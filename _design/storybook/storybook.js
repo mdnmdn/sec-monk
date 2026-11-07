@@ -56,11 +56,11 @@
 
   const app = createApp(App);
   UI.install(app);
-  // view-level patterns (process-detail ...) need the store the app provides: give them the mock one
+  // view-level patterns (process-detail, finding-detail ...) need the store the app provides: give them the mock one
   const store = UI.createStore(UI.MockSource(window.SECMONK_MOCK, { latency: 0 }));
   store.state.snap = JSON.parse(JSON.stringify(window.SECMONK_MOCK.snapshot));
   app.provide("store", store);
-  app.component("ProcessDetail", UI.VIEWS.ProcessDetail);
+  for (const n of ["ProcessDetail", "FindingsTable", "FindingDetail", "JobResult"]) app.component(n, UI.VIEWS[n]);
   // ProcessDetail uses vue-router only through its parent views; a memory router keeps $router available
   app.use(VueRouter.createRouter({ history: VueRouter.createMemoryHistory(), routes: [{ path: "/:p(.*)*", component: { template: "<div/>" } }] }));
   app.mount("#sb");
