@@ -13,7 +13,9 @@ CAT_APPLICATION = "application"    # end-user app (.app bundle, MSI product, cas
 CAT_SYSTEM_APP = "system-app"      # app shipped with the OS (Safari, Mail)
 CAT_PACKAGE = "package"            # package-manager tool/formula (brew formula, pkgutil receipt)
 CAT_RUNTIME = "runtime"            # embedded runtime/framework (Electron, Chromium, JRE, Python)
-CATEGORIES = (CAT_OS, CAT_OS_PACKAGE, CAT_LIBRARY, CAT_APPLICATION, CAT_SYSTEM_APP, CAT_PACKAGE, CAT_RUNTIME)
+CAT_EXECUTABLE = "executable"      # running binary with no package identity (process collector; never matched)
+CATEGORIES = (CAT_OS, CAT_OS_PACKAGE, CAT_LIBRARY, CAT_APPLICATION, CAT_SYSTEM_APP, CAT_PACKAGE, CAT_RUNTIME,
+              CAT_EXECUTABLE)
 
 
 @dataclass

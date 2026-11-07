@@ -623,6 +623,153 @@ def match(
     console.print(_stats_line(asset, stats))
 
 
+# --------------------------------------------------------------------------- process monitor
+
+def _procs_match(conn: sqlite3.Connection, inv, min_confidence: float) -> dict:
+    from . import procmon
+    from .engine.inventory import save_inventory
+    from .engine.match import match_asset
+
+    save_inventory(conn, inv)
+    match_asset(conn, inv.asset.id, min_confidence=min_confidence)
+    return procmon.findings_by_component(conn, inv.asset.id)
+
+
+def _procs_table(rows: list[dict], title: str) -> None:
+    t = Table(title=_t(title))
+    for col in ("pid", "user", "launch", "process", "identity", "findings", "flags"):
+        t.add_column(col, overflow="fold", justify="right" if col == "pid" else "left")
+    for r in rows:
+        style = "red" if r["findings"].startswith(("P1", "P2")) else ("yellow" if r["flags"] or r["findings"] else "")
+        proc = "  " * r["depth"] + r["process"] + (f"  [{r['script']}]" if r.get("script") else "")
+        t.add_row(_t(r["pid"]), _t(r["user"]), _t(r["launch_detail"]), _t(proc), _t(r["identity"]),
+                  _t(r["findings"], style=style), _t(", ".join(r["flags"]), style="yellow" if r["flags"] else ""))
+    _print(t)
+
+
+def _event_line(ev, fmap: dict) -> tuple[str, dict]:
+    from . import procmon
+
+    if ev.kind == "new-executable":
+        v = ev.data["view"]
+        row = procmon.view_row(v, fmap)
+        text = (f"NEW exe  pid {row['pid']} {row['user'] or ''}  {row['launch_detail']}  {row['exe']}"
+                + (f"  -> {row['identity']} [{row['identity_method']}]" if row["identity"] else "")
+                + (f"  findings: {row['findings']}" if row["findings"] else "")
+                + (f"  flags: {', '.join(row['flags'])}" if row["flags"] else ""))
+        return text, {"event": ev.kind, **{k: row[k] for k in row if k != "depth"}}
+    it = ev.data["item"]
+    word = "NEW" if ev.kind == "new-launch-item" else "REMOVED"
+    data = {"event": ev.kind, "label": it.label, "mechanism": it.mechanism, "program": it.program,
+            "source": it.source, "scope": it.scope}
+    return f"{word} launch item  {it.label} ({it.mechanism}, {it.scope})  -> {it.program}  [{it.source}]", data
+
+
+@app.command()
+def procs(
+    target: Annotated[str | None, typer.Argument(
+        help="Process snapshot JSON (secmonk-process-snapshot/1); default: this machine, live")] = None,
+    flat: Annotated[bool, typer.Option("--flat", help="List instead of a parent/child tree")] = False,
+    suspicious: Annotated[bool, typer.Option(
+        "--suspicious", "-s", help="Only processes with findings or risk flags")] = False,
+    match_: Annotated[bool, typer.Option(
+        "--match/--no-match", help="Match running software against the mirror (if a database exists)")] = True,
+    save: Annotated[bool, typer.Option(
+        "--save", help="Persist asset process:<host> + findings (default: match in a temporary overlay)")] = False,
+    watch: Annotated[float | None, typer.Option(
+        "--watch", "-w", min=1.0, help="Keep running: re-snapshot every N seconds, report new executables "
+                                       "and new/removed launch items (live only)")] = None,
+    max_ticks: Annotated[int | None, typer.Option("--max-ticks", hidden=True)] = None,
+    snapshot_out: Annotated[Path | None, typer.Option(
+        "--snapshot-out", help="Also write the raw process snapshot JSON here")] = None,
+    min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
+    fmt: FmtOpt = Fmt.table,
+    opt: OptsOpt = None,
+    db: DbOpt = None,
+):
+    """Process monitor: what runs, how it was started, which software/version it is, findings, provenance."""
+    from . import procmon
+    from .collectors.process.collector import ProcessCollector
+
+    opts = _parse_opts(opt)
+    if snapshot_out:
+        opts["snapshot_out"] = str(snapshot_out)
+    if watch and target:
+        raise _fail("--watch needs a live snapshot (no TARGET)", 2)
+    col = ProcessCollector()
+    try:
+        snap, inspector, views = col.analyse(target, **opts)
+    except COLLECT_ERRORS as e:
+        _traceback()
+        raise _fail(f"process: {type(e).__name__}: {e}") from None
+    inv = col.inventory(snap, inspector, views, opts)
+    _prepare(inv)
+    if fmt is not Fmt.json:
+        _report_inventory_notes(inv)
+    have_db = _db_path(db).exists()
+    if match_ and not have_db and not save:
+        _info(f"[dim]no database at {_e(_db_path(db))}: showing processes without findings "
+              "(run `secmonk sync …` first)[/]", fmt)
+    use_db = save or (match_ and have_db)
+    with contextlib.ExitStack() as stack:
+        conn = stack.enter_context(_open(db, create=save)) if use_db else None
+        if conn is not None and not save:
+            _ephemeral(conn)
+        fmap = _procs_match(conn, inv, min_confidence) if conn is not None else {}
+        rows = [procmon.view_row(v, fmap) for v in views] if flat else procmon.tree_rows(views, fmap)
+        if suspicious:
+            rows = [r for r in rows if procmon.interesting(r)]
+        if fmt is Fmt.json and not watch:
+            typer.echo(json.dumps({"asset": inv.asset.id, "taken_at": snap.taken_at, "platform": snap.platform,
+                                   "os": snap.os, "warnings": inv.warnings,
+                                   "launch_items_missing_program": inv.asset.meta.get("launch_items_missing_program", []),
+                                   "processes": rows}, indent=2, default=str))
+        elif fmt is Fmt.csv and not watch:
+            _emit(rows, ["pid", "ppid", "user", "launch", "label", "exe", "identity", "identity_method", "findings",
+                         "flags"], fmt, cell={"flags": lambda v: " ".join(v or [])})
+        elif fmt is Fmt.table and (not watch or not _state.quiet):
+            kinds = inv.asset.meta.get("launch_kinds", {})
+            _procs_table(rows, f"{inv.asset.id} — {len(views)} processes, {len(inv.components)} components")
+            _info(" · ".join(f"{k} {n}" for k, n in sorted(kinds.items(), key=lambda x: -x[1])))
+            for m in inv.asset.meta.get("launch_items_missing_program", []):
+                err_console.print(f"[yellow]launch item {_e(m['label'])} points to a missing program "
+                                  f"{_e(m['program'])} ({_e(m['source'])})[/]")
+        if not watch:
+            return
+        watcher = procmon.Watcher(inspector)
+        watcher.tick(snap)
+        _info(f"[dim]watching every {watch:g}s — Ctrl-C to stop[/]", fmt)
+        ticks = 0
+        try:
+            while max_ticks is None or ticks < max_ticks:
+                ticks += 1
+                time.sleep(watch)
+                try:
+                    snap = col.snapshot(None, **{k: v for k, v in opts.items() if k != "snapshot_out"})
+                except COLLECT_ERRORS as e:
+                    err_console.print(f"[yellow]snapshot failed: {_e(e)}[/]")
+                    continue
+                views, events = watcher.tick(snap)
+                if not events:
+                    continue
+                if conn is not None and any(e.kind == "new-executable" for e in events):
+                    new_inv = col.inventory(snap, inspector, [e.data["view"] for e in events
+                                                              if e.kind == "new-executable"], opts)
+                    new_inv.asset.id = f"{inv.asset.id}#watch" if not save else inv.asset.id
+                    fmap = _procs_match(conn, new_inv, min_confidence)
+                for ev in events:
+                    text, data = _event_line(ev, fmap)
+                    stamp = time.strftime("%H:%M:%S")
+                    if fmt is Fmt.json:
+                        typer.echo(json.dumps({"time": stamp, **data}, default=str))
+                    else:
+                        bad = data.get("findings", "").startswith(("P1", "P2")) or "flags" in data and data["flags"]
+                        console.print(_t(f"{stamp} {text}", style="red" if bad else ""))
+        except KeyboardInterrupt:
+            pass
+
+
+
 @app.command()
 def findings(
     asset: Annotated[str | None, typer.Argument(help="Only this asset")] = None,

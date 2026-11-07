@@ -6,7 +6,7 @@ status: open
 platform: macos
 tags: [plan, macos, homebrew, collector, ssh]
 updated: 2026-11-07
-related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-macos.md, features/inventory-homebrew.md, references/homebrew.md, tech/collectors/ssh.md]
+related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-macos.md, features/inventory-homebrew.md, references/homebrew.md, tech/collectors/ssh.md, tech/collectors/process.md]
 ---
 
 # Plan: what to do on a Mac
@@ -191,6 +191,48 @@ The engine collector is validated against a **fake socket only**; the generic te
   Verify: each installed runtime is found (paths listed in [docker-engine.md](../tech/collectors/docker-engine.md) implementation notes); Docker
   contexts / `ssh://` DOCKER_HOST are not implemented - confirm the error is explicit. Then repeat `secmonk scan docker-engine <container>` and
   `image:<ref>` once per runtime (VM-backed engines hide the FS; the API must still work).
+
+## F. Process monitor on a real Mac (`secmonk procs`, synthetic fixtures only)
+
+- [ ] **First live run, as user and as root.**
+  ```bash
+  uv run secmonk procs --no-match --snapshot-out /tmp/snap-user.json > /tmp/procs-user.txt
+  sudo uv run secmonk procs --no-match --snapshot-out /tmp/snap-root.json > /tmp/procs-root.txt
+  jq '.processes | length' /tmp/snap-user.json; ps -ax | wc -l
+  jq '[.processes[] | select(.exe == null)] | length' /tmp/snap-root.json
+  jq '[.processes[] | select(.label != null)] | length' /tmp/snap-user.json /tmp/snap-root.json
+  ```
+  Verify: process count equals `ps -ax`; `proc_pidpath` fills `exe` for own processes (user) and all (root); `ps lstart`
+  parses in the C locale (no `started: null`); `launchctl list` labels attach (GUI apps as `application.<id>.<n>.<n>`).
+  Save a trimmed, anonymized `snap-root.json` as `tests/fixtures/collectors/process/real/` and test it.
+- [ ] **Launch classification on real trees.**
+  ```bash
+  uv run secmonk procs snap-root.json -o root=/ -f json | jq -r '.processes[] | "\(.launch)\t\(.label)\t\(.exe)"' | sort | uniq -c | sort -rn | head -50
+  ```
+  Verify: Dock/Finder/menu-bar apps = `gui-app`; `/System/Library/...XPCServices/*.xpc` = `xpc-service`; Terminal/iTerm2/VS Code
+  shells = `interactive (terminal)`; `ssh localhost` session = `remote-session`; third-party daemons match their plist
+  (`service (<label>)`); count `unknown`/`child` without `via`. Add missing terminals / launchers to `launch.DARWIN`.
+- [ ] **Identity coverage.**
+  ```bash
+  uv run secmonk procs -f json | jq -r '.processes[] | .identity_method' | sort | uniq -c
+  uv run secmonk procs -f json | jq -r '.processes[] | select(.identity_method=="none") | .exe' | sort -u | head -40
+  ```
+  Verify: helpers inside `.app` resolve to the host app; Homebrew binaries (via `/opt/homebrew/bin` symlinks) resolve to
+  the keg; Safari from the cryptex (`/System/Volumes/Preboot/Cryptexes/App/...`) resolves; `pkgutil --file-info` hits for
+  `/usr/local/bin` tools (e.g. AWS CLI); privileged helpers (`/Library/PrivilegedHelperTools/*`) give an embedded
+  `__info_plist`; fat (universal) Go binaries: the Go parser skips `0xCAFEBABE`, decide whether to slice the arm64 arch.
+- [ ] **Provenance on real downloads.** Download an app with Safari and Chrome, open it, then
+  ```bash
+  xattr -l "/Applications/<App>.app"; sqlite3 ~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2 'select * from LSQuarantineEvent order by LSQuarantineTimeStamp desc limit 3'
+  uv run secmonk procs -f json | jq '.processes[] | select(.exe|test("<App>")) | .provenance'
+  ```
+  Verify: quarantine flags/time/agent parsed, event row found (uuid case), where-froms present, `user_approved` meaning of
+  flag `0x0040` confirmed (adjust `parse_quarantine` if not); `codesign` fields (Developer ID / MAS / Apple / adhoc /
+  unsigned) on 5 apps; cost of `codesign` per process (time `procs`); `-o gatekeeper=true` output (`source=Notarized Developer ID`).
+- [ ] **`--watch`.** Run `uv run secmonk procs --watch 5`, then start a new app, run a new brew binary, `launchctl bootstrap`
+  a test LaunchAgent and remove it. Verify one event each, no repeated events, CPU usage of the loop acceptable.
+- [ ] **Login items / BTM.** `sudo sfltool dumpbtm | head -80`: decide whether to parse it to tag `login-item` (currently
+  never produced on macOS).
 
 ## E. Wrap-up
 

@@ -23,6 +23,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Containers and Linux filesystems | [inventory-docker.md](inventory-docker.md) | implemented | any OS for images (registry, tarball, OCI dir, no daemon); Linux/macOS host with a Docker/Podman socket for live containers; any rootfs directory | `secmonk collect\|scan docker-image`, `docker-engine`, `rootfs`; `secmonk containers` | real images alpine, debian-slim, python-slim, registry:2 scanned; engine only against a fake socket |
 | Language dependencies | [inventory-dependencies.md](inventory-dependencies.md) | implemented | any (folders, repos; also inside images, containers, SSH hosts, Homebrew) | `secmonk scan fs <dir>` (+ the collectors above) | tool-generated real fixtures; verified end to end on real OSV data |
 | Agentless SSH inventory | [inventory-ssh.md](inventory-ssh.md) | implemented | target Linux, macOS, Windows (OpenSSH); analyst machine any | `secmonk collect\|scan ssh user@host[:port]` | fixture trees + in-process sshd only; no real sshd, no real macOS/Windows host |
+| Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | synthetic fixtures; never run on a real Mac |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 
 Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `vuln ...`) are shared by all inventory features and are described in
@@ -45,7 +46,7 @@ secmonk sync NAMES... | all             fetch into the mirror
     --api-key K         NVD API key (env NVD_API_KEY)
     (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` would be skipped, none currently is)
 
-secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos rootfs ssh windows)
+secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos process rootfs ssh windows)
 secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     --save/--no-save    store the inventory in the DB (default: save)
     -O, --output PATH   write inventory JSON (a hidden `--json` still works but is deprecated)
@@ -62,6 +63,14 @@ secmonk match ASSET                     (re)match a stored asset against the cur
     --min-confidence F  (default 0.5)
 secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
 secmonk containers [--socket PATH] [--all] [-f FMT]   list containers of the local Docker/Podman engine (table)
+secmonk procs [SNAPSHOT.json]           process monitor: tree, launch origin, identity, findings, flags (live macOS by default)
+    --flat              one row per process instead of the tree
+    -s, --suspicious    only processes with findings or risk flags
+    --match/--no-match  match against the mirror if a database exists (default: match, temporary overlay)
+    --save              persist asset process:<host> and its findings
+    -w, --watch N       re-snapshot every N s; print new executables and new/removed launch items (live only)
+    --snapshot-out F    also write the raw snapshot (secmonk-process-snapshot/1)
+    --min-confidence F  -f, --format table|json|csv   -o, --opt KEY=VAL   --db PATH
 
 secmonk findings [ASSET]                list findings ordered by priority
     --priority P1..P4

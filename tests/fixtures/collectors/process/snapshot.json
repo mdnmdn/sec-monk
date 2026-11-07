@@ -1,0 +1,342 @@
+{
+  "schema": "secmonk-process-snapshot/1",
+  "platform": "darwin",
+  "host": "fixture-mac",
+  "taken_at": "2026-11-07T10:00:00+00:00",
+  "os": {
+    "name": "macOS",
+    "version": "14.5",
+    "build": "23F79"
+  },
+  "processes": [
+    {
+      "pid": 0,
+      "ppid": 0,
+      "uid": 0,
+      "user": "root",
+      "exe": null,
+      "started": "2026-11-07T09:00:00",
+      "args": [],
+      "name": "kernel_task"
+    },
+    {
+      "pid": 1,
+      "ppid": 0,
+      "uid": 0,
+      "user": "root",
+      "exe": "/sbin/launchd",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/sbin/launchd"
+      ]
+    },
+    {
+      "pid": 95,
+      "ppid": 1,
+      "uid": 0,
+      "user": "root",
+      "exe": "/usr/sbin/syslogd",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/usr/sbin/syslogd"
+      ],
+      "label": "com.apple.syslogd"
+    },
+    {
+      "pid": 120,
+      "ppid": 1,
+      "uid": 0,
+      "user": "root",
+      "exe": "/Library/PrivilegedHelperTools/com.example.updater",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/Library/PrivilegedHelperTools/com.example.updater"
+      ]
+    },
+    {
+      "pid": 300,
+      "ppid": 1,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/Applications/Slack.app/Contents/MacOS/Slack"
+      ],
+      "label": "application.com.tinyspeck.slackmacgap.1234.5678"
+    },
+    {
+      "pid": 301,
+      "ppid": 300,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+        "--type=utility"
+      ]
+    },
+    {
+      "pid": 310,
+      "ppid": 1,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      ]
+    },
+    {
+      "pid": 320,
+      "ppid": 1,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/Users/alice/Library/Application Support/Sync/syncd"
+      ],
+      "label": "com.sync.agent"
+    },
+    {
+      "pid": 400,
+      "ppid": 1,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+      ],
+      "label": "application.com.apple.Terminal.111.222"
+    },
+    {
+      "pid": 401,
+      "ppid": 400,
+      "uid": 0,
+      "user": "root",
+      "exe": "/usr/bin/login",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "login",
+        "-pf",
+        "alice"
+      ]
+    },
+    {
+      "pid": 402,
+      "ppid": 401,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/bin/zsh",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "-zsh"
+      ]
+    },
+    {
+      "pid": 403,
+      "ppid": 402,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/opt/homebrew/bin/curl",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "curl",
+        "https://user:pw@example.com/x?token=abc"
+      ]
+    },
+    {
+      "pid": 404,
+      "ppid": 402,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/usr/local/bin/hello",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/usr/local/bin/hello"
+      ]
+    },
+    {
+      "pid": 405,
+      "ppid": 402,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/usr/bin/python3",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "python3",
+        "/Users/alice/tool.py",
+        "--token",
+        "abc"
+      ]
+    },
+    {
+      "pid": 500,
+      "ppid": 1,
+      "uid": 0,
+      "user": "root",
+      "exe": "/usr/sbin/sshd",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/usr/sbin/sshd"
+      ],
+      "label": "com.openssh.sshd"
+    },
+    {
+      "pid": 501,
+      "ppid": 500,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/usr/sbin/sshd",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "sshd: alice@ttys001"
+      ]
+    },
+    {
+      "pid": 502,
+      "ppid": 501,
+      "uid": 501,
+      "user": "alice",
+      "exe": "/bin/zsh",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/bin/zsh"
+      ]
+    },
+    {
+      "pid": 503,
+      "ppid": 502,
+      "uid": 0,
+      "user": "root",
+      "exe": "/tmp/x",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/tmp/x"
+      ]
+    },
+    {
+      "pid": 600,
+      "ppid": 1,
+      "uid": 0,
+      "user": "root",
+      "exe": "/usr/sbin/cron",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/usr/sbin/cron"
+      ]
+    },
+    {
+      "pid": 601,
+      "ppid": 600,
+      "uid": 0,
+      "user": "root",
+      "exe": "/bin/sh",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/bin/sh",
+        "-c",
+        "/usr/local/bin/backup.sh"
+      ]
+    },
+    {
+      "pid": 602,
+      "ppid": 601,
+      "uid": 0,
+      "user": "root",
+      "exe": "/bin/bash",
+      "started": "2026-11-07T09:00:00",
+      "args": [
+        "/bin/bash",
+        "/usr/local/bin/backup.sh"
+      ]
+    }
+  ],
+  "launch_items": [
+    {
+      "mechanism": "launchd-daemon",
+      "label": "com.example.updater",
+      "program": "/Library/PrivilegedHelperTools/com.example.updater",
+      "args": [],
+      "source": "/Library/LaunchDaemons/com.example.updater.plist",
+      "scope": "system",
+      "run_at_load": true,
+      "keep_alive": true
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.syslogd",
+      "program": "/usr/sbin/syslogd",
+      "source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+      "scope": "system"
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.openssh.sshd",
+      "program": "/usr/libexec/sshd-keygen-wrapper",
+      "source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist",
+      "scope": "system"
+    },
+    {
+      "mechanism": "launchd-agent",
+      "label": "com.sync.agent",
+      "program": "/Users/alice/Library/Application Support/Sync/syncd",
+      "args": [
+        "--api-key=hunter2"
+      ],
+      "source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist",
+      "scope": "user:alice",
+      "run_at_load": true,
+      "keep_alive": true
+    }
+  ],
+  "executables": {
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome": {
+      "exists": true,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": {
+        "signed": true,
+        "developer_id": true,
+        "team_id": "EQHXZ8M8AV",
+        "authority": [
+          "Developer ID Application: Google LLC (EQHXZ8M8AV)",
+          "Developer ID Certification Authority",
+          "Apple Root CA"
+        ]
+      },
+      "quarantine": {
+        "raw_flags": "0083",
+        "time": "2026-10-01T08:30:00+00:00",
+        "agent": "Safari",
+        "event_id": "9F0C1E52-6D3B-4E0B-9C59-1B2A3C4D5E6F",
+        "user_approved": true,
+        "on": "/Applications/Google Chrome.app",
+        "event": {
+          "time": "2026-10-01T08:29:58+00:00",
+          "agent_bundle_id": "com.apple.Safari",
+          "data_url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+          "origin_url": "https://www.google.com/chrome/"
+        }
+      },
+      "where_froms": [
+        "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+        "https://www.google.com/"
+      ]
+    },
+    "/tmp/x": {
+      "exists": false
+    },
+    "/usr/local/bin/tool-from-agent": {
+      "identity": {
+        "name": "Tool",
+        "version": "1.2.3",
+        "category": "application",
+        "bundle_id": "com.example.tool"
+      }
+    }
+  },
+  "warnings": []
+}

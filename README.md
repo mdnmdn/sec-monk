@@ -40,6 +40,8 @@ uv run secmonk scan fs ./my-service                # language deps: lockfiles, m
 uv run secmonk scan ssh admin@10.0.0.5             # agentless Linux/macOS/Windows host over SSH
 uv run secmonk windows-script > secmonk-inventory.ps1   # run on Windows -> inv.json
 uv run secmonk scan windows inv.json               # (or -o osquery=results.json; live on Windows: no target)
+uv run secmonk procs                               # running processes (macOS): launch origin, version, findings, provenance
+uv run secmonk procs --watch 10 --suspicious       # monitor: report new executables / launch items
 
 # 3. Explore
 uv run secmonk findings --priority P1

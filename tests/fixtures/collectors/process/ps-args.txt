@@ -1,0 +1,2 @@
+  301 /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper --type=utility
+  403 curl -H Authorization=Bearer https://user:pw@example.com/x?token=abc --password secret
