@@ -23,10 +23,12 @@ schema, templates) lives in `_docs/_meta/`.
 | `tech/` | tech | Internal design: architecture, data model, CLI internals. Sub-folders per area: `tech/collectors/` (how each target is inventoried), `tech/engine/` (classification, versions, matching, scoring). | `tech` |
 | `references/` | references | Knowledge about **external** systems we depend on, written from real probes: `references/vuln-sources/` (CVE List, OSV, NVD, KEV, EPSS, EUVD…). Facts about the outside world, not our design. | `reference` |
 | `decisions/` | decisions | Architecture Decision Records `NNNN-short-title.md`. Immutable once accepted; supersede with a new ADR. | `decision` |
+| `plans/` | plans | Work still to do, **organized by the platform you need to be on** to do it (macOS, Linux/Docker host, Windows, open network) plus the source-integration backlog. Checklists, kept current. | `plan` |
 
 Rule of thumb when placing a doc: *Is it about the outside world?* → `references/`.
 *About what the user gets?* → `features/`. *About how we build it?* → `tech/`.
 *About a choice we made?* → `decisions/`. *About why the project exists?* → `product/`.
+*About what is left to do / verify?* → `plans/` (pick the file for the platform it needs).
 
 A folder may contain a `README.md` acting as its index (and as the template holder for
 homogeneous doc families such as vuln sources or collectors).

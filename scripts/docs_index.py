@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1] / "_docs"
 REQUIRED = ("title", "type", "context", "status", "tags", "updated")
-ORDER = ("product", "features", "tech", "references", "decisions", "meta")
+ORDER = ("product", "features", "tech", "references", "plans", "decisions", "meta")
 
 
 def frontmatter(path: Path) -> dict | None:
