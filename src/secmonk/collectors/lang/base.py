@@ -82,8 +82,24 @@ def library(ecosystem_purl_type: str, name: str, version: str | None, *, path: s
                      ecosystem=purls.PURL_TO_OSV.get(ecosystem_purl_type), source_path=path, meta=m)
 
 
+def _dirname(path: str | None) -> str:
+    return (path or "").rsplit("/", 1)[0] if "/" in (path or "") else ""
+
+
+def drop_shadowed(components: list[Component]) -> list[Component]:
+    """Cross-file rules that a single-file parser cannot apply:
+    go.sum lists every module version ever resolved, so when a go.mod sits in the same directory
+    its go.sum entries are dropped (go.mod is the build list)."""
+    gomod_dirs = {_dirname(c.source_path) for c in components if c.meta.get("parser") == "go-mod"}
+    if not gomod_dirs:
+        return components
+    return [c for c in components
+            if not (c.meta.get("gosum") and _dirname(c.source_path) in gomod_dirs)]
+
+
 def dedupe(components: list[Component]) -> list[Component]:
     """Merge components with the same purl (+version); keep strongest evidence, remember all paths."""
+    components = drop_shadowed(components)
     best: dict[str, Component] = {}
     for c in components:
         key = c.purl or c.key
