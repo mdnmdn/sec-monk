@@ -185,3 +185,79 @@ class Watcher:
         self.launch_items = items
         self.primed = True
         return views, events
+
+
+# --------------------------------------------------------------------------- shared by the CLI and the web API
+
+def match_inventory(conn: sqlite3.Connection, inv: Any, min_confidence: float = 0.5) -> dict:
+    """Save `inv` (on `conn`, which may be a temporary overlay), match it, return findings per component."""
+    from .engine.inventory import save_inventory
+    from .engine.match import match_asset
+
+    save_inventory(conn, inv)
+    match_asset(conn, inv.asset.id, min_confidence=min_confidence)
+    return findings_by_component(conn, inv.asset.id)
+
+
+def event_dict(ev: Event, fmap: dict | None = None) -> dict[str, Any]:
+    """JSON form of a watch event (CLI `--watch -f json` and `GET /api/processes/watch`)."""
+    if ev.kind in ("new-executable", "changed-executable"):
+        row = view_row(ev.data["view"], fmap)
+        return {"event": ev.kind, **{k: row[k] for k in row if k != "depth"}}
+    it: LaunchItem = ev.data["item"]
+    d = {"event": ev.kind, "label": it.label, "mechanism": it.mechanism, "program": it.program,
+         "source": it.source, "scope": it.scope}
+    prev = ev.data.get("previous")
+    if prev is not None:
+        d["previous_program"] = prev.program
+    return d
+
+
+def launch_item_rows(snap: Snapshot, views: list[ProcessView], missing: list[dict] | None = None) -> list[dict]:
+    from .collectors.process.launch import MECHANISM_KIND
+
+    pids: dict[str, list[int]] = {}
+    for v in views:
+        if v.launch.label:
+            pids.setdefault(v.launch.label, []).append(v.proc.pid)
+    gone = {(m["label"], m["source"]) for m in missing or []}
+    return [{"label": it.label, "mechanism": it.mechanism, "kind": MECHANISM_KIND.get(it.mechanism, "unknown"),
+             "program": it.program, "args": list(it.args), "source": it.source, "scope": it.scope,
+             "run_at_load": it.run_at_load, "keep_alive": it.keep_alive, "disabled": it.disabled,
+             "running_pids": pids.get(it.label, []), "missing_program": (it.label, it.source) in gone}
+            for it in snap.launch_items]
+
+
+def software_rows(components: list[Any], fmap: dict | None = None) -> list[dict]:
+    out = []
+    for c in components:
+        pm = c.meta.get("process") or {}
+        fs = sorted((fmap or {}).get((c.name, c.version), []),
+                    key=lambda f: (f["priority"] or "P9", not f["kev"], -(f["cvss_score"] or 0)))
+        out.append({"name": c.name, "version": c.version, "category": c.category, "purl": c.purl,
+                    "vendor": c.vendor, "product": c.meta.get("product"), "resolution": pm.get("resolution"),
+                    "count": pm.get("count", 0), "users": pm.get("users", []), "launch": pm.get("launch", []),
+                    "executables": pm.get("executables", []), "pids": [p["pid"] for p in pm.get("processes", [])],
+                    "flags": pm.get("flags", []), "via_executable": pm.get("via_executable"),
+                    "findings": summarize_findings(fs), "findings_detail": fs[:50]})
+    return out
+
+
+def snapshot_payload(snap: Snapshot, views: list[ProcessView], inv: Any, fmap: dict | None, *,
+                     source: str, matched: bool) -> dict[str, Any]:
+    """Everything the web views need for one snapshot (`GET /api/processes`; also the design mock)."""
+    rows = tree_rows(views, fmap)
+    missing = inv.asset.meta.get("launch_items_missing_program", [])
+    return {
+        "asset": inv.asset.id, "host": inv.asset.name, "platform": snap.platform, "os": snap.os,
+        "taken_at": snap.taken_at, "source": source, "matched": matched,
+        "summary": {"processes": len(views), "components": len(inv.components),
+                    "launch_kinds": inv.asset.meta.get("launch_kinds", {}),
+                    "with_findings": sum(1 for r in rows if r["findings"]),
+                    "flagged": sum(1 for r in rows if r["flags"]),
+                    "launch_items": len(snap.launch_items), "missing_programs": len(missing)},
+        "processes": rows,
+        "software": software_rows(inv.components, fmap),
+        "launch_items": launch_item_rows(snap, views, missing),
+        "warnings": list(inv.warnings),
+    }

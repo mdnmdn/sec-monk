@@ -477,6 +477,47 @@ def collect(
         _info(f"saved asset [bold]{_e(inv.asset.id)}[/] (scan {scan_id})")
 
 
+@app.command("ui")
+def ui(
+    host: Annotated[str, typer.Option(help="Address to listen on (default loopback only; the UI has no authentication)")]
+    = "127.0.0.1",
+    port: Annotated[int, typer.Option(min=0, max=65535, help="Port (0 = any free port)")] = 8765,
+    snapshot: Annotated[Path | None, typer.Option(
+        "--snapshot", help="Serve a process snapshot file instead of this machine (any OS)")] = None,
+    open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the browser")] = False,
+    min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
+    opt: OptsOpt = None,
+    db: DbOpt = None,
+):
+    """Local web interface (phase 1: process monitor). Ctrl-C stops it."""
+    from .web.api import ProcessMonitor
+    from .web.server import make_server
+
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        err_console.print(f"[yellow]warning: listening on {_e(host)} — the UI has no authentication; anyone who can "
+                          "reach this address can see the process list and save to the database[/]")
+    if snapshot is not None and not snapshot.is_file():
+        raise _fail(f"no snapshot file {snapshot}", 2)
+    monitor = ProcessMonitor(db_path=_db_path(db), target=str(snapshot) if snapshot else None,
+                             opts=_parse_opts(opt), min_confidence=min_confidence)
+    try:
+        srv = make_server(monitor, host, port, mode="snapshot" if snapshot else "live", verbose=_state.verbose)
+    except OSError as e:
+        raise _fail(f"cannot listen on {host}:{port}: {e}") from None
+    url = f"http://{'localhost' if host in ('127.0.0.1', '::1') else host}:{srv.port}/"
+    console.print(f"sec-monk UI on [bold]{_e(url)}[/] — Ctrl-C to stop")
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(url)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+
+
 @app.command("windows-script")
 def windows_script(compact: Annotated[bool, typer.Option(
         help="Strip comments/blank lines (for `powershell -Command -`)")] = False):
@@ -511,11 +552,7 @@ def containers(
 
 
 def _ephemeral(conn: sqlite3.Connection) -> None:
-    """Shadow the inventory tables with TEMP copies so a scan can match without persisting anything."""
-    conn.execute("PRAGMA foreign_keys=OFF")
-    for t in ("asset", "scan", "component", "asset_component", "finding"):
-        sql = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()[0]
-        conn.execute(re.sub(r"^\s*CREATE TABLE", "CREATE TEMP TABLE", sql, count=1))
+    dbm.ephemeral_overlay(conn)
 
 
 FINDING_COLS = ["priority", "vuln_id", "component", "version", "fixed_version", "severity", "cvss_score",
@@ -627,12 +664,8 @@ def match(
 
 def _procs_match(conn: sqlite3.Connection, inv, min_confidence: float) -> dict:
     from . import procmon
-    from .engine.inventory import save_inventory
-    from .engine.match import match_asset
 
-    save_inventory(conn, inv)
-    match_asset(conn, inv.asset.id, min_confidence=min_confidence)
-    return procmon.findings_by_component(conn, inv.asset.id)
+    return procmon.match_inventory(conn, inv, min_confidence)
 
 
 def _procs_table(rows: list[dict], title: str) -> None:
@@ -650,20 +683,17 @@ def _procs_table(rows: list[dict], title: str) -> None:
 def _event_line(ev, fmap: dict) -> tuple[str, dict]:
     from . import procmon
 
+    data = procmon.event_dict(ev, fmap)
     if ev.kind in ("new-executable", "changed-executable"):
-        v = ev.data["view"]
-        row = procmon.view_row(v, fmap)
         word = "NEW exe" if ev.kind == "new-executable" else "CHANGED exe (replaced on disk)"
-        text = (f"{word}  pid {row['pid']} {row['user'] or ''}  {row['launch_detail']}  {row['exe']}"
-                + (f"  -> {row['identity']} [{row['identity_method']}]" if row["identity"] else "")
-                + (f"  findings: {row['findings']}" if row["findings"] else "")
-                + (f"  flags: {', '.join(row['flags'])}" if row["flags"] else ""))
-        return text, {"event": ev.kind, **{k: row[k] for k in row if k != "depth"}}
-    it = ev.data["item"]
+        text = (f"{word}  pid {data['pid']} {data['user'] or ''}  {data['launch_detail']}  {data['exe']}"
+                + (f"  -> {data['identity']} [{data['identity_method']}]" if data["identity"] else "")
+                + (f"  findings: {data['findings']}" if data["findings"] else "")
+                + (f"  flags: {', '.join(data['flags'])}" if data["flags"] else ""))
+        return text, data
     word = {"new-launch-item": "NEW", "removed-launch-item": "REMOVED"}.get(ev.kind, "CHANGED")
-    data = {"event": ev.kind, "label": it.label, "mechanism": it.mechanism, "program": it.program,
-            "source": it.source, "scope": it.scope}
-    return f"{word} launch item  {it.label} ({it.mechanism}, {it.scope})  -> {it.program}  [{it.source}]", data
+    return (f"{word} launch item  {data['label']} ({data['mechanism']}, {data['scope']})  -> {data['program']}"
+            f"  [{data['source']}]"), data
 
 
 @app.command()

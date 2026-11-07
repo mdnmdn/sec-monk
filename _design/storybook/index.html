@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sec-monk storybook</title>
+  <!-- Components and styles are the app's own files (src/secmonk/web/static); storybook.css only lays out this page. -->
+  <link rel="stylesheet" href="../../src/secmonk/web/static/css/secmonk.css">
+  <link rel="stylesheet" href="storybook.css">
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/vue-router@4.5.0/dist/vue-router.global.prod.js"></script>
+  <script src="../../src/secmonk/web/static/js/secmonk-ui.js"></script>
+  <script src="../../src/secmonk/web/static/js/secmonk-views.js"></script>
+  <script src="../mock/data.js"></script>
+  <script src="stories.js"></script>
+</head>
+<body>
+  <div id="sb" v-cloak></div>
+  <script src="storybook.js"></script>
+</body>
+</html>

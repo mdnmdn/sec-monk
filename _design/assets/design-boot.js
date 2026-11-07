@@ -1,0 +1,20 @@
+/* Boot for the design sample pages: the real app (secmonk-views.js) on the fixture mock (mock/data.js).
+ * <body data-route="/processes/300" data-watch="1"> picks the route and optionally starts the mock watch. */
+(function () {
+  "use strict";
+  if (!window.Vue || !window.VueRouter) {
+    document.body.textContent = "Vue could not be loaded from https://unpkg.com (offline?). See _design/README.md.";
+    return;
+  }
+  const b = document.body.dataset;
+  const { store } = window.SecMonkUI.mountApp("#app", {
+    source: window.SecMonkUI.MockSource(window.SECMONK_MOCK, { latency: 120 }),
+    initialRoute: b.route || "/processes", design: true,
+  });
+  if (b.watch) {
+    store.state.watch.interval = 5;
+    store.startWatch();
+    let n = 0;                                        // fast-forward: a few mock ticks so the feed has content
+    const t = setInterval(() => { window.SecMonkUI.toasts.splice(0); n++ < 3 ? store.startWatch() : clearInterval(t); }, 400);
+  }
+})();
