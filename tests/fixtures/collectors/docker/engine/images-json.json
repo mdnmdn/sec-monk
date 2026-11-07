@@ -1,0 +1,5 @@
+[
+  {"Id": "sha256:a6bd71f48f6839d9faae1f29d3babef831e76bc213107682c5cc80f0cbb30866", "ParentId": "", "RepoTags": ["nginx:1.25.3", "nginx:latest"], "RepoDigests": ["nginx@sha256:10d1f5b58f74683ad34eb29287e07dab1e90f10af243f151bb50aa5dbb4d62ee"], "Created": 1699900000, "Size": 192000000, "SharedSize": -1, "Containers": 1, "Labels": {"maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}},
+  {"Id": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "ParentId": "", "RepoTags": ["postgres:16-alpine"], "RepoDigests": ["postgres@sha256:1111111111111111111111111111111111111111111111111111111111111111"], "Created": 1719000000, "Size": 250000000, "SharedSize": -1, "Containers": 1, "Labels": null},
+  {"Id": "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "ParentId": "", "RepoTags": [], "RepoDigests": [], "Created": 1717000000, "Size": 80000000, "SharedSize": -1, "Containers": 1, "Labels": null}
+]

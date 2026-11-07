@@ -1,0 +1,21 @@
+{
+  "token": "visual-studio-code",
+  "full_token": "visual-studio-code",
+  "tap": "homebrew/cask",
+  "name": [
+    "Microsoft Visual Studio Code",
+    "VS Code"
+  ],
+  "desc": "Open-source code editor",
+  "homepage": "https://code.visualstudio.com/",
+  "url": "https://update.code.visualstudio.com/1.90.0/darwin-arm64/stable",
+  "version": "1.90.0",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "artifacts": [
+    {
+      "app": [
+        "Visual Studio Code.app"
+      ]
+    }
+  ]
+}

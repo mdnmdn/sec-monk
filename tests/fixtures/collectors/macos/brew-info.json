@@ -1,0 +1,167 @@
+{
+  "formulae": [
+    {
+      "name": "openssl@3",
+      "full_name": "openssl@3",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [],
+      "versioned_formulae": [],
+      "desc": "Cryptography and SSL/TLS Toolkit",
+      "license": "Apache-2.0",
+      "homepage": "https://openssl-library.org/",
+      "versions": {
+        "stable": "3.3.1",
+        "head": "HEAD",
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://example.org/openssl@3-3.3.1.tar.gz",
+          "tag": null,
+          "revision": null,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "revision": 0,
+      "version_scheme": 0,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_sonoma": {
+              "cellar": ":any",
+              "url": "https://ghcr.io/v2/homebrew/core/openssl/3/blobs/sha256:0",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "keg_only": true,
+      "keg_only_reason": null,
+      "dependencies": [
+        "ca-certificates"
+      ],
+      "build_dependencies": [],
+      "installed": [
+        {
+          "version": "3.3.1",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1717243200,
+          "runtime_dependencies": [],
+          "installed_as_dependency": false,
+          "installed_on_request": true
+        }
+      ],
+      "linked_keg": null,
+      "pinned": false,
+      "outdated": false,
+      "deprecated": false,
+      "disabled": false
+    },
+    {
+      "name": "curl",
+      "full_name": "curl",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [],
+      "versioned_formulae": [],
+      "desc": "Get a file from an HTTP, HTTPS or FTP server",
+      "license": "curl",
+      "homepage": "https://curl.se",
+      "versions": {
+        "stable": "8.7.1",
+        "head": "HEAD",
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://example.org/curl-8.7.1.tar.gz",
+          "tag": null,
+          "revision": null,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "revision": 0,
+      "version_scheme": 0,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_sonoma": {
+              "cellar": ":any",
+              "url": "https://ghcr.io/v2/homebrew/core/curl/blobs/sha256:0",
+              "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        }
+      },
+      "keg_only": true,
+      "keg_only_reason": null,
+      "dependencies": [
+        "brotli",
+        "openssl@3",
+        "zstd"
+      ],
+      "build_dependencies": [],
+      "installed": [
+        {
+          "version": "8.7.1",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1717243200,
+          "runtime_dependencies": [],
+          "installed_as_dependency": false,
+          "installed_on_request": true
+        }
+      ],
+      "linked_keg": null,
+      "pinned": false,
+      "outdated": false,
+      "deprecated": false,
+      "disabled": false
+    }
+  ],
+  "casks": [
+    {
+      "token": "visual-studio-code",
+      "full_token": "visual-studio-code",
+      "tap": "homebrew/cask",
+      "name": [
+        "Microsoft Visual Studio Code"
+      ],
+      "desc": "Open-source code editor",
+      "homepage": "https://code.visualstudio.com/",
+      "url": "https://update.code.visualstudio.com/1.90.0/darwin-arm64/stable",
+      "version": "1.90.0",
+      "installed": "1.90.0",
+      "installed_time": 1718185501,
+      "outdated": false,
+      "sha256": "no_check",
+      "artifacts": [
+        {
+          "app": [
+            "Visual Studio Code.app"
+          ]
+        },
+        {
+          "zap": [
+            {
+              "trash": [
+                "~/Library/Application Support/Code"
+              ]
+            }
+          ]
+        }
+      ],
+      "auto_updates": true,
+      "deprecated": false,
+      "disabled": false
+    }
+  ]
+}

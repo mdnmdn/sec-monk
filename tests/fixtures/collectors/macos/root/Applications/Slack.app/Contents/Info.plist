@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Slack</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.tinyspeck.slackmacgap</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Slack</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>4.38.125</string>
+	<key>CFBundleVersion</key>
+	<string>440381250</string>
+	<key>ElectronAsarIntegrity</key>
+	<dict>
+		<key>Resources/app.asar</key>
+		<dict>
+			<key>algorithm</key>
+			<string>SHA256</string>
+			<key>hash</key>
+			<string>0000</string>
+		</dict>
+	</dict>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.15</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright 2024 Slack Technologies, LLC</string>
+</dict>
+</plist>
