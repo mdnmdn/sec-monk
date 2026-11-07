@@ -1,0 +1,395 @@
+{
+ "389-ds-base": {
+  "CVE-2024-2199": {
+   "description": "389-ds-base malformed userPassword DoS",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "2.3.1+dfsg1-1+deb12u1",
+     "repositories": {
+      "bookworm": "2.3.1+dfsg1-1+deb12u1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "sid": {
+     "fixed_version": "3.1.1+dfsg1-1",
+     "repositories": {
+      "sid": "3.1.1+dfsg1-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "trixie": {
+     "fixed_version": "3.1.1+dfsg1-1",
+     "repositories": {
+      "trixie": "3.1.1+dfsg1-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "apache2": {
+  "CVE-2001-1534": {
+   "description": "mod_usertrack in Apache 1.3.x predictable session ID",
+   "releases": {
+    "bookworm": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "bullseye": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "forky": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "curl": {
+  "CVE-2023-38545": {
+   "description": "SOCKS5 heap buffer overflow",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "7.88.1-10+deb12u4",
+     "repositories": {
+      "bookworm-security": "7.88.1-10+deb12u4"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "bullseye": {
+     "fixed_version": "0",
+     "repositories": {},
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "sid": {
+     "fixed_version": "8.4.0-1",
+     "repositories": {
+      "sid": "8.4.0-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "glibc": {
+  "CVE-2019-1010022": {
+   "description": "GNU Libc current is affected by: Mitigation bypass. (synthetic copy)",
+   "releases": {
+    "bookworm": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "bullseye": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "forky": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    },
+    "trixie": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "unimportant"
+    }
+   },
+   "scope": "local"
+  }
+ },
+ "imagemagick": {
+  "CVE-2023-34152": {
+   "description": "ImageMagick shell injection in filenames",
+   "releases": {
+    "bookworm": {
+     "nodsa": "Minor issue",
+     "nodsa_reason": "",
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "bullseye": {
+     "nodsa": "Minor issue",
+     "nodsa_reason": "",
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "forky": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "trixie": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    }
+   },
+   "scope": "local"
+  }
+ },
+ "linux": {
+  "CVE-2024-1086": {
+   "description": "nf_tables use-after-free",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "6.1.76-1",
+     "repositories": {
+      "bookworm-security": "6.1.76-1"
+     },
+     "status": "resolved",
+     "urgency": "high*"
+    },
+    "buster": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "end-of-life"
+    },
+    "sid": {
+     "fixed_version": "6.7.7-1",
+     "repositories": {
+      "sid": "6.7.7-1"
+     },
+     "status": "resolved",
+     "urgency": "high"
+    }
+   },
+   "scope": "local"
+  }
+ },
+ "openssh": {
+  "CVE-2024-6387": {
+   "description": "regreSSHion",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "1:9.2p1-2+deb12u3",
+     "repositories": {
+      "bookworm-security": "1:9.2p1-2+deb12u3"
+     },
+     "status": "resolved",
+     "urgency": "high"
+    },
+    "bullseye": {
+     "fixed_version": "1:8.4p1-5+deb11u4",
+     "repositories": {
+      "bullseye-security": "1:8.4p1-5+deb11u4"
+     },
+     "status": "resolved",
+     "urgency": "high"
+    },
+    "sid": {
+     "fixed_version": "1:9.8p1-1",
+     "repositories": {
+      "sid": "1:9.8p1-1"
+     },
+     "status": "resolved",
+     "urgency": "high"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "openssl": {
+  "CVE-2024-5535": {
+   "debianbug": 1074000,
+   "description": "SSL_select_next_proto buffer overread",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "3.0.14-1~deb12u2",
+     "repositories": {
+      "bookworm-security": "3.0.14-1~deb12u2"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "bullseye": {
+     "fixed_version": "1.1.1w-0+deb11u1",
+     "repositories": {
+      "bullseye-security": "1.1.1w-0+deb11u1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "sid": {
+     "fixed_version": "3.3.1-1",
+     "repositories": {
+      "sid": "3.3.1-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    },
+    "trixie": {
+     "fixed_version": "3.3.1-1",
+     "repositories": {
+      "trixie": "3.3.1-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "remote"
+  },
+  "TEMP-0000000-1A2B3C": {
+   "description": "(synthetic) openssl issue without CVE id",
+   "releases": {
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "local"
+  }
+ },
+ "ruby3.1": {
+  "CVE-2023-28755": {
+   "description": "ReDoS in URI",
+   "releases": {
+    "bookworm": {
+     "nodsa": "Minor issue; too intrusive to backport",
+     "nodsa_reason": "ignored",
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "bullseye": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "forky": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    },
+    "trixie": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "low"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "samba": {
+  "CVE-2023-4091": {
+   "description": "client can truncate files",
+   "releases": {
+    "bookworm": {
+     "repositories": {},
+     "status": "undetermined",
+     "urgency": "not yet assigned"
+    },
+    "sid": {
+     "fixed_version": "2:4.19.0+dfsg-1",
+     "repositories": {
+      "sid": "2:4.19.0+dfsg-1"
+     },
+     "status": "resolved",
+     "urgency": "not yet assigned"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "tomcat9": {
+  "CVE-2024-23672": {
+   "description": "WebSocket DoS",
+   "releases": {
+    "bookworm": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "medium"
+    },
+    "bullseye": {
+     "nodsa": "Fix along with next DSA",
+     "nodsa_reason": "postponed",
+     "repositories": {},
+     "status": "open",
+     "urgency": "medium"
+    },
+    "forky": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "medium"
+    },
+    "sid": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "medium"
+    },
+    "trixie": {
+     "repositories": {},
+     "status": "open",
+     "urgency": "medium"
+    }
+   },
+   "scope": "remote"
+  }
+ },
+ "tor": {
+  "CVE-2023-99001": {
+   "description": "(synthetic id) tor issue fixed by DSA-5562-1",
+   "releases": {
+    "bookworm": {
+     "fixed_version": "0.4.7.16-1",
+     "repositories": {
+      "bookworm-security": "0.4.7.16-1"
+     },
+     "status": "resolved",
+     "urgency": "medium*"
+    },
+    "sid": {
+     "fixed_version": "0.4.7.16-1",
+     "repositories": {
+      "sid": "0.4.7.16-1"
+     },
+     "status": "resolved",
+     "urgency": "medium"
+    }
+   },
+   "scope": "remote"
+  }
+ }
+}

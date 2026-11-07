@@ -102,3 +102,23 @@ def test_tracker_fixed_in_newer_version_keeps_finding(conn):
     match_asset(conn, "t:1")
     f = _finding(conn)
     assert f is not None and f["triage"] == "medium"
+
+
+def test_debian_tracker_source_feeds_matcher(conn, fixtures):
+    """End to end: tracker JSON -> distro_triage -> finding triage label (tracker beats OSV)."""
+    from secmonk.sources.base import SyncOptions
+    from secmonk.sources.debian_tracker import DebianTrackerSource
+
+    res = DebianTrackerSource().sync(conn, SyncOptions(path=fixtures / "debian-tracker" / "tracker-sample.json"))
+    assert res.status == "ok"
+    upsert_vulnerability(conn, "osv", "DEBIAN-CVE-2019-1010022", summary="glibc", cvss_score=9.8)
+    conn.execute("INSERT INTO alias VALUES ('DEBIAN-CVE-2019-1010022','CVE-2019-1010022','osv')")
+    add_affected(conn, "osv", "DEBIAN-CVE-2019-1010022", ecosystem="Debian:12", package="glibc",
+                 range_type="ECOSYSTEM", events=[{"introduced": "0"}], extra={"urgency": "not yet assigned"})
+    v = "2.36-9+deb12u7"
+    save_inventory(conn, Inventory(Asset("t:2", "server", "t"), "test", [Component(
+        "libc6", v, CAT_OS_PACKAGE, ecosystem="Debian:12", purl=f"pkg:deb/debian/libc6@{v}?distro=debian-12",
+        meta={"source_package": "glibc", "source_version": v})]))
+    match_asset(conn, "t:2")
+    f = conn.execute("SELECT * FROM finding WHERE asset_id='t:2'").fetchone()
+    assert f["triage"] == "unimportant" and f["triage_source"] == "debian-tracker" and f["priority"] == "P4"

@@ -1,0 +1,7 @@
+[12 Jul 2024] DSA-5724-1 openssh - security update
+	{CVE-2024-6387}
+	[bookworm] - openssh 1:9.2p1-2+deb12u3
+[22 Nov 2023] DSA-5562-1 tor - security update
+	{CVE-2023-99001}
+	[bookworm] - tor 0.4.7.16-1
+	NOTE: synthetic CVE id

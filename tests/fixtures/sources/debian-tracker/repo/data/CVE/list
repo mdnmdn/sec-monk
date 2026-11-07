@@ -1,0 +1,52 @@
+CVE-2024-6387 (regreSSHion: signal handler race in sshd)
+	- openssh 1:9.8p1-1 (high)
+	[bookworm] - openssh 1:9.2p1-2+deb12u3
+	[bullseye] - openssh 1:8.4p1-5+deb11u4
+	NOTE: https://www.qualys.com/2024/07/01/cve-2024-6387/regresshion.txt
+CVE-2024-5535 (SSL_select_next_proto buffer overread)
+	- openssl 3.3.1-1 (bug #1074000)
+	[bookworm] - openssl 3.0.14-1~deb12u2
+	[bullseye] - openssl 1.1.1w-0+deb11u1
+CVE-2024-2199 (389-ds-base malformed userPassword DoS)
+	- 389-ds-base 3.1.1+dfsg1-1
+	[bookworm] - 389-ds-base 2.3.1+dfsg1-1+deb12u1
+CVE-2023-38545 (SOCKS5 heap buffer overflow)
+	- curl 8.4.0-1
+	[bookworm] - curl 7.88.1-10+deb12u4
+	[bullseye] - curl <not-affected> (Vulnerable code introduced later)
+CVE-2023-34152 (ImageMagick shell injection in filenames)
+	- imagemagick <unfixed> (low)
+	[bookworm] - imagemagick <no-dsa> (Minor issue)
+	[bullseye] - imagemagick <no-dsa> (Minor issue)
+CVE-2024-23672 (Tomcat WebSocket DoS)
+	- tomcat9 <unfixed> (medium; bug #1070000)
+	[bullseye] - tomcat9 <postponed> (Fix along with next DSA)
+CVE-2023-28755 (ReDoS in URI)
+	- ruby3.1 <unfixed> (low)
+	[bookworm] - ruby3.1 <ignored> (Minor issue; too intrusive to backport)
+CVE-2024-1086 (nf_tables use-after-free)
+	- linux 6.7.7-1 (high)
+	[bookworm] - linux 6.1.76-1
+	[buster] - linux <end-of-life> (Not supported in buster LTS)
+CVE-2023-99001 (synthetic id: tor issue fixed by DSA-5562-1)
+	- tor 0.4.7.16-1 (medium)
+	[bookworm] - tor 0.4.7.16-1
+CVE-2023-4091 (samba: client can truncate files)
+	- samba 2:4.19.0+dfsg-1
+	[bookworm] - samba <undetermined>
+CVE-2019-1010022 (GNU Libc current is affected by: Mitigation bypass.)
+	- glibc <unfixed> (unimportant)
+	NOTE: Not a security issue upstream; disputed
+CVE-2001-1534 (mod_usertrack in Apache 1.3.x predictable session ID)
+	- apache2 <unfixed> (unimportant)
+CVE-2024-0002 (reserved, no data)
+	RESERVED
+CVE-2024-0003 (rejected)
+	REJECTED
+CVE-2024-0004 (not for Debian)
+	NOT-FOR-US: Some Windows product
+CVE-2024-0005 (package removed)
+	- oldpkg <removed>
+	- newpkg <itp>
+TEMP-0000000-1A2B3C (synthetic openssl issue without CVE id)
+	- openssl <unfixed>

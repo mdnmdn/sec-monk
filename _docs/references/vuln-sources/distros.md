@@ -8,7 +8,7 @@ updated: 2026-11-07
 sample: mixed
 reachable: partial
 fixtures: tests/fixtures/sources/distros/
-related: [references/vuln-sources/nvd.md, references/vuln-sources/kev.md, references/vuln-sources/epss.md, references/vuln-sources/euvd.md]
+related: [references/vuln-sources/debian-tracker.md, references/vuln-sources/nvd.md, references/vuln-sources/kev.md, references/vuln-sources/epss.md, references/vuln-sources/euvd.md]
 ---
 
 # Linux distribution security data sources
@@ -140,6 +140,10 @@ Not reachable from the sandbox. Shape from the brief and memory, **sample: synth
 Memory-based status vocabulary (unverified): `resolved`, `open`, `undetermined`, `no-dsa`,
 `postponed`, `unfixed`, `not-affected`. Keys are source packages and codenames.
 
+Full treatment (both JSON and git text formats, field certainty): [debian-tracker.md](debian-tracker.md).
+In the JSON, `no-dsa`/`postponed`/`ignored` are not statuses but `nodsa`/`nodsa_reason` fields;
+status is only `resolved`/`open`/`undetermined` (assumption).
+
 ### Alpine secdb (blocked; synthetic snippet)
 
 Shape from memory, **sample: synthetic**:
@@ -223,7 +227,9 @@ Working map for the prototype's tables (distro-agnostic):
 - [ ] Sample Ubuntu, Wolfi, SUSE and Chainguard OSV records (stream, do not download fully) and
       record their ecosystem names and open-range behaviour.
 - [ ] Confirm Red Hat OSV source vs binary package naming with a multi-binary advisory.
-- [ ] Confirm Debian tracker status vocabulary and `repositories` shape against a live file.
+- [ ] Confirm Debian tracker status vocabulary and `repositories` shape against a live file
+      (importer implemented in `src/secmonk/sources/debian_tracker.py`; see
+      [debian-tracker.md](debian-tracker.md) for formats and the validation checklist).
 - [ ] Find a native source for Amazon Linux (ALAS) and Oracle Linux (ELSA/OVAL).
 
 ## Recommendation for the prototype
@@ -237,7 +243,8 @@ Working map for the prototype's tables (distro-agnostic):
     `released` versions. Also the USN release map for binary versions.
   - Red Hat CSAF VEX for `known_not_affected` and `under_investigation` (blocked from the
     sandbox; test on an unrestricted network).
-  - Debian tracker for `unfixed`, `no-dsa` and urgency (blocked from the sandbox).
+  - Debian tracker for `unfixed`, `no-dsa` and urgency (blocked from the sandbox; implemented as
+    `debian-tracker`, see [debian-tracker.md](debian-tracker.md), tested on synthetic fixtures only).
 - **Not covered by OSV:** Amazon Linux and Oracle Linux. Add native collectors when those targets
   are in scope.
 - **Policy:** open ranges (no `fixed` event) are surfaced as `unfixed`, not silently dropped,
