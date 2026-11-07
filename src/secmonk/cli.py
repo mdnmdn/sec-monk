@@ -266,6 +266,21 @@ def collect(
 
 
 @app.command()
+def containers(socket: Annotated[str | None, typer.Option(help="Docker/Podman socket path")] = None):
+    """List containers of the local Docker/Podman engine (targets for `scan docker-engine <name>`)."""
+    from .collectors import docker_engine
+
+    kwargs = {"socket": socket} if socket else {}
+    try:
+        rows = docker_engine.list_containers(**kwargs)
+    except Exception as e:  # noqa: BLE001
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1) from None
+    for c in rows:
+        console.print(c)
+
+
+@app.command()
 def scan(
     collector: str,
     target: Annotated[str | None, typer.Argument()] = None,
@@ -301,6 +316,7 @@ def findings(
     asset: Annotated[str | None, typer.Argument()] = None,
     priority: Annotated[str | None, typer.Option(help="P1..P4")] = None,
     all_: Annotated[bool, typer.Option("--all", help="Include fixed/suppressed")] = False,
+    fixable: Annotated[bool, typer.Option(help="Only findings with a known fixed version")] = False,
     limit: int = 200,
     db: DbOpt = None,
 ):
@@ -315,6 +331,8 @@ def findings(
         args.append(priority.upper())
     if not all_:
         where.append("f.status = 'open'")
+    if fixable:
+        where.append("f.fixed_version IS NOT NULL")
     sql = f"""SELECT f.*, c.name, c.version, c.category FROM finding f JOIN component c ON c.id = f.component_id
               {'WHERE ' + ' AND '.join(where) if where else ''}
               ORDER BY f.priority, f.kev DESC, f.epss DESC, f.cvss_score DESC LIMIT ?"""

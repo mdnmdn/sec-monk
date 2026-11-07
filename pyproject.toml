@@ -12,6 +12,7 @@ dependencies = [
     "univers>=30",
     "packageurl-python>=0.15",
     "pyyaml>=6",
+    "zstandard>=0.25.0",
 ]
 
 [project.scripts]

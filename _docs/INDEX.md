@@ -13,6 +13,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 
 | Doc | Status | Updated | Tags |
 |---|---|---|---|
+| [Inventory of containers and Linux filesystems](features/inventory-docker.md) | implemented | 2026-11-07 | docker, container, rootfs, inventory |
 | [macOS inventory](features/inventory-macos.md) | implemented | 2026-11-07 | macos, inventory, homebrew |
 | [Vulnerability data sync](features/vuln-sync.md) | implemented | 2026-11-07 | cli, vuln-source, sync |
 
@@ -22,9 +23,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 |---|---|---|---|
 | [Prototype architecture](tech/architecture.md) | implemented | 2026-11-07 | architecture, cli, engine |
 | [Inventory collectors — index](tech/collectors/README.md) | draft | 2026-11-07 | collector, index |
-| [Docker engine collector](tech/collectors/docker-engine.md) | draft · sample: synthetic | 2026-11-07 | collector, docker, containers, engine-api, podman |
-| [Docker image collector](tech/collectors/docker-image.md) | draft · sample: mixed | 2026-11-07 | collector, docker, oci, registry, dpkg, apk, rpm, sbom |
+| [Docker engine collector](tech/collectors/docker-engine.md) | implemented · sample: synthetic | 2026-11-07 | collector, docker, containers, engine-api, podman |
+| [Docker image collector](tech/collectors/docker-image.md) | implemented · sample: mixed | 2026-11-07 | collector, docker, oci, registry, dpkg, apk, rpm, sbom |
 | [macOS collector](tech/collectors/macos.md) | implemented · sample: synthetic | 2026-11-07 | collector, macos, desktop, homebrew |
+| [Rootfs collector](tech/collectors/rootfs.md) | implemented · sample: real | 2026-11-07 | collector, rootfs, dpkg, apk, rpm, python, npm |
 | [Data model (SQLite schema)](tech/data-model.md) | implemented | 2026-11-07 | data-model, sqlite |
 | [Classification — recognizing and categorizing software](tech/engine/classification.md) | implemented | 2026-11-07 | engine, classification, purl, cpe |
 | [Matching, enrichment and prioritization](tech/engine/matching.md) | implemented | 2026-11-07 | engine, matching, versions, prioritization |
@@ -62,12 +64,13 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 
 - **adp**: [cvelist-v5](references/vuln-sources/cvelist-v5.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
-- **apk**: [docker-image](tech/collectors/docker-image.md)
+- **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **architecture**: [architecture](tech/architecture.md)
 - **backports**: [distros](references/vuln-sources/distros.md)
 - **classification**: [classification](tech/engine/classification.md)
 - **cli**: [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
-- **collector**: [README](tech/collectors/README.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [macos](tech/collectors/macos.md)
+- **collector**: [README](tech/collectors/README.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md)
+- **container**: [inventory-docker](features/inventory-docker.md)
 - **containers**: [docker-engine](tech/collectors/docker-engine.md)
 - **conventions**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
 - **cpe**: [nvd](references/vuln-sources/nvd.md), [classification](tech/engine/classification.md)
@@ -77,9 +80,9 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [data-model](tech/data-model.md)
 - **desktop**: [macos](tech/collectors/macos.md)
 - **distro**: [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
-- **docker**: [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
+- **docker**: [inventory-docker](features/inventory-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
 - **docs**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
-- **dpkg**: [docker-image](tech/collectors/docker-image.md)
+- **dpkg**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **engine**: [architecture](tech/architecture.md), [classification](tech/engine/classification.md), [matching](tech/engine/matching.md)
 - **engine-api**: [docker-engine](tech/collectors/docker-engine.md)
 - **enisa**: [euvd](references/vuln-sources/euvd.md)
@@ -93,21 +96,24 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **glossary**: [vision](product/vision.md)
 - **homebrew**: [inventory-macos](features/inventory-macos.md), [macos](tech/collectors/macos.md)
 - **index**: [README](references/vuln-sources/README.md), [README](tech/collectors/README.md)
-- **inventory**: [inventory-macos](features/inventory-macos.md)
+- **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md)
 - **kev**: [kev](references/vuln-sources/kev.md)
 - **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
 - **linux**: [distros](references/vuln-sources/distros.md)
 - **macos**: [inventory-macos](features/inventory-macos.md), [macos](tech/collectors/macos.md)
 - **matching**: [matching](tech/engine/matching.md)
+- **npm**: [rootfs](tech/collectors/rootfs.md)
 - **nvd**: [nvd](references/vuln-sources/nvd.md)
 - **oci**: [docker-image](tech/collectors/docker-image.md)
 - **osv**: [ghsa](references/vuln-sources/ghsa.md), [osv](references/vuln-sources/osv.md)
 - **podman**: [docker-engine](tech/collectors/docker-engine.md)
 - **prioritization**: [epss](references/vuln-sources/epss.md), [kev](references/vuln-sources/kev.md), [matching](tech/engine/matching.md)
 - **purl**: [osv](references/vuln-sources/osv.md), [classification](tech/engine/classification.md)
+- **python**: [rootfs](tech/collectors/rootfs.md)
 - **registry**: [docker-image](tech/collectors/docker-image.md)
 - **roadmap**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
-- **rpm**: [docker-image](tech/collectors/docker-image.md)
+- **rootfs**: [inventory-docker](features/inventory-docker.md), [rootfs](tech/collectors/rootfs.md)
+- **rpm**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **sbom**: [docker-image](tech/collectors/docker-image.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
 - **sqlite**: [data-model](tech/data-model.md)

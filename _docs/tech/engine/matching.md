@@ -58,6 +58,12 @@ a finding that reappears is re-opened (regression). `suppressed` is sticky (futu
 
 ## Known gaps
 
+- **Unfixed distro CVEs:** OSV Debian carries open ranges (no `fixed` event) for CVEs the Debian
+  tracker marks *unimportant* / *no-dsa* (e.g. CVE-2019-1010022 on glibc). A real
+  `python:3.12-slim` (Debian 13) scan on 2026-11-07 gave 193 findings, most of them without a fix.
+  Mitigations: `secmonk findings --fixable`; later, ingest the Debian tracker `urgency`/status to
+  downgrade or suppress them (see references/vuln-sources/distros.md).
+
 - No VEX ingestion yet; Mozilla-style "unaffected-only" CNA records are stored but not used.
 - Name-based matching is precision-limited by the alias table size.
 - `GIT` ranges and unparseable CNA versions are stored, not matched.
