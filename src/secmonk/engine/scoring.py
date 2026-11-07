@@ -12,13 +12,9 @@ def priority(*, cvss: float | None, epss: float | None, kev: bool, asset_meta: d
     production = meta.get("env") in ("prod", "production")
     epss = epss or 0.0
     cvss = cvss or 0.0
-    if kev:
+    if kev or epss >= EPSS_HIGH and exposed:
         level = 1
-    elif epss >= EPSS_HIGH and exposed:
-        level = 1
-    elif cvss >= 9 and exposed:
-        level = 2
-    elif epss >= EPSS_HIGH:
+    elif cvss >= 9 and exposed or epss >= EPSS_HIGH:
         level = 2
     elif cvss >= 7:
         level = 3

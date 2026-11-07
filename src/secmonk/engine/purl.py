@@ -105,7 +105,7 @@ def normalize_name(ecosystem: str | None, name: str) -> str:
 def parse(purl: str) -> PackageURL | None:
     try:
         return PackageURL.from_string(purl)
-    except Exception:
+    except Exception:  # noqa: BLE001 - invalid purl -> None
         return None
 
 

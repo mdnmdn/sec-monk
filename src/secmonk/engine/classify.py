@@ -22,7 +22,7 @@ from . import purl as purls
 _NOISE = re.compile(
     r"\b(x64|x86|64-bit|32-bit|arm64|aarch64|universal|intel|apple silicon|\(x64\)|\(x86\)|"
     r"desktop|app|for mac|for macos|beta|nightly|insiders?|community edition|ce)\b",
-    re.I,
+    re.IGNORECASE,
 )
 
 

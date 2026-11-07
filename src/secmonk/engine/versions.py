@@ -93,7 +93,7 @@ def _parse(cls: type[uv.Version], v: str) -> uv.Version | None:
         if cls is uv.SemverVersion:
             v = v.lstrip("v")
         return cls(v)
-    except Exception:
+    except Exception:  # noqa: BLE001 - unparseable -> fallback comparator
         return None
 
 
@@ -107,7 +107,7 @@ def compare(a: str, b: str, scheme: str = "generic") -> int:
         if pa is not None and pb is not None:
             try:
                 return (pa > pb) - (pa < pb)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 - incomparable -> fallback
                 pass
     return _generic_cmp(a, b)
 

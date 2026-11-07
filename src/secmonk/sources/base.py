@@ -8,9 +8,10 @@ and writes into the tables defined in secmonk/db.py using the helpers below.
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 
 import httpx
 

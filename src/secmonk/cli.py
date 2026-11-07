@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -21,7 +21,7 @@ app.add_typer(vuln_app, name="vuln")
 app.add_typer(inv_app, name="inventory")
 
 console = Console()
-DbOpt = Annotated[Optional[Path], typer.Option("--db", envvar="SECMONK_DB", help="SQLite file")]
+DbOpt = Annotated[Path | None, typer.Option("--db", envvar="SECMONK_DB", help="SQLite file")]
 
 
 def _conn(db: Path | None):
@@ -73,14 +73,14 @@ def list_sources():
 @app.command()
 def sync(
     names: Annotated[list[str], typer.Argument(help="Sources to sync, or 'all'")],
-    path: Annotated[Optional[Path], typer.Option(help="Import from local file/dir instead of downloading")] = None,
-    ecosystem: Annotated[Optional[list[str]], typer.Option("--ecosystem", "-e", help="OSV ecosystems")] = None,
-    ids: Annotated[Optional[list[str]], typer.Option("--id", help="Specific record ids ('@referenced' "
+    path: Annotated[Path | None, typer.Option(help="Import from local file/dir instead of downloading")] = None,
+    ecosystem: Annotated[list[str] | None, typer.Option("--ecosystem", "-e", help="OSV ecosystems")] = None,
+    ids: Annotated[list[str] | None, typer.Option("--id", help="Specific record ids ('@referenced' "
                                                                   "for cvelist)")] = None,
-    since: Annotated[Optional[str], typer.Option(help="Only records modified since (ISO date / year)")] = None,
+    since: Annotated[str | None, typer.Option(help="Only records modified since (ISO date / year)")] = None,
     full: Annotated[bool, typer.Option(help="Ignore stored delta cursor")] = False,
-    limit: Annotated[Optional[int], typer.Option(help="Max records (debug)")] = None,
-    api_key: Annotated[Optional[str], typer.Option(envvar="NVD_API_KEY", help="NVD API key")] = None,
+    limit: Annotated[int | None, typer.Option(help="Max records (debug)")] = None,
+    api_key: Annotated[str | None, typer.Option(envvar="NVD_API_KEY", help="NVD API key")] = None,
     db: DbOpt = None,
 ):
     """Fetch vulnerability data into the local mirror."""
@@ -100,7 +100,7 @@ def sync(
         with console.status(f"syncing {name}…"):
             try:
                 res = reg[name]().sync(conn, opts)
-            except Exception as e:  # keep the CLI alive for the remaining sources
+            except Exception as e:  # noqa: BLE001  # keep the CLI alive for the remaining sources
                 from .sources.base import SyncResult
                 res = SyncResult(name, status="error", message=f"{type(e).__name__}: {e}")
         dbm.set_sync_state(conn, name, status=res.status, records=res.records, cursor=res.cursor,
@@ -147,10 +147,10 @@ def vuln_show(vuln_id: str, db: DbOpt = None, raw: bool = typer.Option(False, he
 
 @vuln_app.command("search")
 def vuln_search(
-    package: Annotated[Optional[str], typer.Option(help="Package name (OSV)")] = None,
-    ecosystem: Annotated[Optional[str], typer.Option(help="OSV ecosystem, e.g. PyPI, Debian:12")] = None,
-    product: Annotated[Optional[str], typer.Option(help="Product name (CVE/NVD)")] = None,
-    version: Annotated[Optional[str], typer.Option(help="Only advisories affecting this version")] = None,
+    package: Annotated[str | None, typer.Option(help="Package name (OSV)")] = None,
+    ecosystem: Annotated[str | None, typer.Option(help="OSV ecosystem, e.g. PyPI, Debian:12")] = None,
+    product: Annotated[str | None, typer.Option(help="Product name (CVE/NVD)")] = None,
+    version: Annotated[str | None, typer.Option(help="Only advisories affecting this version")] = None,
     limit: int = 50,
     db: DbOpt = None,
 ):
@@ -190,6 +190,26 @@ def vuln_search(
 
 # --------------------------------------------------------------------------- collect / scan
 
+OptsOpt = Annotated[list[str] | None, typer.Option(
+    "--opt", "-o", help="Collector option key=value (repeatable), e.g. -o use_brew_cli=true -o platform=linux/arm64")]
+
+
+def _parse_opts(items: list[str] | None) -> dict:
+    out: dict = {}
+    for item in items or []:
+        key, sep, val = item.partition("=")
+        if not sep:
+            raise typer.BadParameter(f"expected key=value, got {item!r}")
+        low = val.lower()
+        if low in ("true", "yes", "1", "false", "no", "0"):
+            out[key] = low in ("true", "yes", "1")
+        elif "," in val:
+            out[key] = [v for v in val.split(",") if v]
+        else:
+            out[key] = val
+    return out
+
+
 def _collect(collector: str, target: str | None, opts: dict):
     reg = _collectors()
     if collector not in reg:
@@ -219,10 +239,11 @@ def _print_inventory(inv) -> None:
 @app.command()
 def collect(
     collector: Annotated[str, typer.Argument(help="macos | docker-image | docker-engine | rootfs …")],
-    target: Annotated[Optional[str], typer.Argument(help="Collector target (root dir, image ref, tar…)")] = None,
+    target: Annotated[str | None, typer.Argument(help="Collector target (root dir, image ref, tar…)")] = None,
     save: Annotated[bool, typer.Option(help="Store the inventory in the DB")] = True,
-    output: Annotated[Optional[Path], typer.Option("--json", help="Write inventory JSON here")] = None,
+    output: Annotated[Path | None, typer.Option("--json", help="Write inventory JSON here")] = None,
     quiet: bool = False,
+    opt: OptsOpt = None,
     db: DbOpt = None,
 ):
     """Discover installed software (no matching)."""
@@ -231,7 +252,7 @@ def collect(
     from .engine.classify import classify
     from .engine.inventory import save_inventory
 
-    inv = _collect(collector, target, {})
+    inv = _collect(collector, target, _parse_opts(opt))
     for c in inv.components:
         classify(c)
     if not quiet:
@@ -247,8 +268,9 @@ def collect(
 @app.command()
 def scan(
     collector: str,
-    target: Annotated[Optional[str], typer.Argument()] = None,
+    target: Annotated[str | None, typer.Argument()] = None,
     min_confidence: float = typer.Option(0.5, help="Drop name-based matches below this"),
+    opt: OptsOpt = None,
     db: DbOpt = None,
 ):
     """collect + save + match, then print findings."""
@@ -257,7 +279,7 @@ def scan(
     from .engine.match import match_asset
 
     conn = _conn(db)
-    inv = _collect(collector, target, {})
+    inv = _collect(collector, target, _parse_opts(opt))
     for c in inv.components:
         classify(c)
     save_inventory(conn, inv)
@@ -276,8 +298,8 @@ def match(asset: str, min_confidence: float = 0.5, db: DbOpt = None):
 
 @app.command()
 def findings(
-    asset: Annotated[Optional[str], typer.Argument()] = None,
-    priority: Annotated[Optional[str], typer.Option(help="P1..P4")] = None,
+    asset: Annotated[str | None, typer.Argument()] = None,
+    priority: Annotated[str | None, typer.Option(help="P1..P4")] = None,
     all_: Annotated[bool, typer.Option("--all", help="Include fixed/suppressed")] = False,
     limit: int = 200,
     db: DbOpt = None,
@@ -326,7 +348,7 @@ def inv_assets(db: DbOpt = None):
 
 
 @inv_app.command("show")
-def inv_show(asset: str, category: Optional[str] = None, db: DbOpt = None):
+def inv_show(asset: str, category: str | None = None, db: DbOpt = None):
     """Components of an asset (latest scan)."""
     from .engine.inventory import current_components
 
