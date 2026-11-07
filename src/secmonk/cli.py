@@ -276,11 +276,13 @@ def vuln_show(
     fmt: Annotated[Fmt, typer.Option("--format", "-f", help="Output format: table or json")] = Fmt.table,
 ):
     """Everything known about a vulnerability id (CVE, GHSA, OSV, EUVD…) across sources."""
+    if fmt is Fmt.csv:
+        raise typer.BadParameter("vuln show supports --format table or json")
     with _open(db) as conn:
         d = reports.vuln_detail(conn, vuln_id, raw=raw)
     if d is None:
         raise _fail(f"unknown vulnerability id {vuln_id!r}")
-    if fmt is not Fmt.table:
+    if fmt is Fmt.json:
         typer.echo(json.dumps(d, indent=2, default=str))
         return
     console.print(f"[bold]{_e(d['id'])}[/] aliases: {_e(', '.join(d['aliases']) or '-')}")

@@ -187,6 +187,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._api_ok(path):
             return
         try:
+            if path in ("/api/processes/save", "/api/assets/match"):
+                self.server.jobs.refuse_writes_while_busy()
             if path == "/api/processes/save":
                 return self._json(200, self.server.monitor.save())
             if path == "/api/assets/match":

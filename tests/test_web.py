@@ -429,6 +429,9 @@ def test_job_validation(data_server):
            ({"kind": "sync", "sources": ["kev"], "limit": -1}, 400), ({"kind": "sync", "sources": ["kev"], "path": "/no/such"}, 400),
            ({"kind": "scan", "collector": "nope"}, 400), ({"kind": "scan", "collector": "fs", "options": ["novalue"]}, 400),
            ({"kind": "scan", "collector": "fs", "min_confidence": 2}, 400)]
+    from secmonk.web.jobs import _str_list
+
+    assert _str_list("Rocky Linux:9, PyPI", "e") == ["Rocky Linux:9", "PyPI"]       # names may contain spaces
     for body, status in bad:
         assert _post_json(data_server, "/api/jobs", body)[0] == status, body
     assert _post_json(data_server, "/api/jobs", {"kind": "sync"}, ctype="text/plain")[0] == 415
@@ -446,6 +449,8 @@ def test_one_job_at_a_time(data_server, monkeypatch):
     assert s == 202
     s, e = _post_json(data_server, "/api/jobs", {"kind": "sync", "sources": ["kev"]})
     assert s == 409 and "running" in e["error"]
+    assert call(data_server, "/api/processes/save", method="POST")[0] == 409      # no second writer meanwhile
+    assert call(data_server, "/api/assets/match?id=x", method="POST")[0] == 409
     gate.set()
     assert _wait(data_server, j["id"])["status"] == "ok"
 

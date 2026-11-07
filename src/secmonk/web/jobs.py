@@ -17,7 +17,6 @@ from typing import Any
 
 from .. import db as dbm
 from .. import ops, reports
-from ..errors import COLLECT_ERRORS
 from .api import ApiError
 
 KEEP = 20
@@ -59,7 +58,7 @@ def _str_list(v: Any, name: str) -> list[str]:
     if v is None:
         return []
     if isinstance(v, str):
-        v = [x for x in re.split(r"[,\s]+", v) if x]
+        v = [x for x in v.split(",") if x.strip()]          # comma separated: names may contain spaces
     if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
         raise ApiError(400, f"{name}: expected a list of strings")
     return [x.strip() for x in v if x.strip()]
@@ -83,6 +82,16 @@ class JobRunner:
         self.seq = 0
 
     # ------------------------------------------------------------------ API
+    @property
+    def busy(self) -> bool:
+        with self.lock:
+            return any(j.status == "running" for j in self.jobs)
+
+    def refuse_writes_while_busy(self) -> None:
+        """Other writers (re-match, process save) wait for the job instead of failing on a locked database."""
+        if self.busy:
+            raise ApiError(409, "a job is writing to the database", "Try again when it has finished (Jobs).")
+
     def list(self) -> list[dict[str, Any]]:
         with self.lock:
             return [j.to_dict(log=False) for j in reversed(self.jobs)]
@@ -165,9 +174,7 @@ class JobRunner:
         try:
             status, result = fn(job)
             error = None
-        except COLLECT_ERRORS as e:
-            status, result, error = "error", None, f"{type(e).__name__}: {e}"
-        except Exception as e:  # noqa: BLE001 - report, never kill the server
+        except Exception as e:  # noqa: BLE001 - collector errors and anything else: report, never kill the server
             status, result, error = "error", None, f"{type(e).__name__}: {e}"
         if error:
             job.say(f"error: {error}")

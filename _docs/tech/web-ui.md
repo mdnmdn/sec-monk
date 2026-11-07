@@ -68,7 +68,7 @@ request must send `X-SecMonk-Request: 1` (403 otherwise), reads included: `watch
 | GET | `/api/overview` | `reports.overview`: `{db, totals{assets, components, open_findings, fixable, P1..P4, kev}, assets[], top_findings[], sources[], tables{}}` | |
 | GET | `/api/assets` | `reports.asset_rows` = `inventory assets -f json` (+ `findings_by_priority`) | |
 | GET | `/api/assets/detail?id=` | `reports.asset_detail`: `{asset{…, meta (large values summarized)}, scans[], components[] (with open finding counts), findings[] (all statuses), summary, partial, warnings}` | 404 `unknown-asset` |
-| POST | `/api/assets/match?id=` | `{asset, stats}` | `secmonk match` |
+| POST | `/api/assets/match?id=` | `{asset, stats}` | `secmonk match`; this and `/api/processes/save` answer 409 while a job runs (one writer at a time) |
 | GET | `/api/unmatched` | `inventory unmatched -f json` rows | |
 | GET | `/api/findings?priority&asset&all&fixable&hide_minor&hide_deferred&limit` | `{findings[] (= findings -f json), limit, limit_reached}` | 400 on a bad priority / limit (1..5000); 404 unknown asset |
 | GET | `/api/vulns/show?id=[&raw=1]` | `reports.vuln_detail` = `vuln show -f json`: `{id (canonical), query, aliases, summary, severity, cvss_score, records[], kev, epss, affected[], findings[], raw[]?}` | 404 `unknown-vuln` |

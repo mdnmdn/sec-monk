@@ -222,7 +222,8 @@
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     function upsertJob(j) {
       const i = state.jobs.list.findIndex((x) => x.id === j.id);
-      if (i >= 0) state.jobs.list[i] = { ...state.jobs.list[i], ...j };
+      // same id but another start time = another server process (ids restart at 1): replace, never merge
+      if (i >= 0) state.jobs.list[i] = state.jobs.list[i].started === j.started ? { ...state.jobs.list[i], ...j } : j;
       else state.jobs.list.unshift(j);
       state.jobs.list.splice(20);
     }
@@ -238,10 +239,18 @@
       if (polling.has(id)) return;
       polling.add(id);
       try {
+        let failures = 0;
         for (;;) {
           await sleep(1000);
           let j;
-          try { j = await source.job(id); } catch (e) { UI.toast(`Job #${id}: ${e.message}`, "error", 8000); return; }
+          try { j = await source.job(id); failures = 0; } catch (e) {
+            if (++failures < 5) continue;                      // transient: keep polling
+            // server restarted or gone: stop showing the job as running (it would block new jobs forever)
+            const cur = state.jobs.list.find((x) => x.id === id);
+            if (cur) Object.assign(cur, { status: "error", error: `lost track of the job: ${e.message}` });
+            UI.toast(`Job #${id}: ${e.message}`, "error", 8000);
+            return;
+          }
           upsertJob(j);
           if (j.status !== "running") {
             const kind = { ok: "info", partial: "warn" }[j.status] || "error";
@@ -701,7 +710,11 @@
       const store = useStore();
       const route = useRoute();
       const router = useRouter();
-      onMounted(() => { store.state.watch.unseen = 0; });
+      onMounted(() => {
+        store.state.watch.unseen = 0;
+        // event details walk the process tree: load the snapshot like the other monitor views do
+        if (!store.state.snap && !store.state.loading && !store.state.error) store.refresh(false);
+      });
       watch(() => store.state.watch.events.length, () => { if (route.name === "activity") store.state.watch.unseen = 0; });
       const selected = computed(() => route.params.id ? store.state.watch.events.find((e) => String(e.id) === route.params.id) : null);
       const openEvent = (e) => {
@@ -1416,7 +1429,7 @@
       const wantsEco = computed(() => form.sources.includes("osv") || form.sources.includes("all"));
       const busy = computed(() => store.running.value.length > 0);
       const actions = computed(() => !store.state.meta || store.state.meta.actions !== false);
-      const list = (v) => v.split(/[\s,]+/).filter(Boolean);
+      const list = (v) => v.split(",").map((x) => x.trim()).filter(Boolean);   // names may contain spaces (Rocky Linux:9)
       const cli = computed(() => ["secmonk sync", ...(form.sources.length ? form.sources : ["<source>"]),
         ...list(form.ecosystems).map((e) => `-e ${shellArg(e)}`), form.since && `--since ${shellArg(form.since)}`, form.full && "--full",
         form.limit && `-n ${form.limit}`, form.path && `--path ${shellArg(form.path)}`].filter(Boolean).join(" "));
