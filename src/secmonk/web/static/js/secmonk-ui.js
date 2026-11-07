@@ -1,4 +1,5 @@
-/* sec-monk UI kit: formatting helpers, vocabulary (launch kinds, flags, methods) and the base Vue components.
+/* sec-monk UI kit: formatting helpers, vocabulary (launch kinds, flags, methods, severities, jobs) and the base Vue
+ * components.
  *
  * Classic script (no modules, no bundler): needs the global `Vue` (vendored in static/vendor) and defines `window.SecMonkUI`.
  * Loaded unchanged by the app, the _design sample pages and the storybook; every component here has a story in
@@ -25,6 +26,45 @@
     plural(n, word, many) { return `${n} ${n === 1 ? word : (many || word + "s")}`; },
     identity(name, version) { return name ? (version ? `${name} ${version}` : name) : ""; },
     short(s, n = 16) { return s && s.length > n ? s.slice(0, n) + "…" : s || ""; },
+    date(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return isNaN(d) ? String(iso) : d.toLocaleDateString([], { dateStyle: "medium" });
+    },
+    /** "3 h ago", "12 d ago" (falls back to the raw value) */
+    ago(iso) {
+      if (!iso) return "never";
+      const d = new Date(iso);
+      if (isNaN(d)) return String(iso);
+      const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+      if (s < 90) return "just now";
+      if (s < 5400) return `${Math.round(s / 60)} min ago`;
+      if (s < 129600) return `${Math.round(s / 3600)} h ago`;
+      return `${Math.round(s / 86400)} d ago`;
+    },
+    ageDays(iso) { const d = new Date(iso); return iso && !isNaN(d) ? (Date.now() - d.getTime()) / 86400000 : null; },
+    num(n) { return n == null ? "" : Number(n).toLocaleString(); },
+    score(n, digits = 1) { return n == null ? "" : Number(n).toFixed(digits); },
+    pct(n) { return n == null ? "" : `${(Number(n) * 100).toFixed(1)}%`; },
+    /** OSV-style events [{introduced}, {fixed}, ...] + explicit versions -> ">= 2.13.0, < 2.15.0; = 1.2" */
+    ranges(events, versions) {
+      const parts = [];
+      let cur = [];
+      for (const e of events || []) {
+        if (e.introduced != null) { if (cur.length) parts.push(cur.join(", ")); cur = e.introduced === "0" ? [] : [`>= ${e.introduced}`]; }
+        else if (e.introduced_exclusive != null) { if (cur.length) parts.push(cur.join(", ")); cur = [`> ${e.introduced_exclusive}`]; }
+        else if (e.fixed != null) { cur.push(`< ${e.fixed}`); parts.push(cur.join(", ")); cur = []; }
+        else if (e.last_affected != null) { cur.push(`<= ${e.last_affected}`); parts.push(cur.join(", ")); cur = []; }
+        else if (e.limit != null) { cur.push(`< ${e.limit} (limit)`); parts.push(cur.join(", ")); cur = []; }
+      }
+      if (cur.length) parts.push(cur.join(", "));
+      else if ((events || []).length && !parts.length) parts.push("all versions");
+      const vs = versions || [];
+      if (vs.length) parts.push(vs.length > 6 ? `= ${vs.slice(0, 6).join(", ")} … (+${vs.length - 6})` : `= ${vs.join(", ")}`);
+      return parts.join("; ");
+    },
+    /** Only http(s) URLs become links: advisory references are data and could carry javascript: URLs. */
+    safeUrl(u) { return typeof u === "string" && /^https?:\/\//i.test(u) ? u : null; },
   };
 
   // ------------------------------------------------------------------ vocabulary (mirrors collectors/process)
@@ -73,6 +113,40 @@
     "new-launch-item": { label: "new launch item", cls: "warn" },
     "changed-launch-item": { label: "changed launch item", cls: "warn" },
     "removed-launch-item": { label: "removed launch item", cls: "outline" },
+  };
+
+  // ------------------------------------------------------------------ vocabulary (mirrors engine/ and web/jobs.py)
+  const SEVERITY = {
+    CRITICAL: { variant: "p1", label: "critical" }, HIGH: { variant: "p2", label: "high" },
+    MEDIUM: { variant: "p3", label: "medium" }, MODERATE: { variant: "p3", label: "moderate" },
+    LOW: { variant: "p4", label: "low" }, NONE: { variant: "outline", label: "none" },
+  };
+  const PRIORITY_TEXT = {
+    P1: "Fix now: known exploited (KEV), or critical and likely to be exploited.",
+    P2: "Fix soon: high severity or elevated exploitation probability.",
+    P3: "Plan: medium severity, or downgraded by distro triage.",
+    P4: "Low: low severity or minor distro triage.",
+  };
+  const MATCHED_BY = {
+    "osv-package": "Exact package match: ecosystem + package name + version range (OSV).",
+    "cve-product": "Product name match against CVE List affected entries (name-based: see confidence).",
+    "cpe-product": "Product match against NVD CPE applicability (name-based: see confidence).",
+  };
+  const JOB_STATUS = {
+    running: { variant: "live", label: "running" }, ok: { variant: "ok", label: "done" },
+    partial: { variant: "warn", label: "partial" }, error: { variant: "danger", label: "failed" },
+  };
+  /** What to type as the target of each collector (secmonk scan <collector> <target>). */
+  const COLLECTOR_TARGETS = {
+    macos: { placeholder: "(this Mac) or a mounted root, e.g. /Volumes/Backup", optional: true },
+    homebrew: { placeholder: "(default prefix) or e.g. /opt/homebrew", optional: true },
+    rootfs: { placeholder: "/path/to/extracted/rootfs" },
+    fs: { placeholder: "/path/to/project or directory" },
+    "docker-image": { placeholder: "alpine:3.20, image.tar or an OCI layout dir" },
+    "docker-engine": { placeholder: "container name or id (see `secmonk containers`)" },
+    ssh: { placeholder: "user@host[:port]" },
+    windows: { placeholder: "/path/to/inventory.json (from secmonk windows-script)" },
+    process: { placeholder: "(this machine) or a snapshot.json", optional: true },
   };
 
   /** Priority counts from a findings list: [{priority, kev}] -> {P1: n, ..., kev: n} */
@@ -142,6 +216,11 @@
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>',
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
+    play: '<polygon points="5 3 19 12 5 21 5 3"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    external: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><path d="M10 14 21 3"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   };
 
@@ -179,14 +258,48 @@
       {{ priority }}<template v-if="count != null">×{{ count }}</template></span>`,
   };
 
+  /** Findings cell: from a list (findings: [{priority, kev}]) or from counts ({P1..P4, kev}). */
   const SmFindingsSummary = {
     name: "SmFindingsSummary",
-    props: { findings: { type: Array, default: () => [] }, empty: { type: String, default: "" } },
-    computed: { c() { return countFindings(this.findings); } },
+    props: { findings: { type: Array, default: () => [] }, counts: Object, empty: { type: String, default: "" } },
+    computed: {
+      c() {
+        if (!this.counts) return countFindings(this.findings);
+        const c = { P1: 0, P2: 0, P3: 0, P4: 0, kev: 0, ...this.counts };
+        return { ...c, total: c.P1 + c.P2 + c.P3 + c.P4 };
+      },
+    },
     template: `<span class="sm-badges">
       <template v-for="p in ['P1','P2','P3','P4']" :key="p"><sm-priority v-if="c[p]" :priority="p" :count="c[p]"/></template>
       <span v-if="c.kev" class="sm-badge sm-badge--kev" title="Known exploited (CISA KEV)">KEV {{ c.kev }}</span>
       <span v-if="!c.total && empty" class="sm-muted">{{ empty }}</span></span>`,
+  };
+
+  /** Severity label (CRITICAL / HIGH / …) with an optional CVSS score. */
+  const SmSeverity = {
+    name: "SmSeverity",
+    props: { severity: String, score: Number },
+    computed: { info() { return SEVERITY[(this.severity || "").toUpperCase()] || null; } },
+    template: `<span v-if="info || score != null" :class="['sm-badge', 'sm-badge--' + (info ? info.variant : 'outline')]"
+      :title="'Severity ' + (severity || '?') + (score != null ? ' · CVSS ' + score.toFixed(1) : '')">
+      {{ (info ? info.label : 'cvss') + (score != null ? ' ' + score.toFixed(1) : '') }}</span>
+      <span v-else class="sm-muted">—</span>`,
+  };
+
+  /** Stacked bar of open findings per priority. counts: {P1..P4}; legend shows the numbers. */
+  const SmPriorityBar = {
+    name: "SmPriorityBar",
+    props: { counts: { type: Object, default: () => ({}) }, legend: Boolean },
+    computed: {
+      segs() { return ["P1", "P2", "P3", "P4"].map((p) => ({ p, n: this.counts[p] || 0 })).filter((s) => s.n); },
+      total() { return this.segs.reduce((a, s) => a + s.n, 0); },
+    },
+    template: `<span class="sm-pbar-wrap"><span class="sm-pbar" role="img"
+      :aria-label="total ? segs.map(s => s.p + ': ' + s.n).join(', ') : 'no open findings'">
+      <span v-for="s in segs" :key="s.p" :class="['sm-pbar__seg', 'sm-pbar__seg--' + s.p.toLowerCase()]"
+        :style="{ flexGrow: s.n }" :title="s.p + ': ' + s.n"></span><span v-if="!total" class="sm-pbar__none"></span></span>
+      <span v-if="legend" class="sm-pbar__legend"><template v-if="total"><span v-for="s in segs" :key="s.p">{{ s.p }} {{ s.n }}</span></template>
+      <span v-else class="sm-muted">none</span></span></span>`,
   };
 
   const SmLaunchBadge = {
@@ -284,6 +397,45 @@
     template: `<select class="sm-select" :aria-label="label" :value="modelValue"
       @change="$emit('update:modelValue', isNaN(+$event.target.value) ? $event.target.value : +$event.target.value)">
       <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>`,
+  };
+
+  /** Tabs. options: [{value, label, count?}], v-model: value. */
+  const SmTabs = {
+    name: "SmTabs",
+    props: { options: { type: Array, required: true }, modelValue: [String, Number] },
+    emits: ["update:modelValue"],
+    template: `<div class="sm-tabs" role="tablist"><button v-for="o in options" :key="o.value" type="button" role="tab"
+      :class="['sm-tab', o.value === modelValue && 'is-on']" :aria-selected="o.value === modelValue"
+      @click="$emit('update:modelValue', o.value)">{{ o.label }}<span v-if="o.count != null" class="sm-tab__count">{{ o.count }}</span></button></div>`,
+  };
+
+  /** Labelled form control: <sm-field label hint><input class="sm-input"></sm-field>. */
+  const SmField = {
+    name: "SmField",
+    props: { label: String, hint: String, wide: Boolean },
+    template: `<label :class="['sm-field', wide && 'sm-field--wide']"><span class="sm-field__label">{{ label }}</span><slot/>
+      <span v-if="hint" class="sm-field__hint">{{ hint }}</span></label>`,
+  };
+
+  /** A background job (web/jobs.py): status, timing, log; result in the default slot. Emits close if closable. */
+  const SmJob = {
+    name: "SmJob",
+    props: { job: { type: Object, required: true }, log: { type: Boolean, default: true }, closable: Boolean },
+    emits: ["close"],
+    computed: {
+      st() { return JOB_STATUS[this.job.status] || { variant: "outline", label: this.job.status }; },
+      secs() {
+        const a = new Date(this.job.started), b = this.job.finished ? new Date(this.job.finished) : null;
+        return b && !isNaN(a) && !isNaN(b) ? Math.max(0, Math.round((b - a) / 1000)) : null;
+      },
+    },
+    template: `<section class="sm-job"><header class="sm-job__header"><span :class="['sm-badge', 'sm-badge--' + st.variant]">{{ st.label }}</span>
+      <b class="sm-job__title">{{ job.title }}</b><span class="sm-muted">#{{ job.id }} · {{ fmt.time(job.started) }}<template v-if="secs != null"> · {{ secs }} s</template></span>
+      <span class="sm-toolbar__spacer"></span><sm-button v-if="closable" size="sm" variant="ghost" icon-only icon="x" title="Close" @click="$emit('close')"/></header>
+      <div v-if="job.error" class="sm-job__error">{{ job.error }}</div>
+      <pre v-if="log && job.log && job.log.length" class="sm-log">{{ job.log.join('\\n') }}</pre>
+      <div v-if="$slots.default" class="sm-job__result"><slot/></div></section>`,
+    setup() { return { fmt }; },
   };
 
   const SmCard = {
@@ -464,9 +616,10 @@
     </template></nav>`,
   };
 
-  const COMPONENTS = { SmIcon, SmButton, SmBadge, SmPriority, SmFindingsSummary, SmLaunchBadge, SmFlag, SmFlags, SmChip,
-    SmChips, SmSearch, SmSwitch, SmSegmented, SmSelect, SmCard, SmStat, SmKv, SmCopy, SmTable, SmDrawer, SmSection,
-    SmCallout, SmEmpty, SmSpinner, SmChain, SmEventBadge, SmFeedItem, SmPageHeader, SmToasts, SmThemeToggle, SmNav };
+  const COMPONENTS = { SmIcon, SmButton, SmBadge, SmPriority, SmFindingsSummary, SmSeverity, SmPriorityBar, SmLaunchBadge,
+    SmFlag, SmFlags, SmChip, SmChips, SmSearch, SmSwitch, SmSegmented, SmSelect, SmTabs, SmField, SmJob, SmCard, SmStat,
+    SmKv, SmCopy, SmTable, SmDrawer, SmSection, SmCallout, SmEmpty, SmSpinner, SmChain, SmEventBadge, SmFeedItem,
+    SmPageHeader, SmToasts, SmThemeToggle, SmNav };
 
   function install(app) {
     for (const [name, c] of Object.entries(COMPONENTS)) app.component(name, c);
@@ -475,7 +628,7 @@
   }
 
   global.SecMonkUI = Object.assign(global.SecMonkUI || {}, {
-    fmt, LAUNCH, FLAGS, METHODS, EVENTS, ICONS, COMPONENTS, install, toast, dismiss, toasts, theme, applyTheme,
-    countFindings, worstPriority,
+    fmt, LAUNCH, FLAGS, METHODS, EVENTS, SEVERITY, PRIORITY_TEXT, MATCHED_BY, JOB_STATUS, COLLECTOR_TARGETS, ICONS,
+    COMPONENTS, install, toast, dismiss, toasts, theme, applyTheme, countFindings, worstPriority,
   });
 })(window);
