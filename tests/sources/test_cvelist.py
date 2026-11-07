@@ -177,9 +177,10 @@ def test_cve_path():
 
 
 def test_sync_directory_and_limit(conn, cvedir):
+    expected = len(list(cvedir.rglob("CVE-*.json")))  # sync walks sub-folders too
     res = CveListSource().sync(conn, SyncOptions(path=cvedir))
-    assert res.status == "ok" and res.records == 9
-    assert conn.execute("SELECT COUNT(*) FROM vulnerability").fetchone()[0] == 9
+    assert res.status == "ok" and res.records == expected
+    assert conn.execute("SELECT COUNT(*) FROM vulnerability").fetchone()[0] == expected
     # unchanged records are skipped on re-import
     assert CveListSource().sync(conn, SyncOptions(path=cvedir)).records == 0
     assert CveListSource().sync(conn, SyncOptions(path=cvedir, full=True, limit=2)).records == 2

@@ -66,7 +66,8 @@ def _match_package(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
         if not hit and events:
             hit = in_osv_range(check_version, events, scheme)
         if hit:
-            out.append(Match(comp["id"], r["vuln_id"], "osv-package", 1.0,
+            # parsers may lower confidence for weak identification (e.g. jar matched by filename)
+            out.append(Match(comp["id"], r["vuln_id"], "osv-package", float(meta.get("confidence", 1.0)),
                              first_fixed_after(check_version, events, scheme) if events else None))
     return out
 
