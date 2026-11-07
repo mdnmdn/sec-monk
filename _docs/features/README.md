@@ -65,7 +65,7 @@ secmonk match ASSET                     (re)match a stored asset against the cur
 secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
 secmonk containers [--socket PATH] [--all] [-f FMT]   list containers of the local Docker/Podman engine (table)
 secmonk ui                              local web interface on http://127.0.0.1:8765 (phase 1: process monitor)
-    --host H  --port N  --snapshot F (serve a snapshot file)  --open  -o KEY=VAL  --db PATH  --min-confidence F
+    --host H (IPv4/IPv6)  --port N  --allow-host NAME  --snapshot F (serve a snapshot file)  --open  -o KEY=VAL  --db PATH
 secmonk procs [SNAPSHOT.json]           process monitor: tree, launch origin, identity, findings, flags (live macOS by default)
     --flat              one row per process instead of the tree
     -s, --suspicious    only processes with findings or risk flags

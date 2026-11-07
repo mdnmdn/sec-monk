@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import plistlib
-import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -36,13 +35,8 @@ SNAP = PFIX / "snapshot.json"
 
 
 @pytest.fixture
-def root(tmp_path) -> Path:
-    r = tmp_path / "root"
-    shutil.copytree(FIX / "collectors/macos/root", r, symlinks=True)
-    shutil.copytree(PFIX / "root", r, symlinks=True, dirs_exist_ok=True)
-    (r / "usr/local/bin").mkdir(parents=True)
-    shutil.copy(FIX / "lang/go/hello-darwin-arm64", r / "usr/local/bin/hello")
-    return r
+def root(process_root) -> Path:
+    return process_root
 
 
 @pytest.fixture
@@ -437,7 +431,7 @@ def test_cli_procs_errors(monkeypatch):
     assert runner.invoke(app, ["procs", str(SNAP), "--watch", "5"]).exit_code == 2
     monkeypatch.setattr("secmonk.collectors.process.collector.current_platform", lambda: "plan9")
     r = runner.invoke(app, ["procs", "--no-match"])
-    assert r.exit_code == 1 and "not implemented on plan9" in r.output
+    assert r.exit_code == 1 and "not implemented on plan9" in " ".join(r.output.split())
 
 
 def test_cli_procs_watch(root, mirror, monkeypatch):

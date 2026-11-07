@@ -7,7 +7,6 @@ that failed); 2 usage error (unknown source/collector, bad option); 3 `scan --fa
 
 from __future__ import annotations
 
-import configparser
 import contextlib
 import csv
 import io
@@ -15,16 +14,13 @@ import json
 import logging
 import re
 import sqlite3
-import tarfile
 import time
-import zipfile
 from collections.abc import Callable, Iterator
 from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Any
 
-import httpx
 import typer
 from rich.console import Console
 from rich.markup import escape
@@ -35,6 +31,7 @@ from . import db as dbm
 from . import paths
 from .engine import queries
 from .engine.match import canonical_ids
+from .errors import COLLECT_ERRORS
 
 app = typer.Typer(no_args_is_help=True, add_completion=False,
                   help="sec-monk — holistic vulnerability scanner prototype")
@@ -69,8 +66,6 @@ BOOL_OPTS = frozenset({"binaries", "sudo", "all_kegs", "use_brew_cli", "include_
                        "allow_agent", "look_for_keys"})
 LIST_OPTS = frozenset({"exclude", "home", "ecosystems"})
 
-COLLECT_ERRORS = (OSError, RuntimeError, ValueError, KeyError, tarfile.TarError, zipfile.BadZipFile,
-                  httpx.HTTPError, configparser.Error, sqlite3.Error)
 
 
 @app.callback()
@@ -485,6 +480,8 @@ def ui(
     snapshot: Annotated[Path | None, typer.Option(
         "--snapshot", help="Serve a process snapshot file instead of this machine (any OS)")] = None,
     open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the browser")] = False,
+    allow_host: Annotated[list[str] | None, typer.Option(
+        "--allow-host", help="Extra name accepted in the Host header (e.g. the machine's DNS name); repeatable")] = None,
     min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
     opt: OptsOpt = None,
     db: DbOpt = None,
@@ -501,10 +498,12 @@ def ui(
     monitor = ProcessMonitor(db_path=_db_path(db), target=str(snapshot) if snapshot else None,
                              opts=_parse_opts(opt), min_confidence=min_confidence)
     try:
-        srv = make_server(monitor, host, port, mode="snapshot" if snapshot else "live", verbose=_state.verbose)
+        srv = make_server(monitor, host, port, mode="snapshot" if snapshot else "live", verbose=_state.verbose,
+                          allow_hosts=allow_host)
     except OSError as e:
         raise _fail(f"cannot listen on {host}:{port}: {e}") from None
-    url = f"http://{'localhost' if host in ('127.0.0.1', '::1') else host}:{srv.port}/"
+    shown = "localhost" if host in ("127.0.0.1", "::1", "localhost") else (f"[{host}]" if ":" in host else host)
+    url = f"http://{shown}:{srv.port}/"
     console.print(f"sec-monk UI on [bold]{_e(url)}[/] — Ctrl-C to stop")
     if open_browser:
         import webbrowser

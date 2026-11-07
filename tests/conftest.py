@@ -24,6 +24,18 @@ def fixtures() -> Path:
     return FIXTURES
 
 
+@pytest.fixture
+def process_root(tmp_path) -> Path:
+    """The process-collector fixture tree (tests/fixtures/collectors/process/fixture_root.py)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "process_fixture_root", Path(__file__).parent / "fixtures/collectors/process/fixture_root.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.build_root(tmp_path / "root")
+
+
 @pytest.fixture(autouse=True)
 def _isolated_env(tmp_path_factory, monkeypatch):
     """Never touch the developer's real database or cache."""

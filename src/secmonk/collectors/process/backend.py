@@ -31,6 +31,10 @@ INTERPRETERS = re.compile(r"^(python[\d.]*|node|ruby|perl[\d.]*|php[\d.]*|java|o
                           r"pwsh|powershell|wscript|cscript)(\.exe)?$", re.IGNORECASE)
 
 
+class UnsupportedPlatformError(RuntimeError):
+    """No live process backend for this OS (analyse a snapshot file instead)."""
+
+
 @dataclass
 class Resolution:
     """Software identity of one executable."""

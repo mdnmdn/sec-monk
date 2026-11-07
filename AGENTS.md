@@ -81,8 +81,9 @@ design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0009](
 - **One component library**: `static/css/secmonk.css`, `static/js/secmonk-ui.js`, `static/js/secmonk-views.js` are used
   by the app, the `_design` pages and the storybook. Never copy them; a new component gets a story, a new view gets a
   sample page; regenerate `_design/mock/data.js` (`scripts/design_mock.py`) when a payload changes.
-- **Security rules**: render data only with `{{ }}` / bindings (no `v-html`), no inline scripts or styles (CSP), reads are
-  GET, actions are POST with `X-SecMonk-Request: 1`, keep the `Host` check. The server stays stdlib-only.
+- **Security rules**: render data only with `{{ }}` / bindings (no `v-html`), no inline scripts or styles (CSP): no static
+  `style=""` attributes (use classes; `:style` bindings only for computed values), reads are GET, actions are POST, every
+  `/api/` call carries `X-SecMonk-Request: 1`, keep the `Host` check. The server stays stdlib-only.
 - Payloads are built by functions shared with the CLI's JSON output (`procmon.snapshot_payload`, `event_dict`), not
   re-shaped in the server.
 

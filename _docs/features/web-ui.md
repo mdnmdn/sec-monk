@@ -56,8 +56,9 @@ Design system, sample pages and the component storybook: [`_design/`](../../_des
   classic scripts; the design pages work from `file://`. No Node toolchain needed to run or change it.
 - **One component library**: the CSS and the Vue components used by the app are the very files used by the design sample
   pages and the storybook (no copies).
-- **Secure by default for a local tool**: loopback bind, `Host` header check (DNS rebinding), state-changing requests
-  need a custom header (CSRF), strict Content-Security-Policy, all data rendered as text (no `v-html`).
+- **Secure by default for a local tool**: loopback bind, `Host` header check (DNS rebinding; `--allow-host` for extra
+  names when bound to another interface), every API request needs a custom header (CSRF), strict Content-Security-Policy,
+  all data rendered as text (no `v-html`).
 - Responsive down to a laptop split screen (1024 px); usable at phone width for reading. Light and dark themes
   (`prefers-color-scheme`, manual toggle). Keyboard reachable (focus styles, `Esc` closes the drawer, `/` focuses search).
 - Long lists: up to ~2000 processes without pagination (tree collapse, filtering client side).

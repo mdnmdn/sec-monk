@@ -15,7 +15,9 @@ from typing import Any
 
 from .. import db as dbm
 from .. import procmon
+from ..collectors.process.backend import UnsupportedPlatformError
 from ..collectors.process.collector import ProcessCollector
+from ..errors import COLLECT_ERRORS
 
 
 class ApiError(Exception):
@@ -39,6 +41,7 @@ class ProcessMonitor:
         self.matched = False
         self.dirty = False          # views changed by a watch tick: rebuild inventory + match on next payload()
         self.watcher: procmon.Watcher | None = None
+        self.pending: list[procmon.Event] = []   # changes found by a refresh while watching, sent on the next tick
 
     # ------------------------------------------------------------------ helpers
     @property
@@ -48,7 +51,7 @@ class ProcessMonitor:
     def _collect_error(self, e: Exception) -> ApiError:
         msg = f"{type(e).__name__}: {e}"
         hint = None
-        if "not implemented" in str(e):
+        if isinstance(e, UnsupportedPlatformError):
             hint = ("Live process snapshots exist only on macOS so far. Start the UI with a snapshot file: "
                     "secmonk ui --snapshot snap.json (take one on a Mac with `secmonk procs --snapshot-out snap.json`).")
         return ApiError(503, msg, hint)
@@ -75,14 +78,17 @@ class ProcessMonitor:
         return inv
 
     def _analyse(self) -> None:
-        from ..cli import COLLECT_ERRORS
-
         try:
             snap, inspector, views = self.collector.analyse(self.target, **self.opts)
         except COLLECT_ERRORS as e:
             raise self._collect_error(e) from e
         self.snap, self.inspector, self.views = snap, inspector, views
-        self.watcher = None                                  # a new baseline
+        if self.watcher is not None:
+            # watching: diff the refreshed snapshot against the watch baseline instead of starting a new one, so a
+            # change that happened just before the refresh is still reported (on the next watch tick)
+            self.watcher.inspector = inspector
+            _, events = self.watcher.tick(snap)
+            self.pending.extend(events)
         self._rematch()
 
     def _rematch(self) -> None:
@@ -104,8 +110,6 @@ class ProcessMonitor:
 
     def watch(self) -> dict[str, Any]:
         """One watch tick. The first call primes the watcher with the current snapshot (no events)."""
-        from ..cli import COLLECT_ERRORS
-
         with self.lock:
             if self.snap is None:
                 self._analyse()
@@ -118,6 +122,7 @@ class ProcessMonitor:
             except COLLECT_ERRORS as e:
                 raise self._collect_error(e) from e
             views, events = self.watcher.tick(snap)
+            events, self.pending = self.pending + events, []
             fmap: dict = {}
             fresh = [e.data["view"] for e in events if e.kind in ("new-executable", "changed-executable")]
             if fresh:

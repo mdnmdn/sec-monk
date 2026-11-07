@@ -194,7 +194,7 @@
     props: { kind: { type: String, required: true }, detail: String },
     computed: { info() { return LAUNCH[this.kind] || LAUNCH.unknown; } },
     template: `<span :class="['sm-badge', 'sm-badge--kind', 'sm-badge--k-' + (kind in $options.LAUNCH ? kind : 'unknown')]"
-      :title="info.text">{{ info.label }}<span v-if="detail" class="sm-muted" style="font-weight:500">&nbsp;{{ detail }}</span></span>`,
+      :title="info.text">{{ info.label }}<span v-if="detail" class="sm-badge__detail">{{ detail }}</span></span>`,
     LAUNCH,
   };
 
@@ -354,7 +354,7 @@
       onBeforeUnmount(() => document.removeEventListener("keydown", onKey));
     },
     template: `<aside :class="['sm-drawer', inline && 'sm-drawer--inline']" role="dialog" :aria-label="title">
-      <header class="sm-drawer__header"><div style="flex:1;min-width:0"><div class="sm-drawer__title">{{ title }}</div>
+      <header class="sm-drawer__header"><div class="sm-drawer__heading"><div class="sm-drawer__title">{{ title }}</div>
       <div v-if="subtitle || $slots.subtitle" class="sm-drawer__subtitle"><slot name="subtitle">{{ subtitle }}</slot></div></div>
       <slot name="actions"/><sm-button variant="ghost" icon-only icon="x" title="Close (Esc)" @click="$emit('close')"/></header>
       <div class="sm-drawer__body"><slot/></div></aside>`,

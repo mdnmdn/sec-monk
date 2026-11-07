@@ -23,7 +23,7 @@ from typing import Any
 from ...models import CAT_EXECUTABLE, Asset, Component, Inventory
 from ..base import Collector, register
 from . import snapshot as snapfile
-from .backend import Inspector, Resolution, backend_for, current_platform
+from .backend import Inspector, Resolution, UnsupportedPlatformError, backend_for, current_platform
 from .launch import LaunchClassifier
 from .model import (
     LAUNCH_AGENT,
@@ -233,7 +233,7 @@ class ProcessCollector(Collector):
         plat = current_platform()
         backend = backend_for(plat)
         if backend.take_snapshot is None:
-            raise RuntimeError(f"process: live snapshots are not implemented on {plat} yet "
+            raise UnsupportedPlatformError(f"process: live snapshots are not implemented on {plat} yet "
                                f"(analyse a {snapfile.SCHEMA} file instead)")
         snap = backend.take_snapshot(Path(opts.get("root") or "/"), opts)
         if opts.get("snapshot_out"):

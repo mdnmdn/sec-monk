@@ -43,18 +43,20 @@ scripts/design_mock.py ──> runs ProcessMonitor on the fixtures ──> _desi
 | `static/js/secmonk-ui.js` | vocabulary (launch kinds, flags, methods, events), formatting, toasts, theme, base components |
 | `static/js/secmonk-views.js` | `ApiSource` / `MockSource`, store, `NAV`, `ROUTES`, views, `mountApp()` |
 | `static/vendor/` | Vue and Vue Router global builds + LICENSE, `MANIFEST.json` (sha256), README; written by `scripts/vendor_web.py` |
-| `cli.py` `ui` | `secmonk ui [--host] [--port] [--snapshot F] [--open] [-o k=v] [--db]` |
+| `cli.py` `ui` | `secmonk ui [--host] [--port] [--allow-host NAME] [--snapshot F] [--open] [-o k=v] [--db]` |
+| `errors.py` | `COLLECT_ERRORS`, the collector error group shared by the CLI (exit 1) and the API (503) |
 
 ## API (phase 1)
 
-All responses are JSON; errors are `{"error": "...", "hint": "..."}` with a meaningful status.
+All responses are JSON; errors are `{"error": "...", "hint": "..."}` with a meaningful status. **Every** `/api/`
+request must send `X-SecMonk-Request: 1` (403 otherwise), reads included: `watch` and `refresh` change server state.
 
 | Method | Path | Returns | Notes |
 |---|---|---|---|
 | GET | `/api/meta` | `{version, mode, platform, db{path, exists}, bind, features[]}` | `features` tells the client which areas are live |
 | GET | `/api/processes` | snapshot payload (below) | cached; `?refresh=1` takes a new snapshot; a watch tick marks it stale and the next call re-matches |
-| GET | `/api/processes/watch` | `{events[], taken_at, baseline}` | first call primes the watcher (no events); each later call = one tick |
-| POST | `/api/processes/save` | `{asset, scan_id, stats}` | needs `X-SecMonk-Request: 1`; persists `process:<host>` + findings, creates the DB if needed |
+| GET | `/api/processes/watch` | `{events[], taken_at, baseline}` | first call primes the watcher (no events); each later call = one tick. A refresh while watching is diffed against the watch baseline and its changes are delivered on the next tick |
+| POST | `/api/processes/save` | `{asset, scan_id, stats}` | persists `process:<host>` + findings, creates the DB if needed |
 
 Snapshot payload (`procmon.snapshot_payload`): `asset, host, platform, os, taken_at, source (live | snapshot), matched,
 summary{processes, components, launch_kinds{}, with_findings, flagged, launch_items, missing_programs}, processes[]`
@@ -62,16 +64,16 @@ summary{processes, components, launch_kinds{}, with_findings, flagged, launch_it
 flags), `launch_items[]` (with `kind`, `running_pids`, `missing_program`), `warnings[]`. Watch events are
 `procmon.event_dict` (the same JSON as `secmonk procs --watch -f json`).
 
-Errors: live snapshot not available on this OS -> 503 with a hint to use `--snapshot`; collector errors -> 503;
+Errors: live snapshot not available on this OS (`UnsupportedPlatformError`) -> 503 with a hint to use `--snapshot`; collector errors -> 503;
 anything unexpected -> 500 with the exception type and message (never a traceback page).
 
 ## Security (local, no authentication)
 
 | Threat | Mitigation |
 |---|---|
-| Other machines on the network | bind `127.0.0.1` by default; `--host` elsewhere prints a warning |
-| DNS rebinding (a web page resolving its name to 127.0.0.1) | `Host` must be `127.0.0.1:<port>`, `localhost:<port>`, `[::1]:<port>` or the bind address, else 421 |
-| CSRF (a web page posting to localhost) | mutations are POST + `X-SecMonk-Request: 1`; a custom header forces a CORS preflight, which the server never answers |
+| Other machines on the network | bind `127.0.0.1` by default; `--host` elsewhere (IPv4 or IPv6) prints a warning |
+| DNS rebinding (a web page resolving its name to 127.0.0.1) | `Host` (name and port) must be a loopback name, the bind address, a name given with `--allow-host`, or, when bound to a wildcard (`0.0.0.0`, `::`), any IP literal or this machine's hostname; else 421. A rebinding page always sends its own domain name |
+| CSRF / cross-site requests to localhost | every `/api/` request needs `X-SecMonk-Request: 1` (GETs too: a page could otherwise advance the watcher and steal its events, or force snapshots); a custom header forces a CORS preflight, which the server never answers; mutations are also POST |
 | XSS from collected data (process names, paths, plist values) | only `{{ }}` / attribute bindings; the single `v-html` renders static icon paths from `secmonk-ui.js`; CSP `script-src 'self' 'unsafe-eval'` (no inline, no external origin), `style-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` |
 | Tampered or swapped third-party code | libraries vendored from the npm registry after sha512 integrity verification; sha256 per file in `static/vendor/MANIFEST.json`, checked by the tests |
 | Path traversal on static files | resolved under `static/` only, else 404 |
@@ -90,15 +92,17 @@ anything unexpected -> 500 with the exception type and message (never a tracebac
 - **Store** (`createStore(source)`): `snap`, `meta`, loading / saving / error, `watch{on, interval, events, unseen}`,
   `stale` (events since the snapshot). Views read it through `inject("store")`.
 - **Sources**: `ApiSource()` (server) and `MockSource(data)` (design / storybook). Both return the same shapes.
-- **Routing**: hash history; list filters in the query (`useQueryState`), details as route params, so every state is a
-  URL. Planned areas are routes too, rendered by `PlannedView` with the CLI command to use today.
+- **Routing**: hash history; list filters in the query (`useQueryState`, re-read whenever the query changes, so sidebar
+  links and back / forward update the filters), details as route params with stable keys (pid, `name@version@category`,
+  `label|plist`), so every state is a URL. Planned areas are routes too, rendered by `PlannedView` with the CLI command to use today.
 - **Styling**: tokens on `:root`, dark theme via `prefers-color-scheme` or `data-theme`; BEM-like `sm-block__el--mod`
-  and `is-*` states; no inline styles beyond a few layout one-offs.
+  and `is-*` states; spacing utilities (`sm-mt-*`, `sm-mb-*`, `sm-ml-*`). No static `style=""` attributes; `:style`
+  bindings only for computed values (tree depth custom property, column widths), applied through the CSSOM.
 
 ## Adding a feature (later phases)
 
 1. **API**: a handler object like `ProcessMonitor` in `web/api.py` (or a new module) that calls the existing engine /
-   queries; routes in `server.py` (GET for reads, POST + CSRF header for actions); payload builders next to the
+   queries; routes in `server.py` (GET for reads, POST for actions; the CSRF header is enforced for all of `/api/`); payload builders next to the
    CLI code so `--format json` and the UI share them; tests in `tests/test_web.py`.
 2. **Client**: methods on `ApiSource` and `MockSource`; store state if the data is shared across views; a view component
    in `secmonk-views.js` following the page anatomy (page header → context → toolbar → content → drawer); add the route

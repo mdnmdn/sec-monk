@@ -13,8 +13,8 @@ and KEV styling is shown in the storybook instead.
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -23,7 +23,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from secmonk.collectors.process import snapshot as snapfile
-from secmonk.collectors.process.model import LaunchItem, ProcessRecord
+from secmonk.collectors.process.model import LaunchItem
 from secmonk.db import connect
 from secmonk.sources.base import add_affected, upsert_vulnerability
 from secmonk.web.api import ProcessMonitor
@@ -33,12 +33,11 @@ OUT = REPO / "_design/mock/data.js"
 
 
 def build_root(tmp: Path) -> Path:
-    root = tmp / "root"
-    shutil.copytree(FIX / "collectors/macos/root", root, symlinks=True)
-    shutil.copytree(FIX / "collectors/process/root", root, symlinks=True, dirs_exist_ok=True)
-    (root / "usr/local/bin").mkdir(parents=True)
-    shutil.copy(FIX / "lang/go/hello-darwin-arm64", root / "usr/local/bin/hello")
-    return root
+    """The shared fixture tree (tests/fixtures/collectors/process/fixture_root.py, also used by the tests)."""
+    spec = importlib.util.spec_from_file_location("process_fixture_root", FIX / "collectors/process/fixture_root.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.build_root(tmp / "root")
 
 
 def build_mirror(db: Path) -> None:
@@ -65,26 +64,24 @@ def main() -> None:
         tmp = Path(t)
         root = build_root(tmp)
         build_mirror(tmp / "mirror.db")
-        mon = ProcessMonitor(db_path=tmp / "mirror.db", target=str(FIX / "collectors/process/snapshot.json"),
-                             opts={"root": str(root)})
-        snapshot = mon.payload()
-        mon.watch()                                               # baseline
-        later = snapfile.load(FIX / "collectors/process/snapshot.json")
-        later.processes += [ProcessRecord(910, 1, "/usr/local/bin/hello", uid=501, user="alice", started="2026-11-07T10:04:10"),
-                            ProcessRecord(911, 1, "/Users/alice/Library/Application Support/Sync/syncd", uid=501, user="alice")]
+        src = FIX / "collectors/process/snapshot.json"
+        snapshot = ProcessMonitor(db_path=tmp / "mirror.db", target=str(src), opts={"root": str(root)}).payload()
+
+        # watch events: a second monitor starts from a baseline in which pid 404 runs zsh (not the Go binary), then
+        # one tick sees hello start, syncd replaced on disk, the updater plist re-pointed and a new LaunchAgent
+        base = snapfile.load(src)
+        next(p for p in base.processes if p.pid == 404).exe = "/bin/zsh"
+        snapfile.dump(base, tmp / "base.json")
+        later = snapfile.load(src)
         later.launch_items[0].program = "/Users/alice/Downloads/updater-helper"
         later.launch_items.append(LaunchItem("launchd-agent", "com.example.newagent", "/Users/alice/.local/bin/agent",
                                              source="/Users/alice/Library/LaunchAgents/com.example.newagent.plist",
                                              scope="user:alice", run_at_load=True))
+        snapfile.dump(later, tmp / "later.json")
+        mon = ProcessMonitor(db_path=tmp / "mirror.db", target=str(tmp / "base.json"), opts={"root": str(root)})
+        mon.watch()                                               # baseline
         (root / "Users/alice/Library/Application Support/Sync/syncd").write_text("#!/bin/sh\n# replaced\nexec sleep 1\n")
-        for p in later.processes:                                 # hello first seen in the tick
-            if p.pid == 404:
-                p.exe = "/bin/zsh"
-        mon.snap.processes = [p for p in mon.snap.processes if p.pid != 404]
-        mon.watcher.seen_exes.pop("/usr/local/bin/hello", None)
-        snap2 = tmp / "later.json"
-        snapfile.dump(later, snap2)
-        mon.target = str(snap2)
+        mon.target = str(tmp / "later.json")
         events = mon.watch()["events"]
     meta = {"version": "0.1.0", "mode": "snapshot", "platform": "darwin", "bind": "http://127.0.0.1:8765",
             "db": {"path": "~/.local/share/secmonk/secmonk.db", "exists": True}, "features": ["processes"]}

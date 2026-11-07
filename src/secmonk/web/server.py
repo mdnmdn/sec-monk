@@ -2,9 +2,11 @@
 
 Local and unauthenticated by design, hardened for that setting:
   * binds 127.0.0.1 unless told otherwise;
-  * `Host` header must be one of the addresses we listen on (blocks DNS-rebinding pages from reaching the API);
-  * state-changing endpoints are POST and need `X-SecMonk-Request: 1` (a cross-origin page cannot add that header
-    without a CORS preflight, which is never answered);
+  * `Host` header must name this server: a loopback name, the bind address, an IP literal when bound to a wildcard
+    address, or a name passed with `--allow-host` (blocks DNS-rebinding pages, whose Host is their own domain);
+  * every `/api/` request needs `X-SecMonk-Request: 1`, reads included: some GETs change state (watch ticks, refresh)
+    and a cross-origin page cannot add that header without a CORS preflight, which is never answered. Mutations are
+    POST on top of that;
   * strict Content-Security-Policy; static files resolved inside the static directory only.
 
 Routes: GET / (app), GET /static/*, GET /api/meta, GET /api/processes[?refresh=1], GET /api/processes/watch,
@@ -13,8 +15,10 @@ POST /api/processes/save. See _docs/tech/web-ui.md.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import mimetypes
+import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,22 +37,59 @@ CSP = ("default-src 'self'; "
 CSRF_HEADER = "X-SecMonk-Request"
 
 
+LOOPBACK_NAMES = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _split_host(value: str) -> tuple[str, int | None]:
+    """'Host' header -> (name, port): 'localhost:8765', '[::1]:8765', 'example'."""
+    value = value.strip().lower()
+    if value.startswith("["):
+        name, _, rest = value[1:].partition("]")
+        port = rest[1:] if rest.startswith(":") else ""
+    else:
+        name, _, port = value.rpartition(":") if value.count(":") == 1 else (value, "", "")
+    return name, int(port) if port.isdigit() else None
+
+
+def _is_ip(name: str) -> bool:
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        return False
+
+
 class UIServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, addr: tuple[str, int], monitor: ProcessMonitor, *, mode: str):
+    def __init__(self, addr: tuple[str, int], monitor: ProcessMonitor, *, mode: str,
+                 allow_hosts: list[str] | None = None):
+        if ":" in addr[0]:
+            self.address_family = socket.AF_INET6        # instance attribute, read by TCPServer.__init__
         super().__init__(addr, Handler)
         self.monitor = monitor
         self.mode = mode
         host, port = self.server_address[:2]
         self.port = port
-        names = {"127.0.0.1", "localhost", "[::1]", host if ":" not in host else f"[{host}]"}
-        self.allowed_hosts = {f"{n}:{port}" for n in names}
+        self.wildcard = host in ("0.0.0.0", "::")
+        # names a browser may legitimately send in Host; an attacker's rebinding domain is never among them
+        self.allowed_names = set(LOOPBACK_NAMES) | {host.lower()} | {h.lower() for h in allow_hosts or []}
+        if self.wildcard:
+            hn = socket.gethostname().lower()
+            self.allowed_names |= {hn, hn.split(".")[0], f"{hn.split('.')[0]}.local"}
+
+    def host_allowed(self, header: str) -> bool:
+        name, port = _split_host(header)
+        if port != self.port or not name:
+            return False
+        # a wildcard bind answers on every interface: any IP literal is ours (rebinding needs a domain name)
+        return name in self.allowed_names or (self.wildcard and _is_ip(name))
 
     @property
     def bind(self) -> str:
-        return f"http://{self.server_address[0]}:{self.port}"
+        host = self.server_address[0]
+        return f"http://{f'[{host}]' if ':' in host else host}:{self.port}"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -81,10 +122,17 @@ class Handler(BaseHTTPRequestHandler):
         self._json(status, {"error": message, **({"hint": hint} if hint else {})})
 
     def _host_ok(self) -> bool:
-        host = (self.headers.get("Host") or "").lower()
-        if host in self.server.allowed_hosts:
+        if self.server.host_allowed(self.headers.get("Host") or ""):
             return True
-        self._error(421, "unexpected Host header", "the UI only answers on the address it listens on")
+        self._error(421, "unexpected Host header",
+                    "the UI only answers on the address it listens on (add names with `secmonk ui --allow-host`)")
+        return False
+
+    def _api_ok(self, path: str) -> bool:
+        """Every /api/ call must carry the custom header (CSRF), GETs included: watch / refresh change state."""
+        if not path.startswith("/api/") or self.headers.get(CSRF_HEADER) == "1":
+            return True
+        self._error(403, f"missing {CSRF_HEADER} header")
         return False
 
     # ------------------------------------------------------------------ verbs
@@ -93,6 +141,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         url = urlsplit(self.path)
         path, query = url.path, parse_qs(url.query)
+        if not self._api_ok(path):
+            return
         try:
             if path in ("/", "/index.html"):
                 return self._static("index.html")
@@ -115,9 +165,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._host_ok():
             return
-        if self.headers.get(CSRF_HEADER) != "1":
-            return self._error(403, f"missing {CSRF_HEADER} header")
         path = urlsplit(self.path).path
+        if not path.startswith("/api/"):
+            return self._error(404, "not found")
+        if not self._api_ok(path):
+            return
         try:
             if path == "/api/processes/save":
                 return self._json(200, self.server.monitor.save())
@@ -158,8 +210,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def make_server(monitor: ProcessMonitor, host: str = "127.0.0.1", port: int = 8765, *, mode: str = "live",
-                verbose: bool = False) -> UIServer:
-    srv = UIServer((host, port), monitor, mode=mode)
+                verbose: bool = False, allow_hosts: list[str] | None = None) -> UIServer:
+    srv = UIServer((host, port), monitor, mode=mode, allow_hosts=allow_hosts)
     srv.verbose = verbose  # type: ignore[attr-defined]
     return srv
 

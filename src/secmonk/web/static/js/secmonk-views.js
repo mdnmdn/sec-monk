@@ -19,14 +19,16 @@
 
   /** Talks to `secmonk ui` (src/secmonk/web/server.py). */
   function ApiSource(base = "") {
+    // every API call carries X-SecMonk-Request (the server's CSRF check covers GETs too: watch / refresh change state)
     async function call(path, opts = {}) {
-      const res = await fetch(base + path, { headers: { Accept: "application/json", ...(opts.headers || {}) }, ...opts });
+      const headers = { Accept: "application/json", "X-SecMonk-Request": "1", ...(opts.headers || {}) };
+      const res = await fetch(base + path, { ...opts, headers });
       let body = null;
       try { body = await res.json(); } catch (e) { /* non-JSON error page */ }
       if (!res.ok) throw new ApiError((body && body.error) || `HTTP ${res.status}`, res.status, body && body.hint);
       return body;
     }
-    const post = (path) => call(path, { method: "POST", headers: { "X-SecMonk-Request": "1" } });
+    const post = (path) => call(path, { method: "POST" });
     return {
       kind: "api",
       meta: () => call("/api/meta"),
@@ -183,6 +185,8 @@
       }
     };
     read();
+    // the same view re-entered with another query (sidebar link, back / forward) must show that query's filters
+    watch(() => route.query, read);
     watch(() => ({ ...s }), (v) => {
       const q = { ...route.query };
       for (const [k, d] of Object.entries(defaults)) {
@@ -211,7 +215,7 @@
         <div class="sm-muted">Reading processes, launch items and identities; matching against the local mirror.</div></div>
       <sm-callout v-else-if="store.state.error" variant="error" :title="store.state.error.message">
         <div v-if="store.state.error.hint">{{ store.state.error.hint }}</div>
-        <div style="margin-top:8px"><sm-button size="sm" icon="refresh" @click="store.refresh()">Try again</sm-button></div></sm-callout>
+        <div class="sm-mt-2"><sm-button size="sm" icon="refresh" @click="store.refresh()">Try again</sm-button></div></sm-callout>
     </div><slot v-else :snap="store.state.snap"/>`,
   };
 
@@ -278,7 +282,7 @@
       <div v-if="row.script" class="sm-muted">runs script <sm-copy :value="row.script"/></div>
 
       <sm-section title="Launch" icon="rocket">
-        <div style="margin-bottom:8px"><sm-launch-badge :kind="row.launch"/></div>
+        <div class="sm-mb-2"><sm-launch-badge :kind="row.launch"/></div>
         <sm-kv :rows="[
           { label: 'Mechanism', value: row.mechanism },
           { label: 'Job label', value: row.label, mono: true },
@@ -287,9 +291,9 @@
           { label: 'Evidence', value: row.evidence },
           { label: 'Parent', value: row.parent_exe || (store.byPid.value.get(row.ppid) || {}).exe, mono: true },
         ]"/>
-        <div v-if="chain.length > 1" style="margin-top:10px"><div class="sm-muted" style="margin-bottom:4px">Ancestry</div>
+        <div v-if="chain.length > 1" class="sm-mt-3"><div class="sm-muted sm-mb-1">Ancestry</div>
           <sm-chain :items="chain" @pick="$emit('open', $event)"/></div>
-        <div v-if="children.length" style="margin-top:10px"><div class="sm-muted" style="margin-bottom:4px">Children ({{ children.length }})</div>
+        <div v-if="children.length" class="sm-mt-3"><div class="sm-muted sm-mb-1">Children ({{ children.length }})</div>
           <sm-chain :items="children.slice(0, 20).map(c => ({ key: c.pid, label: c.process + ' (' + c.pid + ')' }))" @pick="$emit('open', $event)"/></div>
       </sm-section>
 
@@ -299,7 +303,7 @@
           { label: 'Category', value: row.category },
           { label: 'Method', value: row.identity_method && (row.identity_method + ' — ' + (METHODS[row.identity_method] || '')) },
         ]"/>
-        <table v-if="components.length > 1" class="sm-table sm-table--static" style="margin-top:10px">
+        <table v-if="components.length > 1" class="sm-table sm-table--static sm-mt-3">
           <thead><tr><th>Component</th><th>Version</th><th>Category</th><th>Findings</th></tr></thead>
           <tbody><tr v-for="c in components" :key="c.name + c.version"><td>{{ c.name }}</td><td class="sm-mono">{{ c.version }}</td>
             <td>{{ c.category }}</td><td><sm-findings-summary :findings="c.findings_detail" empty="—"/></td></tr></tbody></table>
@@ -485,7 +489,7 @@
           <sm-kv :rows="[{ label: 'Package URL', value: selected.purl, copy: true }, { label: 'Vendor', value: selected.vendor },
             { label: 'Product', value: selected.product }, { label: 'Identified by', value: METHODS[selected.resolution] },
             { label: 'Embedded in', value: selected.via_executable, mono: true }, { label: 'Users', value: selected.users.join(', ') }]"/>
-          <sm-section title="Executables" icon="file"><div v-for="e in selected.executables" :key="e" style="margin-bottom:4px"><sm-copy :value="e"/></div></sm-section>
+          <sm-section title="Executables" icon="file"><div v-for="e in selected.executables" :key="e" class="sm-mb-1"><sm-copy :value="e"/></div></sm-section>
           <sm-section title="Processes" icon="cpu"><sm-chain :items="selected.pids.map(p => ({ key: p, label: ((store.byPid.value.get(p) || {}).process || '?') + ' (' + p + ')' }))"
             @pick="p => $router.push('/processes/' + p)"/></sm-section>
           <sm-section title="Findings" icon="alert">
@@ -506,7 +510,8 @@
       const route = useRoute();
       const router = useRouter();
       const f = useQueryState({ q: "", kind: [], running: false, problems: false });
-      const list = computed(() => (store.state.snap?.launch_items || []).map((it, i) => ({ ...it, key: `${i}:${it.label}` })));
+      // stable key (label + defining file): deep links survive refreshes and re-sorting
+      const list = computed(() => (store.state.snap?.launch_items || []).map((it) => ({ ...it, key: `${it.label}|${it.source || ""}` })));
       const kindOptions = computed(() => {
         const c = {};
         for (const it of list.value) c[it.kind] = (c[it.kind] || 0) + 1;
@@ -534,8 +539,8 @@
         <sm-table :columns="columns" :rows="rows" row-key="key" :selected="selected && selected.key" label="Launch items" @select="open">
           <template #cell-label="{ row }"><span class="sm-mono">{{ row.label }}</span></template>
           <template #cell-kind="{ row }"><sm-launch-badge :kind="row.kind" :title="row.mechanism"/></template>
-          <template #cell-program="{ row }"><span class="sm-mono sm-truncate" style="display:inline-block;max-width:380px" :title="row.program">{{ row.program }}</span>
-            <sm-badge v-if="row.missing_program" variant="danger" style="margin-left:6px">missing</sm-badge></template>
+          <template #cell-program="{ row }"><span class="sm-mono sm-truncate sm-cell-path" :title="row.program">{{ row.program }}</span>
+            <sm-badge v-if="row.missing_program" variant="danger" class="sm-ml-2">missing</sm-badge></template>
           <template #cell-opts="{ row }"><span class="sm-badges"><sm-badge v-if="row.run_at_load" variant="outline">run at load</sm-badge>
             <sm-badge v-if="row.keep_alive" variant="outline">keep alive</sm-badge><sm-badge v-if="row.disabled" variant="outline">disabled</sm-badge></span></template>
           <template #cell-running="{ row }"><span v-if="row.running_pids.length" class="sm-badge sm-badge--ok">pid {{ row.running_pids.join(', ') }}</span>
@@ -599,7 +604,7 @@
     name: "PlannedView",
     setup() { const route = useRoute(); return { p: computed(() => PLANNED[route.meta.nav] || {}) }; },
     template: `<div class="sm-page"><sm-page-header :title="p.title" subtitle="Planned for a later phase."/>
-      <div class="sm-placeholder"><sm-card title="What this view will show" icon="info"><p style="margin-top:0">{{ p.text }}</p>
+      <div class="sm-placeholder"><sm-card title="What this view will show" icon="info"><p class="sm-mt-0">{{ p.text }}</p>
         <div class="sm-muted">Available today from the command line:</div><pre>{{ p.cli }}</pre>
         <div class="sm-muted">See <code>_docs/features/README.md</code> for every command.</div></sm-card></div></div>`,
   };
