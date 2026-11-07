@@ -86,6 +86,8 @@ Other bundled runtimes: `Contents/Frameworks/Python.framework`, `Contents/Resour
 
 ### Homebrew
 
+> The filesystem walk now lives in the standalone [Homebrew collector](homebrew.md) (active kegs only, casks, vendored packages, Linuxbrew); `macos.py` calls `collect_prefixes()` and keeps the cask <-> app dedupe. The notes below are the original format research.
+
 **Formula receipt** (`INSTALL_RECEIPT.json`; fixtures `root/opt/homebrew/Cellar/{openssl@3/3.3.1,curl/8.7.1}/`).
 Relevant keys: `source.tap` ("homebrew/core"), `source.versions.stable`, `installed_on_request`,
 `installed_as_dependency`, `runtime_dependencies[]` (`full_name`, `version`, `pkg_version`,
@@ -171,16 +173,16 @@ Note `homebrew/core` is also available as the public JSON API `https://formulae.
 
 ## Implementation notes
 
-Code: `src/secmonk/collectors/macos.py` (`MacOSCollector`, `parse_brew_info_json`, `parse_system_profiler_json`); tests `tests/collectors/test_macos.py` (fixture tree only; still synthetic).
+Code: `src/secmonk/collectors/macos.py` (`MacOSCollector`, `parse_system_profiler_json`; `parse_brew_info_json` re-exported from `homebrew.py`); tests `tests/collectors/test_macos.py` (fixture tree only; still synthetic).
 
 **Collected**
 - OS: `macOS` (`os`, vendor apple, meta.build) plus the asset (`macos:<hostname>`, `desktop`).
 - Apps: `/Applications` (depth <= 3), `<home>/Applications`, `/System/Applications` (`system-app`, skipped with `include_system=False`). Purl `pkg:generic/<vendor_hint>/<name>@<ver>?bundle_id=...`; `meta.vendor_hint` comes from the bundle id, `vendor` is set later by classify.
 - Bundled runtimes (`runtime`): Electron (`pkg:npm/electron@<v>`, so OSV npm applies), Chromium Embedded Framework and Sparkle (`pkg:generic/...`), each with `meta.embedded_in`.
-- Homebrew (filesystem walk of `opt/homebrew` and `usr/local`, or `brew info --json=v2` with `use_brew_cli`): formulae `package` with `pkg:brew/[<tap>/]<name>@<ver>` (`@` percent-encoded, `homebrew/core` namespace omitted per purl-spec default, `_N` revision stripped, raw in `meta.brew_version`); casks `application` with `pkg:brew/homebrew/cask/<token>@<ver>`.
+- Homebrew: see [homebrew.md](homebrew.md) (`collect_prefixes`; or `brew info --json=v2` with `use_brew_cli`). Formulae are `package` with `pkg:brew/[<tap>/]<name>@<pkg_version>` (`@` percent-encoded, `homebrew/core` namespace omitted), only the **active** keg, `version` = upstream version (`_N` stripped, raw in `meta.brew_version`); casks `application` with `pkg:brew/homebrew/cask/<token>@<ver>`; vendored PyPI/npm packages as `library` components.
 - pkgutil receipts: `package`, `pkg:generic/<id>@<ver>`, `meta.pkg_id`; `com.apple.*` only with `include_system`.
 - Optional `system_profiler` JSON export (`opts["system_profiler"]`), added only for apps not already found.
 
-**Dedupe rule**: a cask is not emitted when an app bundle matches its `artifacts.app` name, token or display name (normalized, alphanumerics only); the app gets `meta.also_cask=<token>`. Casks without an installed app stay as separate components.
+**Dedupe rule**: a cask is not emitted when an app bundle matches its app name, token, display name (normalized, alphanumerics only) or `uninstall quit:` bundle id; the app gets `meta.also_cask=<token>`. Casks without an installed app stay as separate components.
 
-**Known gaps**: stale non-Apple receipts are not flagged low-confidence; Apple system apps keep their bundle version (not mapped to the macOS release); Linuxbrew, MacPorts, nested helper apps, `latest` cask versions (not resolved from the app) are not handled; all plist errors become `Inventory.warnings`.
+**Known gaps**: stale non-Apple receipts are not flagged low-confidence; Apple system apps keep their bundle version (not mapped to the macOS release); MacPorts and nested helper apps are not handled; a `latest` cask without an app bundle has no version; all plist errors become `Inventory.warnings`.

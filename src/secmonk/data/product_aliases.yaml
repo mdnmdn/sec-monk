@@ -137,3 +137,62 @@ products:
   - vendor: apple
     product: macos
     names: [macos, mac os x, os x]
+
+  # ---- windows (DisplayName after collectors/windows.py normalization, Chocolatey/Scoop ids)
+  # Vendor/product spelling checked against real CVE List records where marked [cna]; [nvd] = from
+  # NVD CPE knowledge only (unverified from the sandbox). CNA and NVD sometimes disagree on the vendor
+  # ("win.rar GmbH" vs rarlab) -- the matcher drops candidates with a different vendor.
+  - vendor: 7-zip                       # [cna] CVE-2024-11477 / CVE-2025-0411 (zdi)
+    product: 7-zip
+    names: [7-zip, 7zip]
+  - vendor: notepad-plus-plus           # [cna] CVE-2025-49144 (GitHub_M)
+    product: notepad-plus-plus
+    names: [notepad++, notepadplusplus, notepad-plus-plus]
+  - vendor: win.rar gmbh                # [cna] CVE-2025-8088 (ESET); NVD uses rarlab:winrar
+    product: winrar
+    names: [winrar, win.rar]
+  - vendor: putty                       # [nvd] putty:putty (older CVEs: simon_tatham:putty)
+    product: putty
+    names: [putty]
+  - vendor: wireshark                   # [nvd] wireshark:wireshark; CNA (GitLab) lists wireshark foundation + per-tool products
+    product: wireshark
+    names: [wireshark]
+  - vendor: adobe                       # [cna] Adobe CNA uses "Acrobat Reader"; plain "Acrobat" is [unverified]
+    product: acrobat
+    names: [adobe acrobat, adobe acrobat dc, acrobat dc]
+  - vendor: microsoft                   # [cna] CVE-2024-38021, CVE-2025-24057: "Microsoft 365 Apps for Enterprise" (version bound is a URL, see windows.md)
+    product: microsoft 365 apps for enterprise
+    names: [microsoft 365 apps for enterprise, microsoft 365 apps for business, microsoft 365 apps, microsoft office 365 proplus]
+  - vendor: microsoft                   # [cna] CVE-2025-26682 cpeApplicability: microsoft:visual_studio_2022
+    product: visual studio 2022
+    cpe_product: visual_studio_2022
+    names: [visual studio community 2022, visual studio professional 2022, visual studio enterprise 2022, visual studio buildtools 2022, visual studio build tools 2022]
+  - vendor: microsoft                   # [cna] CVE-2025-21172 cpeApplicability: microsoft:visual_studio_2019
+    product: visual studio 2019
+    cpe_product: visual_studio_2019
+    names: [visual studio community 2019, visual studio professional 2019, visual studio enterprise 2019, visual studio build tools 2019]
+  - vendor: microsoft                   # [cna] "Visual Studio Code" (CVE-2024-43601); DisplayName has a "(User)" suffix for per-user installs
+    product: visual studio code
+    names: [microsoft visual studio code, microsoft visual studio code (user)]
+  - vendor: videolan
+    product: vlc media player
+    cpe_product: vlc_media_player
+    names: [vlc media player]
+  - vendor: mozilla
+    product: thunderbird
+    names: [mozilla thunderbird]
+  - vendor: the document foundation     # [cna] CVE-2024-3044
+    product: libreoffice
+    names: [libreoffice]
+  - vendor: oracle corporation          # [cna] CVE-2024-21111: "VM VirtualBox"
+    product: vm virtualbox
+    names: [oracle vm virtualbox, virtualbox, oracle virtualbox]
+  - vendor: gimp                        # [cna] CVE-2023-44444
+    product: gimp
+    names: [gimp]
+  - vendor: google                      # Chocolatey ids
+    product: chrome
+    names: [googlechrome]
+  - vendor: python                      # Chocolatey ids; DisplayName "Python 3.12.4 (64-bit)" -> "Python"
+    product: python
+    names: [python3, python launcher]

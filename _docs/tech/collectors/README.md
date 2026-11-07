@@ -16,6 +16,7 @@ the shared engine does ([vision](../../product/vision.md) §6: *different collec
 | Collector | Doc | Target | Status |
 |---|---|---|---|
 | macOS | [macos.md](macos.md) | `.app` bundles, Homebrew (formulae + casks), pkgutil receipts | implemented (fixture-tested on Linux) |
+| Homebrew | [homebrew.md](homebrew.md) | Homebrew/Linuxbrew prefix: active kegs, casks, vendored PyPI/npm packages, upstream identity (also used by macOS) | implemented |
 | Docker image | [docker-image.md](docker-image.md) | Image from registry, `docker save` tarball, or OCI layout → OS packages + language packages | implemented |
 | Docker engine | [docker-engine.md](docker-engine.md) | Running containers via the Docker Engine API (unix socket) | implemented |
 | SSH (agentless) | [ssh.md](ssh.md) | `user@host[:port]` Linux/macOS: harvests metadata files over SSH, then reuses rootfs/macOS collectors | implemented (fixture + in-process sshd tested) |

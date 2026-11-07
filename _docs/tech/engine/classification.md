@@ -41,10 +41,22 @@ matcher can use. It is idempotent and runs before components are stored.
    arch/edition noise, years) in the curated **alias table** `src/secmonk/data/product_aliases.yaml`.
    Hit → `vendor`, `meta.product`, `meta.product_source=alias-table`, and a CPE 2.3 string.
    Miss → `meta.product = normalized name`, `product_source=normalized-name` (lower confidence).
+   **Homebrew formulae** (`meta.brew_kind=formula`) get a precedence of their own, evaluated before the generic lookup
+   (`_classify_brew_formula`); `meta.product_source` and the base confidence the matcher gives it:
+
+   | `product_source` | Rule | Confidence |
+   |---|---|---|
+   | `brew-seed` | formula name (full, incl. `@N`) is in `src/secmonk/data/brew_cpe_seed.csv` (evidence `cve-affected` > `repo-url` > `manual`); first row = `vendor` + `meta.product` + CPE, other rows -> `meta.vendor_alts` / `meta.product_alts` | 0.85 |
+   | `alias-table` | alias table hit (as above) | 0.8 |
+   | `brew-name-vendor` | not in seed/alias and a vendor guess exists (`upstream_repo` org, else homepage domain): `product` = formula name minus `@N`, `meta.vendor_hint` = guess, `vendor` stays empty (the matcher checks it) | 0.7 |
+   | `normalized-name` | fallback; for brew formulae generic names collide (`portal`, `cobalt`, `dex`, `gh`, `hub`) | 0.4 (0.5 otherwise) |
+
+   The seed is packaged data (hatch includes everything under `src/secmonk`); regenerate it from newer CVE List years
+   ([references/homebrew.md](../../references/homebrew.md)).
 4. `secmonk inventory unmatched` lists components that fell back to the normalized name — the
    work queue for growing the alias table (vision §6.1 "name → CPE resolver" R&D).
 
 ## Next steps
 
 - Use NVD CPE dictionary for fuzzy name → CPE resolution with a similarity score.
-- Use bundle-id vendor hints and Homebrew `homepage` URLs as extra evidence.
+- Use bundle-id vendor hints as extra evidence (Homebrew `homepage`/`upstream_repo` hints are already used: `brew-name-vendor`).

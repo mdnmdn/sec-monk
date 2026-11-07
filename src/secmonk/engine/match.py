@@ -7,8 +7,10 @@ Strategies (see _docs/tech/engine/matching.md):
      confidence 1.0
   2. `cve-product`  — applications / brew formulae / runtimes / the OS: product-name lookup in
      CNA `affected` (range_type CVE) and NVD/CNA CPE rows (range_type CPE), generic-ish version
-     comparison. confidence 0.8 with alias-table identity, 0.5 with a normalized name only;
-     vendor mismatch drops the candidate.
+     comparison. base confidence by `meta.product_source`: brew-seed 0.85, alias-table 0.8,
+     brew-name-vendor 0.7, normalized-name 0.5 (0.4 for brew formulae); vendor mismatch drops the
+     candidate (vendor known) or lowers it (vendor only guessed: meta.vendor_hint).
+     Findings whose CVE is in `meta.patched_cves` (Homebrew formula backports) are dropped ("patched").
 
 Findings are de-duplicated on a canonical id (the CVE alias when one exists) and enriched with
 CVSS/EPSS/KEV, then prioritized (engine/scoring.py).
@@ -16,6 +18,7 @@ CVSS/EPSS/KEV, then prioritized (engine/scoring.py).
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from dataclasses import dataclass, field
 
@@ -74,8 +77,32 @@ def _match_package(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
     return out
 
 
+# base confidence of a name-based match by how the component's product identity was derived
+# (engine/classify.py sets meta.product_source); see _docs/tech/engine/matching.md
+PRODUCT_SOURCE_CONFIDENCE = {"brew-seed": 0.85, "alias-table": 0.8, "brew-name-vendor": 0.7,
+                             "normalized-name": 0.5}
+BREW_NORMALIZED_NAME_CONFIDENCE = 0.4      # generic formula names collide (portal, cobalt, dex, gh, hub...)
+
+
+def _base_confidence(meta: dict) -> float:
+    src = meta.get("product_source")
+    if src == "normalized-name" and meta.get("brew_kind") == "formula":
+        return BREW_NORMALIZED_NAME_CONFIDENCE
+    return PRODUCT_SOURCE_CONFIDENCE.get(src, 0.5)
+
+
+def _vendor_consistent(row_vendor: str, hint: str) -> bool:
+    """Loose vendor agreement ('tukaani-project' ~ 'tukaani', 'curl' ~ 'haxx' is NOT): equal after
+    removing punctuation, or one contains the other (>= 4 chars)."""
+    a, b = (re.sub(r"[^a-z0-9]", "", x.lower()) for x in (row_vendor, hint))
+    return bool(a and b and (a == b or (min(len(a), len(b)) >= 4 and (a in b or b in a))))
+
+
 def _product_candidates(meta: dict, name: str) -> set[str]:
     cands = {meta.get("product")} if meta.get("product") else set()
+    cands.update(meta.get("product_alts") or [])
+    if meta.get("brew_name"):       # normalize_product_name turns 'docker-compose' into 'docker compose'
+        cands.add(re.sub(r"@[\d.]+$", "", str(meta["brew_name"]).lower()))
     from .classify import normalize_product_name
 
     cands.add(normalize_product_name(name))
@@ -89,7 +116,9 @@ def _match_product(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
     meta = loads(comp["meta"], {})
     products = _product_candidates(meta, comp["name"])
     vendor = (comp["vendor"] or "").lower() or None
-    base_conf = 0.8 if meta.get("product_source") == "alias-table" else 0.5
+    vendors = ({vendor} | {v.lower() for v in meta.get("vendor_alts") or []}) if vendor else set()
+    hint = None if vendor else meta.get("vendor_hint")      # guessed from upstream repo/homepage
+    base_conf = _base_confidence(meta)
     scheme = "generic"
     rows = conn.execute(
         f"""SELECT vuln_id, vendor, product, range_type, events, versions, status FROM affected
@@ -98,13 +127,16 @@ def _match_product(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
     ).fetchall()
     out: list[Match] = []
     for r in rows:
-        if vendor and r["vendor"] and r["vendor"] != vendor:
+        if vendor and r["vendor"] and r["vendor"] not in vendors:
             continue
         if r["status"] != "affected":
             continue
         events = loads(r["events"], [])
         versions = loads(r["versions"], [])
         conf = base_conf if (vendor and r["vendor"]) else base_conf - 0.2
+        if hint and r["vendor"]:
+            # vendor guess: agreeing vendor = full confidence, a different vendor lowers it by 0.2 more
+            conf = base_conf if _vendor_consistent(r["vendor"], hint) else base_conf - 0.4
         if not is_parseable(version, scheme):
             conf -= 0.2
         hit = version in versions
@@ -207,8 +239,12 @@ def match_asset(conn: sqlite3.Connection, asset_id: str, min_confidence: float =
 
     ts = now()
     seen_keys = set()
-    stats = {"components": len(comps), "matches": len(matches), "findings": 0, "withdrawn": 0}
+    stats = {"components": len(comps), "matches": len(matches), "findings": 0, "withdrawn": 0, "patched": 0}
+    patched = {c["id"]: {x.upper() for x in loads(c["meta"], {}).get("patched_cves") or []} for c in comps}
     for (comp_id, canon), m in merged.items():
+        if patched.get(comp_id) and patched[comp_id] & (m.advisories | {canon}):
+            stats["patched"] += 1          # fixed by a Homebrew formula patch (`patch ... resolves CVE-x`)
+            continue
         facts = _vuln_facts(conn, m.advisories | {canon})
         if facts["withdrawn"]:
             stats["withdrawn"] += 1

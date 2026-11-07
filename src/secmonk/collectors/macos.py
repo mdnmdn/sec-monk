@@ -28,10 +28,15 @@ from ..models import (
     Inventory,
 )
 from .base import Collector, register
+from .homebrew import (  # noqa: F401  (re-exported for backwards compatibility)
+    _cask_apps,
+    _cask_component,
+    _formula_component,
+    collect_prefixes,
+    parse_brew_info_json,
+)
 
 MAX_APP_DEPTH = 3
-BREW_PREFIXES = ("opt/homebrew", "usr/local")
-_REVISION = re.compile(r"_\d+$")
 
 # bundled frameworks reported as runtimes: dir name -> (component name, bundle id, purl type)
 _FRAMEWORKS = {
@@ -64,69 +69,6 @@ def _rel(path: Path, root: Path) -> str:
         return "/" + path.relative_to(root).as_posix()
     except ValueError:
         return str(path)
-
-
-def _brew_purl(kind: str, name: str, version: str | None, tap: str | None) -> str:
-    if kind == "cask":
-        return purls.build("brew", name, version, namespace="homebrew/cask")
-    if tap and tap.lower() != "homebrew/core":
-        return purls.build("brew", name, version, namespace=tap.lower())
-    return purls.build("brew", name, version)
-
-
-def _formula_component(name: str, raw_version: str, tap: str | None, **meta: Any) -> Component:
-    version = _REVISION.sub("", raw_version)
-    m = {"brew_name": name, "brew_kind": "formula", "brew_version": raw_version, "tap": tap}
-    m.update({k: v for k, v in meta.items() if v is not None})
-    return Component(name=name, version=version, category=CAT_PACKAGE,
-                     purl=_brew_purl("formula", name, version, tap), meta=m)
-
-
-def _cask_component(token: str, version: str | None, names: list[str] | None = None,
-                    homepage: str | None = None, apps: list[str] | None = None,
-                    tap: str | None = None) -> Component:
-    display = (names or [None])[0] or token
-    meta = {"brew_name": token, "brew_kind": "cask", "brew_version": version,
-            "homepage": homepage, "cask_apps": apps or [], "tap": tap}
-    return Component(name=display, version=version, category=CAT_APPLICATION,
-                     purl=_brew_purl("cask", token, version, tap), meta={k: v for k, v in meta.items() if v})
-
-
-def _cask_apps(artifacts: list) -> list[str]:
-    out: list[str] = []
-    for a in artifacts or []:
-        if isinstance(a, dict):
-            for app in a.get("app", []) or []:
-                if isinstance(app, str):
-                    out.append(app)
-    return out
-
-
-def parse_brew_info_json(data: dict) -> list[Component]:
-    """Components from `brew info --json=v2 --installed` output."""
-    comps: list[Component] = []
-    for f in data.get("formulae", []) or []:
-        name = f.get("name")
-        installed = f.get("installed") or []
-        for inst in installed:
-            ver = inst.get("version")
-            if not name or not ver:
-                continue
-            comp = _formula_component(
-                name, ver, f.get("tap"),
-                installed_on_request=inst.get("installed_on_request"),
-                runtime_dependencies=len(inst.get("runtime_dependencies") or []),
-                homepage=f.get("homepage"), license=f.get("license"),
-                source_url=((f.get("urls") or {}).get("stable") or {}).get("url"),
-            )
-            comps.append(comp)
-    for c in data.get("casks", []) or []:
-        token = c.get("token")
-        if not token or not c.get("installed"):
-            continue
-        comps.append(_cask_component(token, c.get("installed") or c.get("version"), c.get("name"),
-                                     c.get("homepage"), _cask_apps(c.get("artifacts")), c.get("tap")))
-    return comps
 
 
 def parse_system_profiler_json(data: dict) -> list[Component]:
@@ -212,7 +154,8 @@ class MacOSCollector(Collector):
             except Exception as e:  # noqa: BLE001
                 warnings.append(f"brew CLI failed, using filesystem walk: {e}")
         if not brew:
-            brew = self._walk_brew(root, warnings)
+            brew, brew_warnings = collect_prefixes(root, opts)
+            warnings.extend(brew_warnings)
 
         # dedupe casks against app bundles
         app_comps = [a for a in apps if a.category in (CAT_APPLICATION, CAT_SYSTEM_APP)
@@ -223,6 +166,8 @@ class MacOSCollector(Collector):
                 match = self._match_app(b, app_comps)
                 if match is not None:
                     match.meta["also_cask"] = b.meta["brew_name"]
+                    if b.meta.get("auto_updates"):
+                        match.meta["cask_auto_updates"] = True    # bundle version is the truth
                     continue
             kept_brew.append(b)
 
@@ -338,61 +283,15 @@ class MacOSCollector(Collector):
                              source_path=_rel(p, root), meta={k: x for k, x in meta.items() if x})
         return None
 
-    def _walk_brew(self, root: Path, warnings: list[str]) -> list[Component]:
-        out: list[Component] = []
-        for pfx in BREW_PREFIXES:
-            prefix = root / pfx
-            cellar = prefix / "Cellar"
-            if cellar.is_dir():
-                for formula in sorted(cellar.iterdir()):
-                    if not formula.is_dir():
-                        continue
-                    for vdir in sorted(formula.iterdir()):
-                        receipt = vdir / "INSTALL_RECEIPT.json"
-                        if not vdir.is_dir() or not receipt.is_file():
-                            continue
-                        try:
-                            r = json.loads(receipt.read_text())
-                        except Exception as e:  # noqa: BLE001
-                            warnings.append(f"cannot read {_rel(receipt, root)}: {e}")
-                            continue
-                        c = _formula_component(
-                            formula.name, vdir.name, (r.get("source") or {}).get("tap"),
-                            installed_on_request=r.get("installed_on_request"),
-                            runtime_dependencies=len(r.get("runtime_dependencies") or []),
-                            homebrew_version=r.get("homebrew_version"))
-                        c.source_path = _rel(vdir, root)
-                        out.append(c)
-            caskroom = prefix / "Caskroom"
-            if caskroom.is_dir():
-                for cask in sorted(caskroom.iterdir()):
-                    if not cask.is_dir() or cask.name.startswith("."):
-                        continue
-                    for vdir in sorted(cask.iterdir()):
-                        if not vdir.is_dir() or vdir.name.startswith("."):
-                            continue
-                        names = homepage = tap = None
-                        apps: list[str] = []
-                        for jf in sorted(cask.glob(f".metadata/{vdir.name}/*/Casks/{cask.name}.json")):
-                            try:
-                                j = json.loads(jf.read_text())
-                                names, homepage, tap = j.get("name"), j.get("homepage"), j.get("tap")
-                                apps = _cask_apps(j.get("artifacts"))
-                            except Exception as e:  # noqa: BLE001
-                                warnings.append(f"cannot read {_rel(jf, root)}: {e}")
-                        if not apps:
-                            apps = [p.name for p in vdir.glob("*.app")]
-                        c = _cask_component(cask.name, vdir.name, names, homepage, apps, tap)
-                        c.source_path = _rel(vdir, root)
-                        out.append(c)
-        return out
-
     @staticmethod
     def _match_app(cask: Component, apps: list[Component]) -> Component | None:
         keys = {_norm(a) for a in cask.meta.get("cask_apps", [])}
         keys.add(_norm(cask.meta["brew_name"]))
         keys.add(_norm(cask.name))
+        bundle_ids = set(cask.meta.get("cask_bundle_ids") or [])
         for app in apps:
+            if bundle_ids and app.meta.get("bundle_id") in bundle_ids:
+                return app
             bundle_name = Path(app.source_path or "").stem
             if keys & {_norm(app.name), _norm(bundle_name)}:
                 return app

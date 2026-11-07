@@ -18,13 +18,21 @@ related: [tech/engine/classification.md, tech/data-model.md]
 | Strategy (`matched_by`) | Applies to | Lookup | Version semantics | Confidence |
 |---|---|---|---|---|
 | `osv-package` | `library`, `os-package` with an ecosystem | `affected.ecosystem = component.ecosystem AND package IN (name, meta.source_package)`; range types ECOSYSTEM / SEMVER / VERSIONS | ecosystem-specific via `univers` (Debian, RPM, Alpine, PEP 440, semver, Maven, Go…) on `meta.source_version` if present | 1.0 |
-| `cve-product` / `cpe-product` | everything else (apps, brew, runtimes, OS) | `affected.product IN (meta.product, normalized name)` with range types CVE / CPE; vendor must match when both known | generic tolerant comparator | 0.8 (alias table) / 0.5 (normalized name), −0.2 without vendor confirmation, −0.2 unparseable version |
+| `cve-product` / `cpe-product` | everything else (apps, brew, runtimes, OS) | `affected.product IN (meta.product, normalized name)` with range types CVE / CPE; vendor must match when both known | generic tolerant comparator | base by `meta.product_source`: `brew-seed` 0.85, `alias-table` 0.8, `brew-name-vendor` 0.7, `normalized-name` 0.5 (0.4 for brew formulae); −0.2 without vendor confirmation, −0.2 unparseable version; with `meta.vendor_hint` (no `vendor`): a row vendor consistent with the hint keeps the base, a different one is −0.4 |
 
 Distro backports are handled by construction: OS packages only ever match distro ecosystems,
 never upstream CVE ranges (vision §7).
 
 RPM versions are compared as `epoch:version-release` (collectors always emit an epoch, `0:` by
 default) because OSV RPM fixed versions carry an epoch.
+
+Vendor handling: a known `vendor` drops rows of another vendor (any of `meta.vendor_alts` is accepted; `meta.product_alts`
+extend the product lookup). A guessed `meta.vendor_hint` (brew formulae, bundle ids) never drops rows; it raises/lowers
+confidence. "Consistent" = equal after removing punctuation, or one contains the other (>= 4 chars).
+
+**Formula-patched CVEs**: `meta.patched_cves` (Homebrew `patch ... resolves "CVE-x"`, see
+[homebrew collector](../collectors/homebrew.md)) removes the finding for those CVE ids (any alias); counted as `patched` in the
+match stats. A Homebrew `3.6.4_1` can be fixed although upstream `3.6.4` is in the CVE range.
 
 ## Canonicalization & dedupe
 

@@ -10,6 +10,7 @@ adds what can be derived centrally:
 
 from __future__ import annotations
 
+import csv
 import re
 from functools import lru_cache
 from importlib import resources
@@ -68,15 +69,18 @@ def classify(c: Component) -> Component:
 
     # 2) product identity for name-based matching (applications, brew, runtimes, os)
     if c.category not in (CAT_LIBRARY, CAT_OS_PACKAGE) or not c.ecosystem:
+        if c.meta.get("brew_kind") == "formula" and _classify_brew_formula(c):
+            return c
         aliases = product_aliases()
         hit = None
-        for key in (c.meta.get("bundle_id"), c.meta.get("brew_name"), c.name):
+        # product_hint: collector-cleaned name (e.g. Windows DisplayName without version/arch tags)
+        for key in (c.meta.get("bundle_id"), c.meta.get("brew_name"), c.meta.get("product_hint"), c.name):
             if key and key.lower() in aliases:
                 hit = aliases[key.lower()]
                 break
         if hit is None:
             norm = normalize_product_name(c.name)
-            hit = aliases.get(norm)
+            hit = aliases.get(norm) or aliases.get(normalize_product_name(c.meta.get("product_hint") or ""))
         if hit:
             c.vendor = c.vendor or hit["vendor"]
             c.meta["product"] = hit["product"]
@@ -86,6 +90,89 @@ def classify(c: Component) -> Component:
                 cpe_product = hit.get("cpe_product", hit["product"]).replace(" ", "_")
                 c.cpe = f"cpe:2.3:{part}:{hit['vendor'].replace(' ', '_')}:{cpe_product}:{c.version}:*:*:*:*:*:*:*"
         else:
-            c.meta.setdefault("product", normalize_product_name(c.name))
+            c.meta.setdefault("product", c.meta.get("product_hint") or normalize_product_name(c.name))
             c.meta.setdefault("product_source", "normalized-name")
     return c
+
+
+# --------------------------------------------------------------------------- Homebrew formulae
+# Identity precedence for brew formulae (see _docs/tech/engine/classification.md):
+#   brew-seed > alias-table > brew-name-vendor > normalized-name.
+# alias-table and normalized-name are produced by the generic code in classify(); this block handles
+# the two brew-specific sources and returns False when the generic code should decide.
+
+_SEED_EVIDENCE_RANK = {"cve-affected": 0, "repo-url": 1, "manual": 2}
+_GENERIC_HOST_LABELS = frozenset({"github", "gitlab", "sourceforge", "pypi", "npmjs", "readthedocs",
+                                  "wordpress", "bitbucket", "codeberg", "sf"})
+
+
+@lru_cache(maxsize=1)
+def brew_seed() -> dict[str, list[dict]]:
+    """formula -> candidate rows [{vendor, product, evidence}], best evidence first."""
+    text = resources.files("secmonk.data").joinpath("brew_cpe_seed.csv").read_text()
+    out: dict[str, list[dict]] = {}
+    for row in csv.DictReader(text.splitlines()):
+        f = (row.get("formula") or "").strip().lower()
+        if f and row.get("vendor") and row.get("product"):
+            out.setdefault(f, []).append({"vendor": row["vendor"].strip().lower(),
+                                          "product": row["product"].strip().lower(),
+                                          "evidence": (row.get("evidence") or "").strip()})
+    for rows in out.values():
+        rows.sort(key=lambda r: _SEED_EVIDENCE_RANK.get(r["evidence"], 9))
+    return out
+
+
+def brew_vendor_guess(meta: dict) -> str | None:
+    """Vendor token from the upstream forge org (preferred) or the homepage domain."""
+    repo = meta.get("upstream_repo")
+    if repo:
+        host, _, path = repo.partition("/")
+        if host == "sourceforge.net":
+            return path.rsplit("/", 1)[-1] or None
+        org = path.split("/")[0]
+        if org:
+            return org.lower()
+    homepage = meta.get("homepage") or ""
+    m = re.match(r"^[a-z]+://([^/:?#]+)", homepage.lower())
+    if not m:
+        return None
+    labels = m.group(1).removeprefix("www.").split(".")
+    if len(labels) >= 3 and labels[-2:] == ["github", "io"]:
+        return labels[0]
+    if len(labels) < 2:
+        return None
+    label = labels[-3] if len(labels) >= 3 and labels[-2] in ("co", "com", "org", "net", "ac", "gov") \
+        else labels[-2]
+    return None if label in _GENERIC_HOST_LABELS else label
+
+
+def _classify_brew_formula(c: Component) -> bool:
+    name = str(c.meta.get("brew_name") or c.name).lower()
+    rows = brew_seed().get(name)
+    if rows:
+        first = rows[0]
+        c.vendor = c.vendor or first["vendor"]
+        c.meta["product"] = first["product"]
+        c.meta["product_source"] = "brew-seed"
+        c.meta["brew_seed_evidence"] = first["evidence"]
+        alts_v = sorted({r["vendor"] for r in rows} - {c.vendor})
+        alts_p = sorted({r["product"] for r in rows} - {first["product"]})
+        if alts_v:
+            c.meta["vendor_alts"] = alts_v
+        if alts_p:
+            c.meta["product_alts"] = alts_p
+        if c.version and not c.cpe:
+            c.cpe = (f"cpe:2.3:a:{c.vendor.replace(' ', '_')}:{first['product'].replace(' ', '_')}:"
+                     f"{c.version}:*:*:*:*:*:*:*")
+        return True
+    aliases = product_aliases()
+    if any(k and k.lower() in aliases for k in (c.meta.get("brew_name"), c.name)) \
+            or normalize_product_name(c.name) in aliases:
+        return False                                   # alias-table (generic code)
+    hint = brew_vendor_guess(c.meta)
+    if hint:
+        c.meta["product"] = re.sub(r"@[\d.]+$", "", name)   # formula name minus @N, hyphens kept
+        c.meta["product_source"] = "brew-name-vendor"
+        c.meta["vendor_hint"] = hint                   # matcher: row vendor must agree, else lower
+        return True
+    return False                                       # normalized-name (generic code)

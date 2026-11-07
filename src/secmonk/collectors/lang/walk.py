@@ -48,9 +48,11 @@ def _applicable(rel: str, head: bytes, binaries: bool) -> list[base.LangParser]:
 
 
 def walk_dir(root: str | Path, *, limits: WalkLimits | None = None, rootfs: bool = False,
-             path_prefix: str = "") -> LangResult:
+             path_prefix: str = "", match_prefix: str = "") -> LangResult:
     """Parse every dependency file under `root`. Paths in results are relative to root,
-    prefixed by `path_prefix` (e.g. '/' for rootfs-style absolute display)."""
+    prefixed by `path_prefix` (e.g. '/' for rootfs-style absolute display).
+    `match_prefix` is prepended to the relative path for parser selection only, when `root` is
+    itself a directory the parsers key on (e.g. 'node_modules/' when root is a node_modules dir)."""
     from . import _ensure_loaded
 
     _ensure_loaded()
@@ -63,7 +65,7 @@ def walk_dir(root: str | Path, *, limits: WalkLimits | None = None, rootfs: bool
         dirs[:] = sorted(d for d in dirs if d not in limits.skip_dirs
                          and not (rootfs and rel_dir == "" and d in SKIP_ROOT_DIRS))
         for fn in sorted(files):
-            rel = f"{rel_dir}/{fn}" if rel_dir else fn
+            rel = match_prefix + (f"{rel_dir}/{fn}" if rel_dir else fn)
             if not base.wants(rel):
                 continue
             full = os.path.join(dirpath, fn)
@@ -90,7 +92,7 @@ def walk_dir(root: str | Path, *, limits: WalkLimits | None = None, rootfs: bool
                 res.warnings.append(f"{rel}: {e}")
                 continue
             comps, warns = base.parse_file(rel, data)
-            display = path_prefix + rel
+            display = path_prefix + rel[len(match_prefix):]
             for c in comps:
                 if c.source_path == rel or not c.source_path:
                     c.source_path = display
