@@ -1,0 +1,198 @@
+# Curated alias table: how locally-observed names map to the vendor/product spelling used by
+# CVE records (CNA `affected`) and NVD CPEs. Matching is case-insensitive.
+#   names       — app/display names and normalized forms (see classify.normalize_product_name)
+#   bundle_ids  — macOS CFBundleIdentifier
+#   brew        — Homebrew formula / cask names
+#   product     — normalized product as found in CVE `affected` / CPE (underscores -> spaces)
+#   cpe_product — CPE spelling if different (underscores kept)
+# Grow this table from real scans: `secmonk inventory unmatched` lists candidates.
+products:
+  # ---- browsers
+  - vendor: google
+    product: chrome
+    names: [google chrome, chrome]
+    bundle_ids: [com.google.Chrome]
+    brew: [google-chrome]
+  - vendor: mozilla
+    product: firefox
+    names: [firefox, mozilla firefox]
+    bundle_ids: [org.mozilla.firefox]
+    brew: [firefox]
+  - vendor: mozilla
+    product: thunderbird
+    names: [thunderbird]
+    bundle_ids: [org.mozilla.thunderbird]
+    brew: [thunderbird]
+  - vendor: microsoft
+    product: edge chromium
+    cpe_product: edge_chromium
+    names: [microsoft edge]
+    bundle_ids: [com.microsoft.edgemac]
+    brew: [microsoft-edge]
+  - vendor: apple
+    product: safari
+    names: [safari]
+    bundle_ids: [com.apple.Safari]
+  - vendor: brave
+    product: brave browser
+    names: [brave browser]
+    bundle_ids: [com.brave.Browser]
+    brew: [brave-browser]
+  # ---- dev tools
+  - vendor: microsoft
+    product: visual studio code
+    names: [visual studio code, code]
+    bundle_ids: [com.microsoft.VSCode]
+    brew: [visual-studio-code]
+  - vendor: docker
+    product: desktop
+    names: [docker desktop, docker]
+    bundle_ids: [com.docker.docker]
+    brew: [docker-desktop, docker]
+  - vendor: jetbrains
+    product: intellij idea
+    names: [intellij idea, intellij idea ce]
+    bundle_ids: [com.jetbrains.intellij, com.jetbrains.intellij.ce]
+  - vendor: git-scm
+    product: git
+    names: [git]
+    brew: [git]
+  # ---- communication / office
+  - vendor: slack
+    product: slack
+    names: [slack]
+    bundle_ids: [com.tinyspeck.slackmacgap]
+    brew: [slack]
+  - vendor: zoom
+    product: zoom
+    names: [zoom.us, zoom, zoom workplace]
+    bundle_ids: [us.zoom.xos]
+    brew: [zoom]
+  - vendor: microsoft
+    product: teams
+    names: [microsoft teams]
+    bundle_ids: [com.microsoft.teams2, com.microsoft.teams]
+    brew: [microsoft-teams]
+  - vendor: microsoft
+    product: office
+    names: [microsoft word, microsoft excel, microsoft powerpoint, microsoft outlook]
+    bundle_ids: [com.microsoft.Word, com.microsoft.Excel, com.microsoft.Powerpoint, com.microsoft.Outlook]
+  - vendor: adobe
+    product: acrobat reader
+    names: [adobe acrobat reader, adobe acrobat reader dc, acrobat reader]
+    bundle_ids: [com.adobe.Reader]
+    brew: [adobe-acrobat-reader]
+  - vendor: videolan
+    product: vlc media player
+    cpe_product: vlc_media_player
+    names: [vlc]
+    bundle_ids: [org.videolan.vlc]
+    brew: [vlc]
+  - vendor: 1password
+    product: 1password
+    names: [1password, 1password 7, 1password 8]
+    bundle_ids: [com.1password.1password]
+  # ---- runtimes / frameworks
+  - vendor: electronjs
+    product: electron
+    names: [electron, electron framework]
+    brew: [electron]
+  - vendor: oracle
+    product: jdk
+    names: [java, jdk]
+  # ---- common brew formulae (upstream projects)
+  - vendor: openssl
+    product: openssl
+    names: [openssl]
+    brew: [openssl, openssl@3, openssl@1.1]
+  - vendor: haxx
+    product: curl
+    names: [curl]
+    brew: [curl]
+  - vendor: openbsd
+    product: openssh
+    names: [openssh]
+    brew: [openssh]
+  - vendor: python
+    product: python
+    names: [python]
+    brew: [python, python@3.12, python@3.13, python@3.11]
+  - vendor: nodejs
+    product: node.js
+    names: [node, nodejs, node.js]
+    brew: [node, node@20, node@22]
+  - vendor: sqlite
+    product: sqlite
+    names: [sqlite]
+    brew: [sqlite]
+  - vendor: gnu
+    product: wget
+    names: [wget]
+    brew: [wget]
+  - vendor: ffmpeg
+    product: ffmpeg
+    names: [ffmpeg]
+    brew: [ffmpeg]
+  # ---- operating systems
+  - vendor: apple
+    product: macos
+    names: [macos, mac os x, os x]
+
+  # ---- windows (DisplayName after collectors/windows.py normalization, Chocolatey/Scoop ids)
+  # Vendor/product spelling checked against real CVE List records where marked [cna]; [nvd] = from
+  # NVD CPE knowledge only (unverified from the sandbox). CNA and NVD sometimes disagree on the vendor
+  # ("win.rar GmbH" vs rarlab) -- the matcher drops candidates with a different vendor.
+  - vendor: 7-zip                       # [cna] CVE-2024-11477 / CVE-2025-0411 (zdi)
+    product: 7-zip
+    names: [7-zip, 7zip]
+  - vendor: notepad-plus-plus           # [cna] CVE-2025-49144 (GitHub_M)
+    product: notepad-plus-plus
+    names: [notepad++, notepadplusplus, notepad-plus-plus]
+  - vendor: win.rar gmbh                # [cna] CVE-2025-8088 (ESET); NVD uses rarlab:winrar
+    product: winrar
+    names: [winrar, win.rar]
+  - vendor: putty                       # [nvd] putty:putty (older CVEs: simon_tatham:putty)
+    product: putty
+    names: [putty]
+  - vendor: wireshark                   # [nvd] wireshark:wireshark; CNA (GitLab) lists wireshark foundation + per-tool products
+    product: wireshark
+    names: [wireshark]
+  - vendor: adobe                       # [cna] Adobe CNA uses "Acrobat Reader"; plain "Acrobat" is [unverified]
+    product: acrobat
+    names: [adobe acrobat, adobe acrobat dc, acrobat dc]
+  - vendor: microsoft                   # [cna] CVE-2024-38021, CVE-2025-24057: "Microsoft 365 Apps for Enterprise" (version bound is a URL, see windows.md)
+    product: microsoft 365 apps for enterprise
+    names: [microsoft 365 apps for enterprise, microsoft 365 apps for business, microsoft 365 apps, microsoft office 365 proplus]
+  - vendor: microsoft                   # [cna] CVE-2025-26682 cpeApplicability: microsoft:visual_studio_2022
+    product: visual studio 2022
+    cpe_product: visual_studio_2022
+    names: [visual studio community 2022, visual studio professional 2022, visual studio enterprise 2022, visual studio buildtools 2022, visual studio build tools 2022]
+  - vendor: microsoft                   # [cna] CVE-2025-21172 cpeApplicability: microsoft:visual_studio_2019
+    product: visual studio 2019
+    cpe_product: visual_studio_2019
+    names: [visual studio community 2019, visual studio professional 2019, visual studio enterprise 2019, visual studio build tools 2019]
+  - vendor: microsoft                   # [cna] "Visual Studio Code" (CVE-2024-43601); DisplayName has a "(User)" suffix for per-user installs
+    product: visual studio code
+    names: [microsoft visual studio code, microsoft visual studio code (user)]
+  - vendor: videolan
+    product: vlc media player
+    cpe_product: vlc_media_player
+    names: [vlc media player]
+  - vendor: mozilla
+    product: thunderbird
+    names: [mozilla thunderbird]
+  - vendor: the document foundation     # [cna] CVE-2024-3044
+    product: libreoffice
+    names: [libreoffice]
+  - vendor: oracle corporation          # [cna] CVE-2024-21111: "VM VirtualBox"
+    product: vm virtualbox
+    names: [oracle vm virtualbox, virtualbox, oracle virtualbox]
+  - vendor: gimp                        # [cna] CVE-2023-44444
+    product: gimp
+    names: [gimp]
+  - vendor: google                      # Chocolatey ids
+    product: chrome
+    names: [googlechrome]
+  - vendor: python                      # Chocolatey ids; DisplayName "Python 3.12.4 (64-bit)" -> "Python"
+    product: python
+    names: [python3, python launcher]

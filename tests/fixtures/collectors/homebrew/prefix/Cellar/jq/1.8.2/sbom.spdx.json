@@ -1,0 +1,133 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "name": "SBOM-SPDX-jq-1.8.2",
+  "creationInfo": {
+    "created": "2026-08-17T20:53:20Z",
+    "creators": [
+      "Tool: https://github.com/Homebrew/brew@7.0.10"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://formulae.brew.sh/spdx/jq-1.8.2.json",
+  "documentDescribes": [
+    "SPDXRef-Archive-jq-src",
+    "SPDXRef-Package-SPDXRef-oniguruma-6.9.10",
+    "SPDXRef-Compiler",
+    "SPDXRef-Bottle-jq"
+  ],
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-jq",
+      "fileName": "jq-1.8.2.tar.gz",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af"
+        }
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Archive-jq-src",
+      "name": "jq",
+      "versionInfo": "1.8.2",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2026-06-20T13:36:55Z",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-1.8.2.tar.gz",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/homebrew/core/jq@1.8.2",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-oniguruma-6.9.10",
+      "name": "oniguruma",
+      "versionInfo": "6.9.10",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "BSD-2-Clause",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/oniguruma/blobs/sha256:7d6ab71fff646664b91e8ff91744696ec775357787dbc1a28e45d52759662e8d",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7d6ab71fff646664b91e8ff91744696ec775357787dbc1a28e45d52759662e8d"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/oniguruma@6.9.10",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Compiler",
+      "name": "clang",
+      "versionInfo": "26.3",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "checksums": [],
+      "externalRefs": []
+    },
+    {
+      "SPDXID": "SPDXRef-Bottle-jq",
+      "name": "jq",
+      "versionInfo": "1.8.2",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2026-08-17T13:32:32Z",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/jq/blobs/sha256:ef70e236f58a8a781436ee400f9bdf847ad7d12e75115871fb6a94b9214a1a41",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/jq@1.8.2",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ef70e236f58a8a781436ee400f9bdf847ad7d12e75115871fb6a94b9214a1a41"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-File-jq",
+      "relationshipType": "PACKAGE_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-jq-src"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-oniguruma-6.9.10",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-jq"
+    },
+    {
+      "spdxElementId": "SPDXRef-Compiler",
+      "relationshipType": "BUILD_TOOL_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-jq-src"
+    }
+  ]
+}

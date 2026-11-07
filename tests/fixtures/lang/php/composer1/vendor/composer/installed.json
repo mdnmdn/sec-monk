@@ -1,0 +1,24 @@
+[
+    {
+        "name": "monolog/monolog",
+        "version": "1.25.3",
+        "version_normalized": "1.25.3.0",
+        "source": {"type": "git", "url": "https://github.com/Seldaek/monolog.git", "reference": "fa82921994db851a8becaf3787a9e73c5976b6f1"},
+        "type": "library",
+        "license": ["MIT"]
+    },
+    {
+        "name": "symfony/polyfill-mbstring",
+        "version": "v1.13.1",
+        "version_normalized": "1.13.1.0",
+        "type": "library",
+        "license": ["MIT"]
+    },
+    {
+        "name": "acme/in-house",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
+        "source": {"type": "git", "url": "https://git.example.com/in-house.git", "reference": "0123456789abcdef"},
+        "type": "library"
+    }
+]

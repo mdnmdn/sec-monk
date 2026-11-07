@@ -1,0 +1,127 @@
+{
+ "hostname": "WS-BOB02",
+ "system_info": [
+  {
+   "hostname": "WS-BOB02",
+   "cpu_type": "x86_64",
+   "computer_name": "WS-BOB02"
+  }
+ ],
+ "os_version": [
+  {
+   "name": "Microsoft Windows 11 Pro",
+   "version": "10.0.22631",
+   "major": "10",
+   "minor": "0",
+   "patch": "",
+   "build": "22631",
+   "platform": "windows",
+   "platform_like": "windows",
+   "codename": "",
+   "arch": "64-bit",
+   "install_date": "",
+   "revision": "3880"
+  }
+ ],
+ "registry": [
+  {
+   "name": "UBR",
+   "data": "3880"
+  },
+  {
+   "name": "DisplayVersion",
+   "data": "23H2"
+  },
+  {
+   "name": "InstallationType",
+   "data": "Client"
+  },
+  {
+   "name": "EditionID",
+   "data": "Professional"
+  },
+  {
+   "name": "ProductName",
+   "data": "Windows 10 Pro"
+  }
+ ],
+ "programs": [
+  {
+   "name": "7-Zip 23.01 (x64)",
+   "version": "23.01",
+   "install_location": "C:\\Program Files\\7-Zip\\",
+   "install_source": "",
+   "language": "",
+   "publisher": "Igor Pavlov",
+   "uninstall_string": "\"C:\\Program Files\\7-Zip\\Uninstall.exe\"",
+   "install_date": "20240601",
+   "identifying_number": ""
+  },
+  {
+   "name": "Google Chrome",
+   "version": "126.0.6478.127",
+   "install_location": "",
+   "install_source": "",
+   "language": "",
+   "publisher": "Google LLC",
+   "uninstall_string": "",
+   "install_date": "20240702",
+   "identifying_number": ""
+  },
+  {
+   "name": "Microsoft Edge",
+   "version": "126.0.2592.87",
+   "install_location": "",
+   "install_source": "",
+   "language": "",
+   "publisher": "Microsoft Corporation",
+   "uninstall_string": "",
+   "install_date": "20240705",
+   "identifying_number": ""
+  },
+  {
+   "name": "Notepad++ (64-bit x64)",
+   "version": "8.6.4",
+   "install_location": "C:\\Program Files\\Notepad++\\",
+   "install_source": "",
+   "language": "",
+   "publisher": "Notepad++ Team",
+   "uninstall_string": "",
+   "install_date": "20240601",
+   "identifying_number": ""
+  },
+  {
+   "name": "Python 3.12.4 (64-bit)",
+   "version": "3.12.4150.0",
+   "install_location": "C:\\Program Files\\Python312\\",
+   "install_source": "",
+   "language": "1033",
+   "publisher": "Python Software Foundation",
+   "uninstall_string": "",
+   "install_date": "20240620",
+   "identifying_number": "{7D1C0A52-9A1F-4A5E-A1C8-6B4A6A3F2C33}"
+  },
+  {
+   "name": "Update for Windows (KB5001716)",
+   "version": "8.93.0.0",
+   "install_location": "",
+   "install_source": "",
+   "language": "",
+   "publisher": "Microsoft Corporation",
+   "uninstall_string": "",
+   "install_date": "20240101",
+   "identifying_number": ""
+  }
+ ],
+ "patches": [
+  {
+   "hotfix_id": "KB5040442",
+   "description": "Security Update",
+   "installed_on": "7/17/2024",
+   "installed_by": "NT AUTHORITY\\SYSTEM",
+   "csname": "WS-BOB02",
+   "caption": "https://support.microsoft.com/help/5040442",
+   "fix_comments": ""
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InstallDate</key>
+	<date>2024-05-02T09:30:00Z</date>
+	<key>InstallPrefixPath</key>
+	<string>/</string>
+	<key>InstallProcessName</key>
+	<string>installer</string>
+	<key>PackageFileName</key>
+	<string>Example-1.4.2.pkg</string>
+	<key>PackageIdentifier</key>
+	<string>com.example.pkg</string>
+	<key>PackageVersion</key>
+	<string>1.4.2</string>
+</dict>
+</plist>

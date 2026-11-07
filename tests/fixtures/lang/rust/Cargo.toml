@@ -1,0 +1,8 @@
+[package]
+name = "secmonk-rs-demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+smallvec = "=1.6.0"
+time = "=0.1.43"

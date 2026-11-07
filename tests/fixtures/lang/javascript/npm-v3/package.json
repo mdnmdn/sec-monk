@@ -1,0 +1,1 @@
+{"name":"demo","version":"1.0.0","private":true,"dependencies":{"lodash":"4.17.20","minimist":"1.2.5","@babel/code-frame":"7.12.13"},"devDependencies":{"semver":"7.3.5"},"optionalDependencies":{"fsevents":"2.3.2"}}

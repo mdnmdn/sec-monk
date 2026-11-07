@@ -1,0 +1,11 @@
+{
+  "Id": "8dfafdbc3a40a1f7c0a2a8e5d4a0b4a3c2f1e0d9c8b7a69584736251403f2e1d",
+  "Created": "2024-06-27T14:13:20.000000000Z",
+  "Path": "/docker-entrypoint.sh",
+  "Args": ["nginx", "-g", "daemon off;"],
+  "State": {"Status": "running", "Running": true, "Pid": 4242, "StartedAt": "2024-06-27T14:13:21.5Z"},
+  "Image": "sha256:a6bd71f48f6839d9faae1f29d3babef831e76bc213107682c5cc80f0cbb30866",
+  "Name": "/web",
+  "HostConfig": {"Privileged": false, "NetworkMode": "shop_default", "PortBindings": {"80/tcp": [{"HostIp": "", "HostPort": "8080"}]}},
+  "Config": {"Hostname": "8dfafdbc3a40", "User": "", "Image": "nginx:1.25.3", "Env": ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "NGINX_VERSION=1.25.3"], "Cmd": ["nginx", "-g", "daemon off;"], "Labels": {"com.docker.compose.project": "shop"}, "ExposedPorts": {"80/tcp": {}}}
+}

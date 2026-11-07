@@ -1,0 +1,202 @@
+{
+ "_comment": "SYNTHETIC: hand-built from memory of the MSRC CVRF v3 JSON schema (api.msrc.microsoft.com is blocked); builds/KBs for CVE-2024-38063 follow the real CNA record.",
+ "DocumentTitle": {
+  "Value": "August 2024 Security Updates"
+ },
+ "DocumentType": {
+  "Value": "Security Update"
+ },
+ "DocumentTracking": {
+  "Identification": {
+   "ID": {
+    "Value": "2024-Aug"
+   }
+  },
+  "Status": "Final",
+  "Version": "1.0",
+  "InitialReleaseDate": "2024-08-13T07:00:00Z",
+  "CurrentReleaseDate": "2024-08-14T07:00:00Z"
+ },
+ "ProductTree": {
+  "FullProductName": [
+   {
+    "ProductID": "12086",
+    "Value": "Windows 11 Version 23H2 for x64-based Systems"
+   },
+   {
+    "ProductID": "12087",
+    "Value": "Windows 11 Version 23H2 for ARM64-based Systems"
+   },
+   {
+    "ProductID": "11923",
+    "Value": "Windows 10 Version 22H2 for x64-based Systems"
+   },
+   {
+    "ProductID": "11924",
+    "Value": "Windows 10 Version 22H2 for 32-bit Systems"
+   },
+   {
+    "ProductID": "12000",
+    "Value": "Windows Server 2022"
+   },
+   {
+    "ProductID": "12001",
+    "Value": "Windows Server 2022 (Server Core installation)"
+   },
+   {
+    "ProductID": "12100",
+    "Value": "Windows Server, version 23H2 (Server Core installation)"
+   },
+   {
+    "ProductID": "11000",
+    "Value": "Microsoft 365 Apps for Enterprise for 64-bit Systems"
+   }
+  ]
+ },
+ "Vulnerability": [
+  {
+   "Ordinal": "1",
+   "Title": {
+    "Value": "Windows TCP/IP Remote Code Execution Vulnerability"
+   },
+   "CVE": "CVE-2024-38063",
+   "Notes": [
+    {
+     "Title": "Description",
+     "Type": 1,
+     "Ordinal": "0",
+     "Value": "Windows TCP/IP Remote Code Execution Vulnerability"
+    }
+   ],
+   "CVSSScoreSets": [
+    {
+     "BaseScore": 9.8,
+     "TemporalScore": 8.5,
+     "Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/E:P/RL:O/RC:C",
+     "ProductID": [
+      "12086",
+      "11923",
+      "12000"
+     ]
+    }
+   ],
+   "Threats": [
+    {
+     "Type": 1,
+     "Description": {
+      "Value": "Publicly Disclosed:No;Exploited:No;Latest Software Release:Exploitation Less Likely"
+     },
+     "ProductID": [
+      "12086"
+     ]
+    }
+   ],
+   "Remediations": [
+    {
+     "Type": 2,
+     "Description": {
+      "Value": "5041585"
+     },
+     "URL": "https://support.microsoft.com/help/5041585",
+     "ProductID": [
+      "12086",
+      "12087"
+     ],
+     "Supercedence": "5040442",
+     "RestartRequired": {
+      "Value": "Yes"
+     },
+     "SubType": "Security Update",
+     "FixedBuild": "10.0.22631.4037"
+    },
+    {
+     "Type": 2,
+     "Description": {
+      "Value": "5041580"
+     },
+     "URL": "https://support.microsoft.com/help/5041580",
+     "ProductID": [
+      "11923",
+      "11924"
+     ],
+     "Supercedence": "5040427",
+     "RestartRequired": {
+      "Value": "Yes"
+     },
+     "SubType": "Security Update",
+     "FixedBuild": "10.0.19045.4780"
+    },
+    {
+     "Type": 2,
+     "Description": {
+      "Value": "5041160"
+     },
+     "URL": "https://support.microsoft.com/help/5041160",
+     "ProductID": [
+      "12000",
+      "12001"
+     ],
+     "Supercedence": "5040437",
+     "RestartRequired": {
+      "Value": "Yes"
+     },
+     "SubType": "Security Update",
+     "FixedBuild": "10.0.20348.2700"
+    },
+    {
+     "Type": 2,
+     "Description": {
+      "Value": "5041573"
+     },
+     "URL": "https://support.microsoft.com/help/5041573",
+     "ProductID": [
+      "12100"
+     ],
+     "Supercedence": "5040438",
+     "RestartRequired": {
+      "Value": "Yes"
+     },
+     "SubType": "Security Update",
+     "FixedBuild": "10.0.25398.1085"
+    }
+   ]
+  },
+  {
+   "Ordinal": "2",
+   "Title": {
+    "Value": "Microsoft Excel Remote Code Execution Vulnerability"
+   },
+   "CVE": "CVE-2024-38172",
+   "Notes": [
+    {
+     "Title": "Description",
+     "Type": 1,
+     "Ordinal": "0",
+     "Value": "Microsoft Excel RCE"
+    }
+   ],
+   "CVSSScoreSets": [
+    {
+     "BaseScore": 7.8,
+     "TemporalScore": 6.8,
+     "Vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+     "ProductID": [
+      "11000"
+     ]
+    }
+   ],
+   "Remediations": [
+    {
+     "Type": 2,
+     "Description": {
+      "Value": "Click to Run"
+     },
+     "ProductID": [
+      "11000"
+     ],
+     "SubType": "Security Update"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Google Chrome</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.google.Chrome</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Chrome</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>126.0.6478.127</string>
+	<key>CFBundleVersion</key>
+	<string>6478.127</string>
+	<key>KSProductID</key>
+	<string>com.google.Chrome</string>
+	<key>KSUpdateURL</key>
+	<string>https://tools.google.com/service/update2</string>
+	<key>KSVersion</key>
+	<string>126.0.6478.127</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>11.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright 2024 Google LLC. All rights reserved.</string>
+</dict>
+</plist>

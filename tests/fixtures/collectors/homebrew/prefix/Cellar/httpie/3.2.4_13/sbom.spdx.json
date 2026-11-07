@@ -1,0 +1,394 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "name": "SBOM-SPDX-httpie-3.2.4",
+  "creationInfo": {
+    "created": "2026-10-14T17:46:40Z",
+    "creators": [
+      "Tool: https://github.com/Homebrew/brew@7.0.10"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://formulae.brew.sh/spdx/httpie-3.2.4.json",
+  "documentDescribes": [
+    "SPDXRef-Archive-httpie-src",
+    "SPDXRef-Package-SPDXRef-ca-certificates-2026-10-20",
+    "SPDXRef-Package-SPDXRef-certifi-2026.2e.10.2e.19",
+    "SPDXRef-Package-SPDXRef-mpdecimal-4.2e.0.2e.1",
+    "SPDXRef-Package-SPDXRef-openssl.40.4-4.2e.0.2e.3",
+    "SPDXRef-Package-SPDXRef-readline-8.2e.3.2e.6",
+    "SPDXRef-Package-SPDXRef-sqlite-3.2e.54.2e.1",
+    "SPDXRef-Package-SPDXRef-xz-5.2e.8.2e.4",
+    "SPDXRef-Package-SPDXRef-lz4-1.2e.10.2e.0",
+    "SPDXRef-Package-SPDXRef-zstd-1.2e.5.2e.7.5f.1",
+    "SPDXRef-Package-SPDXRef-python.40.3.2e.15-3.2e.15.2e.0.5f.1",
+    "SPDXRef-Compiler",
+    "SPDXRef-Bottle-httpie"
+  ],
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-httpie",
+      "fileName": "3.2.4.tar.gz",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b185cd8d81325f97c773582e50f1c5e047c2d8575b53d676469c9daf2a52f341"
+        }
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Archive-httpie-src",
+      "name": "httpie",
+      "versionInfo": "3.2.4",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2024-11-01T17:29:56Z",
+      "licenseConcluded": "BSD-3-Clause",
+      "downloadLocation": "https://github.com/httpie/cli/archive/refs/tags/3.2.4.tar.gz",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/homebrew/core/httpie@3.2.4",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b185cd8d81325f97c773582e50f1c5e047c2d8575b53d676469c9daf2a52f341"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-ca-certificates-2026-10-20",
+      "name": "ca-certificates",
+      "versionInfo": "2026-10-20",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "MPL-2.0",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/ca-certificates/blobs/sha256:8589f4e61b3afcc5ea375aab11af1c891ec4c94421c699c2a5a4765078de4443",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8589f4e61b3afcc5ea375aab11af1c891ec4c94421c699c2a5a4765078de4443"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/ca-certificates@2026-10-20",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-certifi-2026.2e.10.2e.19",
+      "name": "certifi",
+      "versionInfo": "2026.10.19",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "MPL-2.0",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/certifi/blobs/sha256:45011f7d0ff99c9f4945e2c5f9da4ce5d5027ff104c69bb563a70f826cb8d186",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "45011f7d0ff99c9f4945e2c5f9da4ce5d5027ff104c69bb563a70f826cb8d186"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/certifi@2026.10.19",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-mpdecimal-4.2e.0.2e.1",
+      "name": "mpdecimal",
+      "versionInfo": "4.0.1",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "BSD-2-Clause",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/mpdecimal/blobs/sha256:9e2dc44e47e91465c3cefa8969baa6af53a1ec339eda8443b18a30786147203e",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9e2dc44e47e91465c3cefa8969baa6af53a1ec339eda8443b18a30786147203e"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/mpdecimal@4.0.1",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-openssl.40.4-4.2e.0.2e.3",
+      "name": "openssl@4",
+      "versionInfo": "4.0.3",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "Apache-2.0",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/openssl/4/blobs/sha256:e9968c63732a4aa642c6131f120d0a89a119885f7ce3cfec796ae672369b98a6",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e9968c63732a4aa642c6131f120d0a89a119885f7ce3cfec796ae672369b98a6"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/openssl%404@4.0.3",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-readline-8.2e.3.2e.6",
+      "name": "readline",
+      "versionInfo": "8.3.6",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "GPL-3.0-or-later",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/readline/blobs/sha256:461763fa21c050a59e5bbceedf67dcacf24e4aa4604490d73f0c9fa0f40e7fe5",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "461763fa21c050a59e5bbceedf67dcacf24e4aa4604490d73f0c9fa0f40e7fe5"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/readline@8.3.6",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-sqlite-3.2e.54.2e.1",
+      "name": "sqlite",
+      "versionInfo": "3.54.1",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "blessing",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/sqlite/blobs/sha256:38bdb30f8e13a07cdcd86233de9ab4d8db29f2b81cb08c15c202ecea6835ab2f",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "38bdb30f8e13a07cdcd86233de9ab4d8db29f2b81cb08c15c202ecea6835ab2f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/sqlite@3.54.1",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-xz-5.2e.8.2e.4",
+      "name": "xz",
+      "versionInfo": "5.8.4",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "0BSD AND GPL-2.0-or-later",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/xz/blobs/sha256:c2724c0db0398134694b8366d30d14f4de376115fb54c559c331d5fd0474af76",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c2724c0db0398134694b8366d30d14f4de376115fb54c559c331d5fd0474af76"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/xz@5.8.4",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-lz4-1.2e.10.2e.0",
+      "name": "lz4",
+      "versionInfo": "1.10.0",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "BSD-2-Clause",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/lz4/blobs/sha256:91674f1c7407b1f7b73d5bd1d85ed1abaaca93be3b68607af4ef3df632540ac0",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "91674f1c7407b1f7b73d5bd1d85ed1abaaca93be3b68607af4ef3df632540ac0"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/lz4@1.10.0",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-zstd-1.2e.5.2e.7.5f.1",
+      "name": "zstd",
+      "versionInfo": "1.5.7_1",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "(BSD-3-Clause OR GPL-2.0-only) AND BSD-2-Clause AND MIT",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/zstd/blobs/sha256:d72adf48460a8384b256f88061cd7b9df4977df7fa2e0794051d427db754a565",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d72adf48460a8384b256f88061cd7b9df4977df7fa2e0794051d427db754a565"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/zstd@1.5.7_1",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-SPDXRef-python.40.3.2e.15-3.2e.15.2e.0.5f.1",
+      "name": "python@3.15",
+      "versionInfo": "3.15.0_1",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "Python-2.0",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/python/3.15/blobs/sha256:454e9a50033e82a0492a0fe0b5b553b28bf6cd97bff7be22464b99858a84b03f",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "454e9a50033e82a0492a0fe0b5b553b28bf6cd97bff7be22464b99858a84b03f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/python%403.15@3.15.0_1",
+          "referenceType": "purl"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Compiler",
+      "name": "clang",
+      "versionInfo": "26.3",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "checksums": [],
+      "externalRefs": []
+    },
+    {
+      "SPDXID": "SPDXRef-Bottle-httpie",
+      "name": "httpie",
+      "versionInfo": "3.2.4_13",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "2026-10-24T10:19:39Z",
+      "licenseConcluded": "BSD-3-Clause",
+      "downloadLocation": "https://ghcr.io/v2/homebrew/core/httpie/blobs/sha256:c324153c25c231d37d45893e53ed46311829edad9e7338a43f6f2f2278817757",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/httpie@3.2.4_13",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c324153c25c231d37d45893e53ed46311829edad9e7338a43f6f2f2278817757"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-File-httpie",
+      "relationshipType": "PACKAGE_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-httpie-src"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-ca-certificates-2026-10-20",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-certifi-2026.2e.10.2e.19",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-mpdecimal-4.2e.0.2e.1",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-openssl.40.4-4.2e.0.2e.3",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-readline-8.2e.3.2e.6",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-sqlite-3.2e.54.2e.1",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-xz-5.2e.8.2e.4",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-lz4-1.2e.10.2e.0",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-zstd-1.2e.5.2e.7.5f.1",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-SPDXRef-python.40.3.2e.15-3.2e.15.2e.0.5f.1",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Bottle-httpie"
+    },
+    {
+      "spdxElementId": "SPDXRef-Compiler",
+      "relationshipType": "BUILD_TOOL_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-httpie-src"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InstallDate</key>
+	<date>2024-03-01T08:00:00Z</date>
+	<key>InstallPrefixPath</key>
+	<string>/</string>
+	<key>InstallProcessName</key>
+	<string>softwareupdated</string>
+	<key>PackageIdentifier</key>
+	<string>com.apple.pkg.CLTools_Executables</string>
+	<key>PackageVersion</key>
+	<string>15.3.0.0.1.1708646388</string>
+</dict>
+</plist>

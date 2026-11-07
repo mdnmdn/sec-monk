@@ -1,0 +1,47 @@
+{
+  "homebrew_version": "4.5.8-117-g019a799",
+  "used_options": [],
+  "unused_options": [],
+  "built_as_bottle": true,
+  "poured_from_bottle": true,
+  "loaded_from_api": true,
+  "installed_on_request": true,
+  "changed_files": [
+    "lib/pkgconfig/libjq.pc"
+  ],
+  "time": 1751890000,
+  "source_modified_time": 1751369998,
+  "compiler": "clang",
+  "aliases": [],
+  "runtime_dependencies": [
+    {
+      "full_name": "oniguruma",
+      "version": "6.9.10",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "6.9.10",
+      "declared_directly": true
+    }
+  ],
+  "source": {
+    "path": "/opt/homebrew/Library/Taps/homebrew/homebrew-core/Formula/j/jq.rb",
+    "tap": "homebrew/core",
+    "tap_git_head": "339fb67352d7fe8c4836ab03200dda21e9b648eb",
+    "spec": "stable",
+    "versions": {
+      "stable": "1.8.1",
+      "head": null,
+      "version_scheme": 0,
+      "compatibility_version": null
+    }
+  },
+  "arch": "arm64",
+  "built_on": {
+    "os": "Macintosh",
+    "os_version": "macOS 15.4",
+    "cpu_family": "dunno",
+    "xcode": "16.3",
+    "clt": "16.3.0.0.1.1742442376",
+    "preferred_perl": "5.34"
+  }
+}
