@@ -76,7 +76,8 @@ analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-m
 | quarantine | xattr `com.apple.quarantine` = `flags;hex-time;agent;event-uuid` on the bundle (apps) or the file | read with `getxattr(2)` via ctypes, no `xattr` subprocess |
 | download event | `~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2` (SQLite, opened `mode=ro&immutable=1`), row by event uuid: data URL, origin URL, agent bundle id, CFAbsoluteTime | URLs stripped of credentials/query |
 | download URLs | xattr `com.apple.metadata:kMDItemWhereFroms` (binary plist list) | same stripping |
-| signature | `codesign -dv --verbose=2 <bundle-or-file>` (stderr) -> signed, adhoc, authority chain, Team ID, hardened runtime | `-o codesign=false` disables |
+| signature | `codesign -dv --verbose=2 <executable>` (stderr) -> signed, adhoc, authority chain (Developer ID / Mac App Store / Apple), Team ID, hardened runtime. Run on the executable itself, not the bundle, so a swapped helper does not inherit its bundle's identity. Display only; a failure that is not about the signature (missing file, permission) is `unknown` | `-o codesign=false` disables; sealed system paths are skipped unless `-o codesign_system=true` |
+| signature validity | `codesign --verify --strict <executable>` -> `verified` true / false (broken seal, modified, revoked); nothing when the check cannot run | opt-in `-o verify=true` (hashes the whole bundle: seconds per large app) |
 | Gatekeeper | `spctl --assess --type execute -vv` (opt-in `-o gatekeeper=true`, slow) | |
 | install time | Homebrew `INSTALL_RECEIPT.json` `time`, pkgutil `install-time`, file `st_birthtime` | |
 
@@ -103,10 +104,10 @@ Windows script hands over identities it computed on the target.
 | `pid-label` | service-manager label of the pid is a known launch item | from mechanism (`launchd-daemon` -> `service`, `launchd-agent` -> `agent`, `run-key` -> `login-item` ...) |
 | `pid-label` | label matches `PlatformHints.gui_label` (`application.<id>.<n>.<n>`) | `gui-app` |
 | `pid-label` | label unknown (job submitted at runtime / unreadable plist) | `service` (uid 0) / `agent` |
-| `exe-match` | executable is a launch item's program (several: the one in the process user's scope) | from mechanism |
+| `exe-match` | executable is a launch item's program (several: the one in the process user's scope). Never for shells, interpreters and wrappers (`sh`, `bash`, `python3`, `env`, `nohup` ...): a plist running `/bin/bash` must not claim every bash; those are attributed by `pid-label` only | from mechanism |
 | `parent` | parent is init: `.xpc` bundle -> `xpc-service`, `.app` bundle -> `gui-app`, else `service`/`agent` by uid | |
 | `parent` | parent is a scheduler (`cron`, `periodic`, `atrun`) / a GUI launcher (Finder, Dock) | `scheduled` / `gui-app` |
-| `ancestry` | parent is a shell: first ancestor that is `sshd` -> `remote-session`, a scheduler -> `scheduled`, a terminal (Terminal.app, iTerm2, tmux, VS Code helper ...) -> `interactive` | |
+| `ancestry` | parent is a shell: first ancestor that is `sshd` -> `remote-session`, a scheduler -> `scheduled`, a terminal (Terminal.app, iTerm2, tmux, VS Code helper ...) -> `interactive (terminal)`; else a console `login` / `getty` above it -> `interactive (login)`; else (an `sh -c` run by a daemon, an app, an updater) it falls through to `child` | |
 | `parent` | anything else | `child`; `via` = top ancestor below init (the app/service that owns the tree) |
 
 The tree walk is cycle-safe and capped (64 levels).
@@ -128,8 +129,32 @@ Inventory: one component per identity, process facts merged under `meta.process`
 max 5000 rows: pid, ppid, user, exe, launch, label, identity, flags) and `launch_items_missing_program` (enabled launch
 items whose program does not exist: stale or removed persistence).
 
-Snapshot file: `secmonk-process-snapshot/1`, documented in `snapshot.py`; `secmonk procs --snapshot-out F` or
-`-o snapshot_out=F` writes it from a live run.
+## Snapshot file format (`secmonk-process-snapshot/1`)
+
+Written by `secmonk procs --snapshot-out F` / `-o snapshot_out=F`; read by `secmonk procs F` and `collect|scan process F`.
+It is the hand-off format for other platforms and future agents, so it is a public contract: extend it compatibly.
+
+| Field | Type | Notes |
+|---|---|---|
+| `schema` | `"secmonk-process-snapshot/1"` | required; anything else is refused |
+| `platform` | `darwin`, `linux`, `windows` | selects the backend (`backend.BACKENDS`); others get the filesystem-free base `Inspector` |
+| `host`, `taken_at` | string | `taken_at` ISO 8601 |
+| `os` | `{name, version, build, vendor?}` | becomes the OS component |
+| `processes[]` | `{pid, ppid, uid?, user?, exe?, started?, args[], name?, label?}` | `pid` (int) required; `exe` absolute path; `label` = service-manager job owning the pid; `args` redacted argv (max 64) |
+| `launch_items[]` | `{mechanism, label, program?, args[], source?, scope?, run_at_load?, keep_alive?, disabled?, meta{}}` | `mechanism` = a key of `launch.MECHANISM_KIND`; `scope` = `system` or `user:<name>` |
+| `executables{path: facts}` | object | precomputed facts, used instead of reading files (keys below) |
+| `warnings[]` | string list | shown with the collector warnings |
+
+`executables[path]` keys, all optional: `exists`, `size`, `mtime`, `created`, `owner_uid`, `world_writable`, `sha256`;
+`signature` (`signed`, `adhoc`, `identifier`, `team_id`, `timestamp`, `hardened_runtime`, `apple`, `mac_app_store`,
+`developer_id`, `verified`, `error`, `unknown`, `authority[]`, `flags[]`); `quarantine` (`raw_flags`, `time`, `agent`,
+`event_id`, `user_approved`, `on`, `event{time, agent_bundle_id, agent, sender, data_url, origin_url}`);
+`where_froms[]`; `gatekeeper{accepted, source}`; `identity{name, version, category, purl, bundle_id, vendor_hint,
+product_hint, file_version, company, os}`.
+
+Loading treats the file as untrusted (`snapshot.from_dict`, `snapshot.clean_facts`): unknown keys are dropped, every
+value is type-checked, sizes are capped (64 MB file, 100 000 processes, 64 args), command lines are re-redacted and every
+URL is stripped of credentials, query and fragment again.
 
 ## Classification
 
@@ -141,9 +166,31 @@ is known (it is what every system process runs).
 ## Risk flags
 
 Computed by `collector.risk_flags()` from facts, platform-neutral; informational, they do not create findings:
-`exe-missing`, `unsigned`, `adhoc-signed`, `signature-invalid`, `downloaded`, `world-writable`, `translocated`,
+`exe-missing`, `unsigned`, `adhoc-signed`, `signature-invalid` (only with `-o verify=true`), `downloaded`, `world-writable`, `translocated`,
 `user-writable-path` (macOS: `/Users/`, `/tmp/`, `/private/var/folders/`, `/Volumes/`, AppTranslocation),
 `root-from-user-path`, `persistent-from-user-path` (service/agent/login item running from there), `unidentified`.
+
+In a copied tree (`-o root=`) a symlink resolving outside the root is never followed: the executable gets the fact
+`outside_root` instead of the analyst's own file data, and launch-item programs are checked with `lexists`.
+
+## Watch mode
+
+`procmon.Watcher` keeps one inspector for the session (identity and facts cached per path). Every tick it:
+
+- stats every running executable (`Inspector.stamp`: inode, size, mtime); a changed stamp drops the cached identity and
+  facts (`Inspector.forget`) and yields `changed-executable` (in-place update, replaced helper);
+- reports `new-executable` once per new path, and `new-launch-item` / `changed-launch-item` (program, args, disabled)
+  / `removed-launch-item` keyed by (label, plist path); plists are re-parsed only when their stat changes;
+- matches new and changed executables: into `process:<host>#watch` in the temporary overlay, or with `--save` into
+  `process:<host>` as a **partial** scan, so components the increment did not see stay current and the baseline process
+  tree in `asset.meta` is kept.
+
+## Cost (expected on a real Mac, not measured)
+
+Per unique executable, once per session: one streamed sha256 (capped by `max_binary_mb`), one `codesign -dv` (skipped
+for sealed system paths), at most one `pkgutil --file-info` (only when no bundle / keg / system rule matched, never for
+user-writable paths), one full read for Go/Rust/plist parsing when nothing else identified it. Per tick: `ps` twice,
+`launchctl list`, one `proc_pidpath` and one `stat` per process, one `stat` per launchd plist.
 
 ## Porting (Linux, Windows)
 
@@ -166,6 +213,8 @@ The Windows side can ship as an extension of `secmonk-inventory.ps1` that emits 
 ## Limitations
 
 - Fixtures are **synthetic**; never run on a real Mac (see [plans/on-macos.md](../../plans/on-macos.md) section F).
+- Command lines come from `ps`, which joins argv with spaces: arguments containing spaces cannot be recovered, so after
+  a redacted value every following non-option token is redacted too (over-redaction). `-o args=false` skips them.
 - Point-in-time: short-lived processes between two `--watch` ticks are missed (no Endpoint Security / `kqueue`
   `NOTE_EXEC` / eBPF / ETW subscription; that would need a privileged agent).
 - Without root, `proc_pidpath` and `launchctl list` cover only the current user; other users' processes keep the `ps`

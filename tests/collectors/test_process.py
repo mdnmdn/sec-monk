@@ -73,6 +73,8 @@ def test_parse_ps_args_redacts():
     curl = args[403]
     assert "https://example.com/x" in curl and not any("pw@" in a or "token=abc" in a for a in curl)
     assert curl[curl.index("--password") + 1] == REDACTED
+    spaced = pm.parse_ps_args("  7 tool --password a b --verbose x\n")[7]
+    assert spaced == ["tool", "--password", REDACTED, REDACTED, "--verbose", "x"]
 
 
 def test_parse_launchctl_list():
@@ -88,8 +90,22 @@ def test_parse_codesign_variants():
     adhoc = pm.parse_codesign((PFIX / "codesign-adhoc.txt").read_text())
     assert adhoc["adhoc"] and "team_id" not in adhoc
     assert pm.parse_codesign((PFIX / "codesign-unsigned.txt").read_text(), 1) == {"signed": False}
-    broken = pm.parse_codesign("Identifier=x\nAuthority=Developer ID Application: X\nsomething: invalid signature", 1)
-    assert broken["error"]
+    # display failures that are not about the signature are "unknown", never "invalid"
+    assert pm.parse_codesign("/x: No such file or directory", 1) == {"unknown": "/x: No such file or directory"}
+    mas = pm.parse_codesign("Identifier=com.apple.iWork.Pages\nAuthority=Apple Mac OS Application Signing\n"
+                            "Authority=Apple Worldwide Developer Relations Certification Authority\n"
+                            "Authority=Apple Root CA\n")
+    assert mas.get("mac_app_store") and not mas.get("apple")
+    system = pm.parse_codesign("Identifier=com.apple.ls\nAuthority=Software Signing\nAuthority=Apple Code Signing "
+                               "Certification Authority\nAuthority=Apple Root CA\n")
+    assert system["apple"]
+
+
+def test_parse_codesign_verify():
+    assert pm.parse_codesign_verify("", 0) == {"verified": True}
+    bad = pm.parse_codesign_verify("/A.app: a sealed resource is missing or invalid\nfile modified: x", 1)
+    assert bad["verified"] is False and "modified" in bad["error"]
+    assert pm.parse_codesign_verify("/A.app: Operation not permitted", 1) is None
 
 
 def test_parse_pkgutil_file_info():
@@ -442,3 +458,124 @@ def test_cli_procs_watch(root, mirror, monkeypatch):
     assert [e["event"] for e in events] == ["new-executable", "new-launch-item"]
     assert events[0]["exe"] == "/usr/local/bin/hello" and events[0]["findings"].startswith("P")
     assert events[1]["label"] == "com.new"
+
+
+# ----------------------------------------------------------------------------- review regressions
+
+def test_generic_program_plist_does_not_claim_every_shell():
+    """A plist whose program is /bin/bash must not label every bash on the machine as that service."""
+    snap = Snapshot("darwin", "h", "", [
+        ProcessRecord(1, 0, "/sbin/launchd", uid=0),
+        ProcessRecord(400, 1, "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", uid=501),
+        ProcessRecord(401, 400, "/bin/bash", uid=501),
+        ProcessRecord(402, 401, "/usr/bin/vim", uid=501),
+        ProcessRecord(500, 1, "/bin/bash", uid=0, label="com.mdm.helper"),
+    ], launch_items=[LaunchItem("launchd-daemon", "com.mdm.helper", "/bin/bash", scope="system")])
+    lc = LaunchClassifier(snap)
+    shell = lc.classify(snap.processes[2])
+    assert shell.kind == "child" and shell.label is None                      # not "service (com.mdm.helper)"
+    assert lc.classify(snap.processes[3]).kind == "interactive"
+    assert lc.classify(snap.processes[4]).label == "com.mdm.helper"          # the pid label still attributes it
+
+
+def test_shell_spawned_by_daemon_is_a_child_not_interactive():
+    snap = Snapshot("darwin", "h", "", [
+        ProcessRecord(1, 0, "/sbin/launchd", uid=0),
+        ProcessRecord(120, 1, "/Library/PrivilegedHelperTools/updater", uid=0),
+        ProcessRecord(121, 120, "/bin/sh", uid=0),
+        ProcessRecord(122, 121, "/usr/bin/curl", uid=0),
+        ProcessRecord(130, 1, "/usr/bin/login", uid=0),
+        ProcessRecord(131, 130, "/bin/zsh", uid=501),
+        ProcessRecord(132, 131, "/usr/bin/vim", uid=501),
+    ])
+    lc = LaunchClassifier(snap)
+    curl = lc.classify(snap.processes[3])
+    assert curl.kind == "child" and curl.via == "/Library/PrivilegedHelperTools/updater"
+    vim = lc.classify(snap.processes[6])
+    assert (vim.kind, vim.mechanism) == ("interactive", "login")             # console login, no terminal app
+
+
+def test_untrusted_snapshot_facts_are_typed_and_stripped(tmp_path):
+    d = json.loads(SNAP.read_text())
+    d["executables"]["/usr/sbin/syslogd"] = {
+        "signature": "yes", "size": True, "junk": {"x": 1},
+        "where_froms": ["https://u:p@h/f.dmg?X-Amz-Signature=SECRET", 3],
+        "quarantine": {"agent": "Safari", "event": {"data_url": "https://a:b@x/y?token=t", "origin_url": 5}}}
+    f = tmp_path / "s.json"
+    f.write_text(json.dumps(d))
+    facts = snapfile.load(f).executables["/usr/sbin/syslogd"]
+    assert facts == {"where_froms": ["https://h/f.dmg"],
+                     "quarantine": {"agent": "Safari", "event": {"data_url": "https://x/y"}}}
+    r = CliRunner().invoke(app, ["procs", str(f), "--no-match", "-f", "json"])
+    assert r.exit_code == 0, r.output and "SECRET" not in r.stdout
+
+
+def test_copied_tree_links_never_reach_the_host(root):
+    """An absolute symlink in a copied tree points at the analyst's machine: no facts from there."""
+    (root / "usr/local/bin/hostlink").symlink_to("/etc/hostname")
+    snap = snapfile.load(SNAP)
+    snap.executables = {}
+    insp = pm.MacOSInspector(snap, root, {}, [])
+    assert insp.facts("/usr/local/bin/hostlink") == {"outside_root": True}
+    assert insp.facts("/does/not/exist") == {"exists": False}
+
+
+def test_non_utf8_process_output_does_not_abort(root, monkeypatch):
+    real_run = subprocess.run
+
+    def fake(cmd, **kw):
+        out = b"  300     1   501 alice  Thu Nov  7 09:01:12 2026     /Applications/Caf\xe9.app/Contents/MacOS/C\n"
+        return real_run(["printf", "%s", out.decode("latin-1")], **{**kw, "env": {"LC_ALL": "C"}}) \
+            if cmd[0] == "ps" else subprocess.CompletedProcess(cmd, 1, "", "")
+
+    monkeypatch.setattr(pm.subprocess, "run", fake)
+    snap = pm.take_snapshot(root, {"args": False})
+    assert snap.processes and snap.processes[0].pid == 300
+
+
+def test_snapshot_timeout_is_a_collector_error(root, monkeypatch):
+    def boom(cmd, timeout=30):
+        raise subprocess.TimeoutExpired(cmd, timeout)
+
+    monkeypatch.setattr(pm, "_run", boom)
+    with pytest.raises(RuntimeError, match="ps failed"):
+        pm.take_snapshot(root, {})
+
+
+def test_watcher_reports_replaced_binary_and_edited_plist(root):
+    snap, insp, _ = ProcessCollector().analyse(str(SNAP), root=str(root))
+    w = procmon.Watcher(insp)
+    w.tick(snap)
+    syncd = root / "Users/alice/Library/Application Support/Sync/syncd"
+    syncd.write_text("#!/bin/sh\n# updated payload, different size\nexec sleep 9999\n")
+    snap2 = snapfile.load(SNAP)
+    snap2.launch_items[0].program = "/Users/alice/Downloads/evil"
+    _, events = w.tick(snap2)
+    kinds = [(e.kind, e.data["view"].proc.exe if "view" in e.data else e.data["item"].label) for e in events]
+    assert ("changed-executable", "/Users/alice/Library/Application Support/Sync/syncd") in kinds
+    assert ("changed-launch-item", "com.example.updater") in kinds
+    assert w.tick(snap2)[1] == []
+
+
+def test_cli_watch_save_keeps_the_asset(root, mirror, monkeypatch):
+    """--watch --save stores each tick as a partial increment: the baseline components stay current."""
+    base = snapfile.load(SNAP)
+    later = snapfile.load(SNAP)
+    later.processes.append(ProcessRecord(900, 1, "/Users/alice/Library/Application Support/Sync/syncd", uid=501))
+    snaps = iter([base, later])
+    monkeypatch.setattr(ProcessCollector, "snapshot", staticmethod(lambda target=None, **o: next(snaps)))
+
+    def sleep(_s):          # between baseline and tick: the agent binary is replaced on disk
+        (root / "Users/alice/Library/Application Support/Sync/syncd").write_text("replaced payload\n")
+
+    monkeypatch.setattr("secmonk.cli.time.sleep", sleep)
+    r = CliRunner().invoke(app, ["-q", "procs", "-o", f"root={root}", "--db", str(mirror), "--save", "--watch", "1",
+                                 "--max-ticks", "1"])
+    assert r.exit_code == 0, r.output
+    assert "CHANGED exe" in r.stdout
+    c = connect(mirror)
+    from secmonk.engine.inventory import current_components
+    names = {row["name"] for row in current_components(c, "process:fixture-mac")}
+    assert {"Slack", "curl", "golang.org/x/text"} <= names
+    assert c.execute("SELECT COUNT(*) FROM finding WHERE status='open'").fetchone()[0] == 1
+    c.close()

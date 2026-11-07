@@ -23,7 +23,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from ..base import redact_command
+from ..base import redact_command, strip_url_secrets
 from .model import LaunchItem, ProcessRecord, Snapshot
 
 SCHEMA = "secmonk-process-snapshot/1"
@@ -48,6 +48,68 @@ def _args(v: Any) -> list[str]:
     if not isinstance(v, list):
         return []
     return list(redact_command([a for a in v[:MAX_ARGS] if isinstance(a, str)]) or [])
+
+
+# --------------------------------------------------------------------------- executable facts
+# Facts arrive from another machine: only known keys survive, each with its type checked, and every URL is
+# stripped of credentials / query again (a pre-signed download URL is a secret).
+
+def _url(v: Any) -> str | None:
+    return strip_url_secrets(v) if isinstance(v, str) and v else None
+
+
+def _scalars(d: Any, spec: dict[str, type | tuple[type, ...]]) -> dict[str, Any]:
+    if not isinstance(d, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for k, t in spec.items():
+        v = d.get(k)
+        if isinstance(v, t) and not (isinstance(v, bool) and t is int):
+            out[k] = v[:4096] if isinstance(v, str) else v
+    return out
+
+
+_SIG = {"signed": bool, "adhoc": bool, "identifier": str, "team_id": str, "timestamp": str, "hardened_runtime": bool,
+        "apple": bool, "mac_app_store": bool, "developer_id": bool, "verified": bool, "error": str, "unknown": str}
+_QUAR = {"raw_flags": str, "time": str, "agent": str, "event_id": str, "user_approved": bool, "on": str}
+_EVENT = {"time": str, "agent_bundle_id": str, "agent": str, "sender": str}
+_IDENT = {"name": str, "version": str, "category": str, "purl": str, "bundle_id": str, "vendor_hint": str,
+          "product_hint": str, "file_version": str, "company": str, "os": bool}
+_TOP = {"exists": bool, "size": int, "mtime": str, "created": str, "owner_uid": int, "world_writable": bool,
+        "sha256": str}
+
+
+def clean_facts(f: dict[str, Any]) -> dict[str, Any]:
+    out = _scalars(f, _TOP)
+    raw_sig = f.get("signature") if isinstance(f.get("signature"), dict) else {}
+    sig = _scalars(raw_sig, _SIG)
+    for k, cap in (("authority", 8), ("flags", 16)):
+        if isinstance(raw_sig.get(k), list):
+            sig[k] = [a for a in raw_sig[k][:cap] if isinstance(a, str)]
+    if sig:
+        out["signature"] = sig
+    q = f.get("quarantine")
+    if isinstance(q, dict):
+        qc = _scalars(q, _QUAR)
+        if isinstance(q.get("event"), dict):
+            ev = _scalars(q["event"], _EVENT)
+            ev.update({k: u for k in ("data_url", "origin_url") if (u := _url(q["event"].get(k)))})
+            if ev:
+                qc["event"] = ev
+        if qc:
+            out["quarantine"] = qc
+    wf = f.get("where_froms")
+    if isinstance(wf, list):
+        urls = [u for u in (_url(x) for x in wf[:4]) if u]
+        if urls:
+            out["where_froms"] = urls
+    gk = _scalars(f.get("gatekeeper"), {"accepted": bool, "source": str})
+    if gk:
+        out["gatekeeper"] = gk
+    ident = _scalars(f.get("identity"), _IDENT)
+    if isinstance(ident.get("name"), str):
+        out["identity"] = ident
+    return out
 
 
 def to_dict(s: Snapshot) -> dict[str, Any]:
@@ -88,7 +150,8 @@ def from_dict(d: dict[str, Any]) -> Snapshot:
         platform=_str(d.get("platform")) or "unknown", host=_str(d.get("host")) or "unknown",
         taken_at=_str(d.get("taken_at")) or "", processes=procs, launch_items=items,
         os=d["os"] if isinstance(d.get("os"), dict) else {},
-        executables={k: v for k, v in exes.items() if isinstance(k, str) and isinstance(v, dict)},
+        executables={k: clean_facts(v) for k, v in list(exes.items())[:MAX_PROCESSES]
+                     if isinstance(k, str) and isinstance(v, dict)},
         warnings=[w for w in d.get("warnings") or [] if isinstance(w, str)])
 
 

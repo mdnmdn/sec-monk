@@ -45,7 +45,8 @@ uv run secmonk scan process                   # the same data through the generi
 uv run secmonk scan process --fail-on P1      # CI/cron gate on running software only
 ```
 
-Options (`-o key=value`): `codesign=false`, `gatekeeper=true` (spctl, slow), `hash=false`, `binaries=false` (no Go/Rust/
+Options (`-o key=value`): `codesign=false`, `codesign_system=true` (also sealed system paths), `verify=true`
+(`codesign --verify --strict`, needed for the `signature-invalid` flag; slow on big apps), `gatekeeper=true` (spctl, slow), `hash=false`, `binaries=false` (no Go/Rust/
 embedded-plist parsing), `max_binary_mb=128`, `pkgutil=false`, `quarantine_db=false`, `args=false` (do not read
 command lines), `include_system=false` (skip `/System/Library/Launch*`), `home=/Users/x` (homes to index),
 `hostname=...`, `root=<dir>`, `snapshot_out=<file>`.
@@ -58,12 +59,16 @@ command lines), `include_system=false` (skip `/System/Library/Launch*`), `home=/
   tree is shown without findings and a note.
 - Findings of a process are those of **every component its executable resolved to** (an Electron app shows the
   app's and Electron's advisories; a Go binary its modules').
-- `--watch` keeps the analysis caches, so codesign/hash/parse run once per executable; each new executable is matched
-  as it appears (asset `process:<host>#watch` in the overlay, or the real asset with `--save`). Ctrl-C stops.
+- `--watch` keeps the analysis caches, so codesign/hash/parse run once per executable. Events: `NEW exe`,
+  `CHANGED exe` (binary replaced on disk: re-identified and re-matched), `NEW` / `CHANGED` / `REMOVED launch item`.
+  New and changed executables are matched as they appear (asset `process:<host>#watch` in the overlay; with `--save`, a
+  partial scan of `process:<host>` that keeps the baseline). Ctrl-C stops.
 - Exit codes as everywhere: 0 ok, 1 collector error (e.g. live snapshot on a platform without a backend), 2 usage
   (`--watch` with a snapshot file).
-- Privacy: command lines are redacted (`--password x`, `token=...`, URL credentials) and only the script/jar path of
-  interpreters is stored; snapshot files are re-redacted on load.
+- Privacy: command lines are redacted (`--password x`, `token=...`, URL credentials; also the tokens after a redacted
+  value up to the next option, since `ps` loses argv boundaries). The inventory and `--format json` keep only the
+  script/jar path of interpreters; `--snapshot-out` files contain the redacted argv. Snapshot files are re-redacted and
+  their URLs re-stripped on load.
 
 ## Acceptance criteria
 

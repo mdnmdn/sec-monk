@@ -74,6 +74,9 @@ class PlatformHints:
     xpc_bundle: re.Pattern[str] | None = None        # executable inside an XPC service bundle
     gui_label: re.Pattern[str] | None = None         # service-manager label of a desktop-launched app
     gui_launchers: frozenset[str] = field(default_factory=frozenset)  # Finder, Dock, explorer.exe ...
+    # programs never attributed to a launch item by path alone (see LaunchClassifier._generic_program)
+    generic_programs: frozenset[str] = frozenset({"env", "nohup", "caffeinate", "open", "xargs", "timeout"})
+    consoles: frozenset[str] = frozenset({"login", "getty", "agetty"})   # a local console session above a shell
 
 
 DARWIN = PlatformHints(
@@ -126,7 +129,7 @@ class LaunchClassifier:
             if info:
                 return info
         items = self.items_by_program.get(p.exe or "")
-        if items:
+        if items and not self._generic_program(p.exe or ""):
             it = self._pick(items, p)
             return self._from_item(it, parent_exe, "exe-match")
         return self._from_tree(p, parent)
@@ -143,6 +146,14 @@ class LaunchClassifier:
         return out
 
     # ------------------------------------------------------------------ helpers
+    def _generic_program(self, exe: str) -> bool:
+        """Shells, interpreters and `env` run many unrelated things: a plist whose program is `/bin/sh` must not
+        claim every shell on the machine (only a pid label can attribute those)."""
+        from .backend import INTERPRETERS
+
+        b = _base(ProcessRecord(0, 0, exe))
+        return b in self.h.shells or b in self.h.generic_programs or bool(INTERPRETERS.match(b))
+
     @staticmethod
     def _pick(items: list[LaunchItem], p: ProcessRecord) -> LaunchItem:
         """Several plists may run the same program (one per user): prefer the scope of the process."""
@@ -196,7 +207,8 @@ class LaunchClassifier:
             return LaunchInfo(LAUNCH_SCHEDULED, mechanism=pbase, parent_exe=parent_exe, via=parent.exe,
                               evidence="parent")
         if pbase in self.h.shells or pbase.lstrip("-") in self.h.shells:
-            for a in chain[1:]:
+            console = None
+            for a in chain:
                 b = _base(a)
                 if b in self.h.remote:
                     return LaunchInfo(LAUNCH_REMOTE, mechanism=b, parent_exe=parent_exe, via=a.exe,
@@ -207,7 +219,12 @@ class LaunchClassifier:
                 if b in self.h.terminals or _bundle_name(a) in self.h.terminals:
                     return LaunchInfo(LAUNCH_INTERACTIVE, mechanism="terminal", parent_exe=parent_exe,
                                       via=a.exe, evidence="ancestry")
-            return LaunchInfo(LAUNCH_INTERACTIVE, mechanism="shell", parent_exe=parent_exe, evidence="ancestry")
+                if b in self.h.consoles:
+                    console = console or a
+            if console is not None:
+                return LaunchInfo(LAUNCH_INTERACTIVE, mechanism=_base(console), parent_exe=parent_exe,
+                                  via=console.exe, evidence="ancestry")
+            # `sh -c` spawned by a daemon, an app or an updater: not interactive, a child of whatever owns the tree
         if pbase in self.h.gui_launchers:
             return LaunchInfo(LAUNCH_GUI_APP, mechanism=pbase, parent_exe=parent_exe, evidence="parent")
         # child of another process: name the top ancestor below init (the app / service that owns the tree)

@@ -228,7 +228,7 @@ The engine collector is validated against a **fake socket only**; the generic te
   ```
   Verify: quarantine flags/time/agent parsed, event row found (uuid case), where-froms present, `user_approved` meaning of
   flag `0x0040` confirmed (adjust `parse_quarantine` if not); `codesign` fields (Developer ID / MAS / Apple / adhoc /
-  unsigned) on 5 apps; cost of `codesign` per process (time `procs`); `-o gatekeeper=true` output (`source=Notarized Developer ID`).
+  unsigned) on 5 apps; cost of `codesign` per process (time `procs`); `-o verify=true` on a deliberately modified copy of an app (expect `signature-invalid`) and its cost on Xcode-sized bundles; `-o gatekeeper=true` output (`source=Notarized Developer ID`).
 - [ ] **`--watch`.** Run `uv run secmonk procs --watch 5`, then start a new app, run a new brew binary, `launchctl bootstrap`
   a test LaunchAgent and remove it. Verify one event each, no repeated events, CPU usage of the loop acceptable.
 - [ ] **Login items / BTM.** `sudo sfltool dumpbtm | head -80`: decide whether to parse it to tag `login-item` (currently

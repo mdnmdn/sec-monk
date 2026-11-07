@@ -31,7 +31,7 @@ from typing import Any
 
 from ...engine import purl as purls
 from ...models import CAT_APPLICATION, CAT_PACKAGE, CAT_SYSTEM_APP, Component
-from ..base import read_within, redact_command, resolve_within, strip_url_secrets
+from ..base import REDACTED, read_within, redact_command, resolve_within, strip_url_secrets
 from .backend import Inspector, Resolution
 from .model import LaunchItem, ProcessRecord, Snapshot
 
@@ -88,7 +88,21 @@ def parse_ps_args(text: str) -> dict[int, list[str]]:
     for line in text.splitlines():
         f = line.strip().split(None, 1)
         if len(f) == 2 and f[0].isdigit():
-            out[int(f[0])] = list(redact_command(f[1].split()[:64]) or [])
+            out[int(f[0])] = _over_redact(list(redact_command(f[1].split()[:64]) or []))
+    return out
+
+
+def _over_redact(args: list[str]) -> list[str]:
+    """ps joins argv with spaces, so `--password "a b"` arrives as 3 tokens: after a redacted value, hide every
+    following token up to the next option (over-redaction is the safe side)."""
+    out: list[str] = []
+    hiding = False
+    for a in args:
+        if hiding and not a.startswith("-"):
+            out.append(REDACTED)
+            continue
+        hiding = a == REDACTED
+        out.append(a)
     return out
 
 
@@ -123,6 +137,9 @@ def parse_launchd_plist(d: dict, source: str, mechanism: str, scope: str) -> Lau
                       disabled=d.get("Disabled") if isinstance(d.get("Disabled"), bool) else None, meta=meta)
 
 
+_PLIST_CACHE: dict[tuple, LaunchItem | None] = {}
+
+
 def index_launch_items(root: Path, homes: list[Path], include_system: bool = True) -> tuple[list[LaunchItem], list[str]]:
     """Every launchd plist under root (system dirs) and under each home (`~/Library/LaunchAgents`)."""
     boundary = root.resolve()
@@ -140,10 +157,18 @@ def index_launch_items(root: Path, homes: list[Path], include_system: bool = Tru
             continue
         for p in sorted(d.glob("*.plist")):
             try:
-                data = plistlib.loads(read_within(p, bound, MAX_PLIST_BYTES))
-                if not isinstance(data, dict):
-                    raise ValueError("not a dictionary")  # noqa: TRY004
-                it = parse_launchd_plist(data, _target_path(p, root), mech, scope)
+                st = p.stat()
+                key = (str(p), str(bound), mech, scope, st.st_ino, st.st_size, st.st_mtime_ns)
+                if key in _PLIST_CACHE:          # --watch re-indexes every tick: parse only changed plists
+                    it = _PLIST_CACHE[key]
+                else:
+                    data = plistlib.loads(read_within(p, bound, MAX_PLIST_BYTES))
+                    if not isinstance(data, dict):
+                        raise ValueError("not a dictionary")
+                    it = parse_launchd_plist(data, _target_path(p, root), mech, scope)
+                    if len(_PLIST_CACHE) > 20_000:
+                        _PLIST_CACHE.clear()
+                    _PLIST_CACHE[key] = it
                 if it:
                     items.append(it)
             except Exception as e:  # noqa: BLE001 - one bad plist must not hide the others
@@ -186,7 +211,9 @@ def quarantine_event(db: Path, event_id: str) -> dict[str, Any] | None:
     """Row of `~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2` for one event id."""
     if not db.is_file():
         return None
-    uri = f"file:{db}?mode=ro&immutable=1"
+    from urllib.parse import quote
+
+    uri = f"file:{quote(str(db))}?mode=ro&immutable=1"
     try:
         with contextlib.closing(sqlite3.connect(uri, uri=True)) as conn:
             r = conn.execute(
@@ -207,9 +234,14 @@ def quarantine_event(db: Path, event_id: str) -> dict[str, Any] | None:
 
 
 def parse_codesign(text: str, returncode: int = 0) -> dict[str, Any]:
-    """stderr of `codesign -dv --verbose=2 <path>`."""
+    """stderr of `codesign -dv --verbose=2 <path>`: what the signature *claims* (display only, nothing is
+    verified; see `parse_codesign_verify`). A failure that is not about the signature (missing file,
+    permission) is `{"unknown": ...}`, never "invalid"."""
     if "not signed at all" in text:
         return {"signed": False}
+    if returncode not in (0, None):
+        last = text.strip().splitlines()[-1][:200] if text.strip() else f"exit {returncode}"
+        return {"unknown": last}
     out: dict[str, Any] = {"signed": True}
     authorities: list[str] = []
     for line in text.splitlines():
@@ -236,15 +268,30 @@ def parse_codesign(text: str, returncode: int = 0) -> dict[str, Any]:
     if authorities:
         out["authority"] = authorities
         leaf = authorities[0]
-        if leaf.startswith("Software Signing") or "Apple Root CA" in authorities and leaf.startswith("Apple"):
-            out["apple"] = True
-        elif leaf.startswith("Apple Mac OS Application Signing"):
-            out["mac_app_store"] = True
+        if leaf.startswith(("Apple Mac OS Application Signing", "Apple iPhone OS Application Signing")):
+            out["mac_app_store"] = True          # before the generic Apple check: MAS leaves start with "Apple"
         elif leaf.startswith("Developer ID Application"):
             out["developer_id"] = True
-    if returncode not in (0, None) and out.get("signed"):
-        out["error"] = text.strip().splitlines()[-1][:200] if text.strip() else f"exit {returncode}"
+        elif leaf.startswith("Software Signing") or (leaf.startswith("Apple") and "Apple Root CA" in authorities):
+            out["apple"] = True
     return out
+
+
+# messages of `codesign --verify` that mean the signature itself is broken (vs. cannot be checked)
+_VERIFY_BAD = ("invalid signature", "sealed resource", "code has no resources but signature indicates",
+               "not valid", "has been modified", "code object is not signed at all", "invalid Info.plist",
+               "nested code is modified", "CSSMERR_TP_CERT_REVOKED", "CSSMERR_TP_NOT_TRUSTED")
+
+
+def parse_codesign_verify(text: str, returncode: int) -> dict[str, Any] | None:
+    """`codesign --verify --strict <path>`: {"verified": True}, {"verified": False, "error": ...} when the
+    signature is broken or revoked, None when the check itself could not run (missing file, permission)."""
+    if returncode == 0:
+        return {"verified": True}
+    msg = text.strip().splitlines()[-1][:200] if text.strip() else f"exit {returncode}"
+    if any(b.lower() in text.lower() for b in _VERIFY_BAD):
+        return {"verified": False, "error": msg}
+    return None
 
 
 def parse_pkgutil_file_info(text: str) -> list[dict[str, Any]]:
@@ -292,8 +339,18 @@ def _target_path(p: Path, root: Path) -> str:
 # ============================================================================ live snapshot
 
 def _run(cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False,
-                          env={**os.environ, "LC_ALL": "C"})
+    """Fixed read-only command. Output decoded leniently: one non-UTF-8 byte in a process name must not
+    abort the snapshot."""
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                          timeout=timeout, check=False, env={**os.environ, "LC_ALL": "C"})
+
+
+def _try(cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess | None:
+    """`_run`, but a timeout / missing binary yields None instead of an exception outside COLLECT_ERRORS."""
+    try:
+        return _run(cmd, timeout)
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 _LIBPROC = None
@@ -337,22 +394,22 @@ def os_info(root: Path) -> dict[str, Any]:
 def take_snapshot(root: Path, opts: dict[str, Any]) -> Snapshot:
     """Live process snapshot of this Mac."""
     warnings: list[str] = []
-    r = _run(["ps", "-axww", "-o", "pid=,ppid=,uid=,user=,lstart=,comm="])
-    if r.returncode != 0:
-        raise RuntimeError(f"ps failed: {r.stderr.strip()[:200]}")
+    r = _try(["ps", "-axww", "-o", "pid=,ppid=,uid=,user=,lstart=,comm="])
+    if r is None or r.returncode != 0:
+        raise RuntimeError(f"ps failed: {(r.stderr.strip()[:200] if r else 'timeout or not runnable')}")
     procs = parse_ps(r.stdout)
     if opts.get("args", True):
-        a = _run(["ps", "-axww", "-o", "pid=,args="])
-        args = parse_ps_args(a.stdout) if a.returncode == 0 else {}
+        a = _try(["ps", "-axww", "-o", "pid=,args="])
+        args = parse_ps_args(a.stdout) if a is not None and a.returncode == 0 else {}
         for p in procs:
             p.args = args.get(p.pid, [])
     for p in procs:
         exact = pid_path(p.pid)
         if exact:
             p.exe = exact
-    lc = _run(["launchctl", "list"])
-    labels = parse_launchctl_list(lc.stdout) if lc.returncode == 0 else {}
-    if lc.returncode != 0:
+    lc = _try(["launchctl", "list"])
+    labels = parse_launchctl_list(lc.stdout) if lc is not None and lc.returncode == 0 else {}
+    if lc is None or lc.returncode != 0:
         warnings.append("launchctl list failed: launch labels unavailable")
     for p in procs:
         p.label = labels.get(p.pid)
@@ -366,6 +423,20 @@ def take_snapshot(root: Path, opts: dict[str, Any]) -> Snapshot:
 
 
 # ============================================================================ executable inspector
+
+def _sha256(path: Path, cap: int) -> str:
+    """Streamed hash (no 128 MB buffer per binary)."""
+    h = hashlib.sha256()
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0))
+    with os.fdopen(fd, "rb") as fh:
+        if not stat.S_ISREG(os.fstat(fh.fileno()).st_mode):
+            raise ValueError(f"{path} is not a regular file")
+        done = 0
+        while done < cap and (chunk := fh.read(min(1 << 20, cap - done))):
+            h.update(chunk)
+            done += len(chunk)
+    return h.hexdigest()
+
 
 def _getxattr(path: Path, name: str) -> bytes | None:
     if hasattr(os, "getxattr"):          # Linux (copied trees on a Linux analyst box)
@@ -481,7 +552,7 @@ class MacOSInspector(Inspector):
         return Resolution("os", [osc] if osc else [], notes={"os_binary": True})
 
     def _pkgutil(self, path: str) -> Resolution | None:
-        if not self.live or not self.opts.get("pkgutil", True):
+        if not self.live or not self.opts.get("pkgutil", True) or self.user_writable(path):
             return None
         try:
             r = _run(["pkgutil", "--file-info", path])
@@ -560,9 +631,16 @@ class MacOSInspector(Inspector):
         f: dict[str, Any] = {}
         lp = self.local(exe)
         try:
-            st = lp.stat()
+            lp.lstat()
         except OSError:
             return {"exists": False}
+        try:                                       # a copied tree: never follow a link onto the analyst's host
+            real = resolve_within(lp, self.boundary)
+            st = real.stat()
+        except ValueError:
+            return {"outside_root": True}
+        except OSError:
+            return {"exists": False}               # dangling link
         f["exists"] = True
         f["size"] = st.st_size
         f["mtime"] = datetime.fromtimestamp(st.st_mtime, UTC).replace(microsecond=0).isoformat()
@@ -574,10 +652,11 @@ class MacOSInspector(Inspector):
             f["world_writable"] = True
         if self.opts.get("hash", True) and stat.S_ISREG(st.st_mode) and st.st_size <= self.max_binary:
             with contextlib.suppress(OSError, ValueError):
-                f["sha256"] = hashlib.sha256(read_within(lp, self.boundary, self.max_binary)).hexdigest()
+                f["sha256"] = _sha256(real, self.max_binary)
         res = self.resolve(exe)
+        real_t = self.target(real)
         # quarantine / where-froms live on the downloaded item: the bundle for apps, the file otherwise
-        cands = list(dict.fromkeys(c for c in (res.anchor, self.real_target(exe) or exe) if c))
+        cands = list(dict.fromkeys(c for c in (res.anchor, real_t) if c))
         for cand in cands:
             q = parse_quarantine(_getxattr(self.local(cand), "com.apple.quarantine"))
             if q:
@@ -591,16 +670,40 @@ class MacOSInspector(Inspector):
             if wf:
                 f["where_froms"] = wf
                 break
-        if self.live and self.opts.get("codesign", True):
-            with contextlib.suppress(OSError, subprocess.SubprocessError):
-                r = _run(["codesign", "-dv", "--verbose=2", res.anchor or exe])
+        # signature of the executable itself (a swapped helper inside a signed bundle must not inherit the
+        # bundle's identity). Sealed system paths are skipped by default: one subprocess each, no information.
+        sign = self.live and self.opts.get("codesign", True) and (
+            self.opts.get("codesign_system", False) or not real_t.startswith(SYSTEM_PREFIXES))
+        if sign:
+            r = _try(["codesign", "-dv", "--verbose=2", real_t])
+            if r is not None:
                 f["signature"] = parse_codesign(r.stderr, r.returncode)
+            if self.opts.get("verify", False) and f.get("signature", {}).get("signed"):
+                v = _try(["codesign", "--verify", "--strict", real_t], timeout=120)
+                ver = parse_codesign_verify(v.stderr, v.returncode) if v is not None else None
+                if ver:
+                    f["signature"].update(ver)
         if self.live and self.opts.get("gatekeeper", False):
-            with contextlib.suppress(OSError, subprocess.SubprocessError):
-                r = _run(["spctl", "--assess", "--type", "execute", "-vv", res.anchor or exe])
+            r = _try(["spctl", "--assess", "--type", "execute", "-vv", res.anchor or real_t])
+            if r is not None:
                 m = re.search(r"source=(.+)", r.stderr)
                 f["gatekeeper"] = {"accepted": r.returncode == 0, "source": m.group(1).strip() if m else None}
         return f
+
+    # ------------------------------------------------------------------ change detection (--watch)
+    def stamp(self, exe: str) -> tuple | None:
+        """Cheap identity of the file at `exe` (inode, size, mtime): changes when it is replaced or rewritten."""
+        if not self.fs:
+            return None
+        try:
+            st = resolve_within(self.local(exe), self.boundary).stat()
+        except (OSError, ValueError):
+            return ("missing",)
+        return (st.st_ino, st.st_size, st.st_mtime_ns)
+
+    def forget(self, exe: str) -> None:
+        super().forget(exe)
+        self._facts.pop(exe, None)
 
     def _quarantine_event(self, event_id: str | None) -> dict[str, Any] | None:
         if not event_id or not self.opts.get("quarantine_db", True) or self.root is None:

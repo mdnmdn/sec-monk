@@ -106,9 +106,19 @@ class Inspector:
         return Component(name=_basename(path), version=None, category=CAT_EXECUTABLE, source_path=path,
                          meta={"identity": "none"})
 
+    def forget(self, exe: str) -> None:
+        """Drop cached identity/facts of `exe` (the file changed on disk; used by --watch)."""
+        self._res.pop(exe, None)
+
+    def stamp(self, exe: str) -> tuple | None:
+        """Change marker of the file at `exe`; None when this inspector cannot see files."""
+        return None
+
     # ------------------------------------------------------------------ provenance
     def facts(self, exe: str) -> dict[str, Any]:
-        return dict(self.snap.executables.get(exe) or {})
+        f = dict(self.snap.executables.get(exe) or {})
+        f.pop("identity", None)
+        return f
 
     def user_writable(self, path: str) -> bool:
         return False

@@ -650,16 +650,17 @@ def _procs_table(rows: list[dict], title: str) -> None:
 def _event_line(ev, fmap: dict) -> tuple[str, dict]:
     from . import procmon
 
-    if ev.kind == "new-executable":
+    if ev.kind in ("new-executable", "changed-executable"):
         v = ev.data["view"]
         row = procmon.view_row(v, fmap)
-        text = (f"NEW exe  pid {row['pid']} {row['user'] or ''}  {row['launch_detail']}  {row['exe']}"
+        word = "NEW exe" if ev.kind == "new-executable" else "CHANGED exe (replaced on disk)"
+        text = (f"{word}  pid {row['pid']} {row['user'] or ''}  {row['launch_detail']}  {row['exe']}"
                 + (f"  -> {row['identity']} [{row['identity_method']}]" if row["identity"] else "")
                 + (f"  findings: {row['findings']}" if row["findings"] else "")
                 + (f"  flags: {', '.join(row['flags'])}" if row["flags"] else ""))
         return text, {"event": ev.kind, **{k: row[k] for k in row if k != "depth"}}
     it = ev.data["item"]
-    word = "NEW" if ev.kind == "new-launch-item" else "REMOVED"
+    word = {"new-launch-item": "NEW", "removed-launch-item": "REMOVED"}.get(ev.kind, "CHANGED")
     data = {"event": ev.kind, "label": it.label, "mechanism": it.mechanism, "program": it.program,
             "source": it.source, "scope": it.scope}
     return f"{word} launch item  {it.label} ({it.mechanism}, {it.scope})  -> {it.program}  [{it.source}]", data
@@ -752,10 +753,16 @@ def procs(
                 views, events = watcher.tick(snap)
                 if not events:
                     continue
-                if conn is not None and any(e.kind == "new-executable" for e in events):
-                    new_inv = col.inventory(snap, inspector, [e.data["view"] for e in events
-                                                              if e.kind == "new-executable"], opts)
-                    new_inv.asset.id = f"{inv.asset.id}#watch" if not save else inv.asset.id
+                fresh = [e.data["view"] for e in events if e.kind in ("new-executable", "changed-executable")]
+                if conn is not None and fresh:
+                    new_inv = col.inventory(snap, inspector, fresh, opts)
+                    if save:
+                        # an increment of the saved asset: partial, so nothing it did not see counts as removed,
+                        # and the baseline asset meta (process tree) is kept
+                        new_inv.asset.id, new_inv.asset.meta = inv.asset.id, inv.asset.meta
+                        new_inv.mark_partial("procs --watch increment")
+                    else:
+                        new_inv.asset.id = f"{inv.asset.id}#watch"
                     fmap = _procs_match(conn, new_inv, min_confidence)
                 for ev in events:
                     text, data = _event_line(ev, fmap)

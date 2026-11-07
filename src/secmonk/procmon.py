@@ -128,38 +128,60 @@ def interesting(row: dict) -> bool:
 
 @dataclass
 class Event:
-    kind: str                         # new-executable | new-launch-item | removed-launch-item
+    kind: str     # new-executable | changed-executable | new-launch-item | changed-launch-item | removed-launch-item
     data: dict[str, Any] = field(default_factory=dict)
+
+
+def _item_sig(it: LaunchItem) -> tuple:
+    return (it.program, tuple(it.args), it.disabled, it.mechanism)
 
 
 @dataclass
 class Watcher:
     """Diffs successive snapshots. One inspector is kept for the whole session, so identity and provenance of
-    an executable are computed once (codesign, hashing and binary parsing are the expensive parts)."""
+    an executable are computed once (codesign, hashing and binary parsing are the expensive parts); a file
+    replaced in place (new inode / size / mtime) is re-inspected and reported as changed."""
 
     inspector: Inspector
-    seen_exes: set[str] = field(default_factory=set)
+    seen_exes: dict[str, tuple | None] = field(default_factory=dict)       # path -> stamp
     launch_items: dict[tuple[str, str | None], LaunchItem] = field(default_factory=dict)
     primed: bool = False
 
     def tick(self, snap: Snapshot) -> tuple[list[ProcessView], list[Event]]:
         self.inspector.snap = snap
+        changed: set[str] = set()
+        stamps: dict[str, tuple | None] = {}
+        for p in snap.processes:
+            if p.exe and p.exe not in stamps:
+                stamps[p.exe] = self.inspector.stamp(p.exe)
+                if p.exe in self.seen_exes and stamps[p.exe] != self.seen_exes[p.exe]:
+                    changed.add(p.exe)
+                    self.inspector.forget(p.exe)           # stale identity, version and facts
         views = build_views(snap, self.inspector)
         events: list[Event] = []
         items = {(it.label, it.source): it for it in snap.launch_items}
         if self.primed:
-            fresh: set[str] = set()
+            reported: set[str] = set()
             for v in views:
-                if v.proc.exe and v.proc.exe not in self.seen_exes and v.proc.exe not in fresh:
-                    fresh.add(v.proc.exe)
+                exe = v.proc.exe
+                if not exe or exe in reported:
+                    continue
+                if exe not in self.seen_exes:
                     events.append(Event("new-executable", {"view": v}))
+                    reported.add(exe)
+                elif exe in changed:
+                    events.append(Event("changed-executable", {"view": v}))
+                    reported.add(exe)
             for key, it in items.items():
-                if key not in self.launch_items:
+                old = self.launch_items.get(key)
+                if old is None:
                     events.append(Event("new-launch-item", {"item": it}))
+                elif _item_sig(old) != _item_sig(it):
+                    events.append(Event("changed-launch-item", {"item": it, "previous": old}))
             for key, it in self.launch_items.items():
                 if key not in items:
                     events.append(Event("removed-launch-item", {"item": it}))
-        self.seen_exes.update(v.proc.exe for v in views if v.proc.exe)
+        self.seen_exes.update(stamps)
         self.launch_items = items
         self.primed = True
         return views, events

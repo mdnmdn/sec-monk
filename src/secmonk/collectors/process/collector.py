@@ -15,6 +15,7 @@ See _docs/tech/collectors/process.md and _docs/features/process-monitor.md.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -66,8 +67,8 @@ def risk_flags(p: ProcessRecord, launch: LaunchInfo, res: Resolution | None, fac
         flags.append("unsigned")
     elif sig.get("adhoc"):
         flags.append("adhoc-signed")
-    if sig.get("error"):
-        flags.append("signature-invalid")
+    if sig.get("verified") is False:
+        flags.append("signature-invalid")       # only from a real check (`codesign --verify`, -o verify=true)
     if facts.get("quarantine"):
         flags.append("downloaded")
     if facts.get("world_writable"):
@@ -196,7 +197,7 @@ def missing_launch_programs(snap: Snapshot, inspector: Inspector) -> list[dict[s
     for it in snap.launch_items:
         if it.program and it.program.startswith("/") and it.disabled is not True:
             try:
-                exists = local(it.program).exists()
+                exists = os.path.lexists(local(it.program))     # never follow a link out of a copied tree
             except (OSError, ValueError):
                 continue
             if not exists:
