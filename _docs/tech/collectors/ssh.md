@@ -124,8 +124,7 @@ meta={transport, user, port, remote_os, remote_hostname, harvested_files, harves
 
 ## Limitations
 
-* Language parsers are whatever `collectors/lang` has; the harvest only guarantees the *files* arrive. The rootfs collector today reads only
-  `dist-info/METADATA` and `node_modules/**/package.json`; the other harvested files are for the lang-registry collectors.
+* Language parsers are whatever `collectors/lang` has (all seven ecosystems, see [dependencies.md](dependencies.md)); the harvest only guarantees the *files* arrive, then the rootfs collector runs `walk_dir` over the temp dir. Jars and Go/Rust binaries are harvested only with `-o binaries=true`.
 * `-path` globs over-approximate (`*/node_modules/*/package.json` also matches deeper fixture `package.json`s inside a package).
 * Linux: `-xdev` skips separately mounted trees for the language walk (not for OS DBs); `/nix/store` and container storage are pruned.
   `var/lib/rpm -> usr/lib/sysimage/rpm` symlinked layouts harvest the DB twice (harmless).

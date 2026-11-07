@@ -3,10 +3,10 @@ title: Windows inventory
 type: feature
 context: features
 status: implemented
-tags: [windows, inventory, registry, msrc]
+tags: [windows, inventory, registry, msrc, cli]
 updated: 2026-11-07
 code: src/secmonk/collectors/windows.py
-related: [tech/collectors/windows.md, references/windows-inventory.md, features/inventory-ssh.md, references/vuln-sources/msrc.md]
+related: [tech/collectors/windows.md, references/windows-inventory.md, features/inventory-ssh.md, features/vuln-sync.md, references/vuln-sources/msrc.md, references/probes.md, features/README.md]
 ---
 
 # Windows inventory
@@ -50,6 +50,10 @@ Vulnerability data: `secmonk sync cvelist` (Microsoft CNA records carry per-buil
 - Display names are cleaned (`Mozilla Firefox (x64 en-US)` becomes `Mozilla Firefox`, `7-Zip 23.01 (x64)` becomes `7-Zip`) and mapped to CVE vendor/product via the alias table.
 - Users whose registry hive is not loaded are reported as warnings (their per-user installs are not seen).
 - The script changes nothing (registry/file reads, standard cmdlets); output is UTF-8 JSON on stdout or in `-OutFile`.
+
+## Validation status
+
+All Windows fixtures are **synthetic**; the 10 Microsoft CNA records they are matched against are **real** (CVE List, fetched 2026-11-07). The PowerShell script has never run on a real Windows host (the dev sandbox is Linux), and MSRC (`api.msrc.microsoft.com`) is unreachable from the sandbox, so `sync msrc` is fixture-tested only. Status stays `implemented` for the code path; real-host validation is open (see [windows-inventory reference](../references/windows-inventory.md), [probe log](../references/probes.md)).
 
 ## Acceptance criteria
 

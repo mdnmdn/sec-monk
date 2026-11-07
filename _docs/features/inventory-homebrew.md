@@ -3,10 +3,10 @@ title: Homebrew inventory
 type: feature
 context: features
 status: implemented
-tags: [cli, homebrew, linuxbrew, collector]
+tags: [cli, homebrew, linuxbrew, macos, linux, collector]
 updated: 2026-11-07
 code: src/secmonk/collectors/homebrew.py
-related: [tech/collectors/homebrew.md, references/homebrew.md, features/inventory-macos.md, tech/engine/classification.md]
+related: [tech/collectors/homebrew.md, references/homebrew.md, features/inventory-macos.md, features/inventory-ssh.md, tech/engine/classification.md, features/README.md]
 ---
 
 # Homebrew inventory
@@ -24,6 +24,7 @@ secmonk scan homebrew                       # search /opt/homebrew, /usr/local, 
 secmonk scan homebrew /opt/homebrew         # one prefix
 secmonk scan homebrew /mnt/disk -o all_kegs=true   # a mounted root; also old kegs (meta.active=false)
 secmonk scan macos                          # apps + brew + pkgutil in one asset
+secmonk scan ssh me@mac.local -o os=macos   # a remote Mac's Homebrew prefix is harvested too (macOS profile only)
 ```
 
 ## Behaviour & rules

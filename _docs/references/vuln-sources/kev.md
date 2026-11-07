@@ -98,7 +98,7 @@ Exploited flag for a finding: a row exists in `kev` for the finding's CVE ID.
 ## Status / TODO
 
 - Real sample fetched 2026-11-07 from the GitHub mirror. Reachable: mirror **yes**, cisa.gov **no**.
-- TODO: importer for `kev` table; test against the fixture (9 rows, one `Known` ransomware entry).
+- Importer implemented (`sources/kev.py`, `tests/sources/test_kev.py` against the 9-row fixture).
 - TODO: verify `www.cisa.gov` directly when run from an unrestricted network; check the feed's
   `count` against the array length.
 

@@ -24,7 +24,7 @@ Builds an inventory from a container image **without a Docker daemon and without
 `rocky-9/rootfs/` (real rpmdb.sqlite **trimmed to 7 of 118 packages**, os-release), `registry/alpine-3.20.{index,manifest,config}.json` (verbatim registry responses).
 **Synthetic (assembled from real files)** = `alpine-mini.tar` (docker save style; config/manifest hand-generated, files real, layer gzip'd - real Docker emits uncompressed layers).
 Images pulled: `alpine:3.20` (3.20.10), `debian:12-slim` (bookworm), `rockylinux:9-minimal` (Rocky 9.3; the mirror's tag was stale, created 2023-11-28).
-Python/npm/jar/go parsing is documented from knowledge, **not fixture-verified**.
+Language parsing (npm, PyPI, Go, Rust, Java, .NET, PHP) now lives in [dependencies.md](dependencies.md) with its own real fixtures (`tests/fixtures/lang/`); real image smoke tests are listed in the implementation notes.
 
 ## Where the data lives
 

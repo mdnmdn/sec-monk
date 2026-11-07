@@ -3,18 +3,18 @@ title: Agentless inventory over SSH
 type: feature
 context: features
 status: implemented
-tags: [ssh, agentless, linux, macos, inventory]
+tags: [ssh, agentless, linux, macos, windows, inventory, dependencies]
 updated: 2026-11-07
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py
-related: [tech/collectors/ssh.md, tech/collectors/rootfs.md, tech/collectors/macos.md, features/inventory-docker.md, features/inventory-macos.md]
+related: [tech/collectors/ssh.md, tech/collectors/rootfs.md, tech/collectors/macos.md, features/inventory-docker.md, features/inventory-macos.md, features/inventory-homebrew.md, features/inventory-windows.md, features/inventory-dependencies.md, features/README.md]
 ---
 
 # Agentless inventory over SSH
 
 ## What the user gets
 
-The software installed on a remote Linux server or macOS machine - OS, distro packages, Python/npm and other language packages,
-macOS apps, Homebrew formulae and casks, pkgutil receipts - without installing an agent, without running anything but a fixed
+The software installed on a remote Linux server or macOS machine - OS, distro packages, Python/npm, Go, Rust, Java, .NET and PHP language packages (lockfiles, installed metadata; jars and Go/Rust binaries with `-o binaries=true`, see [inventory-dependencies](inventory-dependencies.md)),
+macOS apps, Homebrew formulae and casks (see [inventory-homebrew](inventory-homebrew.md)), pkgutil receipts, and Windows hosts via the OpenSSH server (see [inventory-windows](inventory-windows.md)) - without installing an agent, without running anything but a fixed
 read-only script, ready for `secmonk match` / `secmonk scan`. One asset `ssh:<host>` per machine.
 
 ## Usage

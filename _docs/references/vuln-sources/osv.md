@@ -277,7 +277,7 @@ version-compare, plus `versions[]` membership.
 ## Status / TODO
 
 - Fixtures + zip sample done (`tests/fixtures/sources/osv/`).
-- Importer (zip + single JSON + delta) not implemented.
+- Importer (zip + single JSON + delta) implemented in `sources/osv.py` (see Implementation notes).
 - `api.osv.dev` not reachable here; `/v1/querybatch` could be an online fallback elsewhere.
 
 ### Recommended sync strategy (prototype)

@@ -223,9 +223,7 @@ Importer rule: parse each file with `json` only, tolerate unknown `dataVersion`,
 
 - [x] Probed access and measured sparse/partial clone (2026-11-07); fixtures saved and validated as JSON.
 - [x] Format analysed on the full 2025 set (45,479 records).
-- [ ] Implement importer (directory walker + per-ID fetcher + delta poller) and `affected_range` expansion incl. `changes[]`.
-- [ ] Version-expression parser for `version` strings ("< x", ">= a, <= b", "a - b", "x and older").
-- [ ] Vendor/product normalization + CPE mapping table (needed for macOS/desktop apps).
+- [x] Importer (directory walker + per-ID fetcher + git delta), `changes[]` expansion, version-expression parser and vendor/product normalization are implemented (see Implementation notes; alias table in `src/secmonk/data/product_aliases.yaml`).
 - [ ] Validate release-zip bulk path and `cveawg` API from an unrestricted network (blocked: 403).
 - [ ] Decide SSVC storage (table vs JSON column); cross-check KEV hints against KEV (kev.md, sibling doc).
 
@@ -280,5 +278,6 @@ Version entry conversion (one row per `affected` version entry):
   (Mozilla pattern). `unknown` entries are ignored; `defaultStatus` goes to `extra.default_status`.
 - `packageName` -> `package` (lowercased); `collectionURL` host mapped to ecosystem (npm, PyPI, Maven,
   RubyGems, crates.io, Packagist, NuGet, Go) when known. `cpes[]` of `affected` only in `extra.cpes`.
-- `cpeApplicability`: events from versionStartIncluding/EndExcluding/EndIncluding; non-version bounds
-  are dropped and recorded in `extra.dropped_bounds`.
+- `cpeApplicability`: events from versionStartIncluding/EndExcluding/EndIncluding. A non-version bound (e.g. a URL) is
+  recorded in `extra.dropped_bounds` and the row becomes `CVE-UNPARSED` (never matched), so an unparseable bound cannot widen
+  the range to all versions (`cvelist.py:_import_cpe_applicability`; earlier text of this doc said such rows stayed `CPE`).

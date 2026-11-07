@@ -95,8 +95,9 @@ data (no-dsa/postponed/not-affected) is expected to reduce noise further.
 - **Unfixed distro CVEs:** OSV Debian carries open ranges (no `fixed` event) for CVEs the Debian
   tracker marks *unimportant* / *no-dsa* (e.g. CVE-2019-1010022 on glibc). A real
   `python:3.12-slim` (Debian 13) scan on 2026-11-07 gave 193 findings, most of them without a fix.
-  Mitigations: `secmonk findings --fixable`; later, ingest the Debian tracker `urgency`/status to
-  downgrade or suppress them (see references/vuln-sources/distros.md).
+  Mitigations (implemented): OSV urgency and the Debian tracker feed `finding.triage` (see above), plus
+  `secmonk findings --fixable`. The tracker importer itself is validated on **synthetic** fixtures only
+  (host blocked in the sandbox, see [debian-tracker](../../references/vuln-sources/debian-tracker.md)); Ubuntu/Alpine/Red Hat triage is not ingested.
 
 - No VEX ingestion yet; Mozilla-style "unaffected-only" CNA records are stored but not used.
 - Name-based matching is precision-limited by the alias table size.

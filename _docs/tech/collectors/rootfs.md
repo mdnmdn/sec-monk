@@ -16,7 +16,7 @@ related: [tech/collectors/docker-image.md, tech/collectors/docker-engine.md, fea
 ## Summary
 
 Shared engine that turns *any Linux filesystem view* into components: OS, distro packages (dpkg / apk / rpm sqlite) and
-language packages (Python dist-info, npm package.json). The `rootfs` collector (`secmonk collect rootfs <dir>`) applies it to a
+language packages (all seven ecosystems through the shared [lang parser registry](dependencies.md): directories via `walk_dir`, image layers via `LangAccumulator`). The `rootfs` collector (`secmonk collect rootfs <dir>`) applies it to a
 directory (extracted image, chroot, mounted disk, `/` of a host); `docker-image` and `docker-engine` apply it to a `LayeredTarView`
 built from layer tars. Never executes anything and never extracts to disk. Fixtures: real alpine-3.20 / debian-12 (trimmed) / rocky-9 (rpmdb trimmed to 7 packages).
 
@@ -57,7 +57,7 @@ fixed versions are written `0:3.23.12-10.el10_2.5`; a uniform epoch prefix keeps
 
 Warnings: BerkeleyDB/NDB rpm DB (`var/lib/rpm/Packages`, `Packages.db`) is detected but unsupported; OS without any package DB (distroless/scratch); no os-release; truncated (size/count limits).
 Smoke tests on real images: alpine:3.20 = OS + 14 apk; debian:12-slim = OS + 88 deb; python:3.12-slim = OS + 87 deb + pip 25.0.1 (pypi).
-Not done: egg-info/PKG-INFO, jar/go/gem, dropping language files owned by OS packages, `Packages` BDB parsing, Debian `.list`-based ownership.
+Language files are handled by `collectors/lang` (npm, PyPI, Go, Rust, Java, .NET, PHP incl. Go/Rust binaries and jars; see [dependencies.md](dependencies.md)). Not done: gem, dropping language files owned by OS packages, `Packages` BDB parsing, Debian `.list`-based ownership.
 Tests: `tests/collectors/test_rootfs.py`.
 
 ## Limitations

@@ -2,8 +2,8 @@
 title: Inventory collectors — index
 type: tech
 context: tech
-status: draft
-tags: [collector, index]
+status: implemented
+tags: [collector, index, architecture]
 updated: 2026-11-07
 ---
 
@@ -21,7 +21,10 @@ the shared engine does ([vision](../../product/vision.md) §6: *different collec
 | Docker engine | [docker-engine.md](docker-engine.md) | Running containers via the Docker Engine API (unix socket) | implemented |
 | SSH (agentless) | [ssh.md](ssh.md) | `user@host[:port]` Linux/macOS: harvests metadata files over SSH, then reuses rootfs/macOS collectors | implemented (fixture + in-process sshd tested) |
 | Windows | [windows.md](windows.md) | PowerShell inventory JSON / osquery / live `winreg`: OS build + UBR, Uninstall keys, Appx, Chocolatey, Scoop, .NET | implemented (fixture-tested on Linux; script untested on real Windows) |
-| Filesystem / rootfs | (shared with docker-image) | dpkg/apk/rpm DBs + lockfiles under a directory | implemented |
+| Rootfs | [rootfs.md](rootfs.md) | dpkg/apk/rpm DBs + OS + language packages under a directory (shared with docker-image, docker-engine, ssh) | implemented |
+| Filesystem (`fs`) | [dependencies.md](dependencies.md) | Folder/repo: lockfiles, manifests, installed packages, Go/Rust binaries, jars (shared lang parser registry; `walk_dir` / `LangAccumulator`) | implemented |
+
+See [architecture](../architecture.md) for how collectors, the lang registry and the engine fit together, and [features/README.md](../../features/README.md) for the user-facing catalogue.
 
 ## Template
 

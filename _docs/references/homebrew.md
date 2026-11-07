@@ -18,7 +18,7 @@ related: [tech/collectors/macos.md, tech/engine/classification.md]
 - **Inventory is exact and offline.** `<prefix>/Cellar/<formula>/<pkg_version>/` + `INSTALL_RECEIPT.json` + `.brew/<formula>.rb`
   + `sbom.spdx.json` give name, version (incl. `_N` revision), tap, upstream source URL + sha256, license, homepage, runtime
   deps and install reason, with no `brew` execution. Several versions may coexist; **`<prefix>/opt/<formula>` (relative
-  symlink) says which keg is active**. The current collector (`_walk_brew`) emits every keg and ignores `opt/`: fix (see Recommendations).
+  symlink) says which keg is active**. The collector now reads `opt/` and emits only the active keg by default (`-o all_kegs=true` for old kegs): see [tech/collectors/homebrew.md](../tech/collectors/homebrew.md); the earlier `_walk_brew` behaviour (every keg, `opt/` ignored) is superseded.
 - **Homebrew has no CPE and no OSV ecosystem.** Nothing in 8,707 formulae, the formula DSL, the API JSON shape or the keg SBOM carries a CPE.
   What does exist: `pkg:brew/...` purls (SBOM only, nobody indexes them), the upstream **source URL** (62% GitHub, 7% PyPI, 3% npm ...) and,
   new in 2026, Homebrew's own `brew vulns` (OSV `GIT` ecosystem by repo URL + tag; reads the keg SBOM) plus the

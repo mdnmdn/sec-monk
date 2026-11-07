@@ -3,18 +3,19 @@ title: Inventory of containers and Linux filesystems
 type: feature
 context: features
 status: implemented
-tags: [docker, container, rootfs, inventory]
+tags: [docker, container, rootfs, inventory, dependencies, linux]
 updated: 2026-11-07
 code: src/secmonk/collectors/
-related: [tech/collectors/docker-image.md, tech/collectors/docker-engine.md, tech/collectors/rootfs.md]
+related: [tech/collectors/docker-image.md, tech/collectors/docker-engine.md, tech/collectors/rootfs.md, tech/collectors/dependencies.md, features/inventory-dependencies.md, features/README.md]
 ---
 
 # Inventory of containers and Linux filesystems
 
 ## What the user gets
 
-The software inside a container image, a running container or a Linux directory tree - OS, distro packages, Python and npm packages -
-without a Docker daemon (images), without running anything, ready for `secmonk match` / `secmonk scan`.
+The software inside a container image, a running container or a Linux directory tree - OS, distro packages (dpkg/apk/rpm), **language dependencies**
+(npm, Python, Go, Rust, Java, .NET, PHP) and **Go/Rust binaries and jars** - without a Docker daemon (images), without running anything, ready for
+`secmonk match` / `secmonk scan`. Language packages are parsed by the shared parsers described in [inventory-dependencies](inventory-dependencies.md).
 
 ## Usage
 
@@ -35,13 +36,16 @@ secmonk collect docker-engine image:nginx:1.25    # a local image through the en
 
 # any directory (extracted rootfs, chroot, mounted disk)
 secmonk collect rootfs /mnt/disk
-secmonk scan docker-image alpine:3.20
+secmonk scan docker-image alpine:3.20         # collect + save + match
+secmonk scan docker-engine web
+secmonk containers                            # list containers of the local Docker/Podman engine
 ```
 
 ## Behaviour & rules
 
 - Image assets are identified by manifest digest, so re-scanning a re-tagged image creates a new asset; container assets by name.
 - Layers are cached in `.cache/secmonk/blobs/` (digest-verified) and applied in order with whiteouts; later layers win.
+- Language files are parsed while the layers stream (`LangAccumulator`): only parsed components are kept, so memory does not grow with binary size; later layers and whiteouts replace or remove them. Directory trees (`rootfs`) use `walk_dir`. Installed metadata beats binaries beats lockfiles beats manifests.
 - Packages are matched on their *source* package (dpkg `Source`, apk origin, rpm source rpm). rpm versions are shown with an epoch (`0:1.2-3.el9`).
 - Warnings are shown, never silent: unsupported rpm BerkeleyDB, no package DB (distroless), skipped zstd layers.
 - Env variable values from the image config are not stored (names only).
@@ -52,6 +56,8 @@ secmonk scan docker-image alpine:3.20
 - `alpine:3.20` yields the OS + 14 apk packages with ecosystem `Alpine:v3.20`; `debian:12-slim` yields 88 deb packages (`Debian:12`).
 - A rocky/alma/rhel rootfs yields rpm packages whose version starts with the epoch; an Alpine rootfs with a vulnerable `xz-libs` produces an `osv-package` finding (tests/test_e2e_alpine.py).
 - No network needed for tarballs, OCI dirs, rootfs dirs.
+- `python:3.12-slim` yields OS + 87 deb + `pip 25.0.1` (PyPI, from site-packages in the streamed layers); `registry:2` yields the Go binary `/bin/registry` with stdlib 1.20.8 and 85 exact `osv-package` findings (verified 2026-11-07 on real OSV data, see [dependencies](../tech/collectors/dependencies.md)).
+- Findings on Debian images carry distro triage (`--hide-minor`, `--hide-deferred`): see [matching](../tech/engine/matching.md).
 
 ## Implemented by
 
