@@ -1,0 +1,144 @@
+{
+  "homebrew_version": "7.0.9-94-g92b8ea8",
+  "used_options": [],
+  "unused_options": [],
+  "built_as_bottle": true,
+  "poured_from_bottle": true,
+  "loaded_from_api": true,
+  "installed_on_request": true,
+  "changed_files": [
+    "bin/curl-config",
+    "bin/wcurl",
+    "lib/pkgconfig/libcurl.pc"
+  ],
+  "loaded_from_internal_api": true,
+  "linkage_files": [
+    "bin/curl",
+    "lib/libcurl.4.dylib"
+  ],
+  "binary_relocation_files": [],
+  "time": 1791000000,
+  "source_modified_time": 1791957245,
+  "compiler": "clang",
+  "aliases": [],
+  "runtime_dependencies": [
+    {
+      "full_name": "brotli",
+      "version": "1.2.0",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "1.2.0",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "libnghttp2",
+      "version": "1.70.0",
+      "revision": 0,
+      "bottle_rebuild": 1,
+      "pkg_version": "1.70.0",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "libnghttp3",
+      "version": "1.18.0",
+      "revision": 0,
+      "bottle_rebuild": 1,
+      "pkg_version": "1.18.0",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "ca-certificates",
+      "version": "2026-09-25",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "2026-09-25",
+      "declared_directly": false,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "openssl@4",
+      "version": "4.0.3",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "4.0.3",
+      "declared_directly": true
+    },
+    {
+      "full_name": "libngtcp2",
+      "version": "1.25.0",
+      "revision": 1,
+      "bottle_rebuild": 0,
+      "pkg_version": "1.25.0_1",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "libpsl",
+      "version": "0.23.3",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "0.23.3",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "libssh2",
+      "version": "1.11.1",
+      "revision": 7,
+      "bottle_rebuild": 0,
+      "pkg_version": "1.11.1_7",
+      "declared_directly": true,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "lz4",
+      "version": "1.10.0",
+      "revision": 0,
+      "bottle_rebuild": 3,
+      "pkg_version": "1.10.0",
+      "declared_directly": false
+    },
+    {
+      "full_name": "xz",
+      "version": "5.8.4",
+      "revision": 0,
+      "bottle_rebuild": 0,
+      "pkg_version": "5.8.4",
+      "declared_directly": false,
+      "compatibility_version": 1
+    },
+    {
+      "full_name": "zstd",
+      "version": "1.5.7",
+      "revision": 1,
+      "bottle_rebuild": 0,
+      "pkg_version": "1.5.7_1",
+      "declared_directly": true,
+      "compatibility_version": 1
+    }
+  ],
+  "source": {
+    "path": "/opt/homebrew/Library/Taps/homebrew/homebrew-core/Formula/c/curl.rb",
+    "tap": "homebrew/core",
+    "tap_git_head": "71e499665eedf9e31fa15b59a9b971137a3b478d",
+    "spec": "stable",
+    "versions": {
+      "stable": "8.23.0",
+      "head": null,
+      "version_scheme": 0,
+      "compatibility_version": null
+    }
+  },
+  "arch": "arm64",
+  "built_on": {
+    "os": "Macintosh",
+    "os_version": "macOS 15.8",
+    "cpu_family": "dunno",
+    "xcode": "26.3",
+    "clt": "26.3.0.0.1.1771626560",
+    "preferred_perl": "5.34"
+  }
+}

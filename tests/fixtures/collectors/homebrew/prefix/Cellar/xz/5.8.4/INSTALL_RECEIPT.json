@@ -1,0 +1,47 @@
+{
+  "homebrew_version": "6.0.22-323-gde1ac14",
+  "used_options": [],
+  "unused_options": [],
+  "built_as_bottle": true,
+  "poured_from_bottle": true,
+  "loaded_from_api": true,
+  "installed_on_request": false,
+  "changed_files": [
+    "lib/pkgconfig/liblzma.pc"
+  ],
+  "loaded_from_internal_api": true,
+  "linkage_files": [
+    "bin/lzmadec",
+    "bin/lzmainfo",
+    "bin/xz",
+    "bin/xzdec",
+    "lib/liblzma.5.dylib"
+  ],
+  "binary_relocation_files": [],
+  "time": 1790500000,
+  "source_modified_time": 1788964466,
+  "compiler": "clang",
+  "aliases": [],
+  "runtime_dependencies": [],
+  "source": {
+    "path": "/opt/homebrew/Library/Taps/homebrew/homebrew-core/Formula/x/xz.rb",
+    "tap": "homebrew/core",
+    "tap_git_head": "eeb4f6c36cc6374fa705c44486c62df3646e8f03",
+    "spec": "stable",
+    "versions": {
+      "stable": "5.8.4",
+      "head": null,
+      "version_scheme": 1,
+      "compatibility_version": null
+    }
+  },
+  "arch": "arm64",
+  "built_on": {
+    "os": "Macintosh",
+    "os_version": "macOS 15.7",
+    "cpu_family": "dunno",
+    "xcode": "26.3",
+    "clt": "26.3.0.0.1.1771626560",
+    "preferred_perl": "5.34"
+  }
+}
