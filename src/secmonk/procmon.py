@@ -1,0 +1,263 @@
+"""Process monitor views for the CLI (`secmonk procs`): process tree rows joined with findings, and the
+`--watch` differ that reports new executables and new launch items between snapshots.
+
+Kept out of cli.py so it can be tested without Typer. See _docs/features/process-monitor.md.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from dataclasses import dataclass, field
+from typing import Any
+
+from .collectors.process.backend import Inspector
+from .collectors.process.collector import ProcessView, build_views
+from .collectors.process.model import LaunchItem, Snapshot
+from .engine import queries
+
+PRIORITY_ORDER = ("P1", "P2", "P3", "P4")
+
+
+# --------------------------------------------------------------------------- findings join
+
+def findings_by_component(conn: sqlite3.Connection, asset_id: str) -> dict[tuple[str, str | None], list[dict]]:
+    """(component name, version) -> open findings (priority order)."""
+    out: dict[tuple[str, str | None], list[dict]] = {}
+    for r in queries.findings(conn, asset=asset_id, limit=100_000):
+        out.setdefault((r["name"], r["version"]), []).append(
+            {"vuln_id": r["vuln_id"], "priority": r["priority"], "kev": bool(r["kev"]),
+             "fixed_version": r["fixed_version"], "cvss_score": r["cvss_score"]})
+    return out
+
+
+def _view_findings(v: ProcessView, fmap: dict[tuple[str, str | None], list[dict]]) -> list[dict]:
+    """Findings of every component the executable resolved to (app + embedded runtime + Go modules ...)."""
+    if v.resolution is None:
+        return []
+    seen: set[str] = set()
+    out: list[dict] = []
+    for c in v.resolution.components:
+        for f in fmap.get((c.name, c.version), []):
+            if f["vuln_id"] not in seen:
+                seen.add(f["vuln_id"])
+                out.append({**f, "component": c.name})
+    out.sort(key=lambda f: (f["priority"] or "P9", not f["kev"], -(f["cvss_score"] or 0)))
+    return out
+
+
+def summarize_findings(fs: list[dict]) -> str:
+    if not fs:
+        return ""
+    counts: dict[str, int] = {}
+    for f in fs:
+        counts[f["priority"] or "?"] = counts.get(f["priority"] or "?", 0) + 1
+    parts = [f"{p}x{counts[p]}" for p in PRIORITY_ORDER if p in counts]
+    kev = sum(1 for f in fs if f["kev"])
+    return " ".join(parts) + (f" KEV:{kev}" if kev else "")
+
+
+# --------------------------------------------------------------------------- rows
+
+def _identity(v: ProcessView) -> str:
+    c = v.identity
+    if c is None:
+        return ""
+    return f"{c.name} {c.version}" if c.version else c.name
+
+
+def _launch(v: ProcessView) -> str:
+    li = v.launch
+    s = li.kind
+    if li.label and not li.label.startswith("application."):
+        s += f" ({li.label})"
+    elif li.mechanism and li.mechanism not in ("spawn", "init", "launchservices"):
+        s += f" ({li.mechanism})"
+    return s
+
+
+def view_row(v: ProcessView, fmap: dict | None = None, depth: int = 0) -> dict[str, Any]:
+    fs = _view_findings(v, fmap or {})
+    p = v.proc
+    name = (p.exe or p.name or "?").rsplit("/", 1)[-1]
+    return {
+        "pid": p.pid, "ppid": p.ppid, "user": p.user, "depth": depth, "process": name, "exe": p.exe,
+        "launch": v.launch.kind, "launch_detail": _launch(v), "label": v.launch.label, "launch_source": v.launch.source,
+        "via": v.launch.via, "evidence": v.launch.evidence, "started": p.started, "script": v.script,
+        "identity": _identity(v), "identity_method": v.resolution.method if v.resolution else None,
+        "category": v.identity.category if v.identity else None,
+        "findings": summarize_findings(fs), "findings_detail": fs[:20], "flags": list(v.flags),
+        "provenance": {k: v.facts[k] for k in ("quarantine", "where_froms", "signature", "created", "sha256")
+                       if k in v.facts},
+    }
+
+
+def tree_rows(views: list[ProcessView], fmap: dict | None = None) -> list[dict]:
+    """Depth-first by parent pid; orphans (parent not in the snapshot) become roots."""
+    by_pid = {v.proc.pid: v for v in views}
+    children: dict[int, list[ProcessView]] = {}
+    roots: list[ProcessView] = []
+    for v in views:
+        if v.proc.ppid in by_pid and v.proc.ppid != v.proc.pid:
+            children.setdefault(v.proc.ppid, []).append(v)
+        else:
+            roots.append(v)
+    out: list[dict] = []
+    seen: set[int] = set()
+
+    def walk(v: ProcessView, depth: int) -> None:
+        if v.proc.pid in seen:
+            return
+        seen.add(v.proc.pid)
+        out.append(view_row(v, fmap, depth))
+        for c in sorted(children.get(v.proc.pid, []), key=lambda x: x.proc.pid):
+            walk(c, depth + 1)
+
+    for r in sorted(roots, key=lambda x: x.proc.pid):
+        walk(r, 0)
+    for v in views:                                   # cycles: never lose a process
+        if v.proc.pid not in seen:
+            walk(v, 0)
+    return out
+
+
+def interesting(row: dict) -> bool:
+    return bool(row["findings"] or row["flags"])
+
+
+# --------------------------------------------------------------------------- watch
+
+@dataclass
+class Event:
+    kind: str     # new-executable | changed-executable | new-launch-item | changed-launch-item | removed-launch-item
+    data: dict[str, Any] = field(default_factory=dict)
+
+
+def _item_sig(it: LaunchItem) -> tuple:
+    return (it.program, tuple(it.args), it.disabled, it.mechanism)
+
+
+@dataclass
+class Watcher:
+    """Diffs successive snapshots. One inspector is kept for the whole session, so identity and provenance of
+    an executable are computed once (codesign, hashing and binary parsing are the expensive parts); a file
+    replaced in place (new inode / size / mtime) is re-inspected and reported as changed."""
+
+    inspector: Inspector
+    seen_exes: dict[str, tuple | None] = field(default_factory=dict)       # path -> stamp
+    launch_items: dict[tuple[str, str | None], LaunchItem] = field(default_factory=dict)
+    primed: bool = False
+
+    def tick(self, snap: Snapshot) -> tuple[list[ProcessView], list[Event]]:
+        self.inspector.snap = snap
+        changed: set[str] = set()
+        stamps: dict[str, tuple | None] = {}
+        for p in snap.processes:
+            if p.exe and p.exe not in stamps:
+                stamps[p.exe] = self.inspector.stamp(p.exe)
+                if p.exe in self.seen_exes and stamps[p.exe] != self.seen_exes[p.exe]:
+                    changed.add(p.exe)
+                    self.inspector.forget(p.exe)           # stale identity, version and facts
+        views = build_views(snap, self.inspector)
+        events: list[Event] = []
+        items = {(it.label, it.source): it for it in snap.launch_items}
+        if self.primed:
+            reported: set[str] = set()
+            for v in views:
+                exe = v.proc.exe
+                if not exe or exe in reported:
+                    continue
+                if exe not in self.seen_exes:
+                    events.append(Event("new-executable", {"view": v}))
+                    reported.add(exe)
+                elif exe in changed:
+                    events.append(Event("changed-executable", {"view": v}))
+                    reported.add(exe)
+            for key, it in items.items():
+                old = self.launch_items.get(key)
+                if old is None:
+                    events.append(Event("new-launch-item", {"item": it}))
+                elif _item_sig(old) != _item_sig(it):
+                    events.append(Event("changed-launch-item", {"item": it, "previous": old}))
+            for key, it in self.launch_items.items():
+                if key not in items:
+                    events.append(Event("removed-launch-item", {"item": it}))
+        self.seen_exes.update(stamps)
+        self.launch_items = items
+        self.primed = True
+        return views, events
+
+
+# --------------------------------------------------------------------------- shared by the CLI and the web API
+
+def match_inventory(conn: sqlite3.Connection, inv: Any, min_confidence: float = 0.5) -> dict:
+    """Save `inv` (on `conn`, which may be a temporary overlay), match it, return findings per component."""
+    from .engine.inventory import save_inventory
+    from .engine.match import match_asset
+
+    save_inventory(conn, inv)
+    match_asset(conn, inv.asset.id, min_confidence=min_confidence)
+    return findings_by_component(conn, inv.asset.id)
+
+
+def event_dict(ev: Event, fmap: dict | None = None) -> dict[str, Any]:
+    """JSON form of a watch event (CLI `--watch -f json` and `GET /api/processes/watch`)."""
+    if ev.kind in ("new-executable", "changed-executable"):
+        row = view_row(ev.data["view"], fmap)
+        return {"event": ev.kind, **{k: row[k] for k in row if k != "depth"}}
+    it: LaunchItem = ev.data["item"]
+    d = {"event": ev.kind, "label": it.label, "mechanism": it.mechanism, "program": it.program,
+         "source": it.source, "scope": it.scope}
+    prev = ev.data.get("previous")
+    if prev is not None:
+        d["previous_program"] = prev.program
+    return d
+
+
+def launch_item_rows(snap: Snapshot, views: list[ProcessView], missing: list[dict] | None = None) -> list[dict]:
+    from .collectors.process.launch import MECHANISM_KIND
+
+    pids: dict[str, list[int]] = {}
+    for v in views:
+        if v.launch.label:
+            pids.setdefault(v.launch.label, []).append(v.proc.pid)
+    gone = {(m["label"], m["source"]) for m in missing or []}
+    return [{"label": it.label, "mechanism": it.mechanism, "kind": MECHANISM_KIND.get(it.mechanism, "unknown"),
+             "program": it.program, "args": list(it.args), "source": it.source, "scope": it.scope,
+             "run_at_load": it.run_at_load, "keep_alive": it.keep_alive, "disabled": it.disabled,
+             "running_pids": pids.get(it.label, []), "missing_program": (it.label, it.source) in gone}
+            for it in snap.launch_items]
+
+
+def software_rows(components: list[Any], fmap: dict | None = None) -> list[dict]:
+    out = []
+    for c in components:
+        pm = c.meta.get("process") or {}
+        fs = sorted((fmap or {}).get((c.name, c.version), []),
+                    key=lambda f: (f["priority"] or "P9", not f["kev"], -(f["cvss_score"] or 0)))
+        out.append({"name": c.name, "version": c.version, "category": c.category, "purl": c.purl,
+                    "vendor": c.vendor, "product": c.meta.get("product"), "resolution": pm.get("resolution"),
+                    "count": pm.get("count", 0), "users": pm.get("users", []), "launch": pm.get("launch", []),
+                    "executables": pm.get("executables", []), "pids": [p["pid"] for p in pm.get("processes", [])],
+                    "flags": pm.get("flags", []), "via_executable": pm.get("via_executable"),
+                    "findings": summarize_findings(fs), "findings_detail": fs[:50]})
+    return out
+
+
+def snapshot_payload(snap: Snapshot, views: list[ProcessView], inv: Any, fmap: dict | None, *,
+                     source: str, matched: bool) -> dict[str, Any]:
+    """Everything the web views need for one snapshot (`GET /api/processes`; also the design mock)."""
+    rows = tree_rows(views, fmap)
+    missing = inv.asset.meta.get("launch_items_missing_program", [])
+    return {
+        "asset": inv.asset.id, "host": inv.asset.name, "platform": snap.platform, "os": snap.os,
+        "taken_at": snap.taken_at, "source": source, "matched": matched,
+        "summary": {"processes": len(views), "components": len(inv.components),
+                    "launch_kinds": inv.asset.meta.get("launch_kinds", {}),
+                    "with_findings": sum(1 for r in rows if r["findings"]),
+                    "flagged": sum(1 for r in rows if r["flags"]),
+                    "launch_items": len(snap.launch_items), "missing_programs": len(missing)},
+        "processes": rows,
+        "software": software_rows(inv.components, fmap),
+        "launch_items": launch_item_rows(snap, views, missing),
+        "warnings": list(inv.warnings),
+    }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Disabled</key>
+	<true/>
+	<key>Label</key>
+	<string>com.openssh.sshd</string>
+	<key>Program</key>
+	<string>/usr/libexec/sshd-keygen-wrapper</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/sbin/sshd</string>
+		<string>-i</string>
+	</array>
+</dict>
+</plist>

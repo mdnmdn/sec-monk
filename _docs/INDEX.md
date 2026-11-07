@@ -20,8 +20,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [macOS inventory](features/inventory-macos.md) | implemented | 2026-11-07 | macos, inventory, homebrew, collector, cli |
 | [Agentless inventory over SSH](features/inventory-ssh.md) | implemented | 2026-11-07 | ssh, agentless, linux, macos, windows, inventory, dependencies |
 | [Windows inventory](features/inventory-windows.md) | implemented | 2026-11-07 | windows, inventory, registry, msrc, cli |
+| [Process / executable monitor](features/process-monitor.md) | implemented | 2026-11-07 | process, macos, cli, collector, provenance |
 | [Scan, match and findings](features/scan-and-findings.md) | implemented | 2026-11-07 | cli, matching, prioritization, findings |
 | [Vulnerability data sync](features/vuln-sync.md) | implemented | 2026-11-07 | cli, vuln-source, sync, osv, cve, kev, epss, nvd, euvd, msrc |
+| [Web interface (local)](features/web-ui.md) | implemented | 2026-11-07 | web-ui, cli, process, design |
 
 ## tech
 
@@ -34,12 +36,14 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [Docker image collector](tech/collectors/docker-image.md) | implemented · sample: mixed | 2026-11-07 | collector, docker, oci, registry, dpkg, apk, rpm, sbom |
 | [Homebrew / Linuxbrew collector](tech/collectors/homebrew.md) | implemented · sample: mixed | 2026-11-07 | collector, homebrew, linuxbrew, macos, identity |
 | [macOS collector](tech/collectors/macos.md) | implemented · sample: synthetic | 2026-11-07 | collector, macos, desktop, homebrew |
+| [Process collector (process / executable monitor)](tech/collectors/process.md) | implemented · sample: synthetic | 2026-11-07 | collector, process, macos, launchd, provenance |
 | [Rootfs collector](tech/collectors/rootfs.md) | implemented · sample: real | 2026-11-07 | collector, rootfs, dpkg, apk, rpm, python, npm |
 | [SSH collector (agentless)](tech/collectors/ssh.md) | implemented · sample: synthetic | 2026-11-07 | collector, ssh, agentless, linux, macos, windows |
 | [Windows collector](tech/collectors/windows.md) | implemented · sample: synthetic | 2026-11-07 | collector, windows, desktop, server, registry, msrc |
 | [Data model (SQLite schema)](tech/data-model.md) | implemented | 2026-11-07 | data-model, sqlite, matching |
 | [Classification — recognizing and categorizing software](tech/engine/classification.md) | implemented | 2026-11-07 | engine, classification, purl, cpe |
 | [Matching, enrichment and prioritization](tech/engine/matching.md) | implemented | 2026-11-07 | engine, matching, versions, prioritization |
+| [Web interface — architecture](tech/web-ui.md) | implemented | 2026-11-07 | web-ui, architecture, security, cli |
 
 ## references
 
@@ -90,6 +94,9 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [ADR-0004 — SQLite schema v2](decisions/0004-sqlite-schema-v2.md) | accepted | 2026-11-07 | data-model, storage |
 | [ADR-0005 — Prototype scope (November 2026)](decisions/0005-prototype-scope-nov-2026.md) | accepted | 2026-11-07 | scope, roadmap |
 | [ADR-0006 — Per-user state locations (security)](decisions/0006-per-user-state-locations.md) | accepted | 2026-11-07 | security, storage, cli |
+| [ADR-0007 — Process / executable monitor](decisions/0007-process-monitor.md) | accepted | 2026-11-07 | process, collector, architecture, macos |
+| [ADR-0008 — Local web interface stack](decisions/0008-web-ui-stack.md) | superseded | 2026-11-07 | web-ui, architecture, security |
+| [ADR-0009 — Web interface stack with vendored libraries](decisions/0009-web-ui-vendored-libraries.md) | accepted | 2026-11-07 | web-ui, architecture, security |
 
 ## meta
 
@@ -104,13 +111,13 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **agentless**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
 - **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
-- **architecture**: [architecture](tech/architecture.md), [README](tech/collectors/README.md)
+- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
 - **backlog**: [next-sources](plans/next-sources.md)
 - **backports**: [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md)
 - **binary**: [go](references/package-formats/go.md), [rust](references/package-formats/rust.md)
 - **classification**: [classification](tech/engine/classification.md)
-- **cli**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [README](features/README.md), [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [inventory-windows](features/inventory-windows.md), [scan-and-findings](features/scan-and-findings.md), [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
-- **collector**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [on-macos](plans/on-macos.md), [homebrew](references/homebrew.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [dependencies](tech/collectors/dependencies.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)
+- **cli**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [README](features/README.md), [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [inventory-windows](features/inventory-windows.md), [process-monitor](features/process-monitor.md), [scan-and-findings](features/scan-and-findings.md), [vuln-sync](features/vuln-sync.md), [web-ui](features/web-ui.md), [architecture](tech/architecture.md), [web-ui](tech/web-ui.md)
+- **collector**: [0007-process-monitor](decisions/0007-process-monitor.md), [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [process-monitor](features/process-monitor.md), [on-macos](plans/on-macos.md), [homebrew](references/homebrew.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [dependencies](tech/collectors/dependencies.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [process](tech/collectors/process.md), [rootfs](tech/collectors/rootfs.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)
 - **container**: [inventory-docker](features/inventory-docker.md)
 - **containers**: [docker-engine](tech/collectors/docker-engine.md)
 - **conventions**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
@@ -120,6 +127,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **cwe**: [nvd](references/vuln-sources/nvd.md)
 - **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [data-model](tech/data-model.md)
 - **dependencies**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-docker](features/inventory-docker.md), [inventory-ssh](features/inventory-ssh.md), [README](references/package-formats/README.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
+- **design**: [web-ui](features/web-ui.md)
 - **desktop**: [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
 - **distro**: [next-sources](plans/next-sources.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [on-linux-docker](plans/on-linux-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
@@ -148,9 +156,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **java**: [inventory-dependencies](features/inventory-dependencies.md), [java](references/package-formats/java.md), [dependencies](tech/collectors/dependencies.md)
 - **kev**: [vuln-sync](features/vuln-sync.md), [kev](references/vuln-sources/kev.md)
 - **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
+- **launchd**: [process](tech/collectors/process.md)
 - **linux**: [inventory-docker](features/inventory-docker.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-ssh](features/inventory-ssh.md), [on-linux-docker](plans/on-linux-docker.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [ssh](tech/collectors/ssh.md)
 - **linuxbrew**: [inventory-homebrew](features/inventory-homebrew.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md)
-- **macos**: [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [on-macos](plans/on-macos.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [ssh](tech/collectors/ssh.md)
+- **macos**: [0007-process-monitor](decisions/0007-process-monitor.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [process-monitor](features/process-monitor.md), [on-macos](plans/on-macos.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [process](tech/collectors/process.md), [ssh](tech/collectors/ssh.md)
 - **matching**: [scan-and-findings](features/scan-and-findings.md), [engine-and-quality](plans/engine-and-quality.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [data-model](tech/data-model.md), [matching](tech/engine/matching.md)
 - **msrc**: [inventory-windows](features/inventory-windows.md), [vuln-sync](features/vuln-sync.md), [on-windows](plans/on-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [windows](tech/collectors/windows.md)
 - **network**: [on-open-network](plans/on-open-network.md), [probes](references/probes.md), [README](references/vuln-sources/README.md)
@@ -167,6 +176,8 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **powershell**: [on-windows](plans/on-windows.md)
 - **prioritization**: [scan-and-findings](features/scan-and-findings.md), [engine-and-quality](plans/engine-and-quality.md), [epss](references/vuln-sources/epss.md), [kev](references/vuln-sources/kev.md), [matching](tech/engine/matching.md)
 - **probes**: [probes](references/probes.md)
+- **process**: [0007-process-monitor](decisions/0007-process-monitor.md), [process-monitor](features/process-monitor.md), [web-ui](features/web-ui.md), [process](tech/collectors/process.md)
+- **provenance**: [process-monitor](features/process-monitor.md), [process](tech/collectors/process.md)
 - **purl**: [osv](references/vuln-sources/osv.md), [classification](tech/engine/classification.md)
 - **pypi**: [python](references/package-formats/python.md)
 - **python**: [inventory-dependencies](features/inventory-dependencies.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
@@ -177,7 +188,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **rust**: [inventory-dependencies](features/inventory-dependencies.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [docker-image](tech/collectors/docker-image.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
-- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md)
+- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](tech/web-ui.md)
 - **server**: [windows](tech/collectors/windows.md)
 - **sqlite**: [data-model](tech/data-model.md)
 - **ssh**: [inventory-ssh](features/inventory-ssh.md), [on-linux-docker](plans/on-linux-docker.md), [on-macos](plans/on-macos.md), [on-windows](plans/on-windows.md), [ssh](tech/collectors/ssh.md)
@@ -191,4 +202,5 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **versions**: [engine-and-quality](plans/engine-and-quality.md), [matching](tech/engine/matching.md)
 - **vision**: [vision](product/vision.md)
 - **vuln-source**: [vuln-sync](features/vuln-sync.md), [next-sources](plans/next-sources.md), [on-open-network](plans/on-open-network.md), [README](references/vuln-sources/README.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [epss](references/vuln-sources/epss.md), [euvd](references/vuln-sources/euvd.md), [ghsa](references/vuln-sources/ghsa.md), [kev](references/vuln-sources/kev.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [osv](references/vuln-sources/osv.md), [architecture](tech/architecture.md)
+- **web-ui**: [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](features/web-ui.md), [web-ui](tech/web-ui.md)
 - **windows**: [inventory-ssh](features/inventory-ssh.md), [inventory-windows](features/inventory-windows.md), [on-windows](plans/on-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)

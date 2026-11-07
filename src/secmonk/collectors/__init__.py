@@ -5,6 +5,7 @@ from . import (
     fs,  # noqa: F401
     homebrew,  # noqa: F401
     macos,  # noqa: F401
+    process,  # noqa: F401
     rootfs,  # noqa: F401
     ssh,  # noqa: F401
     windows,  # noqa: F401

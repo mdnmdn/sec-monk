@@ -1,0 +1,6 @@
+    1     0     0 root             Thu Nov  7 08:58:01 2026     /sbin/launchd
+   95     1     0 root             Thu Nov  7 08:58:05 2026     /usr/sbin/syslogd
+  300     1   501 alice            Thu Nov  7 09:01:12 2026     /Applications/Slack.app/Contents/MacOS/Slack
+  301   300   501 alice            Thu Nov  7 09:01:13 2026     /Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper
+  402   401   501 alice            Thu Nov  7 09:05:00 2026     -zsh
+garbage line

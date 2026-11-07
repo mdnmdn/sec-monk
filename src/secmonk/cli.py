@@ -7,7 +7,6 @@ that failed); 2 usage error (unknown source/collector, bad option); 3 `scan --fa
 
 from __future__ import annotations
 
-import configparser
 import contextlib
 import csv
 import io
@@ -15,16 +14,13 @@ import json
 import logging
 import re
 import sqlite3
-import tarfile
 import time
-import zipfile
 from collections.abc import Callable, Iterator
 from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Any
 
-import httpx
 import typer
 from rich.console import Console
 from rich.markup import escape
@@ -35,6 +31,7 @@ from . import db as dbm
 from . import paths
 from .engine import queries
 from .engine.match import canonical_ids
+from .errors import COLLECT_ERRORS
 
 app = typer.Typer(no_args_is_help=True, add_completion=False,
                   help="sec-monk — holistic vulnerability scanner prototype")
@@ -69,8 +66,6 @@ BOOL_OPTS = frozenset({"binaries", "sudo", "all_kegs", "use_brew_cli", "include_
                        "allow_agent", "look_for_keys"})
 LIST_OPTS = frozenset({"exclude", "home", "ecosystems"})
 
-COLLECT_ERRORS = (OSError, RuntimeError, ValueError, KeyError, tarfile.TarError, zipfile.BadZipFile,
-                  httpx.HTTPError, configparser.Error, sqlite3.Error)
 
 
 @app.callback()
@@ -477,6 +472,51 @@ def collect(
         _info(f"saved asset [bold]{_e(inv.asset.id)}[/] (scan {scan_id})")
 
 
+@app.command("ui")
+def ui(
+    host: Annotated[str, typer.Option(help="Address to listen on (default loopback only; the UI has no authentication)")]
+    = "127.0.0.1",
+    port: Annotated[int, typer.Option(min=0, max=65535, help="Port (0 = any free port)")] = 8765,
+    snapshot: Annotated[Path | None, typer.Option(
+        "--snapshot", help="Serve a process snapshot file instead of this machine (any OS)")] = None,
+    open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the browser")] = False,
+    allow_host: Annotated[list[str] | None, typer.Option(
+        "--allow-host", help="Extra name accepted in the Host header (e.g. the machine's DNS name); repeatable")] = None,
+    min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
+    opt: OptsOpt = None,
+    db: DbOpt = None,
+):
+    """Local web interface (phase 1: process monitor). Ctrl-C stops it."""
+    from .web.api import ProcessMonitor
+    from .web.server import make_server
+
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        err_console.print(f"[yellow]warning: listening on {_e(host)} — the UI has no authentication; anyone who can "
+                          "reach this address can see the process list and save to the database[/]")
+    if snapshot is not None and not snapshot.is_file():
+        raise _fail(f"no snapshot file {snapshot}", 2)
+    monitor = ProcessMonitor(db_path=_db_path(db), target=str(snapshot) if snapshot else None,
+                             opts=_parse_opts(opt), min_confidence=min_confidence)
+    try:
+        srv = make_server(monitor, host, port, mode="snapshot" if snapshot else "live", verbose=_state.verbose,
+                          allow_hosts=allow_host)
+    except OSError as e:
+        raise _fail(f"cannot listen on {host}:{port}: {e}") from None
+    shown = "localhost" if host in ("127.0.0.1", "::1", "localhost") else (f"[{host}]" if ":" in host else host)
+    url = f"http://{shown}:{srv.port}/"
+    console.print(f"sec-monk UI on [bold]{_e(url)}[/] — Ctrl-C to stop")
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(url)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+
+
 @app.command("windows-script")
 def windows_script(compact: Annotated[bool, typer.Option(
         help="Strip comments/blank lines (for `powershell -Command -`)")] = False):
@@ -511,11 +551,7 @@ def containers(
 
 
 def _ephemeral(conn: sqlite3.Connection) -> None:
-    """Shadow the inventory tables with TEMP copies so a scan can match without persisting anything."""
-    conn.execute("PRAGMA foreign_keys=OFF")
-    for t in ("asset", "scan", "component", "asset_component", "finding"):
-        sql = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()[0]
-        conn.execute(re.sub(r"^\s*CREATE TABLE", "CREATE TEMP TABLE", sql, count=1))
+    dbm.ephemeral_overlay(conn)
 
 
 FINDING_COLS = ["priority", "vuln_id", "component", "version", "fixed_version", "severity", "cvss_score",
@@ -621,6 +657,153 @@ def match(
             _traceback()
             raise _fail(f"unknown asset {asset!r} — see `secmonk inventory assets`") from None
     console.print(_stats_line(asset, stats))
+
+
+# --------------------------------------------------------------------------- process monitor
+
+def _procs_match(conn: sqlite3.Connection, inv, min_confidence: float) -> dict:
+    from . import procmon
+
+    return procmon.match_inventory(conn, inv, min_confidence)
+
+
+def _procs_table(rows: list[dict], title: str) -> None:
+    t = Table(title=_t(title))
+    for col in ("pid", "user", "launch", "process", "identity", "findings", "flags"):
+        t.add_column(col, overflow="fold", justify="right" if col == "pid" else "left")
+    for r in rows:
+        style = "red" if r["findings"].startswith(("P1", "P2")) else ("yellow" if r["flags"] or r["findings"] else "")
+        proc = "  " * r["depth"] + r["process"] + (f"  [{r['script']}]" if r.get("script") else "")
+        t.add_row(_t(r["pid"]), _t(r["user"]), _t(r["launch_detail"]), _t(proc), _t(r["identity"]),
+                  _t(r["findings"], style=style), _t(", ".join(r["flags"]), style="yellow" if r["flags"] else ""))
+    _print(t)
+
+
+def _event_line(ev, fmap: dict) -> tuple[str, dict]:
+    from . import procmon
+
+    data = procmon.event_dict(ev, fmap)
+    if ev.kind in ("new-executable", "changed-executable"):
+        word = "NEW exe" if ev.kind == "new-executable" else "CHANGED exe (replaced on disk)"
+        text = (f"{word}  pid {data['pid']} {data['user'] or ''}  {data['launch_detail']}  {data['exe']}"
+                + (f"  -> {data['identity']} [{data['identity_method']}]" if data["identity"] else "")
+                + (f"  findings: {data['findings']}" if data["findings"] else "")
+                + (f"  flags: {', '.join(data['flags'])}" if data["flags"] else ""))
+        return text, data
+    word = {"new-launch-item": "NEW", "removed-launch-item": "REMOVED"}.get(ev.kind, "CHANGED")
+    return (f"{word} launch item  {data['label']} ({data['mechanism']}, {data['scope']})  -> {data['program']}"
+            f"  [{data['source']}]"), data
+
+
+@app.command()
+def procs(
+    target: Annotated[str | None, typer.Argument(
+        help="Process snapshot JSON (secmonk-process-snapshot/1); default: this machine, live")] = None,
+    flat: Annotated[bool, typer.Option("--flat", help="List instead of a parent/child tree")] = False,
+    suspicious: Annotated[bool, typer.Option(
+        "--suspicious", "-s", help="Only processes with findings or risk flags")] = False,
+    match_: Annotated[bool, typer.Option(
+        "--match/--no-match", help="Match running software against the mirror (if a database exists)")] = True,
+    save: Annotated[bool, typer.Option(
+        "--save", help="Persist asset process:<host> + findings (default: match in a temporary overlay)")] = False,
+    watch: Annotated[float | None, typer.Option(
+        "--watch", "-w", min=1.0, help="Keep running: re-snapshot every N seconds, report new executables "
+                                       "and new/removed launch items (live only)")] = None,
+    max_ticks: Annotated[int | None, typer.Option("--max-ticks", hidden=True)] = None,
+    snapshot_out: Annotated[Path | None, typer.Option(
+        "--snapshot-out", help="Also write the raw process snapshot JSON here")] = None,
+    min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
+    fmt: FmtOpt = Fmt.table,
+    opt: OptsOpt = None,
+    db: DbOpt = None,
+):
+    """Process monitor: what runs, how it was started, which software/version it is, findings, provenance."""
+    from . import procmon
+    from .collectors.process.collector import ProcessCollector
+
+    opts = _parse_opts(opt)
+    if snapshot_out:
+        opts["snapshot_out"] = str(snapshot_out)
+    if watch and target:
+        raise _fail("--watch needs a live snapshot (no TARGET)", 2)
+    col = ProcessCollector()
+    try:
+        snap, inspector, views = col.analyse(target, **opts)
+    except COLLECT_ERRORS as e:
+        _traceback()
+        raise _fail(f"process: {type(e).__name__}: {e}") from None
+    inv = col.inventory(snap, inspector, views, opts)
+    _prepare(inv)
+    if fmt is not Fmt.json:
+        _report_inventory_notes(inv)
+    have_db = _db_path(db).exists()
+    if match_ and not have_db and not save:
+        _info(f"[dim]no database at {_e(_db_path(db))}: showing processes without findings "
+              "(run `secmonk sync …` first)[/]", fmt)
+    use_db = save or (match_ and have_db)
+    with contextlib.ExitStack() as stack:
+        conn = stack.enter_context(_open(db, create=save)) if use_db else None
+        if conn is not None and not save:
+            _ephemeral(conn)
+        fmap = _procs_match(conn, inv, min_confidence) if conn is not None else {}
+        rows = [procmon.view_row(v, fmap) for v in views] if flat else procmon.tree_rows(views, fmap)
+        if suspicious:
+            rows = [r for r in rows if procmon.interesting(r)]
+        if fmt is Fmt.json and not watch:
+            typer.echo(json.dumps({"asset": inv.asset.id, "taken_at": snap.taken_at, "platform": snap.platform,
+                                   "os": snap.os, "warnings": inv.warnings,
+                                   "launch_items_missing_program": inv.asset.meta.get("launch_items_missing_program", []),
+                                   "processes": rows}, indent=2, default=str))
+        elif fmt is Fmt.csv and not watch:
+            _emit(rows, ["pid", "ppid", "user", "launch", "label", "exe", "identity", "identity_method", "findings",
+                         "flags"], fmt, cell={"flags": lambda v: " ".join(v or [])})
+        elif fmt is Fmt.table and (not watch or not _state.quiet):
+            kinds = inv.asset.meta.get("launch_kinds", {})
+            _procs_table(rows, f"{inv.asset.id} — {len(views)} processes, {len(inv.components)} components")
+            _info(" · ".join(f"{k} {n}" for k, n in sorted(kinds.items(), key=lambda x: -x[1])))
+            for m in inv.asset.meta.get("launch_items_missing_program", []):
+                err_console.print(f"[yellow]launch item {_e(m['label'])} points to a missing program "
+                                  f"{_e(m['program'])} ({_e(m['source'])})[/]")
+        if not watch:
+            return
+        watcher = procmon.Watcher(inspector)
+        watcher.tick(snap)
+        _info(f"[dim]watching every {watch:g}s — Ctrl-C to stop[/]", fmt)
+        ticks = 0
+        try:
+            while max_ticks is None or ticks < max_ticks:
+                ticks += 1
+                time.sleep(watch)
+                try:
+                    snap = col.snapshot(None, **{k: v for k, v in opts.items() if k != "snapshot_out"})
+                except COLLECT_ERRORS as e:
+                    err_console.print(f"[yellow]snapshot failed: {_e(e)}[/]")
+                    continue
+                views, events = watcher.tick(snap)
+                if not events:
+                    continue
+                fresh = [e.data["view"] for e in events if e.kind in ("new-executable", "changed-executable")]
+                if conn is not None and fresh:
+                    new_inv = col.inventory(snap, inspector, fresh, opts)
+                    if save:
+                        # an increment of the saved asset: partial, so nothing it did not see counts as removed,
+                        # and the baseline asset meta (process tree) is kept
+                        new_inv.asset.id, new_inv.asset.meta = inv.asset.id, inv.asset.meta
+                        new_inv.mark_partial("procs --watch increment")
+                    else:
+                        new_inv.asset.id = f"{inv.asset.id}#watch"
+                    fmap = _procs_match(conn, new_inv, min_confidence)
+                for ev in events:
+                    text, data = _event_line(ev, fmap)
+                    stamp = time.strftime("%H:%M:%S")
+                    if fmt is Fmt.json:
+                        typer.echo(json.dumps({"time": stamp, **data}, default=str))
+                    else:
+                        bad = data.get("findings", "").startswith(("P1", "P2")) or "flags" in data and data["flags"]
+                        console.print(_t(f"{stamp} {text}", style="red" if bad else ""))
+        except KeyboardInterrupt:
+            pass
+
 
 
 @app.command()

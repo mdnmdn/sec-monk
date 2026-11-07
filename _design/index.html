@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sec-monk design</title>
+  <link rel="stylesheet" href="../src/secmonk/web/static/css/secmonk.css">
+  <link rel="stylesheet" href="storybook/storybook.css">
+</head>
+<body>
+<main class="sm-page" style="max-width:1100px;margin:0 auto">
+  <header class="sm-page-header"><div class="sm-page-header__text">
+    <h1 class="sm-page-header__title"><span class="sm-brand__mark" style="display:inline-grid;vertical-align:-3px">◆</span> sec-monk — interface design</h1>
+    <div class="sm-page-header__subtitle">Design system, sample pages and component storybook of the local web interface (<code>secmonk ui</code>).
+      Requirements, views and navigation: <code>_docs/features/web-ui.md</code>; architecture: <code>_docs/tech/web-ui.md</code>.</div></div></header>
+
+  <div class="sm-callout sm-callout--info"><div><div class="sm-callout__title">One component library</div>
+    Every page here loads <code>src/secmonk/web/static/css/secmonk.css</code>, <code>js/secmonk-ui.js</code> and <code>js/secmonk-views.js</code>
+    — the files the app serves. Sample pages are the real app on mock data generated from the test fixtures
+    (<code>scripts/design_mock.py</code> → <code>mock/data.js</code>). Open them directly (<code>file://</code>) or with
+    <code>python3 -m http.server</code> from the repository root. Vue is vendored (<code>src/secmonk/web/static/vendor</code>): no network needed.</div></div>
+
+  <div class="sm-grid-2">
+    <section class="sm-card"><header class="sm-card__header"><h3 class="sm-card__title">Storybook</h3></header><div class="sm-card__body">
+      <p style="margin-top:0">Every shared component with its variants and the template to copy.</p>
+      <a class="sm-btn sm-btn--primary" href="storybook/index.html">Open the storybook</a></div></section>
+    <section class="sm-card"><header class="sm-card__header"><h3 class="sm-card__title">Principles</h3></header><div class="sm-card__body">
+      <ul style="margin:0;padding-left:18px">
+        <li><b>Explain, don't just list</b>: every badge and flag carries its meaning (tooltip, detail text).</li>
+        <li><b>Risk first</b>: findings and flags are the only saturated colors; everything else stays neutral.</li>
+        <li><b>List → detail drawer</b>: never lose the list's filters and scroll; every state has a URL.</li>
+        <li><b>Same anatomy everywhere</b>: header → context → toolbar → content → drawer.</li>
+        <li><b>Data is text</b>: rendered with interpolation only, never as HTML.</li></ul></div></section>
+  </div>
+
+  <section class="sm-card"><header class="sm-card__header"><h3 class="sm-card__title">Sample pages (phase 1: process monitor)</h3></header>
+    <div class="sm-card__body sm-card__body--flush"><table class="sm-table sm-table--static"><thead><tr><th>Page</th><th>Route</th><th>Shows</th></tr></thead><tbody>
+      <tr><td><a href="pages/processes.html">Processes</a></td><td class="sm-mono">#/processes</td><td>stats, tree with launch kind, identity, findings, flags</td></tr>
+      <tr><td><a href="pages/processes-suspicious.html">Processes — suspicious, list</a></td><td class="sm-mono">#/processes?suspicious=1&amp;mode=flat</td><td>filters in the URL, flat mode</td></tr>
+      <tr><td><a href="pages/process-detail.html">Process detail</a></td><td class="sm-mono">#/processes/403</td><td>Homebrew curl from Terminal: launch chain, identity, findings</td></tr>
+      <tr><td><a href="pages/process-detail-provenance.html">Process detail — provenance</a></td><td class="sm-mono">#/processes/310</td><td>downloaded app: browser, URL, signature</td></tr>
+      <tr><td><a href="pages/software.html">Running software</a></td><td class="sm-mono">#/software</td><td>one row per identity</td></tr>
+      <tr><td><a href="pages/software-detail.html">Software detail</a></td><td class="sm-mono">#/software/curl@8.7.1@package</td><td>executables, processes, findings</td></tr>
+      <tr><td><a href="pages/launch-items.html">Launch items</a></td><td class="sm-mono">#/launch-items</td><td>persistence, running pids, missing programs</td></tr>
+      <tr><td><a href="pages/activity.html">Activity</a></td><td class="sm-mono">#/activity</td><td>watch feed (mock ticks)</td></tr>
+      <tr><td><a href="pages/planned.html">Planned area</a></td><td class="sm-mono">#/findings</td><td>placeholder for later phases</td></tr>
+      <tr><td><a href="pages/about.html">About</a></td><td class="sm-mono">#/about</td><td>server and docs</td></tr>
+    </tbody></table></div></section>
+</main>
+</body>
+</html>

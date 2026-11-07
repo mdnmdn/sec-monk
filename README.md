@@ -40,6 +40,9 @@ uv run secmonk scan fs ./my-service                # language deps: lockfiles, m
 uv run secmonk scan ssh admin@10.0.0.5             # agentless Linux/macOS/Windows host over SSH
 uv run secmonk windows-script > secmonk-inventory.ps1   # run on Windows -> inv.json
 uv run secmonk scan windows inv.json               # (or -o osquery=results.json; live on Windows: no target)
+uv run secmonk procs                               # running processes (macOS): launch origin, version, findings, provenance
+uv run secmonk procs --watch 10 --suspicious       # monitor: report new executables / launch items
+uv run secmonk ui                                  # local web interface (http://127.0.0.1:8765; --snapshot F on any OS)
 
 # 3. Explore
 uv run secmonk findings --priority P1
@@ -75,6 +78,8 @@ scripts/probe_sources.sh                 # read-only reachability probe of every
 | `src/secmonk/sources/` | Vulnerability feeds → SQLite |
 | `src/secmonk/collectors/` | Targets → inventory (components); `lang/` = shared language-dependency parsers |
 | `src/secmonk/engine/` | Classification, versions, matching, scoring |
+| `src/secmonk/web/` | Local web interface: stdlib server + JSON API, static Vue app (`static/`: shared CSS / components) |
+| `_design/` | Interface design: sample pages, [storybook](_design/storybook/index.html), screenshots ([README](_design/README.md)) |
 | `src/secmonk/data/` | `product_aliases.yaml` (curated name → vendor/product), `brew_cpe_seed.csv` (Homebrew identity seed), `windows/secmonk-inventory.ps1` |
 | `_docs/` | Documentation, organized by context with YAML frontmatter |
 | `tests/fixtures/` | Trimmed real samples where the source was reachable, otherwise synthetic or reconstructed ones (each doc's `sample:` frontmatter says which) |

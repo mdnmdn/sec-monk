@@ -6,7 +6,7 @@ status: implemented
 tags: [architecture, cli, engine, collector, vuln-source]
 updated: 2026-11-07
 code: src/secmonk/
-related: [product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
+related: [tech/web-ui.md, product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
 ---
 
 # Prototype architecture
@@ -18,9 +18,9 @@ Python package with a CLI and a SQLite file as the only state.
  secmonk sync <source>                                   secmonk collect|scan <collector> <target>
         |                                                                  |
  +------v---------------------------------+      +-------------------------v------------------------------+
- | sources/  (8, one module per feed)     |      | collectors/  (8 registered)                            |
+ | sources/  (8, one module per feed)     |      | collectors/  (9 registered)                            |
  |  osv cvelist kev epss nvd euvd         |      |  macos  homebrew  rootfs  docker-image  docker-engine  |
- |  msrc debian-tracker                   |      |  fs  ssh  windows                                      |
+ |  msrc debian-tracker                   |      |  fs  ssh  windows  process (running processes)        |
  |  download | --path import -> normalize |      |  each -> Inventory(Asset, [Component], warnings)       |
  +------+---------------------------------+      |                                                        |
         |                                        |  shared helpers                                        |
@@ -71,6 +71,9 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/fs.py` | Folder/repo: `walk_dir` over lockfiles, manifests, installed packages, binaries; git info in asset meta. |
 | `collectors/harvest.py`, `ssh.py` | Agentless SSH: fixed `find | tar` script, safe extraction into a temp dir, then rootfs/macOS/windows code on it. OpenSSH or paramiko transport. |
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
+| `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
+| `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
+| `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`, `api.py`), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
 | `collectors/lang/*.py` | `base.py` registry (`LangParser`, evidence ranks, `dedupe`), parsers: javascript, python, php, golang, rust, java, dotnet; `walk.py` (`walk_dir`, `LangAccumulator`, `WalkLimits`). |
 | `engine/purl.py` | PURL helpers, PURL to OSV ecosystem mapping, ecosystem and name normalization. |
 | `engine/versions.py` | Version comparison per ecosystem (`univers`), OSV range evaluation, tolerant generic comparator. |
@@ -121,6 +124,7 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
 | `scan docker-engine <name / image:ref>` | docker-engine (`LayeredTarView`) | container `export` stream (or image save) through the engine socket | `container:<name>` | same as rootfs |
 | `scan fs <dir>` | fs | lockfiles, manifests, installed metadata, Go/Rust/jar binaries via `walk_dir` | `repo:<path>` / `dir:<path>` | osv-package (7 ecosystems) |
 | `scan ssh user@host` | ssh + harvest | fixed read-only `find` + `tar` stream, extracted to a temp dir, then rootfs / macOS code; Windows hosts: PowerShell inventory script on stdin | `ssh:<host>[:<port>]` (also for Windows hosts) | as rootfs / macOS / windows |
+| `scan process [snapshot.json]` / `procs` | process (+ macos/homebrew/lang code) | live `ps` + `launchctl` + launchd plists, or a snapshot file; per executable: bundle, keg, pkgutil, Go/Rust build info, codesign, quarantine | `process:<host>` | as macos (cve/cpe-product, osv-package for Go/Electron) |
 | `scan windows [inv.json]` | windows | script JSON, osquery rows, or live registry: OS build + UBR, Uninstall keys, Appx, Chocolatey, Scoop, .NET | `windows:<host>` | cve-product on per-build ranges (CNA/MSRC) + alias-table apps |
 
 ## Principles
@@ -131,5 +135,5 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
   disabled with `SECMONK_OSV_STORE_RAW=0` for big ecosystems).
 - **Same CVE, many sources:** rows are keyed `(source, id)`; `alias` links ids; the matcher
   canonicalizes to the CVE id and picks facts by source preference `nvd > cvelist > osv > euvd`.
-- **Read-only collection:** nothing is executed on the target except the fixed SSH scripts and the read-only Windows script; archives are never extracted blindly.
+- **Read-only collection:** nothing is executed on the target except the fixed SSH scripts, the read-only Windows script and the process monitor's fixed read-only commands (`ps`, `launchctl list`, `codesign -dv`, `pkgutil --file-info`); archives are never extracted blindly.
 - **Evidence-based docs:** see [`_meta`](../_meta/README.md). What was validated on real data and which hosts are reachable: [probe log](../references/probes.md); open work: [plans](../plans/README.md).

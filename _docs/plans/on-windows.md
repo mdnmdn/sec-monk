@@ -126,6 +126,17 @@ Needs a Linux/macOS machine (or WSL) with secmonk, and a Windows host with **Ope
 - [ ] **Windows 10 LTSC/IoT, Windows 7/8.1, Server 2008/2012 R2** mapping (listed as "mapped but untested"): run on any such VM or feed historical `winver` outputs into the test suite; check 4-part UBR comparison.
 - [ ] **.NET / Visual Studio / Edge / Teams / WebView2** on the real host: compare found versions against the CNA product strings listed in [windows-inventory.md](../references/windows-inventory.md) section 2.3; log mismatches as alias entries.
 
+## F. Process monitor: Windows backend (not implemented; design in tech/collectors/process.md "Porting")
+
+- [ ] **Emit a process snapshot from the PowerShell script** (or a `collectors/process/windows.py` backend for live runs):
+  `Win32_Process` (ProcessId, ParentProcessId, ExecutablePath, CommandLine redacted, CreationDate), services
+  (`Win32_Service` PathName/ProcessId -> `label`), Run/RunOnce keys, Startup folders, scheduled task actions as
+  `launch_items`; per executable precompute `identity` (file `VersionInfo` ProductName/ProductVersion/CompanyName,
+  owning Uninstall entry), `Zone.Identifier` (ZoneId, HostUrl, ReferrerUrl) as provenance and
+  `Get-AuthenticodeSignature` as `signature`. Analyse with `secmonk procs snap.json` on any OS.
+  Verify: `svchost.exe -k` groups map to their services; Explorer-launched apps -> `gui-app`; WindowsTerminal/conhost
+  shells -> `interactive`; a downloaded exe shows its `HostUrl`.
+
 ## E. Wrap-up
 
 - [ ] Commit real fixtures; set `sample: mixed` or `real` in `tech/collectors/windows.md`, `features/inventory-windows.md`, `references/windows-inventory.md`; update Limitations; regenerate INDEX.

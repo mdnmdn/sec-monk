@@ -1,0 +1,27 @@
+/* Layout of the storybook page only. Component styles come from src/secmonk/web/static/css/secmonk.css. */
+.sb { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sb-side { position: sticky; top: 0; height: 100vh; overflow: auto; padding: 16px; border-right: 1px solid var(--sm-border);
+  background: var(--sm-surface); display: flex; flex-direction: column; gap: 10px; }
+.sb-side .sm-search { min-width: 0; flex: none; }
+.sb-brand { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.sb-group { margin: 12px 0 4px; font-size: 11.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: var(--sm-text-3); }
+.sb-link { display: block; padding: 5px 8px; border-radius: 6px; color: var(--sm-text-2); font-size: 13.5px; }
+.sb-link:hover { background: var(--sm-surface-2); text-decoration: none; }
+.sb-link.is-active { background: var(--sm-accent-soft); color: var(--sm-text); font-weight: 600; }
+.sb-foot { margin-top: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; flex-wrap: wrap; }
+.sb-main { padding: 28px 36px; min-width: 0; max-width: 1100px; }
+.sb-head h1 { font-size: 24px; margin: 2px 0 6px; }
+.sb-head p { color: var(--sm-text-2); margin: 0 0 20px; max-width: 760px; }
+.sb-variant { margin-bottom: 28px; }
+.sb-variant__name { font-size: 13px; font-weight: 650; color: var(--sm-text-2); margin-bottom: 8px; }
+.sb-canvas { border: 1px solid var(--sm-border); border-radius: 8px; padding: 20px; background: var(--sm-bg);
+  background-image: radial-gradient(var(--sm-border) 1px, transparent 1px); background-size: 16px 16px; }
+.sb-code summary { cursor: pointer; color: var(--sm-text-3); font-size: 12.5px; margin-top: 6px; }
+.sb-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.sb-swatch { display: flex; align-items: center; gap: 8px; background: var(--sm-surface); border: 1px solid var(--sm-border);
+  border-radius: 6px; padding: 6px; }
+.sb-swatch__chip { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--sm-border); flex: none; }
+.sb-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.sb-icon { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: var(--sm-surface);
+  border: 1px solid var(--sm-border); border-radius: 6px; font-size: 12px; }
+@media (max-width: 760px) { .sb { grid-template-columns: 1fr; } .sb-side { position: static; height: auto; } .sb-main { padding: 16px; } }

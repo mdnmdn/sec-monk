@@ -25,6 +25,9 @@ schema, templates) lives in `_docs/_meta/`.
 | `decisions/` | decisions | Architecture Decision Records `NNNN-short-title.md`. Immutable once accepted; supersede with a new ADR. | `decision` |
 | `plans/` | plans | Work still to do, **organized by the platform you need to be on** to do it (macOS, Linux/Docker host, Windows, open network) plus the source-integration backlog. Checklists, kept current. | `plan` |
 
+Outside `_docs/`: the interface design (design system, sample pages, component storybook, screenshots) lives in
+[`_design/`](../../_design/README.md), because it is made of runnable HTML that loads the app's own CSS/JS.
+
 Rule of thumb when placing a doc: *Is it about the outside world?* → `references/`.
 *About what the user gets?* → `features/`. *About how we build it?* → `tech/`.
 *About a choice we made?* → `decisions/`. *About why the project exists?* → `product/`.

@@ -138,8 +138,9 @@ CREATE INDEX IF NOT EXISTS ix_triage_cve ON distro_triage(cve_id);
 -- ------------------------------------------------------------------ inventory
 CREATE TABLE IF NOT EXISTS asset (
     id            TEXT PRIMARY KEY,          -- stable id: 'macos:<host>', 'homebrew:<host>', 'windows:<host>', 'ssh:<host>[:<port>]',
-                                             -- 'image:<repo>@<digest>', 'container:<name>', 'rootfs:<path>', 'repo:<path>', 'dir:<path>'
-    type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory
+                                             -- 'image:<repo>@<digest>', 'container:<name>', 'rootfs:<path>', 'repo:<path>', 'dir:<path>',
+                                             -- 'process:<host>' (running processes only)
+    type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory | host-processes
     name          TEXT,
     os_name       TEXT,
     os_version    TEXT,
@@ -332,3 +333,14 @@ def get_sync_cursor(conn: sqlite3.Connection, source: str) -> str | None:
 
 def executemany(conn: sqlite3.Connection, sql: str, rows: Iterable[tuple]) -> None:
     conn.executemany(sql, rows)
+
+
+def ephemeral_overlay(conn: sqlite3.Connection) -> None:
+    """Shadow the inventory tables with TEMP copies so a scan can match without persisting anything
+    (`scan --no-save`, `procs`, the web UI). Lives as long as the connection."""
+    import re
+
+    conn.execute("PRAGMA foreign_keys=OFF")
+    for t in ("asset", "scan", "component", "asset_component", "finding"):
+        sql = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()[0]
+        conn.execute(re.sub(r"^\s*CREATE TABLE", "CREATE TEMP TABLE", sql, count=1))

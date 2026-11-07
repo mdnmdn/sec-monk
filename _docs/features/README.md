@@ -23,6 +23,8 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Containers and Linux filesystems | [inventory-docker.md](inventory-docker.md) | implemented | any OS for images (registry, tarball, OCI dir, no daemon); Linux/macOS host with a Docker/Podman socket for live containers; any rootfs directory | `secmonk collect\|scan docker-image`, `docker-engine`, `rootfs`; `secmonk containers` | real images alpine, debian-slim, python-slim, registry:2 scanned; engine only against a fake socket |
 | Language dependencies | [inventory-dependencies.md](inventory-dependencies.md) | implemented | any (folders, repos; also inside images, containers, SSH hosts, Homebrew) | `secmonk scan fs <dir>` (+ the collectors above) | tool-generated real fixtures; verified end to end on real OSV data |
 | Agentless SSH inventory | [inventory-ssh.md](inventory-ssh.md) | implemented | target Linux, macOS, Windows (OpenSSH); analyst machine any | `secmonk collect\|scan ssh user@host[:port]` | fixture trees + in-process sshd only; no real sshd, no real macOS/Windows host |
+| Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | synthetic fixtures; never run on a real Mac |
+| Web interface (local) | [web-ui.md](web-ui.md) | implemented | any OS (browser, works offline); live process data on macOS, snapshot files anywhere | `secmonk ui [--snapshot F]` | phase 1 = process monitor; design + storybook in [`_design/`](../../_design/README.md); synthetic fixtures |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 
 Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `vuln ...`) are shared by all inventory features and are described in
@@ -30,7 +32,7 @@ Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `v
 
 ## CLI at a glance
 
-Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every command that reads or writes the database (all but `sources`, `collectors`, `containers`, `windows-script`) accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched and scan (json/csv go to stdout, notes to stderr; tables are not truncated when piped).
+Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every command that reads or writes the database (all but `sources`, `collectors`, `containers`, `windows-script`; `ui` and `procs` use it only if present) accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched, scan and procs (json/csv go to stdout, notes to stderr; tables are not truncated when piped). `procs` uses the database only if it exists (findings in a temporary overlay; `--save` creates and writes it).
 
 ```text
 secmonk status                          freshness + table sizes
@@ -45,7 +47,7 @@ secmonk sync NAMES... | all             fetch into the mirror
     --api-key K         NVD API key (env NVD_API_KEY)
     (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` would be skipped, none currently is)
 
-secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos rootfs ssh windows)
+secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos process rootfs ssh windows)
 secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     --save/--no-save    store the inventory in the DB (default: save)
     -O, --output PATH   write inventory JSON (a hidden `--json` still works but is deprecated)
@@ -62,6 +64,16 @@ secmonk match ASSET                     (re)match a stored asset against the cur
     --min-confidence F  (default 0.5)
 secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
 secmonk containers [--socket PATH] [--all] [-f FMT]   list containers of the local Docker/Podman engine (table)
+secmonk ui                              local web interface on http://127.0.0.1:8765 (phase 1: process monitor)
+    --host H (IPv4/IPv6)  --port N  --allow-host NAME  --snapshot F (serve a snapshot file)  --open  -o KEY=VAL  --db PATH
+secmonk procs [SNAPSHOT.json]           process monitor: tree, launch origin, identity, findings, flags (live macOS by default)
+    --flat              one row per process instead of the tree
+    -s, --suspicious    only processes with findings or risk flags
+    --match/--no-match  match against the mirror if a database exists (default: match, temporary overlay)
+    --save              persist asset process:<host> and its findings
+    -w, --watch N       re-snapshot every N s; print new executables and new/removed launch items (live only)
+    --snapshot-out F    also write the raw snapshot (secmonk-process-snapshot/1)
+    --min-confidence F  -f, --format table|json|csv   -o, --opt KEY=VAL   --db PATH
 
 secmonk findings [ASSET]                list findings ordered by priority
     --priority P1..P4

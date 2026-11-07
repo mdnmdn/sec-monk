@@ -178,6 +178,20 @@ Test targets: Debian/Ubuntu (GNU), Alpine (busybox `find`/`tar`), RHEL-like. Two
 - [ ] **Large servers**: scan a host with 1M files: `-o root=/ -o exclude=/data,/mnt -o xdev=false -o max_mb=1024`; check `truncated` flag, time, and that `/nix/store`, container storage are pruned (NixOS-managed software is a documented gap -> [next-sources.md](next-sources.md) NixOS).
 - [ ] **Windows OpenSSH server from Linux** is covered in [on-windows.md](on-windows.md) section C. **macOS target:** [on-macos.md](on-macos.md) section C.
 
+## F. Process monitor: Linux backend (not implemented; design in tech/collectors/process.md "Porting")
+
+- [ ] **Implement `collectors/process/linux.py`** (`take_snapshot` from `/proc`, `Inspector` subclass) and register it in
+  `backend.BACKENDS["linux"]`. Snapshot: `/proc/<pid>/{stat,status,exe,cmdline,cgroup}`; ` (deleted)` exe suffix ->
+  `exists: false`; kernel threads (no `exe`, ppid 2) -> `kernel`. Launch items: systemd units (`systemctl show -p
+  ExecStart,FragmentPath` or parse unit files), XDG autostart, crontabs. Hints: systemd init, `PlatformHints.gui_launchers`
+  for gnome-shell/plasmashell. Identity: path -> dpkg/rpm/apk owner (index built once from `rootfs.py` parsers), snap/flatpak,
+  Linuxbrew via the existing keg rule, Go/Rust binaries via the shared binary step.
+  ```bash
+  uv run secmonk procs --no-match --snapshot-out /tmp/linux-snap.json; sudo uv run secmonk procs --suspicious
+  ```
+  Verify on a desktop and a server: systemd services carry their unit as `label`; `docker run` processes appear as
+  children of `containerd-shim` (decide: link to `container:<name>`); process count equals `ps -e`.
+
 ## E. Wrap-up
 
 - [ ] Commit real fixtures + tests; set `sample:` in `tech/collectors/docker-engine.md`, `docker-image.md`, `ssh.md`, `rootfs.md`; update [inventory-docker.md](../features/inventory-docker.md) / [inventory-ssh.md](../features/inventory-ssh.md) caveats; regenerate INDEX (`uv run python scripts/docs_index.py`).

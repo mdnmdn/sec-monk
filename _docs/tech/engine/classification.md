@@ -25,6 +25,7 @@ matcher can use. It is idempotent and runs before components are stored.
 | `system-app` | App shipped with the OS (Safari) | as application | product |
 | `package` | Package-manager item without an OSV ecosystem (Homebrew formula, pkgutil receipt) | `pkg:brew/...`, receipt id → alias table | product |
 | `runtime` | Embedded runtime/framework (Electron, CEF, Sparkle) | `pkg:npm/electron` when it exists in an ecosystem, else product | package or product |
+| `executable` | Running binary with no package identity (process collector) | file name + path, sha256 in `meta.process.provenance` | never matched (no version) |
 
 ## Rules
 

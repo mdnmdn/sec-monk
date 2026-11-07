@@ -6,7 +6,7 @@ status: implemented
 tags: [data-model, sqlite, matching]
 updated: 2026-11-07
 code: src/secmonk/db.py
-related: [decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
+related: [decisions/0007-process-monitor.md, decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
 ---
 
 # Data model
@@ -79,7 +79,7 @@ Filled by `sync debian-tracker` (full snapshot replace). Read by `engine/match.p
 
 | Table | Key | Purpose |
 |---|---|---|
-| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>`, `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
+| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>`, `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`, `process:<host>` (running processes only, see [process collector](collectors/process.md))) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`, `host-processes`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
 | `scan` | autoinc | One collector run. |
 | `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets; `meta` = identity facts used for matching (vendor/product hints, source package...), shared by every asset with this key (the last writer wins). |
 | `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. Per-asset facts: `paths` (JSON list of **every** location of the component on this asset; `source_path` = the first) and `meta` (JSON: this asset's own users, install location, scope...). |
@@ -91,6 +91,11 @@ file/count limits hit. `save_inventory` still records the scan (`scan.meta = {"p
 **not** a reference for removal. `current_components(asset)` = components whose `last_scan_id >=` the latest *non-partial* scan (so: everything the last complete scan saw, plus anything
 seen by later partial scans; components absent from the last complete scan stay removed). An asset with only partial scans shows everything ever seen.
 Several copies of one component on an asset (two `Foo.app` bundles, a library in two virtualenvs) share one row; `asset_component.paths` lists all of them and `asset_component.meta` is that asset's own copy of the collector's `meta`.
+
+Process assets (`process:<host>`) reuse these tables unchanged: a running app shares its `component` row with `macos:<host>` /
+`homebrew:<host>`; running-process facts (pids, launch kinds, executables, provenance, flags) are under `meta.process`, and the
+process tree under `asset.meta.processes`. Executables without a package identity use the category `executable` (no version, never
+matched). No schema change: only the comments in `db.py` list the new id and type.
 
 ## Findings
 
