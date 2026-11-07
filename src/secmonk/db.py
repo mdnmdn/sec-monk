@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 -- ------------------------------------------------------------------ vuln data
@@ -111,6 +111,24 @@ CREATE TABLE IF NOT EXISTS epss (
     source        TEXT DEFAULT 'epss'
 );
 
+-- Distribution triage per (release ecosystem, source package, CVE): what the distro security
+-- team decided, beyond affected ranges. Filled by distro trackers (sources/debian_tracker.py);
+-- read by engine/match.py to drop not-affected findings and to downgrade minor ones.
+CREATE TABLE IF NOT EXISTS distro_triage (
+    ecosystem     TEXT NOT NULL,             -- normalized OSV ecosystem: 'Debian:12'
+    package       TEXT NOT NULL,             -- source package (lowercase)
+    cve_id        TEXT NOT NULL,
+    status        TEXT,                      -- open | resolved | not-affected | undetermined
+    urgency       TEXT,                      -- unimportant | low | medium | high | not yet assigned | end-of-life …
+    fixed_version TEXT,                      -- distro fixed version ('0' = never affected)
+    nodsa         TEXT,                      -- no-dsa | postponed | ignored (Debian 'nodsa' + reason)
+    note          TEXT,                      -- free-text reason (nodsa_reason, description)
+    advisory      TEXT,                      -- DSA-/DLA- id when known
+    source        TEXT NOT NULL,             -- 'debian-tracker'
+    PRIMARY KEY (ecosystem, package, cve_id, source)
+);
+CREATE INDEX IF NOT EXISTS ix_triage_cve ON distro_triage(cve_id);
+
 -- ------------------------------------------------------------------ inventory
 CREATE TABLE IF NOT EXISTS asset (
     id            TEXT PRIMARY KEY,          -- stable id, e.g. 'macos:<hostname>', 'image:<digest>'
@@ -175,6 +193,8 @@ CREATE TABLE IF NOT EXISTS finding (
     first_seen    TEXT,
     last_seen     TEXT,
     fixed_at      TEXT,
+    triage        TEXT,                      -- distro triage label: unimportant | no-dsa | postponed | ignored | end-of-life | low …
+    triage_source TEXT,                      -- debian-tracker | osv
     PRIMARY KEY (asset_id, component_id, vuln_id)
 );
 """
@@ -199,8 +219,16 @@ def connect(path: str | Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+# columns added after a table was first created: (table, column, type)
+_ADDED_COLUMNS = (("finding", "triage", "TEXT"), ("finding", "triage_source", "TEXT"))
+
+
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    for table, col, typ in _ADDED_COLUMNS:          # lightweight migration for existing DBs
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if col not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typ}")
     conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
     conn.commit()
 

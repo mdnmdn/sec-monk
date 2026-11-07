@@ -64,6 +64,32 @@ modifiers: env=production −1 level, internet-facing −1 level (only below P2)
 Re-matching an asset marks open findings that are no longer produced as `fixed` (`fixed_at`);
 a finding that reappears is re-opened (regression). `suppressed` is sticky (future VEX).
 
+## Distro triage (Debian)
+
+Distro security teams triage CVEs beyond "affected range": *unimportant*, *no-dsa*, *postponed*,
+*ignored*, *end-of-life*, *not-affected*. The matcher uses two inputs for OS-package findings:
+
+| Input | Where it comes from | Stored in |
+|---|---|---|
+| OSV urgency | `affected[].ecosystem_specific.urgency` of OSV Debian records | `affected.extra.urgency` |
+| Tracker triage | Debian Security Tracker JSON / security-tracker repo (`sync debian-tracker`) | `distro_triage` table |
+
+Rules (`engine/match.py:_triage`, tracker wins over OSV):
+1. Tracker says `not-affected` (or fixed version `0`) → finding dropped (`stats.not_affected`).
+2. Tracker `resolved` with fixed version ≤ installed version → dropped (tracker newer than OSV snapshot).
+3. Label = tracker `nodsa` (no-dsa / postponed / ignored) → tracker urgency → OSV urgency
+   (`not yet assigned` is ignored). Stored as `finding.triage` + `finding.triage_source`.
+4. Priority (`engine/scoring.py`): `unimportant` / `ignored` / `end-of-life` → **P4**;
+   `no-dsa` / `postponed` / `low` → at most **P3**; **KEV overrides** all caps.
+
+CLI: `secmonk findings --hide-minor` (hides unimportant/ignored/end-of-life),
+`--hide-deferred` (also no-dsa/postponed), `--fixable`.
+
+Measured 2026-11-07 on real `python:3.12-slim` (Debian 13) with OSV urgency only: 193 findings →
+46 labelled *unimportant* (now P4, hidden by `--hide-minor`), e.g. glibc CVE-2019-1010022
+(CVSS 9.8, previously P3). 53.5k of 61k Debian 13 OSV ranges are *not yet assigned*, so tracker
+data (no-dsa/postponed/not-affected) is expected to reduce noise further.
+
 ## Known gaps
 
 - **Unfixed distro CVEs:** OSV Debian carries open ranges (no `fixed` event) for CVEs the Debian

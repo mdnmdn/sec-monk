@@ -218,6 +218,8 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
                 extra["database_specific"] = r["database_specific"]
             if binaries:
                 extra["binaries"] = binaries
+            if isinstance(espec.get("urgency"), str):      # Debian triage label (unimportant, low, …)
+                extra["urgency"] = espec["urgency"].strip().lower()
             if rt == "GIT" and r.get("repo"):
                 extra["repo"] = r["repo"]
             add_affected(conn, "osv", rid, ecosystem=eco, package=name, purl=purl, range_type=rt,

@@ -6,7 +6,26 @@ from __future__ import annotations
 EPSS_HIGH = 0.1
 
 
-def priority(*, cvss: float | None, epss: float | None, kev: bool, asset_meta: dict | None = None) -> str:
+MINOR_TRIAGE = frozenset({"unimportant", "ignored", "end-of-life"})
+DEFERRED_TRIAGE = frozenset({"no-dsa", "postponed"})
+
+
+def priority(*, cvss: float | None, epss: float | None, kev: bool, asset_meta: dict | None = None,
+             triage: str | None = None) -> str:
+    """Priority P1..P4. Distro triage (Debian tracker / OSV urgency) caps it unless the CVE is in
+    KEV: minor (unimportant, ignored, end-of-life) → P4; deferred (no-dsa, postponed) → at most P3."""
+    p = _base_priority(cvss=cvss, epss=epss, kev=kev, asset_meta=asset_meta)
+    if kev or not triage:
+        return p
+    level = int(p[1])
+    if triage in MINOR_TRIAGE:
+        level = 4
+    elif triage in DEFERRED_TRIAGE or triage == "low":
+        level = max(level, 3)
+    return f"P{level}"
+
+
+def _base_priority(*, cvss: float | None, epss: float | None, kev: bool, asset_meta: dict | None = None) -> str:
     meta = asset_meta or {}
     exposed = bool(meta.get("internet_facing") or meta.get("exposed"))
     production = meta.get("env") in ("prod", "production")

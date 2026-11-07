@@ -39,6 +39,9 @@ class Match:
     confidence: float
     fixed_version: str | None = None
     advisories: set[str] = field(default_factory=set)
+    urgency: str | None = None                       # distro urgency from the OSV record (Debian)
+    distro: tuple[str, tuple[str, ...]] | None = None  # (ecosystem, package names) for triage lookup
+    version: str | None = None                       # installed version compared (source version)
 
 
 # --------------------------------------------------------------------------- strategies
@@ -56,7 +59,7 @@ def _match_package(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
     # but when the collector knows the source version prefer it.
     check_version = meta.get("source_version") or version
     rows = conn.execute(
-        f"""SELECT vuln_id, range_type, events, versions FROM affected
+        f"""SELECT vuln_id, range_type, events, versions, extra FROM affected
             WHERE ecosystem = ? AND package IN ({','.join('?' * len(names))})
               AND status = 'affected' AND range_type IN ('ECOSYSTEM','SEMVER','VERSIONS')""",
         (eco, *names),
@@ -73,8 +76,48 @@ def _match_package(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
         if hit:
             # parsers may lower confidence for weak identification (e.g. jar matched by filename)
             out.append(Match(comp["id"], r["vuln_id"], "osv-package", float(meta.get("confidence", 1.0)),
-                             first_fixed_after(check_version, events, scheme) if events else None))
+                             first_fixed_after(check_version, events, scheme) if events else None,
+                             urgency=loads(r["extra"], {}).get("urgency"),
+                             distro=(eco, tuple(sorted(names))) if comp["category"] == CAT_OS_PACKAGE else None,
+                             version=check_version))
     return out
+
+
+# --------------------------------------------------------------------------- distro triage
+
+def _triage(conn: sqlite3.Connection, m: Match, ids: set[str]) -> tuple[str | None, str | None, bool]:
+    """(label, source, not_affected) for a distro-package match.
+
+    Distro tracker rows (distro_triage) win over the urgency carried by the OSV record.
+    `not_affected` is True when the distro states the release was never affected, or the tracker's
+    fixed version is <= the installed one (tracker newer than the OSV snapshot)."""
+    if not m.distro:
+        return m.urgency if m.urgency not in (None, "", "not yet assigned") else None, "osv", False
+    eco, names = m.distro
+    cves = sorted(i for i in ids if i.startswith("CVE-"))
+    rows = []
+    if cves:
+        rows = conn.execute(
+            f"""SELECT status, urgency, fixed_version, nodsa FROM distro_triage
+                WHERE ecosystem = ? AND package IN ({','.join('?' * len(names))})
+                  AND cve_id IN ({','.join('?' * len(cves))})""",
+            (eco, *names, *cves)).fetchall()
+    for r in rows:
+        if r["status"] == "not-affected" or r["fixed_version"] == "0":
+            return "not-affected", "debian-tracker", True
+        if (r["status"] == "resolved" and r["fixed_version"] and m.version
+                and compare(m.version, r["fixed_version"], scheme_for_ecosystem(eco)) >= 0):
+            return "fixed-in-tracker", "debian-tracker", True
+    for r in rows:
+        if r["nodsa"]:
+            return r["nodsa"], "debian-tracker", False
+    for r in rows:
+        u = (r["urgency"] or "").strip().lower()
+        if u and u != "not yet assigned":
+            return u, "debian-tracker", False
+    if m.urgency and m.urgency != "not yet assigned":
+        return m.urgency, "osv", False
+    return None, None, False
 
 
 # base confidence of a name-based match by how the component's product identity was derived
@@ -249,23 +292,29 @@ def match_asset(conn: sqlite3.Connection, asset_id: str, min_confidence: float =
         if facts["withdrawn"]:
             stats["withdrawn"] += 1
             continue
-        prio = priority(cvss=facts["cvss_score"], epss=facts["epss"], kev=facts["kev"], asset_meta=asset_meta)
+        triage, triage_src, not_affected = _triage(conn, m, m.advisories | {canon})
+        if not_affected:
+            stats["not_affected"] = stats.get("not_affected", 0) + 1   # distro tracker says not affected
+            continue
+        prio = priority(cvss=facts["cvss_score"], epss=facts["epss"], kev=facts["kev"], asset_meta=asset_meta,
+                        triage=triage)
         seen_keys.add((comp_id, canon))
         conn.execute(
             """INSERT INTO finding(asset_id, component_id, vuln_id, advisory_ids, matched_by, confidence,
                                    fixed_version, severity, cvss_score, epss, kev, priority, status,
-                                   first_seen, last_seen)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?, ?)
+                                   first_seen, last_seen, triage, triage_source)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'open', ?, ?, ?, ?)
                ON CONFLICT(asset_id, component_id, vuln_id) DO UPDATE SET
                  advisory_ids=excluded.advisory_ids, matched_by=excluded.matched_by,
                  confidence=excluded.confidence, fixed_version=excluded.fixed_version,
                  severity=excluded.severity, cvss_score=excluded.cvss_score, epss=excluded.epss,
                  kev=excluded.kev, priority=excluded.priority, last_seen=excluded.last_seen,
+                 triage=excluded.triage, triage_source=excluded.triage_source,
                  status=CASE WHEN finding.status='suppressed' THEN 'suppressed' ELSE 'open' END,
                  fixed_at=NULL""",
             (asset_id, comp_id, canon, dumps(sorted(m.advisories)), m.matched_by, m.confidence,
              m.fixed_version, facts["severity"], facts["cvss_score"], facts["epss"], int(facts["kev"]),
-             prio, ts, ts),
+             prio, ts, ts, triage, triage_src),
         )
         stats["findings"] += 1
     # lifecycle: open findings not re-detected are now fixed

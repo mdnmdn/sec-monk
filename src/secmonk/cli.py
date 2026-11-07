@@ -329,6 +329,9 @@ def findings(
     priority: Annotated[str | None, typer.Option(help="P1..P4")] = None,
     all_: Annotated[bool, typer.Option("--all", help="Include fixed/suppressed")] = False,
     fixable: Annotated[bool, typer.Option(help="Only findings with a known fixed version")] = False,
+    hide_minor: Annotated[bool, typer.Option(help="Hide distro-triaged minor issues "
+                                                  "(unimportant, ignored, end-of-life)")] = False,
+    hide_deferred: Annotated[bool, typer.Option(help="Also hide no-dsa / postponed")] = False,
     limit: int = 200,
     db: DbOpt = None,
 ):
@@ -345,17 +348,24 @@ def findings(
         where.append("f.status = 'open'")
     if fixable:
         where.append("f.fixed_version IS NOT NULL")
+    hidden = (["unimportant", "ignored", "end-of-life"] if hide_minor or hide_deferred else []) + \
+        (["no-dsa", "postponed"] if hide_deferred else [])
+    if hidden:
+        where.append(f"(f.triage IS NULL OR f.triage NOT IN ({','.join('?' * len(hidden))}))")
+        args.extend(hidden)
     sql = f"""SELECT f.*, c.name, c.version, c.category FROM finding f JOIN component c ON c.id = f.component_id
               {'WHERE ' + ' AND '.join(where) if where else ''}
               ORDER BY f.priority, f.kev DESC, f.epss DESC, f.cvss_score DESC LIMIT ?"""
     t = Table(title="Findings")
-    for col in ("prio", "vuln", "component", "version", "fix", "sev", "cvss", "epss", "kev", "match", "conf"):
+    for col in ("prio", "vuln", "component", "version", "fix", "sev", "cvss", "epss", "kev", "triage",
+                "match", "conf"):
         t.add_column(col, overflow="fold")
     rows = conn.execute(sql, (*args, limit)).fetchall()
     for r in rows:
         t.add_row(r["priority"], r["vuln_id"], r["name"], r["version"] or "", r["fixed_version"] or "",
                   r["severity"] or "", f"{r['cvss_score']:.1f}" if r["cvss_score"] is not None else "",
                   f"{r['epss']:.3f}" if r["epss"] is not None else "", "✔" if r["kev"] else "",
+                  r["triage"] or "",
                   r["matched_by"], f"{r['confidence']:.1f}")
     console.print(t)
 
