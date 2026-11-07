@@ -1,0 +1,175 @@
+{
+    "packages": [
+        {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.4.0",
+            "version_normalized": "7.4.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/guzzle.git",
+                "reference": "868b3571a039f0ebc11ac8f344f4080babe2cb94"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/868b3571a039f0ebc11ac8f344f4080babe2cb94",
+                "reference": "868b3571a039f0ebc11ac8f344f4080babe2cb94",
+                "shasum": ""
+            },
+            "time": "2021-10-18T09:52:00+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "MIT"
+            ],
+            "install-path": "../guzzlehttp/guzzle"
+        },
+        {
+            "name": "guzzlehttp/psr7",
+            "version": "2.13.2",
+            "version_normalized": "2.13.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/psr7.git",
+                "reference": "adee536f95101929f262b8c59e8a61472f347d58"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
+                "reference": "adee536f95101929f262b8c59e8a61472f347d58",
+                "shasum": ""
+            },
+            "time": "2026-10-17T23:49:46+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "MIT"
+            ],
+            "install-path": "../guzzlehttp/psr7"
+        },
+        {
+            "name": "myclabs/deep-copy",
+            "version": "1.14.0",
+            "version_normalized": "1.14.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/myclabs/DeepCopy.git",
+                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/myclabs/DeepCopy/zipball/8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
+                "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae",
+                "shasum": ""
+            },
+            "time": "2026-08-11T10:17:44+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "MIT"
+            ],
+            "install-path": "../myclabs/deep-copy"
+        },
+        {
+            "name": "phpunit/phpunit",
+            "version": "9.5.0",
+            "version_normalized": "9.5.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sebastianbergmann/phpunit.git",
+                "reference": "8e16c225d57c3d6808014df6b1dd7598d0a5bbbe"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/8e16c225d57c3d6808014df6b1dd7598d0a5bbbe",
+                "reference": "8e16c225d57c3d6808014df6b1dd7598d0a5bbbe",
+                "shasum": ""
+            },
+            "time": "2020-12-04T05:05:53+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "homepage": "https://phpunit.de/",
+            "install-path": "../phpunit/phpunit"
+        },
+        {
+            "name": "psr/http-message",
+            "version": "2.0",
+            "version_normalized": "2.0.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-message.git",
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-message/zipball/402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+                "shasum": ""
+            },
+            "time": "2023-04-04T09:54:51+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "MIT"
+            ],
+            "homepage": "https://github.com/php-fig/http-message",
+            "install-path": "../psr/http-message"
+        },
+        {
+            "name": "sebastian/diff",
+            "version": "4.0.6",
+            "version_normalized": "4.0.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sebastianbergmann/diff.git",
+                "reference": "ba01945089c3a293b01ba9badc29ad55b106b0bc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sebastianbergmann/diff/zipball/ba01945089c3a293b01ba9badc29ad55b106b0bc",
+                "reference": "ba01945089c3a293b01ba9badc29ad55b106b0bc",
+                "shasum": ""
+            },
+            "time": "2024-03-02T06:30:58+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "homepage": "https://github.com/sebastianbergmann/diff",
+            "install-path": "../sebastian/diff"
+        },
+        {
+            "name": "symfony/polyfill-php80",
+            "version": "v1.43.0",
+            "version_normalized": "1.43.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/polyfill-php80.git",
+                "reference": "9c6a5d6b01ca51d486c813e9a9c0ed55f208bb74"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/polyfill-php80/zipball/9c6a5d6b01ca51d486c813e9a9c0ed55f208bb74",
+                "reference": "9c6a5d6b01ca51d486c813e9a9c0ed55f208bb74",
+                "shasum": ""
+            },
+            "time": "2026-09-25T15:50:05+00:00",
+            "type": "library",
+            "installation-source": "source",
+            "license": [
+                "MIT"
+            ],
+            "homepage": "https://symfony.com",
+            "install-path": "../symfony/polyfill-php80"
+        }
+    ],
+    "dev": true,
+    "dev-package-names": [
+        "myclabs/deep-copy",
+        "phpunit/phpunit",
+        "sebastian/diff"
+    ]
+}

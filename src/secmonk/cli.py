@@ -215,7 +215,11 @@ def _collect(collector: str, target: str | None, opts: dict):
     if collector not in reg:
         console.print(f"[red]unknown collector {collector}[/] (known: {', '.join(sorted(reg))})")
         raise typer.Exit(2)
-    return reg[collector]().collect(target, **opts)
+    try:
+        return reg[collector]().collect(target, **opts)
+    except (OSError, RuntimeError, ValueError) as e:  # connection/permission/target errors: no traceback
+        console.print(f"[red]{collector}: {type(e).__name__}: {e}[/]")
+        raise typer.Exit(1) from None
 
 
 @app.command("collectors")

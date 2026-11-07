@@ -18,6 +18,7 @@ the shared engine does ([vision](../../product/vision.md) §6: *different collec
 | macOS | [macos.md](macos.md) | `.app` bundles, Homebrew (formulae + casks), pkgutil receipts | implemented (fixture-tested on Linux) |
 | Docker image | [docker-image.md](docker-image.md) | Image from registry, `docker save` tarball, or OCI layout → OS packages + language packages | implemented |
 | Docker engine | [docker-engine.md](docker-engine.md) | Running containers via the Docker Engine API (unix socket) | implemented |
+| SSH (agentless) | [ssh.md](ssh.md) | `user@host[:port]` Linux/macOS: harvests metadata files over SSH, then reuses rootfs/macOS collectors | implemented (fixture + in-process sshd tested) |
 | Filesystem / rootfs | (shared with docker-image) | dpkg/apk/rpm DBs + lockfiles under a directory | implemented |
 
 ## Template

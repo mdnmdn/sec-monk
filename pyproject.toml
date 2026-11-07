@@ -13,6 +13,7 @@ dependencies = [
     "packageurl-python>=0.15",
     "pyyaml>=6",
     "zstandard>=0.25.0",
+    "paramiko>=5.1.0",
 ]
 
 [project.scripts]

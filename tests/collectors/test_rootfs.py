@@ -106,11 +106,12 @@ def test_lang_packages_and_limits(tmp_path: Path):
     (nm / "left-pad/test/package.json").write_text('{"name":"nope","version":"9"}')
     inv = REGISTRY["rootfs"]().collect(str(r))
     c = {x.name: x for x in inv.components}
-    assert c["foo-bar"].purl == "pkg:pypi/foo-bar@1.2" and c["foo-bar"].ecosystem == "PyPI"
-    assert c["foo-bar"].category == CAT_LIBRARY
+    # display name keeps the original spelling; the purl is PEP 503-normalized
+    assert c["Foo_Bar"].purl == "pkg:pypi/foo-bar@1.2" and c["Foo_Bar"].ecosystem == "PyPI"
+    assert c["Foo_Bar"].category == CAT_LIBRARY
     assert c["@scope/pkg"].purl == "pkg:npm/%40scope/pkg@2.0.0" and c["@scope/pkg"].ecosystem == "npm"
     assert "left-pad" in c and "inner" in c and "nope" not in c
-    assert c["left-pad"].source_path == "app/node_modules/left-pad/package.json"
+    assert c["left-pad"].source_path == "/app/node_modules/left-pad/package.json"
     assert any("not identified" in w for w in inv.warnings)
 
 

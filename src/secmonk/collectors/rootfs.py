@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any, BinaryIO
 
 from ..engine import purl as purls
-from ..models import CAT_LIBRARY, CAT_OS, CAT_OS_PACKAGE, Asset, Component, Inventory
+from ..models import CAT_OS, CAT_OS_PACKAGE, Asset, Component, Inventory
 from .base import Collector, register
 
 MAX_LANG_FILES = 20_000
@@ -266,17 +266,21 @@ class LayeredTarView(FsView):
     what is stored so far, so the final view equals the merged image for those paths.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, binaries: bool = True) -> None:
         self.files: dict[str, bytes] = {}
         self.links: dict[str, str] = {}
         self._gen: dict[str, int] = {}
         self._layer = 0
         self._lang_count = 0
         self.truncated = False
+        from .lang.walk import LangAccumulator, WalkLimits
+
+        self.lang = LangAccumulator(WalkLimits(binaries=binaries))
 
     # ---- building
 
     def _remove_under(self, prefix: str, only_older: bool) -> None:
+        self.lang.remove_under(prefix)
         pre = prefix + "/"
         for store in (self.files, self.links):
             for p in [p for p in store if p == prefix or p.startswith(pre)]:
@@ -319,6 +323,7 @@ class LayeredTarView(FsView):
             if d:
                 self._remove_under(d, only_older=True)
             else:  # opaque root: everything older goes
+                self.lang.clear()
                 for store in (self.files, self.links):
                     for p in [p for p in store if self._gen.get(p, -1) < self._layer]:
                         del store[p]
@@ -335,14 +340,26 @@ class LayeredTarView(FsView):
             src = norm_path(m.linkname)
             if is_interesting(path) and src in self.files:
                 self._put_file(path, self.files[src])
-        elif m.isfile() and is_interesting(path):
-            limit = MAX_FILE_BYTES if not lang_kind(path) else MAX_META_BYTES
-            if m.size > limit:
-                self.truncated = True
+            if src in self.lang.by_path:
+                self.lang.by_path[path] = self.lang.by_path[src]
+        elif m.isfile():
+            wanted_fixed = path in FIXED_PATHS or path.startswith(DPKG_STATUS_D + "/")
+            wanted_lang = self.lang.wants(path)
+            if not (wanted_fixed or wanted_lang):
                 return
             f = tf.extractfile(m)
-            if f is not None:
-                self._put_file(path, f.read())
+            if f is None:
+                return
+            if wanted_fixed:
+                if m.size > MAX_FILE_BYTES:
+                    self.truncated = True
+                    return
+                data = f.read()
+                self._put_file(path, data)
+                if wanted_lang:
+                    self.lang.feed(path, m.size, _BytesReader(data).read)
+            else:
+                self.lang.feed(path, m.size, f.read)
 
     # ---- FsView
 
@@ -724,31 +741,41 @@ def collect_from_view(view: FsView, asset: Asset, warnings: list[str] | None = N
     if not osr:
         warn.append("operating system not identified (no os-release)")
 
-    # ---- language packages
-    for path, kind in view.iter_lang_files():
-        text = view.read_text(path, MAX_META_BYTES)
-        if not text:
-            continue
-        if kind == "pypi":
-            d = parse_python_metadata(text)
-            if not d["name"] or not d["version"]:
-                continue
-            norm = re.sub(r"[-_.]+", "-", d["name"]).lower()
-            add(Component(name=norm, version=d["version"], category=CAT_LIBRARY,
-                          purl=purls.build("pypi", norm, d["version"]), ecosystem="PyPI",
-                          source_path=path, meta={"license": d["license"], "display_name": d["name"]}))
-        else:
-            d = parse_package_json(text)
-            if not d.get("name") or not d.get("version"):
-                continue
-            nm = d["name"]
-            ns, _, short = nm.rpartition("/") if nm.startswith("@") else ("", "", nm)
-            add(Component(name=nm, version=d["version"], category=CAT_LIBRARY, ecosystem="npm",
-                          purl=purls.build("npm", short, d["version"], namespace=ns or None),
-                          source_path=path, meta={"license": d["license"]}))
+    # ---- language packages (all ecosystems, see collectors/lang/)
+    for c in lang_components(view, warn):
+        add(c)
     if getattr(view, "truncated", False):
-        warn.append(f"some files exceeded size/count limits (max {MAX_LANG_FILES} language files)")
+        warn.append("some files exceeded size/count limits")
     return list(comps.values())
+
+
+class _BytesReader:
+    """read(n=-1) over in-memory bytes (to feed already-read data to the lang accumulator)."""
+
+    def __init__(self, data: bytes):
+        self._data, self._pos = data, 0
+
+    def read(self, n: int = -1) -> bytes:
+        end = len(self._data) if n is None or n < 0 else self._pos + n
+        out = self._data[self._pos:end]
+        self._pos += len(out)
+        return out
+
+
+def lang_components(view: FsView, warn: list[str], binaries: bool = True) -> list[Component]:
+    """Language dependencies of a view: parsed while streaming for image layers, walked for dirs."""
+    if isinstance(view, LayeredTarView):
+        warn.extend(view.lang.warnings)
+        if view.lang.truncated:
+            warn.append("language dependency file limit reached")
+        return view.lang.components()
+    if isinstance(view, DirView):
+        from .lang.walk import WalkLimits, walk_dir
+
+        res = walk_dir(view.root, limits=WalkLimits(binaries=binaries), rootfs=True, path_prefix="/")
+        warn.extend(res.warnings)
+        return res.components
+    return []
 
 
 def _rpm_rows_from_bytes(db: bytes, wal: bytes | None) -> list[dict]:

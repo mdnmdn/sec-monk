@@ -2,7 +2,7 @@
 title: Dependency inventory (folders, repos, images, containers, SSH hosts)
 type: feature
 context: features
-status: draft
+status: implemented
 tags: [cli, dependencies, collector]
 updated: 2026-11-07
 code: src/secmonk/collectors/fs.py

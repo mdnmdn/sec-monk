@@ -1,0 +1,15 @@
+# pinned production deps (synthetic, exercises parser edge cases)
+-r base.txt
+--index-url https://pypi.org/simple
+requests==2.25.0 \
+    --hash=sha256:aaaa \
+    --hash=sha256:bbbb
+Django[argon2, bcrypt] == 3.2.4 ; python_version >= "3.6"   # inline comment
+PyYAML===5.3
+Flask_Login==0.5.0
+urllib3>=1.26
+numpy==1.*
+six
+-e git+https://github.com/x/y.git#egg=y
+./local/pkg
+foo @ https://example.com/foo-1.0.tar.gz

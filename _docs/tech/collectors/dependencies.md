@@ -2,7 +2,7 @@
 title: Language dependency scanning
 type: tech
 context: tech
-status: draft
+status: implemented
 tags: [collector, dependencies, npm, python, go, rust, java, dotnet, php]
 updated: 2026-11-07
 code: src/secmonk/collectors/lang/
@@ -66,7 +66,22 @@ Components carry OSV ecosystems (`npm`, `PyPI`, `Go`, `crates.io`, `Maven`, `NuG
 `Packagist`) and go through the exact `osv-package` strategy (confidence 1.0). Sync the
 ecosystems you need: `secmonk sync osv -e npm -e PyPI -e Go -e crates.io -e Maven -e NuGet -e Packagist`.
 
+## Verified end to end (2026-11-07, real OSV data)
+
+| Target | Result |
+|---|---|
+| `scan fs tests/fixtures/lang` | 453 components in 7 ecosystems → findings in all of them, e.g. log4j-core 2.14.1 → CVE-2021-44228 **P1 (KEV)**, golang.org/x/text 0.3.7 → CVE-2022-32149, smallvec 1.6.0 → CVE-2021-25900, guzzle 7.4.0, lodash 4.17.20, minimist 1.2.5, requests 2.25.0 |
+| `scan docker-image python:3.12-slim` | pip 25.0.1 from site-packages via streaming layers |
+| `scan docker-image registry:2` | Go binary `/bin/registry` → stdlib 1.20.8 → 85 findings (exact `osv-package`) |
+
+Runtimes that carry an OSV ecosystem (Go `stdlib`, `pkg:npm/electron`, .NET runtime packs) use
+exact package matching too.
+
 ## Known gaps
+
+- Interpreters installed from source (e.g. CPython in `python:*` images under `/usr/local`) are not
+  detected as runtimes yet.
+- Go binaries built without modules (GOPATH mode) expose only the stdlib version.
 
 See each format doc in [references/package-formats](../../references/package-formats/README.md).
 Cross-cutting: no reachability analysis; vendored/copied source without metadata is invisible;

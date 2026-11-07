@@ -20,7 +20,7 @@ import sqlite3
 from dataclasses import dataclass, field
 
 from ..db import dumps, loads, now
-from ..models import CAT_LIBRARY, CAT_OS_PACKAGE
+from ..models import CAT_LIBRARY, CAT_OS_PACKAGE, CAT_RUNTIME
 from . import purl as purls
 from .scoring import priority
 from .versions import compare, first_fixed_after, in_osv_range, is_parseable, scheme_for_ecosystem
@@ -62,7 +62,9 @@ def _match_package(conn: sqlite3.Connection, comp: sqlite3.Row) -> list[Match]:
     for r in rows:
         events = loads(r["events"], [])
         versions = loads(r["versions"], [])
-        hit = check_version in versions or version in versions
+        # explicit version lists may spell versions with a 'v' prefix (Packagist, Go) or without
+        cands = {check_version, version, f"v{version}", version.removeprefix("v")}
+        hit = bool(cands & set(versions))
         if not hit and events:
             hit = in_osv_range(check_version, events, scheme)
         if hit:
@@ -179,7 +181,9 @@ def match_asset(conn: sqlite3.Connection, asset_id: str, min_confidence: float =
     comps = current_components(conn, asset_id)
     matches: list[Match] = []
     for comp in comps:
-        if comp["ecosystem"] and comp["category"] in (CAT_LIBRARY, CAT_OS_PACKAGE):
+        # anything with an OSV ecosystem is matched exactly — libraries, distro packages and
+        # runtimes such as the Go stdlib (pkg:golang/stdlib) or Electron (pkg:npm/electron)
+        if comp["ecosystem"] and (comp["category"] in (CAT_LIBRARY, CAT_OS_PACKAGE, CAT_RUNTIME)):
             matches += _match_package(conn, comp)
         else:
             matches += _match_product(conn, comp)

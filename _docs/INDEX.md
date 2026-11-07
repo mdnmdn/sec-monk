@@ -13,8 +13,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 
 | Doc | Status | Updated | Tags |
 |---|---|---|---|
+| [Dependency inventory (folders, repos, images, containers, SSH hosts)](features/inventory-dependencies.md) | implemented | 2026-11-07 | cli, dependencies, collector |
 | [Inventory of containers and Linux filesystems](features/inventory-docker.md) | implemented | 2026-11-07 | docker, container, rootfs, inventory |
 | [macOS inventory](features/inventory-macos.md) | implemented | 2026-11-07 | macos, inventory, homebrew |
+| [Agentless inventory over SSH](features/inventory-ssh.md) | implemented | 2026-11-07 | ssh, agentless, linux, macos, inventory |
 | [Vulnerability data sync](features/vuln-sync.md) | implemented | 2026-11-07 | cli, vuln-source, sync |
 
 ## tech
@@ -23,10 +25,12 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 |---|---|---|---|
 | [Prototype architecture](tech/architecture.md) | implemented | 2026-11-07 | architecture, cli, engine |
 | [Inventory collectors — index](tech/collectors/README.md) | draft | 2026-11-07 | collector, index |
+| [Language dependency scanning](tech/collectors/dependencies.md) | implemented | 2026-11-07 | collector, dependencies, npm, python, go, rust, java, dotnet, php |
 | [Docker engine collector](tech/collectors/docker-engine.md) | implemented · sample: synthetic | 2026-11-07 | collector, docker, containers, engine-api, podman |
 | [Docker image collector](tech/collectors/docker-image.md) | implemented · sample: mixed | 2026-11-07 | collector, docker, oci, registry, dpkg, apk, rpm, sbom |
 | [macOS collector](tech/collectors/macos.md) | implemented · sample: synthetic | 2026-11-07 | collector, macos, desktop, homebrew |
 | [Rootfs collector](tech/collectors/rootfs.md) | implemented · sample: real | 2026-11-07 | collector, rootfs, dpkg, apk, rpm, python, npm |
+| [SSH collector (agentless)](tech/collectors/ssh.md) | implemented · sample: synthetic | 2026-11-07 | collector, ssh, agentless, linux, macos |
 | [Data model (SQLite schema)](tech/data-model.md) | implemented | 2026-11-07 | data-model, sqlite |
 | [Classification — recognizing and categorizing software](tech/engine/classification.md) | implemented | 2026-11-07 | engine, classification, purl, cpe |
 | [Matching, enrichment and prioritization](tech/engine/matching.md) | implemented | 2026-11-07 | engine, matching, versions, prioritization |
@@ -35,6 +39,15 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 
 | Doc | Status | Updated | Tags |
 |---|---|---|---|
+| [Homebrew (inventory and vulnerability identity)](references/homebrew.md) | draft · sample: real · reachable: partial | 2026-11-07 | homebrew, macos, linuxbrew, collector, identity |
+| [Package formats](references/package-formats/README.md) | reference | 2026-11-07 | package-format, dependencies |
+| [.NET packages (NuGet)](references/package-formats/dotnet.md) | implemented · sample: real | 2026-11-07 | package-format, dependencies, dotnet |
+| [Go modules and binaries](references/package-formats/go.md) | implemented · sample: real | 2026-11-07 | package-format, dependencies, go, binary |
+| [Java packages (Maven, Gradle, JARs)](references/package-formats/java.md) | implemented · sample: mixed | 2026-11-07 | package-format, dependencies, java |
+| [JavaScript packages (npm, yarn, pnpm, bun)](references/package-formats/javascript.md) | implemented · sample: mixed | 2026-11-07 | package-format, dependencies, npm |
+| [PHP packages (Composer / Packagist)](references/package-formats/php.md) | implemented · sample: mixed | 2026-11-07 | package-format, dependencies, packagist, php |
+| [Python packages (PyPI, conda)](references/package-formats/python.md) | implemented · sample: mixed | 2026-11-07 | package-format, dependencies, pypi |
+| [Rust Cargo.lock and cargo-auditable binaries](references/package-formats/rust.md) | implemented · sample: mixed | 2026-11-07 | package-format, dependencies, rust, binary |
 | [Vulnerability data sources — index](references/vuln-sources/README.md) | draft | 2026-11-07 | vuln-source, index |
 | [CVE List v5 (+ CISA Vulnrichment)](references/vuln-sources/cvelist-v5.md) | implemented · sample: real · reachable: partial | 2026-11-07 | vuln-source, cve, adp, ssvc |
 | [Linux distribution security data sources](references/vuln-sources/distros.md) | draft · sample: mixed · reachable: partial | 2026-11-07 | vuln-source, linux, distro, backports |
@@ -63,13 +76,15 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 ## By tag
 
 - **adp**: [cvelist-v5](references/vuln-sources/cvelist-v5.md)
+- **agentless**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
 - **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **architecture**: [architecture](tech/architecture.md)
 - **backports**: [distros](references/vuln-sources/distros.md)
+- **binary**: [go](references/package-formats/go.md), [rust](references/package-formats/rust.md)
 - **classification**: [classification](tech/engine/classification.md)
-- **cli**: [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
-- **collector**: [README](tech/collectors/README.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md)
+- **cli**: [inventory-dependencies](features/inventory-dependencies.md), [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
+- **collector**: [inventory-dependencies](features/inventory-dependencies.md), [homebrew](references/homebrew.md), [README](tech/collectors/README.md), [dependencies](tech/collectors/dependencies.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md), [ssh](tech/collectors/ssh.md)
 - **container**: [inventory-docker](features/inventory-docker.md)
 - **containers**: [docker-engine](tech/collectors/docker-engine.md)
 - **conventions**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
@@ -78,10 +93,12 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **cvss**: [nvd](references/vuln-sources/nvd.md)
 - **cwe**: [nvd](references/vuln-sources/nvd.md)
 - **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [data-model](tech/data-model.md)
+- **dependencies**: [inventory-dependencies](features/inventory-dependencies.md), [README](references/package-formats/README.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **desktop**: [macos](tech/collectors/macos.md)
 - **distro**: [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
 - **docs**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
+- **dotnet**: [dotnet](references/package-formats/dotnet.md), [dependencies](tech/collectors/dependencies.md)
 - **dpkg**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **engine**: [architecture](tech/architecture.md), [classification](tech/engine/classification.md), [matching](tech/engine/matching.md)
 - **engine-api**: [docker-engine](tech/collectors/docker-engine.md)
@@ -94,29 +111,39 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **ghsa**: [ghsa](references/vuln-sources/ghsa.md), [osv](references/vuln-sources/osv.md)
 - **github**: [ghsa](references/vuln-sources/ghsa.md)
 - **glossary**: [vision](product/vision.md)
-- **homebrew**: [inventory-macos](features/inventory-macos.md), [macos](tech/collectors/macos.md)
+- **go**: [go](references/package-formats/go.md), [dependencies](tech/collectors/dependencies.md)
+- **homebrew**: [inventory-macos](features/inventory-macos.md), [homebrew](references/homebrew.md), [macos](tech/collectors/macos.md)
+- **identity**: [homebrew](references/homebrew.md)
 - **index**: [README](references/vuln-sources/README.md), [README](tech/collectors/README.md)
-- **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md)
+- **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md)
+- **java**: [java](references/package-formats/java.md), [dependencies](tech/collectors/dependencies.md)
 - **kev**: [kev](references/vuln-sources/kev.md)
 - **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
-- **linux**: [distros](references/vuln-sources/distros.md)
-- **macos**: [inventory-macos](features/inventory-macos.md), [macos](tech/collectors/macos.md)
+- **linux**: [inventory-ssh](features/inventory-ssh.md), [distros](references/vuln-sources/distros.md), [ssh](tech/collectors/ssh.md)
+- **linuxbrew**: [homebrew](references/homebrew.md)
+- **macos**: [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [homebrew](references/homebrew.md), [macos](tech/collectors/macos.md), [ssh](tech/collectors/ssh.md)
 - **matching**: [matching](tech/engine/matching.md)
-- **npm**: [rootfs](tech/collectors/rootfs.md)
+- **npm**: [javascript](references/package-formats/javascript.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
 - **nvd**: [nvd](references/vuln-sources/nvd.md)
 - **oci**: [docker-image](tech/collectors/docker-image.md)
 - **osv**: [ghsa](references/vuln-sources/ghsa.md), [osv](references/vuln-sources/osv.md)
+- **package-format**: [README](references/package-formats/README.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md)
+- **packagist**: [php](references/package-formats/php.md)
+- **php**: [php](references/package-formats/php.md), [dependencies](tech/collectors/dependencies.md)
 - **podman**: [docker-engine](tech/collectors/docker-engine.md)
 - **prioritization**: [epss](references/vuln-sources/epss.md), [kev](references/vuln-sources/kev.md), [matching](tech/engine/matching.md)
 - **purl**: [osv](references/vuln-sources/osv.md), [classification](tech/engine/classification.md)
-- **python**: [rootfs](tech/collectors/rootfs.md)
+- **pypi**: [python](references/package-formats/python.md)
+- **python**: [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
 - **registry**: [docker-image](tech/collectors/docker-image.md)
 - **roadmap**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
 - **rootfs**: [inventory-docker](features/inventory-docker.md), [rootfs](tech/collectors/rootfs.md)
 - **rpm**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
+- **rust**: [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [docker-image](tech/collectors/docker-image.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
 - **sqlite**: [data-model](tech/data-model.md)
+- **ssh**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **ssvc**: [cvelist-v5](references/vuln-sources/cvelist-v5.md)
 - **storage**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md)
 - **sync**: [vuln-sync](features/vuln-sync.md)

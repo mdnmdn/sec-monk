@@ -11,7 +11,10 @@ def _ensure_loaded() -> None:
 
 
 # ecosystem modules — one import per line
-from . import golang as golang
-from . import rust as rust
-from . import java as java
 from . import dotnet as dotnet
+from . import golang as golang
+from . import java as java
+from . import javascript as javascript
+from . import php as php
+from . import python as python
+from . import rust as rust
