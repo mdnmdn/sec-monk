@@ -269,6 +269,14 @@ def collect(
         console.print(f"saved asset [bold]{inv.asset.id}[/] (scan {scan_id})")
 
 
+@app.command("windows-script")
+def windows_script(compact: bool = typer.Option(False, help="Strip comments/blank lines (for -Command -)")):
+    """Print the read-only PowerShell inventory script (run it on Windows, then `scan windows out.json`)."""
+    from .collectors.windows import inventory_script
+
+    typer.echo(inventory_script(compact=compact), nl=False)
+
+
 @app.command()
 def containers(socket: Annotated[str | None, typer.Option(help="Docker/Podman socket path")] = None):
     """List containers of the local Docker/Podman engine (targets for `scan docker-engine <name>`)."""

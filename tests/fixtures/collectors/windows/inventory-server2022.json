@@ -1,0 +1,120 @@
+{
+ "schema": "secmonk-windows-inventory/1",
+ "script_version": "1.0",
+ "collected_at": "2024-07-20T10:00:00Z",
+ "hostname": "SRV-DC01",
+ "domain": "corp.example.com",
+ "is_admin": true,
+ "powershell_version": "5.1.20348.2655",
+ "os": {
+  "product_name": "Windows Server 2022 Datacenter",
+  "display_version": "21H2",
+  "release_id": "2009",
+  "current_build": "20348",
+  "ubr": 2655,
+  "edition_id": "ServerDatacenter",
+  "installation_type": "Server",
+  "current_version": "6.3",
+  "major": 10,
+  "minor": 0,
+  "install_date": "2022-03-02",
+  "architecture": "AMD64"
+ },
+ "dotnet_framework": {
+  "version": "4.8.04084",
+  "release": 528049
+ },
+ "uninstall": [
+  {
+   "hive": "HKLM",
+   "scope": "machine",
+   "sid": null,
+   "user": null,
+   "wow6432": false,
+   "key_name": "7-Zip",
+   "display_name": "7-Zip 23.01 (x64)",
+   "display_version": "23.01",
+   "publisher": "Igor Pavlov",
+   "install_date": "20240601",
+   "install_location": null,
+   "system_component": null,
+   "windows_installer": null,
+   "parent_key_name": null,
+   "release_type": null
+  },
+  {
+   "hive": "HKLM",
+   "scope": "machine",
+   "sid": null,
+   "user": null,
+   "wow6432": true,
+   "key_name": "Microsoft Edge",
+   "display_name": "Microsoft Edge",
+   "display_version": "124.0.2478.51",
+   "publisher": "Microsoft Corporation",
+   "install_date": "20240601",
+   "install_location": null,
+   "system_component": null,
+   "windows_installer": null,
+   "parent_key_name": null,
+   "release_type": null
+  },
+  {
+   "hive": "HKLM",
+   "scope": "machine",
+   "sid": null,
+   "user": null,
+   "wow6432": false,
+   "key_name": "{e8b6a6e6-6f3b-4a0b-8ed0-6a0a3a9f1c11}",
+   "display_name": "Microsoft Visual C++ 2015-2022 Redistributable (x64) - 14.38.33135",
+   "display_version": "14.38.33135.0",
+   "publisher": "Microsoft Corporation",
+   "install_date": "20240601",
+   "install_location": null,
+   "system_component": null,
+   "windows_installer": 1,
+   "parent_key_name": null,
+   "release_type": null
+  },
+  {
+   "hive": "HKLM",
+   "scope": "machine",
+   "sid": null,
+   "user": null,
+   "wow6432": false,
+   "key_name": "Notepad++",
+   "display_name": "Notepad++ (64-bit x64)",
+   "display_version": "8.6.4",
+   "publisher": "Notepad++ Team",
+   "install_date": "20240601",
+   "install_location": null,
+   "system_component": null,
+   "windows_installer": null,
+   "parent_key_name": null,
+   "release_type": null
+  }
+ ],
+ "appx": [],
+ "hotfixes": [
+  {
+   "id": "KB5040437",
+   "description": "Security Update",
+   "installed_on": "2024-06-20",
+   "installed_by": "NT AUTHORITY\\SYSTEM"
+  }
+ ],
+ "chocolatey": [],
+ "scoop": [],
+ "winget": null,
+ "dotnet_runtimes": [
+  {
+   "name": "Microsoft.NETCore.App",
+   "version": "6.0.30",
+   "arch": "x64",
+   "path": "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\6.0.30"
+  }
+ ],
+ "dotnet_sdks": [],
+ "unloaded_profiles": [],
+ "warnings": []
+}

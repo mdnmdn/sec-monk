@@ -13,6 +13,7 @@ login shell never parses them), optionally under `sudo -n`.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -491,7 +492,9 @@ class SSHCollector(Collector):
         sudo = bool(opts.get("sudo"))
         warnings: list[str] = []
 
-        # 1. detect
+        # 1. detect (Windows OpenSSH starts cmd.exe/PowerShell, where `sh -s` fails -> PowerShell path)
+        if str(opts.get("os", "")).lower() == "windows":
+            return self._collect_windows(t, transport, opts, timeout)
         script = harvest.detect_script(root)
         log.debug("remote command: sh -s <<'EOF'\n%sEOF", script)
         try:
@@ -501,12 +504,14 @@ class SSHCollector(Collector):
         try:
             info = harvest.parse_detect(out.decode("utf-8", "replace"))
         except ValueError as e:
+            if not opts.get("os") and self._is_windows(transport, timeout):
+                return self._collect_windows(t, transport, opts, timeout)
             raise SSHError(f"{e} on {t} (rc={rc}): {_stderr_text(err) or 'no stderr'}") from e
         family = str(opts["os"]).lower() if opts.get("os") else info.family
         if family in ("darwin", "mac", "osx"):
             family = "macos"
         if family not in ("linux", "macos"):
-            raise SSHError(f"unsupported remote OS {info.kernel!r} on {t} (supported: Linux, macOS)")
+            raise SSHError(f"unsupported remote OS {info.kernel!r} on {t} (supported: Linux, macOS, Windows)")
 
         # 2./3. harvest + extract
         spec = HarvestSpec(
@@ -550,6 +555,45 @@ class SSHCollector(Collector):
             a.meta["root"] = root
         inv.collector = self.name
         inv.warnings = warnings
+        return inv
+
+    # ------------------------------------------------------------------ Windows (OpenSSH server)
+    PS = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -"
+
+    def _is_windows(self, transport: Transport, timeout: int) -> bool:
+        try:
+            rc, out, _ = transport.run(
+                'powershell -NoProfile -NonInteractive -Command "[Environment]::OSVersion.Platform"',
+                timeout=min(timeout, 60))
+        except Exception:  # noqa: BLE001 - any failure means "not a Windows host we can drive"
+            return False
+        return rc == 0 and b"Win32NT" in out
+
+    def _collect_windows(self, t: SSHTarget, transport: Transport, opts: dict[str, Any],
+                         timeout: int) -> Inventory:
+        """Run the read-only PowerShell inventory script (fed on stdin) and parse its JSON."""
+        from . import windows
+
+        script = windows.inventory_script(compact=True)
+        log.debug("remote command: %s  (stdin: secmonk-inventory.ps1, %d bytes)", self.PS, len(script))
+        rc, out, err = transport.run(self.PS, timeout=timeout, stdin=script.encode("utf-8"))
+        text = out.decode("utf-8-sig", "replace")
+        start = text.find("{")
+        if start < 0:
+            raise SSHError(f"Windows inventory on {t} produced no JSON (rc={rc}): "
+                           f"{_stderr_text(err) or 'no stderr'}")
+        try:
+            data = json.loads(text[start:text.rfind("}") + 1])
+        except ValueError as e:
+            raise SSHError(f"Windows inventory on {t} returned invalid JSON: {e}") from e
+        inv = windows.parse_inventory_json(data, include_system=opts.get("include_system", True))
+        a = inv.asset
+        a.meta.update({"transport": transport.name, "user": t.user, "port": t.port or 22,
+                       "remote_os": "windows", "remote_hostname": a.name})
+        a.id, a.name = f"ssh:{t.host}", t.host
+        inv.collector = self.name
+        if rc not in (0, None) and err:
+            inv.warnings.append(f"powershell exited {rc}: {_stderr_text(err)}")
         return inv
 
     def _harvest(self, transport: Transport, cmd: str, script: str, tmp: str, timeout: int,

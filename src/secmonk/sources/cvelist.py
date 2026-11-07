@@ -463,8 +463,11 @@ def _import_cpe_applicability(conn: sqlite3.Connection, cve_id: str, apps: list[
                 if end is not None:
                     events.append({end_key: end})
             versions = [exact] if exact and not events and is_version_like(exact) else None
+            # A bound we could not parse (e.g. a URL in versionEndExcluding) must never widen the
+            # range to "all versions": keep the row but make it unmatchable.
+            range_type = "CVE-UNPARSED" if dropped else "CPE"
             add_affected(conn, SOURCE, cve_id, vendor=vendor, product=product, cpe=crit,
-                         range_type="CPE", events=events or None, versions=versions,
+                         range_type=range_type, events=events or None, versions=versions,
                          extra={"container": "cna", "dropped_bounds": dropped} if dropped
                          else {"container": "cna"})
             n += 1

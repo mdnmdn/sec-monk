@@ -58,3 +58,10 @@ secmonk scan ssh me@mac.local -o os=macos -o verbose=true
 ## Implemented by
 
 [tech/collectors/ssh.md](../tech/collectors/ssh.md), [tech/collectors/rootfs.md](../tech/collectors/rootfs.md), [tech/collectors/macos.md](../tech/collectors/macos.md).
+
+## Windows
+```bash
+secmonk scan ssh admin@win-host                 # auto-detected (cmd.exe/PowerShell login shell)
+secmonk scan ssh admin@win-host -o os=windows   # skip the POSIX probe
+```
+Prerequisite on the host: the Windows OpenSSH server (built into Windows 10 1809+/Server 2019+).

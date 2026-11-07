@@ -129,10 +129,12 @@ def test_cpe_applicability(conn, cvedir):
     mac = next(r for r in cpe_rows if "office_macos_2021" in r["cpe"])
     assert mac["vendor"] == "microsoft"
     assert loads(mac["events"]) == [{"introduced": "16.0.1"}, {"fixed": "16.95.25030928"}]
-    url_row = next(r for r in cpe_rows if "365_apps" in r["cpe"])
-    assert loads(url_row["events"]) == [{"introduced": "16.0.1"}]  # URL bound dropped
-    cna_rows = [r for r in affected(conn, "CVE-2025-24077") if r["range_type"] == "CVE-UNPARSED"]
-    assert cna_rows  # lessThan is a URL, no changes[]
+    # a URL upper bound must not widen the range to "all versions": the row is kept unmatchable
+    assert not any("365_apps" in r["cpe"] for r in cpe_rows)
+    unparsed = [r for r in affected(conn, "CVE-2025-24077") if r["range_type"] == "CVE-UNPARSED"]
+    url_row = next(r for r in unparsed if (r["cpe"] or "").find("365_apps") >= 0)
+    assert "versionEndExcluding" in loads(url_row["extra"])["dropped_bounds"]
+    assert any(r["cpe"] is None for r in unparsed)  # CNA lessThan is a URL too, no changes[]
 
 
 @pytest.mark.parametrize("expr,expected", [
@@ -229,3 +231,24 @@ def test_referenced_and_fetch_missing(conn, cvedir, monkeypatch):
     assert res.records == 1
     assert base.REGISTRY["cvelist"] is CveListSource
     assert dumps(None) is None
+
+
+def test_cpe_bound_that_is_not_a_version_never_widens_range(conn):
+    """A URL in versionEndExcluding (seen in Microsoft 365 Apps records) must not become 'all versions'."""
+    from secmonk.sources.cvelist import import_record
+
+    rec = {
+        "dataType": "CVE_RECORD", "dataVersion": "5.1",
+        "cveMetadata": {"cveId": "CVE-2099-0001", "state": "PUBLISHED", "assignerShortName": "microsoft"},
+        "containers": {"cna": {
+            "descriptions": [{"lang": "en", "value": "x"}],
+            "cpeApplicability": [{"nodes": [{"operator": "OR", "cpeMatch": [{
+                "vulnerable": True,
+                "criteria": "cpe:2.3:a:microsoft:365_apps:-:*:*:*:enterprise:*:x64:*",
+                "versionStartIncluding": "16.0.1",
+                "versionEndExcluding": "https://aka.ms/OfficeSecurityReleases"}]}]}],
+        }},
+    }
+    import_record(conn, rec)
+    rows = conn.execute("SELECT range_type FROM affected WHERE vuln_id='CVE-2099-0001' AND cpe IS NOT NULL").fetchall()
+    assert rows and all(r["range_type"] == "CVE-UNPARSED" for r in rows)

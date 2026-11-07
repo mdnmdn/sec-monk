@@ -23,6 +23,7 @@ samples live in `tests/fixtures/sources/<source>/` and double as test fixtures.
 | FIRST EPSS | [epss.md](epss.md) | Exploitation probability | ❌ (`api.first.org`, `epss.empiricalsecurity.com`) |
 | NVD 2.0 | [nvd.md](nvd.md) | CPE applicability, CVSS | ❌ (`services.nvd.nist.gov`) |
 | ENISA EUVD | [euvd.md](euvd.md) | EU redundancy, exploited view, EPSS | ❌ |
+| Microsoft MSRC CVRF | [msrc.md](msrc.md) | Per-product fixed builds + KBs for Windows | ❌ (`api.msrc.microsoft.com`; CNA records of the same data via CVE List ✅) |
 | Distro trackers (Debian, Alpine secdb, Ubuntu, Red Hat) | [distros.md](distros.md) | Backport-aware OS package matching | Ubuntu ✅ · others ❌ (covered via OSV) |
 
 "❌" means blocked by the **sandbox egress policy** used during development, not by the source.

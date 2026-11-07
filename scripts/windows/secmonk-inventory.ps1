@@ -1,0 +1,1 @@
+../../src/secmonk/data/windows/secmonk-inventory.ps1

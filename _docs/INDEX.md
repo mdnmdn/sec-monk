@@ -15,8 +15,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 |---|---|---|---|
 | [Dependency inventory (folders, repos, images, containers, SSH hosts)](features/inventory-dependencies.md) | implemented | 2026-11-07 | cli, dependencies, collector |
 | [Inventory of containers and Linux filesystems](features/inventory-docker.md) | implemented | 2026-11-07 | docker, container, rootfs, inventory |
+| [Homebrew inventory](features/inventory-homebrew.md) | implemented | 2026-11-07 | cli, homebrew, linuxbrew, collector |
 | [macOS inventory](features/inventory-macos.md) | implemented | 2026-11-07 | macos, inventory, homebrew |
 | [Agentless inventory over SSH](features/inventory-ssh.md) | implemented | 2026-11-07 | ssh, agentless, linux, macos, inventory |
+| [Windows inventory](features/inventory-windows.md) | implemented | 2026-11-07 | windows, inventory, registry, msrc |
 | [Vulnerability data sync](features/vuln-sync.md) | implemented | 2026-11-07 | cli, vuln-source, sync |
 
 ## tech
@@ -28,9 +30,11 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [Language dependency scanning](tech/collectors/dependencies.md) | implemented | 2026-11-07 | collector, dependencies, npm, python, go, rust, java, dotnet, php |
 | [Docker engine collector](tech/collectors/docker-engine.md) | implemented · sample: synthetic | 2026-11-07 | collector, docker, containers, engine-api, podman |
 | [Docker image collector](tech/collectors/docker-image.md) | implemented · sample: mixed | 2026-11-07 | collector, docker, oci, registry, dpkg, apk, rpm, sbom |
+| [Homebrew / Linuxbrew collector](tech/collectors/homebrew.md) | implemented · sample: real | 2026-11-07 | collector, homebrew, linuxbrew, macos, identity |
 | [macOS collector](tech/collectors/macos.md) | implemented · sample: synthetic | 2026-11-07 | collector, macos, desktop, homebrew |
 | [Rootfs collector](tech/collectors/rootfs.md) | implemented · sample: real | 2026-11-07 | collector, rootfs, dpkg, apk, rpm, python, npm |
 | [SSH collector (agentless)](tech/collectors/ssh.md) | implemented · sample: synthetic | 2026-11-07 | collector, ssh, agentless, linux, macos |
+| [Windows collector](tech/collectors/windows.md) | implemented · sample: synthetic | 2026-11-07 | collector, windows, desktop, server, registry, msrc |
 | [Data model (SQLite schema)](tech/data-model.md) | implemented | 2026-11-07 | data-model, sqlite |
 | [Classification — recognizing and categorizing software](tech/engine/classification.md) | implemented | 2026-11-07 | engine, classification, purl, cpe |
 | [Matching, enrichment and prioritization](tech/engine/matching.md) | implemented | 2026-11-07 | engine, matching, versions, prioritization |
@@ -55,8 +59,10 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [ENISA EUVD](references/vuln-sources/euvd.md) | implemented · sample: synthetic | 2026-11-07 | vuln-source, euvd, enisa, exploited, alias |
 | [GitHub Advisory Database](references/vuln-sources/ghsa.md) | draft · sample: real · reachable: partial | 2026-11-07 | vuln-source, ghsa, osv, github |
 | [CISA KEV](references/vuln-sources/kev.md) | implemented · sample: real · reachable: partial | 2026-11-07 | vuln-source, kev, exploited, prioritization |
+| [Microsoft MSRC CVRF](references/vuln-sources/msrc.md) | blocked · sample: synthetic | 2026-11-07 | vuln-source, msrc, windows, cve |
 | [NVD API 2.0](references/vuln-sources/nvd.md) | implemented · sample: synthetic | 2026-11-07 | vuln-source, nvd, cve, cvss, cpe, cwe |
 | [OSV.dev (bulk)](references/vuln-sources/osv.md) | implemented · sample: real · reachable: partial | 2026-11-07 | vuln-source, osv, purl, distro, ghsa |
+| [Windows inventory and Microsoft vulnerability data](references/windows-inventory.md) | reference · sample: mixed · reachable: partial | 2026-11-07 | windows, inventory, registry, msrc, cve, cpe |
 
 ## decisions
 
@@ -83,18 +89,18 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **backports**: [distros](references/vuln-sources/distros.md)
 - **binary**: [go](references/package-formats/go.md), [rust](references/package-formats/rust.md)
 - **classification**: [classification](tech/engine/classification.md)
-- **cli**: [inventory-dependencies](features/inventory-dependencies.md), [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
-- **collector**: [inventory-dependencies](features/inventory-dependencies.md), [homebrew](references/homebrew.md), [README](tech/collectors/README.md), [dependencies](tech/collectors/dependencies.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md), [ssh](tech/collectors/ssh.md)
+- **cli**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [vuln-sync](features/vuln-sync.md), [architecture](tech/architecture.md)
+- **collector**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-homebrew](features/inventory-homebrew.md), [homebrew](references/homebrew.md), [README](tech/collectors/README.md), [dependencies](tech/collectors/dependencies.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [rootfs](tech/collectors/rootfs.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)
 - **container**: [inventory-docker](features/inventory-docker.md)
 - **containers**: [docker-engine](tech/collectors/docker-engine.md)
 - **conventions**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
-- **cpe**: [nvd](references/vuln-sources/nvd.md), [classification](tech/engine/classification.md)
-- **cve**: [cvelist-v5](references/vuln-sources/cvelist-v5.md), [nvd](references/vuln-sources/nvd.md)
+- **cpe**: [nvd](references/vuln-sources/nvd.md), [windows-inventory](references/windows-inventory.md), [classification](tech/engine/classification.md)
+- **cve**: [cvelist-v5](references/vuln-sources/cvelist-v5.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [windows-inventory](references/windows-inventory.md)
 - **cvss**: [nvd](references/vuln-sources/nvd.md)
 - **cwe**: [nvd](references/vuln-sources/nvd.md)
 - **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [data-model](tech/data-model.md)
 - **dependencies**: [inventory-dependencies](features/inventory-dependencies.md), [README](references/package-formats/README.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
-- **desktop**: [macos](tech/collectors/macos.md)
+- **desktop**: [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
 - **distro**: [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
 - **docs**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
@@ -112,17 +118,18 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **github**: [ghsa](references/vuln-sources/ghsa.md)
 - **glossary**: [vision](product/vision.md)
 - **go**: [go](references/package-formats/go.md), [dependencies](tech/collectors/dependencies.md)
-- **homebrew**: [inventory-macos](features/inventory-macos.md), [homebrew](references/homebrew.md), [macos](tech/collectors/macos.md)
-- **identity**: [homebrew](references/homebrew.md)
+- **homebrew**: [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md)
+- **identity**: [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md)
 - **index**: [README](references/vuln-sources/README.md), [README](tech/collectors/README.md)
-- **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md)
+- **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [inventory-windows](features/inventory-windows.md), [windows-inventory](references/windows-inventory.md)
 - **java**: [java](references/package-formats/java.md), [dependencies](tech/collectors/dependencies.md)
 - **kev**: [kev](references/vuln-sources/kev.md)
 - **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
 - **linux**: [inventory-ssh](features/inventory-ssh.md), [distros](references/vuln-sources/distros.md), [ssh](tech/collectors/ssh.md)
-- **linuxbrew**: [homebrew](references/homebrew.md)
-- **macos**: [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [homebrew](references/homebrew.md), [macos](tech/collectors/macos.md), [ssh](tech/collectors/ssh.md)
+- **linuxbrew**: [inventory-homebrew](features/inventory-homebrew.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md)
+- **macos**: [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [ssh](tech/collectors/ssh.md)
 - **matching**: [matching](tech/engine/matching.md)
+- **msrc**: [inventory-windows](features/inventory-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [windows](tech/collectors/windows.md)
 - **npm**: [javascript](references/package-formats/javascript.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
 - **nvd**: [nvd](references/vuln-sources/nvd.md)
 - **oci**: [docker-image](tech/collectors/docker-image.md)
@@ -135,13 +142,14 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **purl**: [osv](references/vuln-sources/osv.md), [classification](tech/engine/classification.md)
 - **pypi**: [python](references/package-formats/python.md)
 - **python**: [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
-- **registry**: [docker-image](tech/collectors/docker-image.md)
+- **registry**: [inventory-windows](features/inventory-windows.md), [windows-inventory](references/windows-inventory.md), [docker-image](tech/collectors/docker-image.md), [windows](tech/collectors/windows.md)
 - **roadmap**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
 - **rootfs**: [inventory-docker](features/inventory-docker.md), [rootfs](tech/collectors/rootfs.md)
 - **rpm**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
 - **rust**: [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [docker-image](tech/collectors/docker-image.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [vision](product/vision.md)
+- **server**: [windows](tech/collectors/windows.md)
 - **sqlite**: [data-model](tech/data-model.md)
 - **ssh**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **ssvc**: [cvelist-v5](references/vuln-sources/cvelist-v5.md)
@@ -150,4 +158,5 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **tooling**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
 - **versions**: [matching](tech/engine/matching.md)
 - **vision**: [vision](product/vision.md)
-- **vuln-source**: [vuln-sync](features/vuln-sync.md), [README](references/vuln-sources/README.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [distros](references/vuln-sources/distros.md), [epss](references/vuln-sources/epss.md), [euvd](references/vuln-sources/euvd.md), [ghsa](references/vuln-sources/ghsa.md), [kev](references/vuln-sources/kev.md), [nvd](references/vuln-sources/nvd.md), [osv](references/vuln-sources/osv.md)
+- **vuln-source**: [vuln-sync](features/vuln-sync.md), [README](references/vuln-sources/README.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [distros](references/vuln-sources/distros.md), [epss](references/vuln-sources/epss.md), [euvd](references/vuln-sources/euvd.md), [ghsa](references/vuln-sources/ghsa.md), [kev](references/vuln-sources/kev.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [osv](references/vuln-sources/osv.md)
+- **windows**: [inventory-windows](features/inventory-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [windows](tech/collectors/windows.md)

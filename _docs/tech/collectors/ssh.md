@@ -135,3 +135,14 @@ meta={transport, user, port, remote_os, remote_hostname, harvested_files, harves
 * BSD `find`/`bsdtar` (macOS), busybox `find`/`tar` (Alpine without GNU) are untested; the script avoids GNU-only flags on purpose
   (`-size -Nc`, `-perm -100`, `-mindepth/-maxdepth`, `--null --no-recursion -T -`), but busybox tar may lack `--null`.
 * The inventory is a point-in-time view of files, not of running processes; remote clock/hostname are not verified.
+
+## Windows targets (OpenSSH server)
+
+Windows OpenSSH starts `cmd.exe` (or PowerShell) as the login shell, so the POSIX detection
+script fails. The collector then probes `powershell … [Environment]::OSVersion.Platform`
+(`Win32NT`) and, if it answers, runs the **read-only** inventory script
+(`secmonk windows-script`, shipped in `src/secmonk/data/windows/`) via
+`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -` with the script on stdin
+(compact form: no blank/comment lines). The JSON on stdout (BOM/banner tolerated) goes to
+`windows.parse_inventory_json`. `-o os=windows` skips the POSIX probe.
+Tested with a fake transport only (no Windows host in the dev sandbox).

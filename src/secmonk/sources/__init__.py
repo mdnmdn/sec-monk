@@ -5,6 +5,7 @@ from . import (
     epss,  # noqa: F401
     euvd,  # noqa: F401
     kev,  # noqa: F401
+    msrc,  # noqa: F401
     nvd,  # noqa: F401
     osv,  # noqa: F401
 )
