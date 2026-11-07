@@ -6,7 +6,7 @@ status: implemented
 tags: [architecture, cli, engine, collector, vuln-source]
 updated: 2026-11-07
 code: src/secmonk/
-related: [product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
+related: [tech/web-ui.md, product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
 ---
 
 # Prototype architecture
@@ -72,7 +72,8 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/harvest.py`, `ssh.py` | Agentless SSH: fixed `find | tar` script, safe extraction into a temp dir, then rootfs/macOS/windows code on it. OpenSSH or paramiko transport. |
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
 | `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
-| `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`. |
+| `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
+| `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`, `api.py`), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
 | `collectors/lang/*.py` | `base.py` registry (`LangParser`, evidence ranks, `dedupe`), parsers: javascript, python, php, golang, rust, java, dotnet; `walk.py` (`walk_dir`, `LangAccumulator`, `WalkLimits`). |
 | `engine/purl.py` | PURL helpers, PURL to OSV ecosystem mapping, ecosystem and name normalization. |
 | `engine/versions.py` | Version comparison per ecosystem (`univers`), OSV range evaluation, tolerant generic comparator. |

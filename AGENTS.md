@@ -16,8 +16,10 @@ collectors/  targets -> Inventory(Asset, [Component]) ; never touch the DB, neve
              lang/     shared language-dependency parsers (7 ecosystems)
              process/  process monitor: platform-neutral core + per-OS backends (macOS now)
 engine/      classify -> versions -> match (osv-package | cve-product | cpe-product) -> scoring P1..P4
-procmon.py   `secmonk procs` views (process tree + findings, --watch differ)
+procmon.py   `secmonk procs` views (process tree + findings, --watch differ); payload builders shared with web/
+web/         local web UI (`secmonk ui`): stdlib server + JSON API, static Vue app (static/css, static/js)
 cli.py       Typer CLI (`secmonk ...`)
+_design/     interface design: sample pages, storybook, screenshots (loads web/static files, never copies)
 data/        product_aliases.yaml, brew_cpe_seed.csv, windows/secmonk-inventory.ps1
 _docs/       all documentation, organized by context with YAML frontmatter
 tests/       offline tests on fixtures (tests/fixtures/)
@@ -67,6 +69,21 @@ uv run python scripts/docs_index.py --check  # frontmatter, paths, links, anchor
   fixture tests; live commands are wrapped in `_run` so tests can replace them.
 - The `secmonk-process-snapshot/1` format is a public contract (offline analysis, agents, fixtures): extend it
   compatibly, validate on load.
+
+## Web interface specifics
+
+Feature: [web-ui](_docs/features/web-ui.md); architecture and "Adding a feature": [tech/web-ui](_docs/tech/web-ui.md);
+design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0008](_docs/decisions/0008-web-ui-stack.md).
+
+- **No build step**: Vue 3 + Vue Router from unpkg (pinned in `static/index.html`, every `_design` page and the
+  storybook: bump together), classic scripts exposing `window.SecMonkUI`. No npm dependency in the app.
+- **One component library**: `static/css/secmonk.css`, `static/js/secmonk-ui.js`, `static/js/secmonk-views.js` are used
+  by the app, the `_design` pages and the storybook. Never copy them; a new component gets a story, a new view gets a
+  sample page; regenerate `_design/mock/data.js` (`scripts/design_mock.py`) when a payload changes.
+- **Security rules**: render data only with `{{ }}` / bindings (no `v-html`), no inline scripts or styles (CSP), reads are
+  GET, actions are POST with `X-SecMonk-Request: 1`, keep the `Host` check. The server stays stdlib-only.
+- Payloads are built by functions shared with the CLI's JSON output (`procmon.snapshot_payload`, `event_dict`), not
+  re-shaped in the server.
 
 ## Tests and fixtures
 
