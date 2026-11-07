@@ -231,10 +231,11 @@ The engine collector is validated against a **fake socket only**; the generic te
   unsigned) on 5 apps; cost of `codesign` per process (time `procs`); `-o verify=true` on a deliberately modified copy of an app (expect `signature-invalid`) and its cost on Xcode-sized bundles; `-o gatekeeper=true` output (`source=Notarized Developer ID`).
 - [ ] **`--watch`.** Run `uv run secmonk procs --watch 5`, then start a new app, run a new brew binary, `launchctl bootstrap`
   a test LaunchAgent and remove it. Verify one event each, no repeated events, CPU usage of the loop acceptable.
-- [ ] **Web interface live** (`secmonk ui --open`, browser with internet for the Vue CDN).
+- [ ] **Web interface live** (`secmonk ui --open`; works offline, Vue is vendored).
   Verify: Processes / Software / Launch items / Activity show the live Mac; Watch reports a newly started app; Save then
   `secmonk findings process:$(hostname -s)` lists the same findings; no console errors (CSP) in Safari, Chrome and Firefox;
-  first-load time with ~500 processes. Replace `_design/screenshots/` with real (anonymized) ones only if useful.
+  first-load time with ~500 processes. Then Scan `macos` and `homebrew` from the Scan page and check the asset pages
+  against `secmonk inventory show`; a `sync kev epss` job from Sources & sync. Replace `_design/screenshots/` with real (anonymized) ones only if useful.
 - [ ] **Login items / BTM.** `sudo sfltool dumpbtm | head -80`: decide whether to parse it to tag `login-item` (currently
   never produced on macOS).
 

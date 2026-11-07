@@ -73,7 +73,9 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
 | `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
 | `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
-| `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`, `api.py`), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
+| `reports.py` | JSON payloads shared by the CLI's `--format json` and the web API (findings, assets, asset detail, status, vuln show/search, overview). |
+| `ops.py` | Operations shared by the CLI and the web UI's jobs: collector options, `sync all` expansion, one-source sync with its bookkeeping, collect / save / match. |
+| `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`; `api.py` process monitor, `data.py` database reads, `jobs.py` background scan / sync), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
 | `collectors/lang/*.py` | `base.py` registry (`LangParser`, evidence ranks, `dedupe`), parsers: javascript, python, php, golang, rust, java, dotnet; `walk.py` (`walk_dir`, `LangAccumulator`, `WalkLimits`). |
 | `engine/purl.py` | PURL helpers, PURL to OSV ecosystem mapping, ecosystem and name normalization. |
 | `engine/versions.py` | Version comparison per ecosystem (`univers`), OSV range evaluation, tolerant generic comparator. |
