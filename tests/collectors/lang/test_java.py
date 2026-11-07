@@ -90,9 +90,10 @@ def test_manifest_fallback_with_vendor_id():
           "Implementation-Vendor-Id: org.apache.logging.log4j\r\n\r\n")
     data = make_zip({"META-INF/MANIFEST.MF": mf, "a/B.class": b"x"})
     (c,) = parse_file("log4j-core-2.14.1.jar", data)[0]
-    assert c.purl == "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
-    assert c.meta["identified_by"] == "manifest" and c.meta["confidence"] == 0.7
-    assert "needs_identification" not in c.meta
+    # Implementation-Vendor-Id names the vendor, not necessarily the groupId: hint only
+    assert c.purl == "pkg:maven/log4j-core@2.14.1"
+    assert c.meta["identified_by"] == "manifest" and c.meta["confidence"] == 0.4
+    assert c.meta["needs_identification"] is True and c.meta["vendor_id"] == "org.apache.logging.log4j"
 
 
 def test_manifest_fallback_unknown_group_and_continuation_lines():
@@ -178,7 +179,7 @@ def test_oversized_nested_entry_is_skipped_but_rest_survives():
                       "META-INF/maven/o/app/pom.properties": pom_props("o", "app", "1")})
     outer = _declare_size(outer, "BOOT-INF/lib/huge-1.jar", 200 * 1024 * 1024)
     comps, warns = parse_file("app.jar", outer)
-    assert not warns
+    assert len(warns) == 1 and "huge-1.jar" in warns[0]
     assert {c.source_path for c in comps} == {"app.jar", "app.jar!/BOOT-INF/lib/ok-1.jar"}
 
 
@@ -282,3 +283,70 @@ def test_parsed_components_match_osv_maven(conn, osv_log4j):
     save_inventory(conn, Inventory(Asset("img2", "repo", "fixed"), "test", fixed))
     match_asset(conn, "img2")
     assert conn.execute("SELECT count(*) FROM finding WHERE asset_id='img2'").fetchone()[0] == 0
+
+
+# --------------------------------------------------------------------------- review fixes
+import zlib
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("netty-transport-native-epoll-4.1.100.Final-linux-x86_64.jar", ("netty-transport-native-epoll", "4.1.100.Final")),
+    ("shadow-demo-1.2.3-all.jar", ("shadow-demo", "1.2.3")),
+    ("app-1.0-shaded.jar", ("app", "1.0")),
+    ("app-1.0-jar-with-dependencies.jar", ("app", "1.0")),
+    ("asm-9.5-no_aop.jar", ("asm", "9.5")),
+    ("guice-5.1.0-jdk8.jar", ("guice", "5.1.0")),
+    ("lib-2.0-osx-aarch_64.jar", ("lib", "2.0")),
+    ("lib-2.0-windows-x86_64.jar", ("lib", "2.0")),
+    ("lib-2.0-native.jar", ("lib", "2.0")),
+    ("plain-1.0.0-beta.1.jar", ("plain", "1.0.0-beta.1")),       # real pre-release qualifier stays
+])
+def test_filename_classifiers_stripped_from_version(name, expected):
+    assert java._filename_ga(name) == expected
+
+
+def test_vendor_id_is_a_hint_unless_last_segment_is_the_artifact():
+    mf = "Manifest-Version: 1.0\r\nImplementation-Version: 31.1\r\nImplementation-Vendor-Id: com.google.guava\r\n\r\n"
+    (c,) = parse_file("guava-31.1.jar", make_zip({"META-INF/MANIFEST.MF": mf}))[0]
+    assert c.purl == "pkg:maven/com.google.guava/guava@31.1" and c.meta["confidence"] == 0.7
+    mf = ("Manifest-Version: 1.0\r\nImplementation-Version: 2.14.1\r\n"
+          "Implementation-Vendor-Id: org.apache.logging.log4j\r\n\r\n")
+    (c,) = parse_file("log4j-api-2.14.1.jar", make_zip({"META-INF/MANIFEST.MF": mf}))[0]
+    assert c.purl == "pkg:maven/log4j-api@2.14.1"
+    assert c.meta["needs_identification"] is True and c.meta["confidence"] == 0.4
+    assert c.meta["vendor_id"] == "org.apache.logging.log4j"
+
+
+def _corrupt_entry(data: bytes, name: str) -> bytes:
+    """Overwrite the deflate payload of one entry (the central directory stays valid, so
+    zipfile opens the archive but reading that entry raises zlib.error / BadZipFile)."""
+    info = zipfile.ZipFile(io.BytesIO(data)).getinfo(name)
+    # local header: 30 bytes + name + extra
+    start = info.header_offset + 30 + len(info.filename.encode())
+    buf = bytearray(data)
+    buf[start:start + info.compress_size] = b"\xff" * info.compress_size
+    return bytes(buf)
+
+
+def test_corrupt_pom_properties_entry_keeps_the_other_components():
+    """L4: one unreadable pom.properties (zlib.error ...) must not discard the rest."""
+    entries = {"META-INF/maven/o/bad/pom.properties": pom_props("o", "bad", "1") * 20,
+               "META-INF/maven/o/good/pom.properties": pom_props("o", "good", "2")}
+    data = _corrupt_entry(make_zip(entries), "META-INF/maven/o/bad/pom.properties")
+    with pytest.raises((zlib.error, zipfile.BadZipFile)):
+        zipfile.ZipFile(io.BytesIO(data)).read("META-INF/maven/o/bad/pom.properties")
+    comps, warns = parse_file("fat.jar", data)
+    assert {c.purl for c in comps} == {"pkg:maven/o/good@2"}
+    assert len(warns) == 1 and "bad/pom.properties" in warns[0]
+
+
+def test_corrupt_nested_archive_entry_keeps_found_components():
+    inner_ok = make_zip({"META-INF/maven/o/ok/pom.properties": pom_props("o", "ok", "1")})
+    inner_bad = _corrupt_entry(make_zip({"META-INF/maven/o/x/pom.properties": pom_props("o", "x", "1") * 20}),
+                               "META-INF/maven/o/x/pom.properties")
+    outer = make_zip({"BOOT-INF/lib/ok-1.jar": inner_ok, "BOOT-INF/lib/bad-1.jar": inner_bad,
+                      "BOOT-INF/lib/junk-1.jar": b"PK\x03\x04" + b"junk" * 50,
+                      "META-INF/maven/o/app/pom.properties": pom_props("o", "app", "1")})
+    comps, warns = parse_file("app.jar", outer)
+    assert {c.purl for c in comps} >= {"pkg:maven/o/app@1", "pkg:maven/o/ok@1"}
+    assert warns

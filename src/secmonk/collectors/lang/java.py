@@ -19,15 +19,22 @@ Nested jars (BOOT-INF/lib, WEB-INF/lib, lib/ …) are opened recursively (depth 
 from __future__ import annotations
 
 import io
-import logging
 import re
 import xml.etree.ElementTree as ET
 import zipfile
 
 from ...models import Component
-from .base import EV_BINARY, EV_LOCKFILE, EV_MANIFEST, LangParser, basename, dedupe, library, register
-
-log = logging.getLogger(__name__)
+from .base import (
+    EV_BINARY,
+    EV_LOCKFILE,
+    EV_MANIFEST,
+    LangParser,
+    basename,
+    dedupe,
+    push,
+    register,
+    safe_library,
+)
 
 ARCHIVE_EXTS = (".jar", ".war", ".ear", ".hpi", ".jpi", ".par")
 NESTED_EXTS = ARCHIVE_EXTS
@@ -38,6 +45,11 @@ MAX_ENTRIES = 200_000
 _POM_PROPS = re.compile(r"^META-INF/maven/([^/]+)/([^/]+)/pom\.properties$")
 _FILENAME = re.compile(r"^(?P<a>[A-Za-z0-9_.+\-]*?[A-Za-z0-9_])-(?P<v>\d[\w.+\-]*)$")
 _SKIP_SUFFIX = re.compile(r"-(sources|javadoc|tests?|test-sources)$", re.IGNORECASE)
+# build classifiers that follow the version in a file name (`netty-4.1.0-linux-x86_64.jar`)
+_CLASSIFIER = re.compile(
+    r"(?:-(?:all|shaded|shadow|uber|fat|bundle|standalone|jar-with-dependencies|with-dependencies|no_aop|"
+    r"nodeps|native|natives|(?:linux|osx|macosx|macos|windows|win|android|ios|freebsd)(?:[-_][\w.]+)*|"
+    r"jdk\d+|java\d+|jre\d+|x86_64|x86|amd64|aarch_64|aarch64|arm64|arm|ppc64le|s390x))+$", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------- helpers
@@ -81,18 +93,32 @@ def _filename_ga(path_in_archive: str) -> tuple[str, str] | None:
     if _SKIP_SUFFIX.search(stem):
         return None
     m = _FILENAME.match(stem)
-    return (m["a"], m["v"]) if m else None
+    if not m:
+        return None
+    version = _CLASSIFIER.sub("", m["v"]) or m["v"]
+    return m["a"], version
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[-_.]", "", s.lower())
+
+
+def _vendor_id(mf: dict[str, str]) -> str | None:
+    v = mf.get("Implementation-Vendor-Id")
+    return v if v and "." in v and " " not in v else None
 
 
 def _group_from_manifest(mf: dict[str, str], artifact: str | None) -> str | None:
-    """Group is only taken from evidence that really is a group: Implementation-Vendor-Id (a reverse-DNS
-    id such as `org.apache.logging.log4j`), or a Bundle-SymbolicName / Automatic-Module-Name whose last
-    segment *is* the artifactId (`com.acme.widgets` for artifact `widgets` -> `com.acme`). Anything else
+    """Group is only taken from evidence that really is a group: a Bundle-SymbolicName /
+    Automatic-Module-Name whose last segment *is* the artifactId (`com.acme.widgets` for artifact
+    `widgets` -> `com.acme`). Implementation-Vendor-Id (`org.apache.logging.log4j`) names the *vendor*,
+    often the project and not the Maven groupId (`org.apache.commons.lang3` for `commons-lang3`), so
+    it is only a hint (meta.vendor_id) unless its last segment is the artifactId. Anything else
     (e.g. `org.apache.commons.lang3` for `commons-lang3`) is a guess that would be wrong as often as
     right, so the group stays unknown."""
-    vendor_id = mf.get("Implementation-Vendor-Id")
-    if vendor_id and "." in vendor_id and " " not in vendor_id:
-        return vendor_id
+    vendor_id = _vendor_id(mf)
+    if vendor_id and artifact and _norm(vendor_id.rsplit(".", 1)[-1]) == _norm(artifact):
+        return vendor_id            # `com.acme.widgets` for artifact `widgets`: really a group.artifact id
     for key in ("Bundle-SymbolicName", "Automatic-Module-Name"):
         sym = (mf.get(key) or "").split(";")[0].strip()
         head, _, last = sym.rpartition(".")
@@ -144,7 +170,7 @@ def _read(zf: zipfile.ZipFile, info: zipfile.ZipInfo, budget: _Budget) -> bytes 
 
 # ---------------------------------------------------------------------------- archives
 def _scan_archive(display: str, data: bytes, depth: int, budget: _Budget, parent: str | None,
-                  out: list[Component]) -> None:
+                  out: list[Component], warnings: list[str]) -> None:
     zf = zipfile.ZipFile(io.BytesIO(data))
     infos = _check_zip(zf)
     by_name = {i.filename: i for i in infos if not i.is_dir()}
@@ -154,28 +180,37 @@ def _scan_archive(display: str, data: bytes, depth: int, budget: _Budget, parent
     found = False
     stem = basename(display.split("!/")[-1]).lower()
     for m, info in poms:
-        raw = _read(zf, info, budget)
-        if raw is None:
+        try:
+            raw = _read(zf, info, budget)
+            if raw is None:
+                continue
+            props = _parse_props(raw.decode("utf-8", "replace"))
+            group, artifact, version = (props.get("groupId") or m[1], props.get("artifactId") or m[2],
+                                        props.get("version"))
+            if not version or "${" in version:
+                continue
+            meta = dict(base_meta, identified_by="pom.properties", confidence=1.0)
+            if len(poms) > 1 and artifact.lower() not in stem:   # not the jar's own artifact -> bundled/shaded
+                meta["shaded"] = True
+            comp = safe_library("maven", artifact, version, namespace=group, path=display,
+                                evidence=EV_BINARY, parser="java-archive", **meta)
+        except Exception as e:  # noqa: BLE001 - corrupt entry (zlib.error, EOFError, BadZipFile, ...)
+            warnings.append(f"{display}!/{info.filename}: unreadable pom.properties: {type(e).__name__}: {e}")
             continue
-        props = _parse_props(raw.decode("utf-8", "replace"))
-        group, artifact, version = (props.get("groupId") or m[1], props.get("artifactId") or m[2],
-                                    props.get("version"))
-        if not version or "${" in version:
-            continue
-        meta = dict(base_meta, identified_by="pom.properties", confidence=1.0)
-        if len(poms) > 1 and artifact.lower() not in stem:   # not the jar's own artifact -> bundled/shaded
-            meta["shaded"] = True
-        out.append(library("maven", artifact, version, namespace=group, path=display, evidence=EV_BINARY,
-                           parser="java-archive", **meta))
-        found = True
+        if comp is not None:
+            out.append(comp)
+            found = True
 
     if not found:
         fn = _filename_ga(display)
         mf_info = by_name.get("META-INF/MANIFEST.MF")
         mf = {}
         if mf_info is not None:
-            raw = _read(zf, mf_info, budget)
-            mf = _parse_manifest(raw.decode("utf-8", "replace")) if raw else {}
+            try:
+                raw = _read(zf, mf_info, budget)
+                mf = _parse_manifest(raw.decode("utf-8", "replace")) if raw else {}
+            except Exception as e:  # noqa: BLE001
+                warnings.append(f"{display}!/META-INF/MANIFEST.MF: unreadable: {type(e).__name__}: {e}")
         ident = None
         if mf:
             group, artifact, version = _manifest_identity(mf, display)
@@ -189,7 +224,9 @@ def _scan_archive(display: str, data: bytes, depth: int, budget: _Budget, parent
             meta = dict(base_meta, identified_by=how, confidence=confidence)
             if not group:
                 meta["needs_identification"] = True
-            out.append(library("maven", artifact, version, namespace=group, path=display, evidence=EV_BINARY,
+                if how == "manifest" and _vendor_id(mf):
+                    meta["vendor_id"] = _vendor_id(mf)
+            push(out, safe_library("maven", artifact, version, namespace=group, path=display, evidence=EV_BINARY,
                                parser="java-archive", **meta))
 
     # nested archives
@@ -199,21 +236,31 @@ def _scan_archive(display: str, data: bytes, depth: int, budget: _Budget, parent
         if not name.lower().endswith(NESTED_EXTS):
             continue
         if info.file_size > MAX_ENTRY_BYTES:
-            log.warning("%s!/%s skipped: %d bytes > per-entry cap", display, name, info.file_size)
+            warnings.append(f"{display}!/{name} skipped: {info.file_size} bytes > per-entry cap")
             continue
-        raw = _read(zf, info, budget)
+        try:
+            raw = _read(zf, info, budget)
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"{display}!/{name} skipped: {type(e).__name__}: {e}")
+            continue
         if raw is None or raw[:4] != b"PK\x03\x04":
             continue
         try:
-            _scan_archive(f"{display}!/{name}", raw, depth + 1, budget, display, out)
-        except (zipfile.BadZipFile, ValueError, OSError) as e:
-            log.warning("%s!/%s skipped: %s", display, name, e)
+            _scan_archive(f"{display}!/{name}", raw, depth + 1, budget, display, out, warnings)
+        except Exception as e:  # noqa: BLE001 - one broken nested jar must not drop the rest
+            warnings.append(f"{display}!/{name} skipped: {type(e).__name__}: {e}")
 
 
-def parse_archive(path: str, data: bytes) -> list[Component]:
+def parse_archive(path: str, data: bytes) -> tuple[list[Component], list[str]]:
     out: list[Component] = []
-    _scan_archive(path, data, 0, _Budget(), None, out)
-    return dedupe(out)
+    warnings: list[str] = []
+    try:
+        _scan_archive(path, data, 0, _Budget(), None, out, warnings)
+    except Exception as e:
+        if not out:
+            raise
+        warnings.append(f"archive damaged after partial read: {type(e).__name__}: {e}")
+    return dedupe(out), warnings
 
 
 register(LangParser(
@@ -284,7 +331,7 @@ def parse_pom(path: str, data: bytes) -> list[Component]:
         scope = _text(d, "scope")
         typ = _text(d, "type")
         quals = {"type": typ if typ and typ != "jar" else None, "classifier": _text(d, "classifier")}
-        out.append(library("maven", a, v, namespace=g, path=path, evidence=EV_MANIFEST, parser="maven-pom",
+        push(out, safe_library("maven", a, v, namespace=g, path=path, evidence=EV_MANIFEST, parser="maven-pom",
                            qualifiers=quals, scope=scope, optional=True if _text(d, "optional") == "true" else None))
     return out
 
@@ -310,7 +357,7 @@ def parse_gradle_lockfile(path: str, data: bytes) -> list[Component]:
         g, a, v = parts[0], parts[1], parts[2]
         configs = [c for c in confs.split(",") if c] or ([legacy_conf] if legacy_conf else [])
         scope = "test" if configs and all("test" in c.lower() for c in configs) else None
-        out.append(library("maven", a, v, namespace=g, path=path, evidence=EV_LOCKFILE, parser="gradle-lockfile",
+        push(out, safe_library("maven", a, v, namespace=g, path=path, evidence=EV_LOCKFILE, parser="gradle-lockfile",
                            configurations=configs or None, scope=scope))
     return dedupe(out)
 
@@ -328,7 +375,7 @@ def parse_gradle_verification(path: str, data: bytes) -> list[Component]:
     for c in root.iter("component"):
         g, a, v = c.get("group"), c.get("name"), c.get("version")
         if g and a and v:
-            out.append(library("maven", a, v, namespace=g, path=path, evidence=EV_LOCKFILE,
+            push(out, safe_library("maven", a, v, namespace=g, path=path, evidence=EV_LOCKFILE,
                                parser="gradle-verification-metadata"))
     return dedupe(out)
 

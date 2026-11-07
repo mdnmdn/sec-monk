@@ -108,3 +108,4 @@ Exploited flag for a finding: a row exists in `kev` for the finding's CVE ID.
 - Each entry goes through `store_raw` (`modified` = `dateAdded`), so the feed can be re-normalized without a download.
 - `kev.ransomware` is stored as 1/0. The column is `TEXT` in the schema, so it reads back as `'1'`/`'0'`.
 - The full replace runs in one transaction (`DELETE FROM kev`, then inserts). A failure rolls back and keeps the previous snapshot.
+- Guard (review S16): a snapshot with 0 entries or fewer than 50% of the stored rows is refused (status `error`, table untouched) unless `opts.full`. `--limit` upserts the first N entries without replacing the table (status `partial`, no cursor).

@@ -66,9 +66,10 @@ def test_npm_v2_nested_and_special_entries():
     }}
     comps, _ = parse_file("package-lock.json", json.dumps(lock).encode())
     got = {c.purl: c for c in comps}
-    assert set(got) == {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0", "pkg:npm/real-pkg@1.1.1",
+    assert set(got) == {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0", "pkg:npm/b@3.0.0", "pkg:npm/real-pkg@1.1.1",
                         "pkg:npm/%40s/x@1.2.3-beta.1"}
     assert got["pkg:npm/b@2.0.0"].meta["peer"] is True
+    assert got["pkg:npm/b@3.0.0"].meta["bundled"] is True      # inBundle: emitted, flagged
 
 
 def test_npm_v1_alias_and_git_version():
@@ -185,3 +186,80 @@ def test_registered():
     names = {p.name for p in lang.REGISTRY}
     assert {"npm-package-lock", "yarn-lock", "pnpm-lock", "bun-lock", "node-modules"} <= names
     assert js.parse_yarn_lock
+
+
+# --------------------------------------------------------------------------- review fixes
+import subprocess
+import sys
+import textwrap
+
+
+@pytest.mark.parametrize("kind", ["pnpm", "berry"])
+def test_deeply_nested_yaml_does_not_crash_the_process(kind):
+    """L1: libyaml's C parser overflows the C stack (SIGSEGV) on deeply nested input. Run in a
+    subprocess so a regression kills the child, not the test suite."""
+    code = textwrap.dedent(f"""
+        import sys
+        from secmonk.collectors.lang import parse_file
+        n = 100000
+        if "{kind}" == "pnpm":
+            path, data = "pnpm-lock.yaml", ("lockfileVersion: '9.0'\\npackages: " + "[" * n + "]" * n + "\\n").encode()
+        else:
+            path, data = "yarn.lock", ("__metadata:\\n  version: 8\\nx: " + "[" * n + "]" * n + "\\n").encode()
+        comps, warns = parse_file(path, data)
+        assert comps == [] and len(warns) == 1 and "too deep" in warns[0], warns
+        print("OK")
+    """)
+    r = subprocess.run([sys.executable, "-I", "-c", code], check=False, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "OK" in r.stdout, (r.returncode, r.stderr[-500:])
+
+
+def test_yaml_depth_estimate_and_moderate_nesting_still_parses():
+    assert js.yaml_depth("a: 1\nb:\n  c: 2\n") < 5
+    assert js.yaml_depth("x: " + "[" * 500 + "]" * 500) >= 500
+    assert js.yaml_depth("- - - - - - x\n") >= 3
+    assert js.yaml_depth("a:\n" + " " * 300 + "b: 1\n") > js.MAX_YAML_DEPTH
+    nested = "[" * 100 + "]" * 100                               # > fast-loader threshold, < limit
+    text = ("lockfileVersion: '9.0'\npackages:\n  a@1.0.0:\n    resolution: {integrity: x}\n"
+            f"    extra: {nested}\n")
+    comps, warns = parse_file("pnpm-lock.yaml", text.encode())
+    assert [c.purl for c in comps] == ["pkg:npm/a@1.0.0"] and not warns
+
+
+def test_yarn_v1_name_split_at_first_at_after_index_zero():
+    """L6: git/ssh specs contain further '@' characters."""
+    text = ('"left-pad@git+ssh://git@github.com/o/left-pad.git#abc":\n  version "1.3.0"\n\n'
+            '"@scope/pkg@^1.0.0":\n  version "1.2.3"\n\n'
+            'plain@^2.0.0:\n  version "2.0.1"\n\n'
+            '"al@npm:real@^1.0.0":\n  version "1.0.5"\n')
+    comps, _ = parse_file("yarn.lock", text.encode())
+    assert {c.purl for c in comps} == {"pkg:npm/left-pad@1.3.0", "pkg:npm/%40scope/pkg@1.2.3",
+                                       "pkg:npm/plain@2.0.1", "pkg:npm/real@1.0.5"}
+
+
+def test_yarn_berry_archive_url_suffix_stripped():
+    """L13: `resolution: "foo@npm:1.2.3::__archiveUrl=https%3A%2F%2F..."`."""
+    text = ('__metadata:\n  version: 8\n\n'
+            '"foo@npm:^1.0.0":\n  version: 1.2.3\n'
+            '  resolution: "foo@npm:1.2.3::__archiveUrl=https%3A%2F%2Fnpm.example.com%2Ffoo.tgz"\n\n'
+            '"@s/bar@npm:^2.0.0":\n  version: 2.0.0\n'
+            '  resolution: "@s/bar@npm:2.0.0::__archiveUrl=https%3A%2F%2Fx%2Fbar.tgz#abc"\n')
+    comps, warns = parse_file("yarn.lock", text.encode())
+    assert {c.purl for c in comps} == {"pkg:npm/foo@1.2.3", "pkg:npm/%40s/bar@2.0.0"} and not warns
+
+
+def test_npm_bundled_entries_emitted_with_flag_v1_and_v2():
+    v1 = {"lockfileVersion": 1, "dependencies": {"b": {"version": "1.0.0", "bundled": True}}}
+    (c,) = parse_file("package-lock.json", json.dumps(v1).encode())[0]
+    assert c.purl == "pkg:npm/b@1.0.0" and c.meta["bundled"] is True
+    v3 = {"lockfileVersion": 3, "packages": {"node_modules/b": {"version": "1.0.0", "inBundle": True},
+                                              "node_modules/c": {"version": "1.0.0"}}}
+    got = {c.name: c for c in parse_file("package-lock.json", json.dumps(v3).encode())[0]}
+    assert got["b"].meta["bundled"] is True and "bundled" not in got["c"].meta
+
+
+def test_alias_with_empty_or_leading_at_does_not_crash():
+    assert js._alias("n", "npm:@") == ("n", "npm:@")
+    assert js._alias("n", "npm:real") == ("n", "npm:real")
+    assert js._alias("n", "npm:real@1.0.0") == ("real", "1.0.0")
+    assert js._alias("n", "npm:@s/real@1.0.0") == ("@s/real", "1.0.0")

@@ -7,8 +7,11 @@ sparse partial git clone (default). All CNA/ADP `affected` data is stored with r
 
 from __future__ import annotations
 
+import functools
 import json
+import os
 import re
+import shutil
 import sqlite3
 import subprocess
 from collections.abc import Iterator
@@ -17,15 +20,19 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from ..db import get_sync_cursor, set_sync_state
+from .. import paths
+from ..db import get_sync_cursor, loads, set_sync_state
+from ..engine import purl as purl_mod
+from ..engine.versions import compare as compare_versions
 from .base import (
-    CACHE_DIR,
     Source,
     SyncOptions,
     SyncResult,
     add_affected,
+    cpe_fields,
     http_client,
     norm_vendor_product,
+    normalize_severity,
     register,
     replace_children,
     severity_from_score,
@@ -36,7 +43,7 @@ from .base import (
 SOURCE = "cvelist"
 REPO_URL = "https://github.com/CVEProject/cvelistV5"
 RAW_BASE = "https://raw.githubusercontent.com/CVEProject/cvelistV5/main/"
-CACHE_REPO = CACHE_DIR / "cvelistV5"
+CACHE_REPO: Path | None = None   # override (tests); default paths.cache_subdir("cvelistV5")
 REFERENCED = "@referenced"
 
 _ID_RE = re.compile(r"^CVE-(\d{4})-(\d{4,})$", re.IGNORECASE)
@@ -46,12 +53,15 @@ _ID_RE = re.compile(r"^CVE-(\d{4})-(\d{4,})$", re.IGNORECASE)
 
 
 def cve_path(cve_id: str) -> str:
-    """Repo-relative path: CVE-2021-44228 -> cves/2021/44xxx/CVE-2021-44228.json (no zero padding)."""
+    """Repo-relative path: CVE-2021-44228 -> cves/2021/44xxx/CVE-2021-44228.json.
+
+    The file name keeps the id's digits verbatim (CVE-2014-0160 -> cves/2014/0xxx/CVE-2014-0160.json);
+    only the folder is derived from the numeric value (thousands + "xxx")."""
     m = _ID_RE.match(cve_id.strip())
     if not m:
         raise ValueError(f"not a CVE id: {cve_id!r}")
-    year, num = m.group(1), int(m.group(2))
-    return f"cves/{year}/{num // 1000}xxx/CVE-{year}-{num}.json"
+    year, digits = m.group(1), m.group(2)
+    return f"cves/{year}/{int(digits) // 1000}xxx/CVE-{year}-{digits}.json"
 
 
 def raw_url(cve_id: str) -> str:
@@ -250,15 +260,21 @@ def convert_version_entry(entry: dict) -> tuple[str, Any]:
         if bound_kind == "fixed" and not open_ended and bound == start:
             start = "0"  # Chrome style: version == lessThan means "below this version"
         events: list[dict] = [{"introduced": start}]
-        if not open_ended:
+        is_open = True
+        valid = [c for c in changes if is_version_like(c.get("at"))]
+        valid.sort(key=functools.cmp_to_key(lambda a, b: compare_versions(str(a["at"]), str(b["at"]))))
+        for ch in valid:
+            at, st = str(ch["at"]), str(ch.get("status", "")).lower()
+            if not open_ended and compare_versions(at, bound) >= 0:
+                continue                                  # changes at/after the bound are moot
+            if st == "unaffected" and is_open:
+                events.append({"fixed": at})
+                is_open = False
+            elif st == "affected" and not is_open:
+                events.append({"introduced": at})
+                is_open = True
+        if is_open and not open_ended:
             events.append({bound_kind: bound})
-        if changes:
-            for ch in changes:
-                at, st = ch.get("at"), str(ch.get("status", "")).lower()
-                if not is_version_like(at):
-                    continue
-                if st == "affected":
-                    events.append({"introduced": at})
         return "events", events
 
     # invalid bound or lower bound: try changes[], then free-text expression
@@ -364,25 +380,18 @@ def _ssvc(adps: list[dict]) -> dict | None:
     return out or None
 
 
-def _cpe_vendor_product(cpe: str) -> tuple[str | None, str | None, str | None]:
-    parts = cpe.split(":")
-    if len(parts) < 6 or parts[0] != "cpe":
-        return None, None, None
-    ver = parts[5]
-    return parts[3], parts[4], None if ver in ("*", "-", "") else ver
-
-
 # --------------------------------------------------------------------------- affected import
 
 
 def _import_affected_entry(conn: sqlite3.Connection, cve_id: str, aff: dict, container: str) -> int:
     vendor, product = aff.get("vendor"), aff.get("product")
     pkg = aff.get("packageName")
-    package = pkg.strip().lower() if isinstance(pkg, str) and pkg.strip() else None
-    if package is None and norm_vendor_product(vendor) is None and norm_vendor_product(product) is None:
+    pkg_raw = pkg.strip() if isinstance(pkg, str) and pkg.strip() else None
+    if pkg_raw is None and norm_vendor_product(vendor) is None and norm_vendor_product(product) is None:
         return 0
     coll = aff.get("collectionURL")
-    ecosystem = ecosystem_from_url(coll) if package else None
+    ecosystem = ecosystem_from_url(coll) if pkg_raw else None
+    package = purl_mod.normalize_name(ecosystem, pkg_raw) if pkg_raw else None
 
     base_extra: dict[str, Any] = {"container": container}
     for k, v in (("package_name", pkg), ("collection_url", coll), ("platforms", aff.get("platforms")),
@@ -425,6 +434,10 @@ def _import_affected_entry(conn: sqlite3.Connection, cve_id: str, aff: dict, con
     if n == 0 and unaffected:
         row("CVE", None, status="unaffected", extra={"unaffected_versions": unaffected})
         n += 1
+    # defaultStatus "affected" with no usable versions: keep the statement (not matchable, but not lost)
+    if n == 0 and str(aff.get("defaultStatus") or "").lower() == "affected":
+        row("CVE-UNPARSED", None, status="affected", extra={"default_status": "affected"})
+        n += 1
     return n
 
 
@@ -433,6 +446,7 @@ def _import_cpe_applicability(conn: sqlite3.Connection, cve_id: str, apps: list[
     stack = []
     for app in apps or []:
         stack.extend(app.get("nodes") or [])
+    seen: set[str] = set()
     while stack:
         node = stack.pop(0)
         stack.extend(node.get("children") or [])
@@ -440,36 +454,57 @@ def _import_cpe_applicability(conn: sqlite3.Connection, cve_id: str, apps: list[
             if m.get("vulnerable") is False or not m.get("criteria"):
                 continue
             crit = m["criteria"]
-            vendor, product, exact = _cpe_vendor_product(crit)
+            key = m.get("matchCriteriaId") or json.dumps(m, sort_keys=True)
+            if key in seen:
+                continue
+            seen.add(key)
+            fields = cpe_fields(crit)
+            if len(fields) < 6 or fields[0] != "cpe":
+                continue
+            vendor, product, raw_ver = fields[3], fields[4], fields[5]
+            update = fields[6] if len(fields) > 6 else "*"
+            exact = None if raw_ver in ("*", "-", "") else raw_ver
             events: list[dict] = []
-            dropped = {}
-            vsi, vse, vei = (m.get("versionStartIncluding"), m.get("versionEndExcluding"),
-                             m.get("versionEndIncluding"))
-            start = None
-            if vsi:
-                if is_version_like(vsi):
-                    start = vsi
-                else:
-                    dropped["versionStartIncluding"] = vsi
-            end_key = end = None
-            for key, val in (("fixed", vse), ("last_affected", vei)):
+            dropped: dict[str, Any] = {}
+            start_key = start = None
+            for field, ev in (("versionStartIncluding", "introduced"),
+                              ("versionStartExcluding", "introduced_exclusive")):
+                val = m.get(field)
                 if val:
                     if is_version_like(val):
-                        end_key, end = key, val
+                        if start is None:
+                            start_key, start = ev, val
                     else:
-                        dropped["versionEnd" + ("Excluding" if key == "fixed" else "Including")] = val
+                        dropped[field] = val
+            end_key = end = None
+            for field, ev in (("versionEndExcluding", "fixed"), ("versionEndIncluding", "last_affected")):
+                val = m.get(field)
+                if val:
+                    if is_version_like(val):
+                        end_key, end = ev, val
+                    else:
+                        dropped[field] = val
             if start is not None or end is not None:
-                events.append({"introduced": start or "0"})
+                events.append({start_key: start} if start is not None else {"introduced": "0"})
                 if end is not None:
                     events.append({end_key: end})
+            elif exact is None and raw_ver == "*" and not dropped:
+                events = [{"introduced": "0"}]          # wildcard, no bounds: all versions (as nvd.py)
             versions = [exact] if exact and not events and is_version_like(exact) else None
-            # A bound we could not parse (e.g. a URL in versionEndExcluding) must never widen the
-            # range to "all versions": keep the row but make it unmatchable.
-            range_type = "CVE-UNPARSED" if dropped else "CPE"
+            extra: dict[str, Any] = {"container": "cna"}
+            # A bound we could not parse (e.g. a URL in versionEndExcluding), or a CPE `update`
+            # such as beta/rc/p1, must never widen the range to "all versions"/the final release:
+            # keep the row but make it unmatchable.
+            if update not in ("*", "-", ""):
+                dropped_update = True
+                extra["cpe_update"] = update
+            else:
+                dropped_update = False
+            if dropped:
+                extra["dropped_bounds"] = dropped
+            range_type = "CVE-UNPARSED" if (dropped or dropped_update) else "CPE"
             add_affected(conn, SOURCE, cve_id, vendor=vendor, product=product, cpe=crit,
-                         range_type=range_type, events=events or None, versions=versions,
-                         extra={"container": "cna", "dropped_bounds": dropped} if dropped
-                         else {"container": "cna"})
+                         range_type=range_type, events=events or None, versions=versions, extra=extra)
             n += 1
     return n
 
@@ -507,7 +542,7 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> str | None:
         vector = metric.get("vectorString")
         version = str(metric["version"]) if metric.get("version") is not None else None
         sev = metric.get("baseSeverity")
-        severity = str(sev).upper() if sev else severity_from_score(score)
+        severity = normalize_severity(str(sev)) if sev else severity_from_score(score)
         extra["cvss_source"] = "cna" if prov == "cna" else prov
     cwes = _cwes(cna)
     if not cwes:
@@ -560,6 +595,22 @@ def _is_newer(conn: sqlite3.Connection, rec: dict) -> bool:
                 and row["modified"] >= meta["dateUpdated"])
 
 
+def _import_guarded(conn: sqlite3.Connection, rec: dict) -> str | None:
+    """import_record inside a SAVEPOINT: any exception rolls back that record only (the previous
+    version of the record, children included, stays intact) and is re-raised to the caller."""
+    if not conn.in_transaction:
+        conn.execute("BEGIN")
+    conn.execute("SAVEPOINT cve_rec")
+    try:
+        cid = import_record(conn, rec)
+    except Exception:
+        conn.execute("ROLLBACK TO cve_rec")
+        conn.execute("RELEASE cve_rec")
+        raise
+    conn.execute("RELEASE cve_rec")
+    return cid
+
+
 def _import_files(conn: sqlite3.Connection, files: Iterator[Path] | list[Path], opts: SyncOptions
                   ) -> tuple[int, int, bool]:
     """Import files; returns (imported, errors, hit_limit)."""
@@ -574,11 +625,11 @@ def _import_files(conn: sqlite3.Connection, files: Iterator[Path] | list[Path], 
                 continue
             if not opts.full and not _is_newer(conn, rec):
                 continue
-            if import_record(conn, rec):
+            if _import_guarded(conn, rec):
                 count += 1
-        except (OSError, ValueError) as e:
+        except Exception as e:  # noqa: BLE001 - one bad record must not abort the sync
             errors += 1
-            opts.log(f"cvelist: skipping {f}: {e}")
+            opts.log(f"cvelist: skipping {f}: {type(e).__name__}: {e}")
         if i % 500 == 499:
             conn.commit()
             opts.log(f"cvelist: {count} records")
@@ -591,6 +642,21 @@ def _walk(path: Path) -> Iterator[Path]:
         yield path
     else:
         yield from sorted(path.rglob("CVE-*.json"))
+
+
+def renormalize(conn: sqlite3.Connection) -> tuple[int, int]:
+    """Rebuild every cvelist vulnerability/affected row from `raw_record` (no download), so
+    importer fixes reach an existing DB. Returns (rebuilt, errors)."""
+    ok = errors = 0
+    rows = conn.execute("SELECT record_id, data FROM raw_record WHERE source=?", (SOURCE,)).fetchall()
+    for r in rows:
+        try:
+            if _import_guarded(conn, loads(r["data"])):
+                ok += 1
+        except Exception:  # noqa: BLE001
+            errors += 1
+    conn.commit()
+    return ok, errors
 
 
 # --------------------------------------------------------------------------- referenced ids
@@ -622,11 +688,13 @@ def _fetch_ids(conn: sqlite3.Connection, ids: list[str], opts: SyncOptions) -> t
                     opts.log(f"cvelist: {cid} not found")
                     continue
                 resp.raise_for_status()
-                if import_record(conn, resp.json()):
+                if _import_guarded(conn, resp.json()):
                     count += 1
-            except Exception as e:  # noqa: BLE001 - network/JSON errors: keep going, report partial
+            except Exception as e:  # noqa: BLE001 - network/JSON/record errors: keep going, report partial
                 errors += 1
-                opts.log(f"cvelist: {cid}: {e}")
+                opts.log(f"cvelist: {cid}: {type(e).__name__}: {e}")
+            if count and count % 500 == 0:
+                conn.commit()
     conn.commit()
     return count, errors
 
@@ -648,56 +716,102 @@ def fetch_missing(conn: sqlite3.Connection, cve_ids: list[str] | None, opts: Syn
 
 # --------------------------------------------------------------------------- git mode
 
+GIT_KEY = "cvelist:git"        # internal cursor row: last fully imported commit
+YEARS_KEY = "cvelist:years"    # internal row: cursor = oldest year ever synced (backfill persistence)
+_SHA_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+_GIT_HARDEN = ["-c", "core.fsmonitor=", "-c", "core.hooksPath=/dev/null", "-c", "core.pager=cat",
+               "-c", "core.sshCommand=ssh", "-c", "protocol.ext.allow=never"]
+_GIT_DROP_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_EXEC_PATH",
+                 "GIT_EXTERNAL_DIFF", "GIT_SSH_COMMAND", "GIT_SSH", "GIT_ASKPASS", "GIT_PAGER",
+                 "GIT_CONFIG_COUNT")
+
+
+def _git_env() -> dict[str, str]:
+    env = {k: v for k, v in os.environ.items()
+           if k not in _GIT_DROP_ENV and not k.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_"))}
+    env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull, GIT_TERMINAL_PROMPT="0")
+    return env
+
 
 def _git(args: list[str], cwd: Path | None = None) -> str:
-    r = subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
+    r = subprocess.run(["git", *_GIT_HARDEN, *args], cwd=cwd, check=True, capture_output=True,
+                       text=True, env=_git_env(), timeout=3600)
     return r.stdout.strip()
 
 
-def _years(since: str | None) -> list[str]:
+def _years(since: str | None, oldest: int | None = None) -> list[str]:
+    """Years to keep checked out: default previous+current year, widened by --since and by the
+    oldest year synced earlier (so a plain sync never shrinks a --since backfill)."""
     cur = datetime.now(UTC).year
     start = cur - 1
     if since:
         m = re.match(r"\d{4}", since)
         if m:
-            start = min(int(m.group()), cur)
+            start = min(start, int(m.group()), cur)
+    if oldest is not None:
+        start = min(start, oldest)
     return [str(y) for y in range(start, cur + 1)]
 
 
+def _cache_repo() -> Path:
+    return CACHE_REPO if CACHE_REPO is not None else paths.cache_subdir("cvelistV5")
+
+
+def _origin_matches(repo: Path, url: str) -> bool:
+    if not (repo / ".git").is_dir():
+        return False
+    try:
+        return _git(["config", "--local", "--get", "remote.origin.url"], repo) == url
+    except subprocess.CalledProcessError:
+        return False
+
+
 def _sync_git(conn: sqlite3.Connection, opts: SyncOptions, repo: Path | None = None) -> SyncResult:
-    repo = repo or CACHE_REPO
-    years = _years(opts.since)
+    repo = repo or _cache_repo()
+    url = REPO_URL
+    stored_years = get_sync_cursor(conn, YEARS_KEY)
+    oldest = int(stored_years) if stored_years and stored_years.isdigit() else None
+    years = _years(opts.since, oldest)
     sparse = [f"cves/{y}" for y in years]
-    old = None if opts.full else get_sync_cursor(conn, SOURCE)
-    walk_dirs: list[Path] = []
+    stored = get_sync_cursor(conn, GIT_KEY)
+    old = stored if stored and _SHA_RE.match(stored) and not opts.full else None
     changed: list[Path] | None = None
 
-    if not (repo / ".git").exists():
+    if (repo / ".git").exists() and not _origin_matches(repo, url):
+        opts.log("cvelist: cache has a foreign/unknown origin; re-cloning")
+        shutil.rmtree(repo)
+    fresh = not (repo / ".git").exists()
+    if fresh:
         repo.parent.mkdir(parents=True, exist_ok=True)
         opts.log("cvelist: cloning (partial, sparse)")
-        _git(["clone", "--depth", "1", "--filter=blob:none", "--sparse", REPO_URL, str(repo)])
+        _git(["clone", "--depth", "1", "--filter=blob:none", "--sparse", "--", url, str(repo)])
         old = None
     new_years = [y for y in years if not (repo / "cves" / y).exists()]
-    _git(["sparse-checkout", "set", *sparse], repo)
-    walk_dirs = [repo / "cves" / y for y in (years if old is None else new_years)]
+    _git(["sparse-checkout", "add", *sparse], repo)
 
-    if old is not None:
+    if not fresh:
+        # always bring the cache to upstream HEAD; the cursor only picks diff vs full walk
         _git(["fetch", "--depth", "1", "origin", "main"], repo)
         new_sha = _git(["rev-parse", "FETCH_HEAD"], repo)
-        if new_sha != old:
-            try:
-                names = _git(["diff", "--name-only", old, "FETCH_HEAD", "--", "cves"], repo).splitlines()
-                changed = [repo / n for n in names if n.endswith(".json")]
-            except subprocess.CalledProcessError:
-                # shallow history: old commit not available -> rely on dateUpdated comparison
-                opts.log("cvelist: diff unavailable, falling back to dateUpdated comparison")
-                changed = None
-                walk_dirs = [repo / "cves" / y for y in years]
-        else:
-            changed = []
-        # only inside the dedicated cache dir
-        _git(["reset", "--hard", "FETCH_HEAD"], repo)
+        walk_years = years
+        if old is not None:
+            walk_years = new_years
+            if new_sha != old:
+                try:
+                    names = _git(["diff", "--name-only", "--end-of-options", old, new_sha, "--", "cves"],
+                                 repo).splitlines()
+                    changed = [repo / n for n in names if n.endswith(".json")]
+                except subprocess.CalledProcessError:
+                    # shallow history: old commit not available -> rely on dateUpdated comparison
+                    opts.log("cvelist: diff unavailable, falling back to dateUpdated comparison")
+                    walk_years = years
+            else:
+                changed = []
+        _git(["reset", "--hard", "FETCH_HEAD"], repo)   # only inside the dedicated cache dir
         _git(["sparse-checkout", "reapply"], repo)
+        walk_dirs = [repo / "cves" / y for y in walk_years]
+    else:
+        walk_dirs = [repo / "cves" / y for y in years]
 
     head = _git(["rev-parse", "HEAD"], repo)
 
@@ -714,11 +828,16 @@ def _sync_git(conn: sqlite3.Connection, opts: SyncOptions, repo: Path | None = N
                     yield f
 
     count, errors, hit_limit = _import_files(conn, files(), opts)
-    partial = hit_limit or errors > 0
-    return SyncResult(SOURCE, records=count, status="partial" if partial else "ok",
-                      cursor=None if hit_limit else head,
+    complete = not hit_limit and errors == 0
+    if complete:
+        # only a fully imported run may advance the internal cursor / widen the synced year range
+        set_sync_state(conn, GIT_KEY, status="ok", cursor=head, message=f"git {head[:10]}")
+        set_sync_state(conn, YEARS_KEY, status="ok", cursor=years[0], message="oldest synced year")
+    return SyncResult(SOURCE, records=count, status="ok" if complete else "partial",
+                      cursor=head if complete else None,
                       message=f"git {head[:10]}, years {years[0]}..{years[-1]}"
-                      + (", limit reached" if hit_limit else ""))
+                      + (", limit reached" if hit_limit else "")
+                      + (f", {errors} record errors" if errors else ""))
 
 
 # --------------------------------------------------------------------------- source
@@ -730,6 +849,9 @@ class CveListSource(Source):
     description = "CVE List v5 (CVEProject/cvelistV5) with CISA Vulnrichment ADP data"
 
     def sync(self, conn: sqlite3.Connection, opts: SyncOptions) -> SyncResult:
+        """Never writes the main `source_sync` row (the CLI does, from the SyncResult); the git
+        cursor and year range live in the internal rows `cvelist:git` / `cvelist:years`.
+        `SyncResult.records` = imported this run, `.total` = cvelist records in the DB."""
         try:
             if opts.path:
                 path = Path(opts.path)
@@ -746,11 +868,10 @@ class CveListSource(Source):
                                  message=f"fetched {count} ids")
             else:
                 res = _sync_git(conn, opts)
-        except (subprocess.CalledProcessError, OSError) as e:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as e:
+            conn.rollback()
             detail = getattr(e, "stderr", "") or str(e)
             return SyncResult(SOURCE, status="error", message=f"git failed: {detail.strip()[:300]}")
-        if res.records or res.cursor:
-            total = conn.execute("SELECT COUNT(*) FROM vulnerability WHERE source=?", (SOURCE,)).fetchone()[0]
-            set_sync_state(conn, SOURCE, status=res.status, records=total, cursor=res.cursor,
-                           message=res.message)
+        total = conn.execute("SELECT COUNT(*) FROM vulnerability WHERE source=?", (SOURCE,)).fetchone()[0]
+        res.total = total
         return res

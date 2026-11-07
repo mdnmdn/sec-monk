@@ -17,14 +17,17 @@ Without mise: any Python ≥ 3.12 plus `uv` works.
 ## Quick start
 
 ```bash
-# 1. Mirror vulnerability data (SQLite at ./secmonk.db, or $SECMONK_DB / --db)
+# 1. Mirror vulnerability data. SQLite lives in the per-user data dir
+#    ($XDG_DATA_HOME/secmonk/secmonk.db, ~/.local/share/secmonk/secmonk.db, %LOCALAPPDATA%\secmonk on Windows),
+#    never in the current directory; override with $SECMONK_DB or --db. Read-only commands refuse to
+#    create an empty database ("no database at X — run `secmonk sync …` first").
 uv run secmonk sources                             # cvelist debian-tracker epss euvd kev msrc nvd osv
 uv run secmonk sync kev epss
 uv run secmonk sync osv -e Alpine -e Debian -e PyPI -e npm
 uv run secmonk sync cvelist --since 2024          # CNA data for desktop apps / brew / Windows
 uv run secmonk sync debian-tracker                # Debian triage (no-dsa, not-affected, urgency)
 uv run secmonk sync nvd --since 2026-10-01 ; uv run secmonk sync euvd ; uv run secmonk sync msrc
-uv run secmonk status                              # `sync all` = kev epss osv cvelist nvd euvd
+uv run secmonk status                              # `sync all` = every source (kev epss osv cvelist nvd euvd msrc debian-tracker)
 
 # 2. Inventory + match (collectors: uv run secmonk collectors)
 uv run secmonk scan macos /                        # this Mac: apps, Homebrew, pkgutil, macOS
@@ -40,6 +43,8 @@ uv run secmonk scan windows inv.json               # (or -o osquery=results.json
 
 # 3. Explore
 uv run secmonk findings --priority P1
+uv run secmonk findings --format json            # table | json | csv (also status, inventory, scan)
+uv run secmonk scan rootfs ./rootfs --fail-on P2  # CI gate: exit 3 if an open P1/P2 finding exists
 uv run secmonk findings <asset-id> --fixable --hide-minor     # fix available, without distro-triaged minor issues
 uv run secmonk findings <asset-id> --hide-deferred            # also hide no-dsa / postponed
 uv run secmonk inventory assets
@@ -48,6 +53,8 @@ uv run secmonk inventory unmatched                 # apps needing an alias-table
 uv run secmonk vuln show CVE-2024-3094
 uv run secmonk vuln search --ecosystem PyPI --package django --version 4.2.1
 ```
+
+Exit codes: 0 ok, 1 runtime error (unknown asset, no database, collector failure, a failed `sync` source; a *partial* sync exits 0 with a note), 2 usage error (unknown source/collector, bad option), 3 `scan --fail-on` hit. `-v` shows debug logs and tracebacks, `-q` hides informational output (collector warnings are always shown).
 
 Collector options are passed as `-o key=value` (e.g. `-o binaries=false`, `-o all_kegs=true`, `-o sudo=true`, `-o platform=linux/arm64`).
 Every command and option: [`_docs/features/README.md`](_docs/features/README.md#cli-at-a-glance); how it fits together:

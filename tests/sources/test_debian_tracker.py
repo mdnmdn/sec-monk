@@ -26,7 +26,7 @@ def repo(fixtures: Path) -> Path:
 
 def sync(conn, path: Path, **kw):
     res = dt.DebianTrackerSource().sync(conn, SyncOptions(path=path, **kw))
-    assert res.status == "ok", res.message
+    assert res.status == ("partial" if kw.get("limit") else "ok"), res.message
     return res
 
 

@@ -62,3 +62,9 @@ CNA's `windows server 2022, 23h2 edition (server core installation)`.
 
 - Validate the JSON shape against the real API; handle `Supercedence` chains to derive "first KB containing the fix".
 - Office build tables (channel to fixed build) from the Microsoft release-notes pages; MSRC Update Guide API (`/sug/v2.0`, needs an API key).
+
+## Implementation notes (review fixes)
+
+- Rows are replaced per **document**: importing a month deletes only `affected` rows with the same `extra.document`, so a CVE fixed for Windows 10 in January and Windows 11 in February keeps both. The `vulnerability`/raw row belongs to the newest document (an older one never overwrites it, but its KBs are merged into `extra.kbs`).
+- Local `--path` files are sorted by `DocumentTracking.CurrentReleaseDate` (not by file name). Downloads skip months whose release date is not newer than the stored cursor (unless `--full`); the cursor only advances over documents imported before the first failure.
+- The source no longer writes `source_sync` (the CLI does, from `SyncResult.records/total/cursor`).

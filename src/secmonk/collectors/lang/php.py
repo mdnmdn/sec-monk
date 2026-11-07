@@ -11,7 +11,7 @@ import json
 import re
 
 from ...models import Component
-from .base import EV_INSTALLED, EV_LOCKFILE, LangParser, basename, library, register
+from .base import EV_INSTALLED, EV_LOCKFILE, LangParser, basename, register, safe_library
 
 _V_PREFIX = re.compile(r"^[vV](?=\d)")
 
@@ -32,7 +32,7 @@ def _component(p: dict, path: str, evidence: str, parser: str, dev: bool | None)
     version, branch = _norm_version(ver)
     src = p.get("source") or {}
     lic = p.get("license")
-    return library("composer", pkg, version, path=path, evidence=evidence, parser=parser, namespace=vendor,
+    return safe_library("composer", pkg, version, path=path, evidence=evidence, parser=parser, namespace=vendor,
                    dev=True if dev else None, dev_branch=branch,
                    raw_version=ver if ver != version else None,
                    reference=(src.get("reference") if isinstance(src, dict) else None) or None,

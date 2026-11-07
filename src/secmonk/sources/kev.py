@@ -1,7 +1,8 @@
 """CISA Known Exploited Vulnerabilities (KEV) source.
 
 Spec: _docs/references/vuln-sources/kev.md. The feed is a small full snapshot, so every sync
-replaces the whole `kev` table. The feed's `catalogVersion` is returned as the cursor.
+replaces the whole `kev` table. The feed's `catalogVersion` is returned as the cursor. A snapshot that is empty or under 50% of the
+stored rows is refused unless `opts.full`; `--limit` upserts a subset without replacing the table.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from typing import Any
 import httpx
 
 from ..db import dumps, transaction
-from .base import Source, SyncOptions, SyncResult, http_client, register, store_raw
+from .base import Source, SyncOptions, SyncResult, http_client, register, snapshot_guard, store_raw
 
 OFFICIAL_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 MIRROR_URL = (
@@ -63,8 +64,16 @@ class KevSource(Source):
             if doc.get("count") not in (None, len(entries)):
                 opts.log(f"kev: feed count {doc.get('count')} != {len(entries)} entries; using entries")
 
+            limited = opts.limit is not None
+            if limited:
+                entries = entries[:opts.limit]      # debug subset: upsert only, never replace the table
+            else:
+                refusal = snapshot_guard(conn, "kev", len(entries), opts)
+                if refusal:
+                    return SyncResult(self.name, status="error", message=f"kev: {refusal}")
             with transaction(conn):
-                conn.execute("DELETE FROM kev")
+                if not limited:
+                    conn.execute("DELETE FROM kev")
                 for e in entries:
                     cve = e["cveID"]
                     store_raw(conn, self.name, cve, e, modified=e.get("dateAdded"))
@@ -84,7 +93,7 @@ class KevSource(Source):
         return SyncResult(
             self.name,
             records=len(entries),
-            status="ok",
-            cursor=doc.get("catalogVersion"),
+            status="partial" if limited else "ok",
+            cursor=None if limited else doc.get("catalogVersion"),
             message=f"{len(entries)} entries {origin}",
         )

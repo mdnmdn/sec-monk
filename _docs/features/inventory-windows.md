@@ -36,7 +36,7 @@ secmonk scan windows
 secmonk scan windows -o osquery=results.json
 
 # remotely: stdin script over OpenSSH on the Windows host (Intune: deploy the script and collect the -OutFile)
-ssh admin@win-host "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -" < src/secmonk/data/windows/secmonk-inventory.ps1 (symlinked at scripts/windows/) > inv.json
+ssh admin@win-host "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -" < secmonk-inventory.ps1 > inv.json   # script: `secmonk windows-script > secmonk-inventory.ps1`
 ```
 
 Vulnerability data: `secmonk sync cvelist` (Microsoft CNA records carry per-build fixed versions for Windows, .NET, Edge, Visual Studio) and optionally

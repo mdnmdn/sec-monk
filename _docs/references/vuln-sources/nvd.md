@@ -124,9 +124,12 @@ columns, not the criteria string alone.
 
 ## Implementation notes
 
-- Rejected records (`vulnStatus == "Rejected"`) are skipped and not stored. Existing rows are not removed.
-- Delta: the cursor is the end of the window, captured before any request is sent. Windows are 119 days long, under the 120-day cap. With no stored cursor (and no `--since`), the sync is a full pull. Failed runs do not advance the cursor.
+- Rejected records (`vulnStatus == "Rejected"`) update the vulnerability row (`state='REJECTED'`, `withdrawn = lastModified`) and drop their `affected` rows (`replace_children`); the matcher treats `withdrawn` rows as not applicable.
+- Delta: the cursor is the end of the window, captured before any request is sent. Windows are 119 days long, under the 120-day cap. With no stored cursor (and no `--since`), the sync is a full pull. The end of every completed window is persisted in the internal row `nvd:progress`, and a failed run returns status `partial` with the records and cursor of the completed windows (no re-download on retry). `--since` accepts a year, month, date or timestamp and only advances the cursor when it re-covers the stored cursor (`since <= stored`); with no stored cursor or a later `since` the cursor is not moved (it would hide an unsynced gap). The source never writes the main `nvd` row (the CLI does).
 - Each page is committed in its own transaction, so a failure keeps the progress already made. Re-running is idempotent (upserts, `replace_children`).
-- CPE: a cpeMatch with version `-` and no bounds is skipped (no version applies). `*` with no bounds becomes `introduced: "0"`.
+- CPE: a cpeMatch with version `-` and no bounds is skipped (no version applies). `*` with no bounds becomes `introduced: "0"`; an end-only bound (`versionEnd*`) gets a leading `introduced: "0"`; a CPE `update` field (beta/rc/pN) makes the row `CVE-UNPARSED` (`extra.cpe_update`) so stable releases do not match; `cpeMatch` entries are de-duplicated on `matchCriteriaId`.
 - The `introduced_exclusive` event key is new. `db.py` lists only `introduced`, `fixed`, `last_affected` and `limit`. Matchers must handle it.
 - Rate limit: one client paces all requests (6 s without a key, 0.6 s with). Per-request `apiKey` header.
+- HTTP (review S12/SEC11): 403/429/5xx and transport errors are retried up to 5 times with exponential backoff (2 s base, 120 s cap), honoring `Retry-After` (seconds or HTTP date). Redirects are never followed, so the `apiKey` header cannot leave `services.nvd.nist.gov`.
+- CVSS choice: Primary before Secondary, then 4.0 > 3.1 > 3.0 > 2.0. `--limit` stops after N stored records (status `partial`, no cursor).
+- `nvd.renormalize(conn)` rebuilds all nvd rows from `raw_record` without downloading, so importer fixes reach an existing DB.

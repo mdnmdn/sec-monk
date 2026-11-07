@@ -57,3 +57,12 @@ class Inventory:
     collector: str
     components: list[Component] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # True when the collection is known to be incomplete (aborted stream, skipped/unreadable layer,
+    # truncation). A partial inventory never counts as the authoritative "latest scan": components
+    # it did not see are NOT treated as removed (see engine/inventory.py).
+    partial: bool = False
+    partial_reason: str | None = None
+
+    def mark_partial(self, reason: str) -> None:
+        self.partial = True
+        self.partial_reason = f"{self.partial_reason}; {reason}" if self.partial_reason else reason

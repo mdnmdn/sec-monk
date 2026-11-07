@@ -305,7 +305,7 @@ def test_cli_collect(tmp_path):
 # --------------------------------------------------------------------------- script + ssh contract
 
 def test_script_is_ascii_and_balanced():
-    text = w.INVENTORY_SCRIPT_PATH.read_text(encoding="utf-8")
+    text = w.inventory_script(compact=False)
     assert text.isascii()
     assert text.count("{") == text.count("}") and text.count("(") == text.count(")")
     assert "secmonk-windows-inventory/1" in text and w.SCHEMA in text

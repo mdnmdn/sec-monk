@@ -14,8 +14,16 @@ description = "Run the test suite"
 run = "uv run pytest -q"
 
 [tasks.lint]
-description = "Lint"
-run = "uv run ruff check src tests"
+description = "Lint (ruff + docs index check)"
+run = ["uv run ruff check src tests scripts", "uv run python scripts/docs_index.py --check"]
+
+[tasks.cov]
+description = "Tests with coverage"
+run = "uv run pytest -q --cov=secmonk --cov-report=term-missing"
+
+[tasks.docs-check]
+description = "Verify _docs/INDEX.md is up to date"
+run = "uv run python scripts/docs_index.py --check"
 
 [tasks.docs-index]
 description = "Regenerate _docs/INDEX.md from frontmatter"

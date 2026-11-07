@@ -14,16 +14,47 @@ from urllib.parse import unquote, urlparse
 import yaml
 
 from ...models import Component
-from .base import EV_INSTALLED, EV_LOCKFILE, LangParser, basename, library, register
+from .base import EV_INSTALLED, EV_LOCKFILE, LangParser, basename, push, register, safe_library
 
 ECO = "npm"
 _VERSION_RE = re.compile(r"^\d+(?:\.\d+)*(?:[-+][0-9A-Za-z.+~_-]+)?$")
 _NM_PKG_RE = re.compile(r"(?:^|/)node_modules/((?:@[^/]+/)?[^/@][^/]*)/package\.json$")
 
 try:  # libyaml is ~10x faster on big lockfiles
-    _YamlLoader: Any = yaml.CSafeLoader
+    _FastYamlLoader: Any = yaml.CSafeLoader
 except AttributeError:  # pragma: no cover
-    _YamlLoader = yaml.SafeLoader
+    _FastYamlLoader = yaml.SafeLoader
+
+MAX_YAML_DEPTH = 200      # real lockfiles nest < 10 levels; libyaml recurses on the C stack
+_FAST_YAML_DEPTH = 40     # deeper than this goes to the pure-Python loader (RecursionError, not a segfault)
+_FLOW_CHARS = re.compile(r"[\[\]{}]")
+_LEADING = re.compile(r"^( *)((?:- )*)", re.MULTILINE)
+
+
+def yaml_depth(text: str) -> int:
+    """Cheap upper estimate of the nesting depth of a YAML document: flow brackets/braces
+    (`[[[[`) and block structure (indentation width, `- - - -` chains; each level needs at least one
+    column). No parsing, so it is safe to run before the real parser."""
+    depth = cur = 0
+    for m in _FLOW_CHARS.finditer(text):
+        cur = max(0, cur + (1 if m[0] in "[{" else -1))
+        depth = max(depth, cur)
+    for m in _LEADING.finditer(text):
+        depth = max(depth, len(m[1]) + len(m[2]) // 2)
+    return depth
+
+
+def load_yaml(text: str | bytes) -> Any:
+    """yaml.safe_load with a nesting guard. Pathologically deep documents crash libyaml's C parser
+    (SIGSEGV kills the whole scan), so they are rejected up front; moderately deep ones use the
+    pure-Python SafeLoader."""
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+    depth = yaml_depth(text)
+    if depth > MAX_YAML_DEPTH:
+        raise ValueError(f"YAML nesting too deep ({depth} > {MAX_YAML_DEPTH}); not parsed")
+    loader = _FastYamlLoader if depth <= _FAST_YAML_DEPTH else yaml.SafeLoader
+    return yaml.load(text, Loader=loader)
 
 
 # --------------------------------------------------------------------------- helpers
@@ -46,12 +77,12 @@ def _host(url: str | None) -> str | None:
         return None
 
 
-def _mk(full_name: str, version: str | None, *, path: str, evidence: str, parser: str, **meta) -> Component:
+def _mk(full_name: str, version: str | None, *, path: str, evidence: str, parser: str, **meta) -> Component | None:
     ns, nm = _split_scope(full_name)
     ver = version if version and _VERSION_RE.match(version) else None
     if version and ver is None:
         meta["non_registry_version"] = version
-    return library("npm", nm, ver, path=path, evidence=evidence, parser=parser, namespace=ns, **meta)
+    return safe_library("npm", nm, ver, path=path, evidence=evidence, parser=parser, namespace=ns, **meta)
 
 
 def _alias(name: str, version: str) -> tuple[str, str]:
@@ -61,6 +92,8 @@ def _alias(name: str, version: str) -> tuple[str, str]:
         i = inner.rfind("@")
         if i > 0:
             return inner[:i], inner[i + 1:]
+        if i < 0 and inner:                  # `npm:real` without a version: keep the aliased spec
+            return name, version
     return name, version
 
 
@@ -88,18 +121,17 @@ def parse_package_lock(path: str, data: bytes) -> list[Component]:
                 continue
             if "node_modules/" not in key:      # workspace folders ("packages/foo") are local code
                 continue
-            if e.get("inBundle") or e.get("bundled"):
-                continue
             name = e.get("name") or key.rsplit("node_modules/", 1)[1]
             ver = e.get("version")
             if not isinstance(ver, str):
                 continue
             if isinstance(e.get("resolved"), str) and e["resolved"].startswith("file:"):
                 continue
-            out.append(_mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="npm-package-lock",
+            push(out, _mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="npm-package-lock",
                            dev=True if e.get("dev") else None, optional=True if e.get("optional") else None,
                            peer=True if e.get("peer") else None,
                            dev_optional=True if e.get("devOptional") else None,
+                           bundled=True if (e.get("inBundle") or e.get("bundled")) else None,
                            resolved_host=_host(e.get("resolved")), lockfile_version=lv,
                            lock_key=key if key.count("node_modules/") > 1 else None))
     elif isinstance(d.get("dependencies"), dict):
@@ -113,11 +145,11 @@ def _walk_v1(deps: dict, path: str, lv, out: list[Component], depth: int = 0) ->
     for name, e in deps.items():
         if not isinstance(e, dict):
             continue
-        if not e.get("bundled"):
-            ver = e.get("version")
-            if isinstance(ver, str) and not ver.startswith("file:"):
-                name2, ver2 = _alias(name, ver)
-                out.append(_mk(name2, ver2, path=path, evidence=EV_LOCKFILE, parser="npm-package-lock",
+        ver = e.get("version")
+        if isinstance(ver, str) and not ver.startswith("file:"):
+            name2, ver2 = _alias(name, ver)
+            push(out, _mk(name2, ver2, path=path, evidence=EV_LOCKFILE, parser="npm-package-lock",
+                               bundled=True if e.get("bundled") else None,
                                dev=True if e.get("dev") else None, optional=True if e.get("optional") else None,
                                resolved_host=_host(e.get("resolved")), lockfile_version=lv))
         if isinstance(e.get("dependencies"), dict):
@@ -145,13 +177,15 @@ def _parse_yarn_v1(path: str, text: str) -> list[Component]:
         ver = fields["version"]
         if "@npm:" in first:                            # alias "foo@npm:bar@^1" -> real package is bar
             name = first.partition("@npm:")[2].rsplit("@", 1)[0]
+            if not name:
+                return
         else:
-            i = first.rfind("@")
+            i = first.find("@", 1)             # name ends at the first '@' after index 0
             if i <= 0:
                 return
             name = first[:i]
         res = fields.get("resolved")
-        out.append(_mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="yarn-lock",
+        push(out, _mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="yarn-lock",
                        resolved_host=_host(res.split("#")[0]) if res else None, lockfile_format="yarn-v1"))
 
     for raw in text.splitlines():
@@ -169,12 +203,12 @@ def _parse_yarn_v1(path: str, text: str) -> list[Component]:
     return _uniq(out)
 
 
-_BERRY_NPM = re.compile(r"^(?P<name>@?[^@]+)@npm:(?P<ver>[^#]+)$")
+_BERRY_NPM = re.compile(r"^(?P<name>@?[^@]+)@npm:(?P<ver>[^#:]+)(?:::.*)?(?:#.*)?$")
 _BERRY_PATCH_INNER = re.compile(r"^(?P<name>@?[^@]+)@patch:.*?@npm(?:%3A|:)(?P<ver>[^#:%]+)")
 
 
 def _parse_yarn_berry(path: str, text: str) -> list[Component]:
-    d = yaml.load(text, Loader=_YamlLoader)
+    d = load_yaml(text)
     out: list[Component] = []
     if not isinstance(d, dict):
         return out
@@ -193,7 +227,7 @@ def _parse_yarn_berry(path: str, text: str) -> list[Component]:
             if not m:
                 continue                            # workspace:, portal:, link:, git, https, exec:
             name, ver = m["name"], unquote(m["ver"])
-        out.append(_mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="yarn-lock",
+        push(out, _mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="yarn-lock",
                        lockfile_format="yarn-berry", lockfile_version=meta_v,
                        patched=True if "@patch:" in res else None))
     return _uniq(out)
@@ -220,7 +254,7 @@ def _pnpm_split(key: str, lockv: float) -> tuple[str, str] | None:
 
 
 def parse_pnpm_lock(path: str, data: bytes) -> list[Component]:
-    d = yaml.load(data, Loader=_YamlLoader)
+    d = load_yaml(data)
     if not isinstance(d, dict):
         return []
     try:
@@ -244,7 +278,7 @@ def parse_pnpm_lock(path: str, data: bytes) -> list[Component]:
                 name, ver = e["name"], e["version"]
             if ver.startswith(("link:", "file:")) or "/" in ver:
                 continue
-            out.append(_mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="pnpm-lock",
+            push(out, _mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="pnpm-lock",
                            dev=True if e.get("dev") is True else None,
                            optional=True if e.get("optional") is True else None,
                            lockfile_version=str(d.get("lockfileVersion"))))
@@ -298,7 +332,7 @@ def parse_bun_lock(path: str, data: bytes) -> list[Component]:
             name, ver = ident[:i], ident[i + 1:]
             if not _VERSION_RE.match(ver):
                 continue                            # workspace:, file:, github:, link:, https:
-        out.append(_mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="bun-lock",
+        push(out, _mk(name, ver, path=path, evidence=EV_LOCKFILE, parser="bun-lock",
                        dev_direct=True if key in dev_direct else None, lockfile_version=d.get("lockfileVersion")))
     return _uniq(out)
 
@@ -317,7 +351,7 @@ def parse_installed_package_json(path: str, data: bytes) -> list[Component]:
         lic = lic.get("type")
     c = _mk(name, ver, path=path, evidence=EV_INSTALLED, parser="node-modules",
             license=lic if isinstance(lic, str) else None)
-    return [c]
+    return [c] if c else []
 
 
 # --------------------------------------------------------------------------- registration

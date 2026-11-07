@@ -13,7 +13,16 @@ import tomllib
 from email.parser import HeaderParser
 
 from ...models import Component
-from .base import EV_INSTALLED, EV_LOCKFILE, EV_MANIFEST, LangParser, basename, library, register
+from .base import (
+    EV_INSTALLED,
+    EV_LOCKFILE,
+    EV_MANIFEST,
+    LangParser,
+    basename,
+    push,
+    register,
+    safe_library,
+)
 
 _SP_DIRS = ("site-packages", "dist-packages")
 _REQ_NAME_RE = re.compile(r"^(?:requirements|constraints)(?:[-_.][^/]*)?\.txt$|^[^/]*[-_]requirements\.txt$", re.IGNORECASE)
@@ -23,9 +32,10 @@ def pep503(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name.strip()).lower()
 
 
-def _pypi(name: str, version: str | None, *, path: str, evidence: str, parser: str, **meta) -> Component:
-    c = library("pypi", pep503(name), version, path=path, evidence=evidence, parser=parser, **meta)
-    c.name = name.strip()              # keep the spelling the package uses for display
+def _pypi(name: str, version: str | None, *, path: str, evidence: str, parser: str, **meta) -> Component | None:
+    c = safe_library("pypi", pep503(name), version, path=path, evidence=evidence, parser=parser, **meta)
+    if c is not None:
+        c.name = name.strip()              # keep the spelling the package uses for display
     return c
 
 
@@ -74,8 +84,9 @@ def parse_core_metadata(path: str, data: bytes) -> list[Component]:
     if lic and (len(lic) > 80 or "\n" in lic or lic.upper() == "UNKNOWN"):
         lic = None
     kind = "dist-info" if ".dist-info/" in path else "egg-info"
-    return [_pypi(str(name), str(version).strip(), path=path, evidence=EV_INSTALLED, parser=f"python-{kind}",
-                  venv_root=_venv_root(path), license=lic, layout=kind)]
+    c = _pypi(str(name), str(version).strip(), path=path, evidence=EV_INSTALLED, parser=f"python-{kind}",
+              venv_root=_venv_root(path), license=lic, layout=kind)
+    return [c] if c else []
 
 
 # --------------------------------------------------------------------------- conda
@@ -97,9 +108,10 @@ def parse_conda_meta(path: str, data: bytes) -> list[Component]:
         channel = segs[-2] if len(segs) >= 2 and "-" in segs[-1] and segs[-1].split("-")[0] in (
             "linux", "osx", "win", "noarch") else segs[-1]
     prefix = path.rsplit("/conda-meta/", 1)[0] if "/conda-meta/" in path else None
-    return [library("conda", name, ver, path=path, evidence=EV_INSTALLED, parser="conda-meta",
-                    channel=channel or None, build=d.get("build_string") or d.get("build"),
-                    subdir=d.get("subdir"), license=d.get("license"), conda_prefix=prefix)]
+    c = safe_library("conda", name, ver, path=path, evidence=EV_INSTALLED, parser="conda-meta",
+                     channel=channel or None, build=d.get("build_string") or d.get("build"),
+                     subdir=d.get("subdir"), license=d.get("license"), conda_prefix=prefix)
+    return [c] if c else []
 
 
 # --------------------------------------------------------------------------- lockfiles
@@ -117,7 +129,7 @@ def parse_poetry_lock(path: str, data: bytes) -> list[Component]:
         groups = p.get("groups")
         dev = (p.get("category") == "dev") if "category" in p else (
             bool(groups) and "main" not in groups) if groups is not None else None
-        out.append(_pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="poetry-lock",
+        push(out, _pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="poetry-lock",
                          dev=True if dev else None, optional=True if p.get("optional") else None,
                          groups=groups, source_type=src.get("type")))
     return out
@@ -134,7 +146,7 @@ def parse_pipfile_lock(path: str, data: bytes) -> list[Component]:
             if not v.startswith(("==", "===")):
                 continue
             v = v.lstrip("=").strip()
-            out.append(_pypi(name, v, path=path, evidence=EV_LOCKFILE, parser="pipfile-lock",
+            push(out, _pypi(name, v, path=path, evidence=EV_LOCKFILE, parser="pipfile-lock",
                              dev=True if dev else None, markers=e.get("markers")))
     return out
 
@@ -176,7 +188,7 @@ def parse_uv_lock(path: str, data: bytes) -> list[Component]:
         src = p.get("source") or {}
         if not name or not ver or "editable" in src or "virtual" in src or "directory" in src:
             continue
-        out.append(_pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="uv-lock",
+        push(out, _pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="uv-lock",
                          dev=True if dev_only is not None and pep503(name) in dev_only else None,
                          source_type=next(iter(src), None)))
     return out
@@ -194,7 +206,7 @@ def parse_pdm_lock(path: str, data: bytes) -> list[Component]:
         seen.add((name, ver))
         groups = p.get("groups")
         dev = bool(groups) and "default" not in groups
-        out.append(_pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="pdm-lock",
+        push(out, _pypi(name, ver, path=path, evidence=EV_LOCKFILE, parser="pdm-lock",
                          dev=True if dev else None, groups=groups))
     return out
 
@@ -233,7 +245,7 @@ def parse_requirements(path: str, data: bytes) -> list[Component]:
         marker = None
         if rest.startswith(";"):
             marker = re.split(r"\s--", rest[1:], maxsplit=1)[0].strip() or None
-        out.append(_pypi(m["name"], ver, path=path, evidence=EV_MANIFEST, parser="requirements-txt",
+        push(out, _pypi(m["name"], ver, path=path, evidence=EV_MANIFEST, parser="requirements-txt",
                          extras=[e.strip() for e in m["extras"].split(",") if e.strip()] if m["extras"] else None,
                          marker=marker))
     return out

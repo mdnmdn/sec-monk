@@ -103,5 +103,6 @@ Log4j-style record with a CVE alias, and one with no alias (exercises the "EUVD 
 - Product entries: the fixture has none. The module reads an optional `products` list of `{vendor, product, version}` objects. Its real shape is unverified. `enisaIdProduct[]` strings are not stored.
 - `exploited` = the record's own flag, OR the record came from the exploited view. It is stored in `vulnerability.extra` only and is not merged into `kev`.
 - Only CVE aliases are stored (`alias.source = 'euvd'`). EUVD-only records get no alias rows.
-- EPSS: when the record has an `epss` value, one `INSERT OR IGNORE` per CVE alias, with `date` = the `dateUpdated` day. EUVD never overwrites a FIRST score.
+- EPSS: when the record has an `epss` value, one upsert per CVE alias, with `date` = the `dateUpdated` day. EUVD never overwrites a FIRST score (`source='epss'`) but refreshes its own earlier `source='euvd'` row.
 - No cursor is returned: the views are small and pulled whole.
+- `--limit` caps the records imported from a local file, and in remote mode additionally pages `/vulnerabilities` up to N records.

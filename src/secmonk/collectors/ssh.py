@@ -102,6 +102,13 @@ def parse_target(target: str) -> SSHTarget:
     return SSHTarget(host=host, user=user or None, port=port)
 
 
+def ssh_asset_id(t: SSHTarget) -> str:
+    """`ssh:<host>` for the default port, `ssh:<host>:<port>` otherwise (IPv6 hosts bracketed), so two
+    machines behind one jump host / NAT address do not collapse into one asset."""
+    host = f"[{t.host}]" if ":" in t.host and t.port not in (None, 22) else t.host
+    return f"ssh:{host}" if t.port in (None, 22) else f"ssh:{host}:{t.port}"
+
+
 # --------------------------------------------------------------------------- transports
 
 class Stream(ABC):
@@ -352,7 +359,9 @@ class ParamikoTransport(Transport):
                 log.debug("ignoring unreadable ssh config %s: %s", cfg_path, e)
         client = paramiko.SSHClient()
         if self.known_hosts:
-            client.load_host_keys(self.known_hosts)
+            # get_host_keys().load() (unlike client.load_host_keys) does not remember the file, so
+            # nothing is ever written back to the user's known_hosts
+            client.get_host_keys().load(str(Path(self.known_hosts).expanduser()))
         else:
             try:
                 client.load_system_host_keys()
@@ -360,7 +369,7 @@ class ParamikoTransport(Transport):
                 pass
         if self.insecure_host_key:
             log.warning("insecure_host_key: remote host key of %s is NOT verified", t.host)
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.set_missing_host_key_policy(_non_saving_autoadd(paramiko))
         else:
             client.set_missing_host_key_policy(paramiko.RejectPolicy())
         try:
@@ -400,6 +409,16 @@ class ParamikoTransport(Transport):
         if self._client is not None:
             self._client.close()
             self._client = None
+
+
+def _non_saving_autoadd(paramiko: Any) -> Any:
+    """Accept unknown host keys for this connection only (paramiko's AutoAddPolicy would also save them)."""
+
+    class NonSavingAutoAddPolicy(paramiko.MissingHostKeyPolicy):
+        def missing_host_key(self, client: Any, hostname: str, key: Any) -> None:
+            log.warning("accepting unverified host key %s for %s (not saved)", key.get_name(), hostname)
+
+    return NonSavingAutoAddPolicy()
 
 
 def _as_list(v: Any) -> list[str]:
@@ -525,9 +544,12 @@ class SSHCollector(Collector):
         tmp = tempfile.mkdtemp(prefix="secmonk-ssh-")
         os.chmod(tmp, 0o700)
         try:
-            stats, trc, terr = self._harvest(transport, remote_cmd, hscript, tmp, timeout, opts, warnings)
-            if stats.files == 0 and trc not in (0, 1):
-                raise SSHError(f"remote harvest on {t} failed (rc={trc}): {_stderr_text(terr) or 'no stderr'}"
+            stats, trc, terr, abnormal = self._harvest(transport, remote_cmd, hscript, tmp, timeout, opts,
+                                                       warnings)
+            conn_lost = trc == 255 or trc < 0 or trc >= 128
+            if stats.files == 0 and (abnormal or trc not in (0, 1)):
+                raise SSHError(f"remote harvest on {t} failed (rc={trc}"
+                               f"{', ' + abnormal if abnormal else ''}): {_stderr_text(terr) or 'no stderr'}"
                                + (" (sudo needs a NOPASSWD rule: sudo -n)" if sudo else ""))
             if trc not in (0, 1) and terr:
                 warnings.append(f"remote tar exited {trc} (some files unreadable?): {_stderr_text(terr)}")
@@ -536,14 +558,20 @@ class SSHCollector(Collector):
             if stats.limit:
                 warnings.append(f"harvest truncated: {stats.limit}; inventory is partial "
                                 "(raise -o max_mb / -o max_files or narrow with -o exclude=...)")
+            partial_reasons = [x for x in (
+                abnormal, f"harvest truncated: {stats.limit}" if stats.limit else None,
+                f"remote command ended with status {trc}" if conn_lost and not stats.limit and not abnormal
+                else None) if x]
             # 4. reuse the existing collectors
             inv = self._inventory(family, tmp, t, info, stats, warnings, opts)
+            if inv.partial_reason:
+                partial_reasons.append(inv.partial_reason)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
         # 5. rewrite the asset
         a = inv.asset
-        a.id, a.name = f"ssh:{t.host}", t.host
+        a.id, a.name = ssh_asset_id(t), t.host
         a.type = "server" if family == "linux" else "desktop"
         arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(info.arch, info.arch or "unknown")
         a.platform = f"{'linux' if family == 'linux' else 'darwin'}/{arch}"
@@ -551,10 +579,16 @@ class SSHCollector(Collector):
             "transport": transport.name, "user": t.user, "port": t.port or 22, "remote_os": info.description,
             "remote_hostname": info.hostname or None, "harvested_files": stats.files,
             "harvested_bytes": stats.bytes, "sudo": sudo, "truncated": bool(stats.limit)})
+        if info.machine_id:
+            a.meta["machine_id"] = harvest.machine_fingerprint(info.machine_id)
+            a.meta["machine_id_source"] = info.machine_id_source
         if root != "/":
             a.meta["root"] = root
         inv.collector = self.name
         inv.warnings = warnings
+        inv.partial, inv.partial_reason = False, None
+        if partial_reasons:
+            inv.mark_partial("; ".join(partial_reasons))
         return inv
 
     # ------------------------------------------------------------------ Windows (OpenSSH server)
@@ -590,7 +624,7 @@ class SSHCollector(Collector):
         a = inv.asset
         a.meta.update({"transport": transport.name, "user": t.user, "port": t.port or 22,
                        "remote_os": "windows", "remote_hostname": a.name})
-        a.id, a.name = f"ssh:{t.host}", t.host
+        a.id, a.name = ssh_asset_id(t), t.host
         inv.collector = self.name
         if rc not in (0, None) and err:
             inv.warnings.append(f"powershell exited {rc}: {_stderr_text(err)}")
@@ -598,10 +632,16 @@ class SSHCollector(Collector):
 
     def _harvest(self, transport: Transport, cmd: str, script: str, tmp: str, timeout: int,
                  opts: dict[str, Any], warnings: list[str]):
+        """Returns (stats, real exit status, stderr, abnormal-end reason or None).
+
+        The exit status is the remote command's own (255 = ssh connection error; a negative value or
+        >=128 = killed). `abnormal` is set when the archive stream was cut short or timed out; a stop
+        caused by our own file/byte limit is reported through `stats.limit` instead."""
         max_files = opts_int(opts, "max_files", 200_000)
         max_bytes = opts_int(opts, "max_mb", 512) * harvest.MB
         stream = transport.stream(cmd, timeout=timeout, stdin=script.encode())
         aborted = False
+        abnormal: str | None = None
         stats = harvest.ExtractStats()
         try:
             if not _skip_to_marker(stream, (harvest.STREAM_MARKER + "\n").encode()):
@@ -619,21 +659,23 @@ class SSHCollector(Collector):
                 if stream.timed_out:
                     raise SSHError(f"remote harvest timed out after {timeout}s") from e
                 aborted = True
-                warnings.append(f"harvest stream ended abnormally: {type(e).__name__}: {e}; inventory may be partial")
+                abnormal = f"harvest stream ended abnormally: {type(e).__name__}: {e}"
+                warnings.append(f"{abnormal}; inventory may be partial")
             rc, err = stream.finish(abort=aborted)
         except BaseException:
             if not aborted:
                 stream.finish(abort=True)
             raise
         if stream.timed_out:
+            abnormal = abnormal or f"remote harvest hit the {timeout}s timeout"
             warnings.append(f"remote harvest hit the {timeout}s timeout; inventory is partial")
-        return stats, (0 if aborted else rc), err
+        return stats, rc, err, abnormal
 
     @staticmethod
     def _inventory(family: str, tmp: str, t: SSHTarget, info: harvest.RemoteInfo, stats: Any,
                    warnings: list[str], opts: dict[str, Any]) -> Inventory:
         if family == "linux":
-            asset = Asset(id=f"ssh:{t.host}", type="server", name=t.host)
+            asset = Asset(id=ssh_asset_id(t), type="server", name=t.host)
             w: list[str] = []
             comps = collect_from_view(DirView(tmp), asset, w)
             warnings.extend(w)

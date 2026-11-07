@@ -101,3 +101,11 @@ Implemented in `src/secmonk/collectors/docker_engine.py` (stdlib `http.client` +
 - `collect("<container id|name>")`: `GET /containers/{id}/json` (metadata) + `GET /containers/{id}/export` streamed straight into `LayeredTarView` as one layer (nothing touches disk). Asset `container:<name>`, type `container`, meta `container_id, image, image_id, labels, state, privileged, published_ports, user, engine`. `collect("image:<ref>")` streams `GET /images/{ref}/get` to a temp tar and reuses the docker-image archive path. `collect(None)` raises `ValueError` listing running containers.
 - Helpers for the CLI: `list_containers(all=False, **opts)`, `export_image(ref, dest)`, `EngineClient.ping()/version()`.
 - Not done: `/archive` partial fetch, one-scan-per-ImageID dedupe, host asset + engine/containerd/runc components, `Privileged` as scoring input (stored in meta only).
+
+
+## Review fixes (2026-11)
+
+- An explicit endpoint (`-o socket=...` or `$DOCKER_HOST`) that does not exist is a `RuntimeError`; the well-known paths are only tried when nothing was requested.
+- Rootless Docker (`$XDG_RUNTIME_DIR/docker.sock`) is a candidate socket (before the rootless podman one).
+- An interrupted `/containers/<id>/export` or `/images/<ref>/get` marks the inventory **partial** (`Inventory.partial`), so removal
+  detection ignores that scan (see data-model). Container labels are stored with secret-looking keys redacted (`<redacted>`).

@@ -44,8 +44,9 @@ path) drops the module. `exclude` and `retract` are ignored. `vendor/` directori
 
 `module version h1:` lines -> components with `meta.gosum=True`. `module version/go.mod h1:` lines are
 skipped: they only prove the go.mod was read for the dependency graph. go.sum **over-approximates** (old versions
-linger after upgrades) and knows nothing of `replace`; **go.mod wins when both exist**. Parsers are
-per-file, so the walker/consumer should drop `gosum` components when a sibling go.mod was parsed.
+linger after upgrades) and knows nothing of `replace`; **go.mod wins when both exist and its `go`
+directive is >= 1.17** (go.mod then lists indirect dependencies too; `dedupe()` drops the `gosum` components
+of that directory). For older or missing `go` directives go.sum is the more complete list and is kept.
 
 ## Binaries (the important case)
 
@@ -66,8 +67,13 @@ modinfo is framed by 16-byte sentinels (`modinfo` is `sentinel + text + sentinel
 Text lines, tab separated: `path <main pkg>`, `mod <path> <ver|(devel)> <sum>`, `dep <path> <ver> <h1>`,
 `=> <path> <ver> <h1>` (replacement of the preceding dep), `build <k>=<v>` (GOOS, GOARCH, vcs.revision, -trimpath...).
 
-Implementation: scan the first 64 MB for the magic at a 16-byte-aligned *file* offset. This is
-format-agnostic (ELF, Mach-O, PE) and needs no section parsing. Detection: `\x7fELF`, thin Mach-O
+Implementation: the header is located through the container's section table (ELF `.go.buildinfo`,
+Mach-O `__DATA,__go_buildinfo`, PE `.data`; headers only), so its position in the file does not matter
+(real binaries of 80+ MB keep it past 64 MiB). If that fails (stripped section headers) the whole file is
+scanned (up to 256 MiB) for the magic at a 16-byte-aligned offset. Every candidate is validated
+(pointer size 4/8, flags, varints, version starts with `go`): the linker quotes the magic in `.rodata`.
+An executable with Go markers (`Go build ID`, Go sections) but no readable build info produces a
+warning; ordinary non-Go executables do not. Detection: `\x7fELF`, thin Mach-O
 (feedface/feedfacf, either endianness), `MZ`; fat Mach-O (`cafebabe`) is skipped because it collides with Java
 classes. Emits: stdlib (runtime), main module (`meta.main`, `(devel)` -> no version), every dep (replacement
 used, `meta.replaced_from`); build settings in `meta.build`.

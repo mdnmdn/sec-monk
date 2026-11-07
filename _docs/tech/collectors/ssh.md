@@ -119,7 +119,7 @@ Target forms: `user@host`, `user@host:2222`, `ssh://user@host:2222`, `host`, `us
 Unchanged: Linux packages -> `os-package` with deb/apk/rpm PURLs and distro ecosystem (`collect_from_view`); apps/Homebrew/receipts -> as in
 [macos.md](macos.md). Component `source_path` is the path on the remote machine. The asset is rewritten:
 
-`Asset(id="ssh:<host>", type="server"|"desktop", name=<host>, os_name/os_version from the collector, platform="linux|darwin/<arch>",
+`Asset(id="ssh:<host>" (`ssh:<host>:<port>` for a non-22 port, IPv6 bracketed), type="server"|"desktop", name=<host>, os_name/os_version from the collector, platform="linux|darwin/<arch>",
 meta={transport, user, port, remote_os, remote_hostname, harvested_files, harvested_bytes, sudo, truncated[, root]})`.
 
 ## Limitations
@@ -145,3 +145,30 @@ script fails. The collector then probes `powershell … [Environment]::OSVersion
 (compact form: no blank/comment lines). The JSON on stdout (BOM/banner tolerated) goes to
 `windows.parse_inventory_json`. `-o os=windows` skips the POSIX probe.
 Tested with a fake transport only (no Windows host in the dev sandbox).
+
+## Review fixes (2026-11)
+
+- **Asset id**: `ssh:<host>` for port 22 / unset, `ssh:<host>:<port>` otherwise (`ssh:[::1]:2222` for IPv6). Two machines behind one
+  NAT/jump address no longer collapse into one asset. Existing `ssh:<host>` assets of non-default ports are re-created on the next scan.
+- **Machine identity**: the detect step reads (read-only) `/etc/machine-id` (fallback `/var/lib/dbus/machine-id`) or, on macOS,
+  `ioreg -rd1 -c IOPlatformExpertDevice` (`IOPlatformUUID`). `asset.meta.machine_id` is `sha256("secmonk\0machine-id\0" + id)` (systemd asks
+  that the raw machine id is never exposed) and `machine_id_source` is `machine-id` or `IOPlatformUUID`. Use it to recognise a host whose
+  address or port changed.
+- **Partial results**: `Inventory.partial`/`partial_reason` is set when the archive stream ended abnormally, timed out, hit the
+  file/byte limits, or the remote command ended with 255/killed. If nothing was extracted and the end was abnormal, `SSHError` is
+  raised (rc included) instead of storing an empty inventory. `_harvest()` returns `(stats, real rc, stderr, abnormal)`.
+  See [data-model](../data-model.md) for how partial scans are stored.
+- **Insecure host keys** (`-o insecure_host_key=true`, paramiko): keys are accepted for the connection only; `known_hosts` is loaded with
+  `get_host_keys().load()` and a non-saving policy is used, so nothing is ever written back.
+
+### Safer sudo (recommended setup)
+
+`-o sudo=true` runs `sudo -n sh -s` with the script on stdin, which needs `NOPASSWD: ALL`-like rights for `sh`: that is root for anyone
+who can use the account. Prefer a dedicated account and a root-owned wrapper that can only do what the harvest does:
+
+1. Save the output of `secmonk` harvest script (`harvest.build_script`) as `/usr/local/libexec/secmonk-harvest` (root:root 0755, not writable by the scan user).
+2. `/etc/sudoers.d/secmonk`: `secmonk-scan ALL=(root) NOPASSWD: /usr/local/libexec/secmonk-harvest` and `Defaults!/usr/local/libexec/secmonk-harvest !requiretty`.
+3. Restrict the key in `authorized_keys` (`no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty`).
+4. Scan with a wrapper-aware command (future option) or leave sudo off: without root only root-only files are missing (warned).
+
+The wrapper approach keeps a stolen scan key from becoming a root shell. No code change is required for the current behaviour.

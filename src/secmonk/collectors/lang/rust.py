@@ -21,7 +21,7 @@ import tomllib
 import zlib
 
 from ...models import Component
-from .base import EV_BINARY, EV_LOCKFILE, LangParser, basename, library, register
+from .base import EV_BINARY, EV_LOCKFILE, LangParser, basename, push, register, safe_library
 
 ECOSYSTEM = "crates.io"
 SECTION = ".dep-v0"
@@ -37,8 +37,8 @@ def _is_crates_io(source: str | None) -> bool:
         "crates.io-index" in source or "index.crates.io" in source)
 
 
-def _crate(name: str, version: str, path: str, evidence: str, parser: str, **meta) -> Component:
-    return library("cargo", name, version, path=path, evidence=evidence, parser=parser, **meta)
+def _crate(name: str, version: str, path: str, evidence: str, parser: str, **meta) -> Component | None:
+    return safe_library("cargo", name, version, path=path, evidence=evidence, parser=parser, **meta)
 
 
 # --------------------------------------------------------------------------- Cargo.lock
@@ -51,7 +51,7 @@ def parse_cargo_lock(path: str, data: bytes) -> list[Component]:
         name, version = pkg.get("name"), pkg.get("version")
         if not name or not version or not _is_crates_io(pkg.get("source")):
             continue
-        out.append(_crate(name, version, path, EV_LOCKFILE, "cargo-lock", lock_version=lock_version))
+        push(out, _crate(name, version, path, EV_LOCKFILE, "cargo-lock", lock_version=lock_version))
     return out
 
 
@@ -159,7 +159,7 @@ def parse_auditable(path: str, data: bytes) -> list[Component]:
         if not _is_crates_io(pkg.get("source")):
             continue                               # local / git / other registry
         kind = pkg.get("kind")
-        out.append(_crate(pkg["name"], pkg["version"], path, EV_BINARY, "cargo-auditable",
+        push(out, _crate(pkg["name"], pkg["version"], path, EV_BINARY, "cargo-auditable",
                           kind=kind if kind != "runtime" else None))
     return out
 

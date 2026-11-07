@@ -63,3 +63,14 @@ Tests: `tests/collectors/test_rootfs.py`.
 ## Limitations
 
 Whiteout/hardlink logic is spec-based (base images have a single layer); layers whose directories are replaced by regular files are not purged from the view.
+
+
+## Review fixes (2026-11)
+
+- **ID_LIKE derivatives** (Kali, Mint, ...): the parent release comes from `UBUNTU_CODENAME` / `DEBIAN_CODENAME` / `etc/debian_version` (codename tables in `rootfs.py`);
+  when unknown only the bare base ecosystem (`Debian`) is used, with a warning - never the derivative's own `VERSION_ID`.
+- **dpkg states**: `unpacked`, `half-configured`, `triggers-awaited`, `triggers-pending` are listed (files are on disk); `meta.dpkg_state` records it when not `installed`.
+- **LayeredTarView budgets**: 512 MB retained in total, 64 MB per dpkg text file (and 64 MB / 10 000 files for all of `status.d`), 1 M symlinks; anything over sets `truncated` (-> partial).
+  Whiteouts use a directory index (O(matches), not O(all paths)). Lang components use generation tracking (`layer=`, `only_older=`) so a same-layer opaque marker does not wipe them.
+- **rpmdb.sqlite is untrusted**: needs a real `Packages` table (no views/triggers), `trusted_schema=OFF`, `SQLITE_DBCONFIG_DEFENSIVE` when available, a VM-instruction and time budget, batch fetch with a 200 000 row / 4 MB-per-blob cap.
+- Truncation (file/count limits) marks the inventory partial.

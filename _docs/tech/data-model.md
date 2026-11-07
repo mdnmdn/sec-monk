@@ -28,10 +28,10 @@ Schema v2 = v1 + `distro_triage` + `finding.triage` / `finding.triage_source`.
 
 | Table | Key | Purpose |
 |---|---|---|
-| `source_sync` | `source` | Last sync, status (`ok` / `error` / `partial`), delta cursor. OSV keeps per-ecosystem rows `osv:<Ecosystem>`; one row each for `cvelist`, `kev`, `epss`, `nvd`, `euvd`, `msrc`, `debian-tracker`. |
+| `source_sync` | `source` | Last sync, status (`ok` / `error` / `partial`), delta cursor. OSV keeps per-ecosystem rows `osv:<Ecosystem>`; one row each for `cvelist`, `kev`, `epss`, `nvd`, `euvd`, `msrc`, `debian-tracker`, written by the CLI from `SyncResult` (sources never write their main row). Internal rows: `cvelist:git`, `cvelist:years`, `nvd:progress`. `db.set_sync_state`: `last_sync` only moves for status `ok`/`partial`; an `error` keeps the previous records/cursor/last_sync and only updates status + message. |
 | `raw_record` | `(source, record_id)` | Verbatim JSON as published — re-normalize without re-downloading. |
 | `vulnerability` | `(source, id)` | Normalized facts per source: summary, dates, `state`/`withdrawn`, CVSS (score/vector/version), severity, CWEs, `extra` JSON (SSVC, ADP KEV, references…). |
-| `alias` | `(vuln_id, alias, source)` | Undirected id edges (GHSA ↔ CVE, DEBIAN-CVE ↔ CVE, EUVD ↔ CVE). |
+| `alias` | `(vuln_id, alias, source)` | Id edges (GHSA ↔ CVE, DEBIAN-CVE ↔ CVE, EUVD ↔ CVE). Column `kind` = `alias` (same vulnerability) \| `upstream` (OSV `upstream`: the CVEs a downstream advisory derives from; never merge on these); old rows migrate to `alias`, re-sync to reclassify. |
 | `affected` | autoinc | What is affected — see below. |
 | `kev` | `cve_id` | CISA KEV catalog (full snapshot). |
 | `epss` | `cve_id` | Latest EPSS score/percentile (no history yet; FIRST import replaces, EUVD-derived rows never overwrite). |
@@ -81,6 +81,15 @@ Filled by `sync debian-tracker` (full snapshot replace). Read by `engine/match.p
 | `scan` | autoinc | One collector run. |
 | `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets. |
 | `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. |
+
+### Partial scans
+
+A collector can mark its `Inventory` `partial` (`partial_reason`): SSH stream aborted/truncated, docker-engine export incomplete, docker-image layer skipped/unreadable, rootfs
+file/count limits hit. `save_inventory` still records the scan (`scan.meta = {"partial": true, "partial_reason": ...}`) and upserts the components it saw, but a partial scan is
+**not** a reference for removal. `current_components(asset)` = components whose `last_scan_id >=` the latest *non-partial* scan (so: everything the last complete scan saw, plus anything
+seen by later partial scans; components absent from the last complete scan stay removed). An asset with only partial scans shows everything ever seen.
+Not yet stored per asset (deferred): the full list of paths when a component is installed in several places (`asset_component.source_path` keeps the last one) and per-asset component meta
+(`users`, `install_location` live in the shared `component.meta`, last writer wins).
 
 ## Findings
 

@@ -18,10 +18,20 @@ from __future__ import annotations
 
 import ast
 import re
+import struct
 
 from ...engine import purl as purls
 from ...models import CAT_RUNTIME, Component
-from .base import EV_BINARY, EV_LOCKFILE, EV_MANIFEST, LangParser, basename, library, register
+from .base import (
+    EV_BINARY,
+    EV_LOCKFILE,
+    EV_MANIFEST,
+    LangParser,
+    basename,
+    push,
+    register,
+    safe_library,
+)
 
 ECOSYSTEM = "Go"
 _PURL = "golang"
@@ -38,9 +48,10 @@ def _split(module: str) -> tuple[str | None, str]:
     return (ns or None), name
 
 
-def _lib(module: str, version: str | None, path: str, evidence: str, parser: str, **meta) -> Component:
+def _lib(module: str, version: str | None, path: str, evidence: str, parser: str,
+         **meta) -> Component | None:
     ns, name = _split(module)
-    return library(_PURL, name, _norm_version(version), path=path, evidence=evidence, parser=parser,
+    return safe_library(_PURL, name, _norm_version(version), path=path, evidence=evidence, parser=parser,
                    namespace=ns, **meta)
 
 
@@ -106,7 +117,7 @@ def parse_go_mod(path: str, data: bytes) -> list[Component]:
                 target, tver, replaced_from = new, nver, f"{mod}@{ver}"
         if target is None:
             continue
-        out.append(_lib(target, tver, path, EV_MANIFEST, "go-mod", direct=direct,
+        push(out, _lib(target, tver, path, EV_MANIFEST, "go-mod", direct=direct,
                              replaced_from=replaced_from, **meta))
     return out
 
@@ -126,31 +137,172 @@ def parse_go_sum(path: str, data: bytes) -> list[Component]:
         if key in seen:
             continue
         seen.add(key)
-        out.append(_lib(parts[0], parts[1], path, EV_LOCKFILE, "go-sum", gosum=True))
+        push(out, _lib(parts[0], parts[1], path, EV_LOCKFILE, "go-sum", gosum=True))
     return out
 
 
 # --------------------------------------------------------------------------- binaries
 
 BUILDINFO_MAGIC = b"\xff Go buildinf:"
-SCAN_LIMIT = 64 * 1024 * 1024
+SCAN_LIMIT = 256 * 1024 * 1024        # fallback magic scan; matches the parser's max_bytes
 _SENTINEL = 16
+_MARKER_WINDOW = 1024 * 1024
+_GO_MARKER = b"Go build ID"
 
 
-def find_buildinfo(data: bytes) -> int | None:
-    """Offset of the build-info header. Go's `.go.buildinfo` section is 16-byte aligned *in the
-    virtual address space*; scanning the file for the magic at 16-byte-aligned file offsets works for
-    ELF, Mach-O and PE alike without parsing any container (sections are 16+-aligned in the file too).
-    Only the first 64 MB are scanned: the section sits in the first data segment, near the start."""
-    end = min(len(data), SCAN_LIMIT)
-    pos = 0
+def _sections(data: bytes):
+    """Yield (name, file_offset, size) for the sections of an ELF / thin Mach-O / PE image.
+    Only headers are read (random access), never the section contents. Malformed headers just end
+    the iteration."""
+    try:
+        yield from _elf_sections(data)
+        yield from _macho_sections(data)
+        yield from _pe_sections(data)
+    except (struct.error, IndexError):
+        return
+
+
+def _elf_sections(data: bytes):
+    if data[:4] != b"\x7fELF" or len(data) < 64:
+        return
+    is64 = data[4] == 2
+    e = "<" if data[5] == 1 else ">"
+    if is64:
+        shoff, = struct.unpack_from(e + "Q", data, 0x28)
+        shentsize, shnum, shstrndx = struct.unpack_from(e + "HHH", data, 0x3A)
+    else:
+        shoff, = struct.unpack_from(e + "I", data, 0x20)
+        shentsize, shnum, shstrndx = struct.unpack_from(e + "HHH", data, 0x2E)
+    if not shoff or not shnum or shstrndx >= shnum or shoff + shnum * shentsize > len(data):
+        return
+
+    def sh(i: int) -> tuple[int, int, int]:
+        pos = shoff + i * shentsize
+        if is64:
+            name, _t, _f, _a, off, size = struct.unpack_from(e + "IIQQQQ", data, pos)
+        else:
+            name, _t, _f, _a, off, size = struct.unpack_from(e + "IIIIII", data, pos)
+        return name, off, size
+
+    _, stroff, strsize = sh(shstrndx)
+    strtab = bytes(data[stroff:stroff + min(strsize, 1 << 20)])
+    for i in range(shnum):
+        name, off, size = sh(i)
+        end = strtab.find(b"\0", name)
+        yield strtab[name:end if end >= 0 else None].decode("latin-1"), off, size
+
+
+def _macho_sections(data: bytes):
+    magic = data[:4]
+    if magic in (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe"):
+        e = "<"
+    elif magic in (b"\xfe\xed\xfa\xcf", b"\xfe\xed\xfa\xce"):
+        e = ">"
+    else:
+        return
+    is64 = magic in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf")
+    ncmds, = struct.unpack_from(e + "I", data, 16)
+    pos = 32 if is64 else 28
+    for _ in range(min(ncmds, 4096)):
+        cmd, size = struct.unpack_from(e + "II", data, pos)
+        if cmd in (0x19, 0x1):                      # LC_SEGMENT_64 / LC_SEGMENT
+            if cmd == 0x19:
+                nsects, = struct.unpack_from(e + "I", data, pos + 64)
+                sp, step = pos + 72, 80
+            else:
+                nsects, = struct.unpack_from(e + "I", data, pos + 48)
+                sp, step = pos + 56, 68
+            for _ in range(nsects):
+                sectname = bytes(data[sp:sp + 16]).rstrip(b"\0").decode("latin-1")
+                if cmd == 0x19:
+                    sec_size, = struct.unpack_from(e + "Q", data, sp + 40)
+                    sec_off, = struct.unpack_from(e + "I", data, sp + 48)
+                else:
+                    sec_size, sec_off = struct.unpack_from(e + "II", data, sp + 36)
+                yield sectname, sec_off, sec_size
+                sp += step
+        if size < 8:
+            break
+        pos += size
+
+
+def _pe_sections(data: bytes):
+    if data[:2] != b"MZ" or len(data) < 0x40:
+        return
+    pe, = struct.unpack_from("<I", data, 0x3C)
+    if data[pe:pe + 4] != b"PE\0\0":
+        return
+    nsec, = struct.unpack_from("<H", data, pe + 6)
+    optsize, = struct.unpack_from("<H", data, pe + 20)
+    sp = pe + 24 + optsize
+    for _ in range(min(nsec, 256)):
+        name = bytes(data[sp:sp + 8]).rstrip(b"\0").decode("latin-1")
+        vsize, _va, rawsize, rawptr = struct.unpack_from("<IIII", data, sp + 8)
+        yield name, rawptr, (min(vsize, rawsize) if vsize else rawsize)
+        sp += 40
+
+
+# sections that can hold the header: ELF `.go.buildinfo`, Mach-O `__go_buildinfo`, PE `.data`
+_BUILDINFO_SECTIONS = {".go.buildinfo", "__go_buildinfo", ".data"}
+
+
+def _parse_header(data: bytes, off: int) -> tuple[str, str] | None:
+    """Validate and decode a buildinfo header at `off` (Go >= 1.18 inline form), else None.
+    Header (32 bytes): magic(14) | ptrsize(1) | flags(1) | 16 bytes unused. flags&2 => the two strings
+    follow inline as uvarint-length-prefixed bytes (version, then modinfo). Without it (Go < 1.18) the
+    header holds *pointers* that need the section/segment tables to resolve -- not supported."""
+    if off < 0 or off + 32 > len(data) or data[off:off + 14] != BUILDINFO_MAGIC:
+        return None
+    ptrsize, flags = data[off + 14], data[off + 15]
+    if ptrsize not in (4, 8) or flags & ~3 or not flags & 2:
+        return None
+    try:
+        pos = off + 32
+        n, pos = _uvarint(data, pos)
+        if n > 4096 or pos + n > len(data):
+            return None
+        version = bytes(data[pos:pos + n]).decode("utf-8", "replace")
+        pos += n
+        n, pos = _uvarint(data, pos)
+        if pos + n > len(data):
+            return None
+        mod = bytes(data[pos:pos + n]).decode("utf-8", "replace")
+    except (IndexError, ValueError):
+        return None
+    if not version.startswith(("go", "devel")):
+        return None
+    if len(mod) >= 2 * _SENTINEL + 1 and mod[-_SENTINEL - 1] == "\n":
+        mod = mod[_SENTINEL:-_SENTINEL]
+    return version, mod
+
+
+def _aligned_magics(data: bytes, start: int, end: int):
+    pos = start
     while True:
         i = data.find(BUILDINFO_MAGIC, pos, end)
         if i < 0:
-            return None
+            return
         if i % 16 == 0:
-            return i
+            yield i
         pos = i + 1
+
+
+def find_buildinfo(data: bytes) -> int | None:
+    """Offset of a *valid* build-info header. The section table (ELF `.go.buildinfo`, Mach-O
+    `__go_buildinfo`, PE `.data`) gives the location directly, wherever in the file it sits (an
+    81 MB binary has it past 64 MiB); only when that fails (stripped section headers, odd containers)
+    is the whole file scanned for the 16-byte aligned magic, up to SCAN_LIMIT. Every candidate is
+    validated (pointer size, flags, varints) so the magic string quoted in .rodata by the Go linker
+    or by unrelated programs is skipped."""
+    for name, off, size in _sections(data):
+        if name in _BUILDINFO_SECTIONS and 0 <= off < len(data):
+            for i in _aligned_magics(data, off, min(len(data), off + size)):
+                if _parse_header(data, i):
+                    return i
+    for i in _aligned_magics(data, 0, min(len(data), SCAN_LIMIT)):
+        if _parse_header(data, i):
+            return i
+    return None
 
 
 def _uvarint(data: bytes, pos: int) -> tuple[int, int]:
@@ -167,26 +319,18 @@ def _uvarint(data: bytes, pos: int) -> tuple[int, int]:
 
 
 def read_buildinfo(data: bytes) -> tuple[str, str] | None:
-    """(runtime version, modinfo text) from a Go >= 1.18 binary, else None.
-
-    Header (32 bytes): magic(14) | ptrsize(1) | flags(1) | 16 bytes unused. flags&2 => the two strings
-    follow inline as uvarint-length-prefixed bytes (version, then modinfo). Without it (Go < 1.18) the
-    header holds *pointers* that need the section/segment tables to resolve — not supported."""
+    """(runtime version, modinfo text) from a Go >= 1.18 binary, else None."""
     off = find_buildinfo(data)
-    if off is None or off + 32 > len(data):
-        return None
-    flags = data[off + 15]
-    if not flags & 2:
-        return None
-    pos = off + 32
-    n, pos = _uvarint(data, pos)
-    version = data[pos:pos + n].decode("utf-8", "replace")
-    pos += n
-    n, pos = _uvarint(data, pos)
-    mod = data[pos:pos + n].decode("utf-8", "replace")
-    if len(mod) >= 2 * _SENTINEL + 1 and mod[-_SENTINEL - 1] == "\n":
-        mod = mod[_SENTINEL:-_SENTINEL]
-    return version, mod
+    return _parse_header(data, off) if off is not None else None
+
+
+def looks_like_go(data: bytes) -> bool:
+    """Cheap evidence that an executable was built by Go even though no build info could be read:
+    the `Go build ID` note, or a Go-specific section. Plain C / Rust / .NET binaries have neither."""
+    if _GO_MARKER in bytes(data[:_MARKER_WINDOW]):
+        return True
+    return any(n in (".go.buildinfo", "__go_buildinfo", ".note.go.buildid", ".gopclntab", "__gopclntab")
+               for n, _o, _s in _sections(data))
 
 
 def stdlib_version(goversion: str) -> str | None:
@@ -212,9 +356,21 @@ def _setting(value: str) -> tuple[str, str]:
 
 
 def parse_go_binary(path: str, data: bytes) -> list[Component]:
+    """Components only (see `parse_go_binary_ex` for the warnings)."""
+    return parse_go_binary_ex(path, data)[0]
+
+
+def parse_go_binary_ex(path: str, data: bytes) -> tuple[list[Component], list[str]]:
     info = read_buildinfo(data)
     if info is None:
-        return []
+        if looks_like_go(data):
+            msg = "looks like a Go binary but no readable build info was found (stripped, or Go < 1.18)"
+            return [], [msg]
+        return [], []
+    return _components_from_buildinfo(path, info), []
+
+
+def _components_from_buildinfo(path: str, info: tuple[str, str]) -> list[Component]:
     goversion, modinfo = info
     main_path: str | None = None
     main: tuple[str, str | None] | None = None
@@ -248,7 +404,7 @@ def parse_go_binary(path: str, data: bytes) -> list[Component]:
                                                  "runtime": "go", **{k: v for k, v in common.items() if v}}))
     mpath, mver = main if main else (main_path, None)
     if mpath:
-        out.append(_lib(mpath, mver, path, EV_BINARY, "go-binary", main=True, **common))
+        push(out, _lib(mpath, mver, path, EV_BINARY, "go-binary", main=True, **common))
     for mod, ver, repl in deps:
         replaced_from = None
         if repl:
@@ -256,7 +412,7 @@ def parse_go_binary(path: str, data: bytes) -> list[Component]:
             if not rver or rver == "(devel)" or _is_local(rpath):
                 continue            # local-directory replacement: not a published module
             replaced_from, mod, ver = f"{mod}@{ver}", rpath, rver
-        out.append(_lib(mod, ver, path, EV_BINARY, "go-binary", replaced_from=replaced_from))
+        push(out, _lib(mod, ver, path, EV_BINARY, "go-binary", replaced_from=replaced_from))
     return out
 
 
@@ -283,5 +439,5 @@ def _match_binary(path: str) -> bool:
 
 register(LangParser("go-mod", ECOSYSTEM, EV_MANIFEST, lambda p: basename(p) == "go.mod", parse_go_mod))
 register(LangParser("go-sum", ECOSYSTEM, EV_LOCKFILE, lambda p: basename(p) == "go.sum", parse_go_sum))
-register(LangParser("go-binary", ECOSYSTEM, EV_BINARY, _match_binary, parse_go_binary,
+register(LangParser("go-binary", ECOSYSTEM, EV_BINARY, _match_binary, parse_go_binary_ex,
                     sniff=sniff_executable, max_bytes=256 * 1024 * 1024, binary=True))

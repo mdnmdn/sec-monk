@@ -15,7 +15,8 @@ related: [tech/collectors/dependencies.md, references/vuln-sources/osv.md]
 
 ## Summary
 PURL `pkg:nuget/<Name>@<version>` maps to OSV ecosystem `NuGet`, package name = `<Name>`.
-NuGet ids are case-insensitive. The purl keeps the original casing; `engine.purl.normalize_name` lowercases
+NuGet ids are case-insensitive. The **purl name is lowercased** (purl spec; OSV stores lowercase) while `Component.name` keeps the
+original display casing, so case variants dedupe. `engine.purl.normalize_name` lowercases
 for NuGet and the OSV importer lowercases `affected.package` the same way, so `Newtonsoft.Json`,
 `newtonsoft.json` and OSV's mixed spellings (`Microsoft.NetCore.App.Runtime.*` vs `Microsoft.NETCore...`)
 all meet.
@@ -37,7 +38,10 @@ read from `libraries`. `package` -> emitted; `project`, `reference`, `referencea
 prefix stripped and emitted. `meta.runtime_target` (e.g. `.NETCoreApp,Version=v8.0/linux-x64`) and `tfm` recorded.
 
 ### Project files
-Literal versions, `[1.2.3]` (exact), and `$(Property)` resolved from the same file's `PropertyGroup`.
+Literal versions, `[1.2.3]` (exact), and `$(Property)` resolved from the same file's `PropertyGroup`
+(MSBuild property names are case-insensitive: `$(fooversion)` finds `<FooVersion>`).
+`Update=` items without a matching `Include=` only modify an item declared elsewhere: emitted with
+`meta.declared_only=true`. An item's own or its `ItemGroup`'s `Condition` is kept in `meta.condition`.
 Skipped: floating (`1.*`, `1.0.0-*`), ranges (`[1.0,2.0)`), unresolved properties, and `PackageReference`
 without a version (central package management: the version lives in `Directory.Packages.props`, which is
 parsed separately; cross-file joining is a gap). A bare `1.0` is NuGet's *minimum* (>= 1.0) but is the version

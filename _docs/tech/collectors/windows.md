@@ -7,7 +7,7 @@ tags: [collector, windows, desktop, server, registry, msrc]
 updated: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/windows/
-code: src/secmonk/collectors/windows.py, src/secmonk/data/windows/secmonk-inventory.ps1 (symlinked at scripts/windows/)
+code: src/secmonk/collectors/windows.py, src/secmonk/data/windows/secmonk-inventory.ps1 (print it with `secmonk windows-script > secmonk-inventory.ps1`)
 related: [references/windows-inventory.md, features/inventory-windows.md, tech/engine/classification.md, tech/engine/matching.md, references/vuln-sources/msrc.md]
 ---
 
@@ -19,7 +19,7 @@ Inventories a Windows desktop/server **without needing Windows at test time**. I
 
 | Mode | How | Notes |
 |---|---|---|
-| Script JSON (primary) | `secmonk scan windows inventory.json` | JSON from `scripts/windows/secmonk-inventory.ps1` (schema `secmonk-windows-inventory/1`) |
+| Script JSON (primary) | `secmonk scan windows inventory.json` | JSON from the PowerShell script (`secmonk windows-script > secmonk-inventory.ps1`) (schema `secmonk-windows-inventory/1`) |
 | osquery | `secmonk scan windows -o osquery=results.json` | `{programs, os_version, patches, registry, system_info}` row lists |
 | Live | `secmonk scan windows` **on Windows** | `winreg` for OS + Uninstall keys; PowerShell (best effort) for Appx + hotfixes; files for Chocolatey/Scoop/.NET |
 
@@ -28,7 +28,7 @@ written for 5.1, ASCII-only and checked for balanced syntax only. Validate on a 
 
 Public API (`collectors/windows.py`): `parse_inventory_json(data) -> Inventory`, `parse_osquery(data) -> Inventory`,
 `collect_live() -> Inventory` (raises off Windows), `read_live_inventory() -> dict`, `windows_os_identity(os_info)`,
-`normalize_display_name(raw)`, `inventory_script() -> str`, `INVENTORY_SCRIPT_PATH`.
+`normalize_display_name(raw)`, `inventory_script() -> str` (read with `importlib.resources` from `secmonk.data`).
 
 ## Where the data lives
 
@@ -119,3 +119,9 @@ Detection: `ssh host ver` / `cmd /c ver` printing `Microsoft Windows` (uname doe
 - CNA vs NVD vendor spelling drift drops some third-party matches (alias table picks one spelling).
 - Only HKLM/HKU registry; software without an Uninstall key (portable apps, services) is found only through Scoop/Chocolatey.
 - osquery without `os_version.revision` or a `registry` row for `UBR` yields no OS version (warning).
+
+## Review fixes (2026-11)
+
+- `os_version` never contains `None`: `<DisplayVersion> (build <build>.<UBR>)`, or `... (build <build>)` when the UBR is unknown.
+- A document without hostname uses `-o hostname=` or the input file name (`web01.json` -> `windows:web01`; generic names such as
+  `inventory.json` are not used) with a warning; with neither it is `windows:unknown` plus a loud warning.

@@ -38,14 +38,17 @@ war/ear. These are read directly from the archive; nothing needs to be extracted
 2. **`META-INF/MANIFEST.MF`** (continuation lines handled): version = `Implementation-Version` else
    `Bundle-Version`; artifactId = filename artifact if the filename version agrees with the manifest
    version, else `Implementation-Title` (single token only) else last segment of `Bundle-SymbolicName` /
-   `Automatic-Module-Name`; group = `Implementation-Vendor-Id` (must be dotted), or a
-   `Bundle-SymbolicName` whose last segment equals the artifactId (`com.acme.widgets` for `widgets`).
+   `Automatic-Module-Name`; group = `Implementation-Vendor-Id` only when its last segment equals the artifactId
+   (`com.google.guava` for `guava`; otherwise it names a vendor, not a groupId, and is kept as
+   `meta.vendor_id` hint), or a `Bundle-SymbolicName` whose last segment equals the artifactId
+   (`com.acme.widgets` for `widgets`).
    `identified_by=manifest`, `confidence=0.7`.
    **Group unknown** (the common case, e.g. `org.apache.commons.lang3` for `commons-lang3` is not
    derivable): the component is still emitted, purl `pkg:maven/<artifact>@<v>` without namespace,
    `confidence=0.4`, `meta.needs_identification=true`. Such components never match OSV (name has no
    `group:`); they exist so the inventory shows the library. We deliberately do not guess groups.
-3. **Filename** `artifact-1.2.3.jar` (first `-<digit>` splits name/version; `-sources/-javadoc/-tests`
+3. **Filename** `artifact-1.2.3.jar` (build classifiers after the version - `-all`, `-shaded`, `-jar-with-dependencies`,
+   `-no_aop`, `-linux-x86_64`, `-osx-*`, `-windows-*`, `-jdk8`, `-native` ... - are stripped) (first `-<digit>` splits name/version; `-sources/-javadoc/-tests`
    ignored): `identified_by=filename`, `confidence=0.4`, always `needs_identification=true`.
 
 `meta.confidence` is a float (1.0 / 0.7 / 0.4); the engine ignores it today.
@@ -93,3 +96,9 @@ over-inclusive.
 | `jmeter-verification-metadata.xml` | **real**, apache/jmeter `gradle/verification-metadata.xml` |
 Manifest-only, filename-only, war/ear nesting and zip-bomb cases are built in memory in the tests
 (synthetic). The OSV match test reuses `tests/fixtures/sources/osv/maven-GHSA-jfh8-c2jp-5v3q.json`.
+
+
+## Corrupt entries
+
+Each pom.properties / manifest / nested archive is read in its own `try`: a bad entry (zlib error, truncated data,
+bad nested zip) produces a warning and everything already found is kept.

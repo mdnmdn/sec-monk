@@ -46,7 +46,7 @@ matcher can use. It is idempotent and runs before components are stored.
 
    | `product_source` | Rule | Confidence |
    |---|---|---|
-   | `brew-seed` | formula name (full, incl. `@N`) is in `src/secmonk/data/brew_cpe_seed.csv` (evidence `cve-affected` > `repo-url` > `manual`); first row = `vendor` + `meta.product` + CPE, other rows -> `meta.vendor_alts` / `meta.product_alts` | 0.85 |
+   | `brew-seed` | formula name (full, incl. `@N`) is in `src/secmonk/data/brew_cpe_seed.csv` (evidence `cve-affected` > `repo-url` > `manual`); first row = `vendor` + `meta.product` + CPE, other rows -> `meta.vendor_alts` / `meta.product_alts`. Seed vendor/product are normalized at load exactly like `affected.vendor/product` (`sources.base.norm_vendor_product`: lowercase, `_` → space, collapsed spaces), so `mit,kerberos_5` → `mit` / `kerberos 5`; the CPE string turns spaces back into `_` | 0.85 |
    | `alias-table` | alias table hit (as above) | 0.8 |
    | `brew-name-vendor` | not in seed/alias and a vendor guess exists (`upstream_repo` org, else homepage domain): `product` = formula name minus `@N`, `meta.vendor_hint` = guess, `vendor` stays empty (the matcher checks it) | 0.7 |
    | `normalized-name` | fallback; for brew formulae generic names collide (`portal`, `cobalt`, `dex`, `gh`, `hub`) | 0.4 (0.5 otherwise) |

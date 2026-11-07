@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from secmonk.collectors.lang import REGISTRY, parse_file, parsers_for, wants
-from secmonk.collectors.lang.base import EV_INSTALLED, EV_LOCKFILE, EV_MANIFEST
+from secmonk.collectors.lang.base import EV_INSTALLED, EV_LOCKFILE, EV_MANIFEST, dedupe
 from secmonk.engine import purl as purls
 from secmonk.engine.inventory import save_inventory
 from secmonk.engine.match import match_asset
@@ -32,7 +32,7 @@ def test_deps_json_package_vs_project():
     p = by_name(comps)
     assert "Loader" not in p                                   # type "project" is the app itself
     assert p["Newtonsoft.Json"].version == "13.0.3"
-    assert p["Newtonsoft.Json"].purl == "pkg:nuget/Newtonsoft.Json@13.0.3" and p["Newtonsoft.Json"].ecosystem == "NuGet"
+    assert p["Newtonsoft.Json"].purl == "pkg:nuget/newtonsoft.json@13.0.3" and p["Newtonsoft.Json"].ecosystem == "NuGet"
     assert p["Newtonsoft.Json"].meta["evidence"] == EV_INSTALLED
     assert p["Newtonsoft.Json"].meta["runtime_target"] == ".NETCoreApp,Version=v8.0/win-x64"
     assert len(comps) == 110
@@ -50,14 +50,14 @@ def test_deps_json_self_contained_runtimepack():
     p = by_name(parse_file("x.deps.json", json.dumps(doc).encode())[0])
     assert set(p) == {"Serilog", "Microsoft.NETCore.App.Runtime.linux-musl-x64"}
     rt = p["Microsoft.NETCore.App.Runtime.linux-musl-x64"]
-    assert rt.purl == "pkg:nuget/Microsoft.NETCore.App.Runtime.linux-musl-x64@8.0.4" and rt.meta["runtime"] is True
+    assert rt.purl == "pkg:nuget/microsoft.netcore.app.runtime.linux-musl-x64@8.0.4" and rt.meta["runtime"] is True
     assert "runtime" not in p["Serilog"].meta
 
 
 def test_shared_framework_deps_json_is_the_runtime_component():
     path = "usr/share/dotnet/shared/Microsoft.NETCore.App/6.0.1/Microsoft.NETCore.App.deps.json"
     (c,) = parse_file(path, fx("shared-Microsoft.NETCore.App.6.0.1.deps.json"))[0]
-    assert c.purl == "pkg:nuget/Microsoft.NETCore.App.Runtime.linux-x64@6.0.1"
+    assert c.purl == "pkg:nuget/microsoft.netcore.app.runtime.linux-x64@6.0.1"
     assert c.meta["runtime"] is True and c.source_path == path
 
 
@@ -161,9 +161,9 @@ def test_central_props_with_properties_and_pre_release():
 
 
 # --------------------------------------------------------------------------- purl case / matching
-def test_purl_keeps_case_and_engine_lowercases():
+def test_purl_is_lowercase_display_keeps_case():
     (c,) = parse_file("x.deps.json", json.dumps({"libraries": {"Newtonsoft.Json/13.0.3": {"type": "package"}}}).encode())[0]
-    assert c.purl == "pkg:nuget/Newtonsoft.Json@13.0.3"
+    assert c.purl == "pkg:nuget/newtonsoft.json@13.0.3" and c.name == "Newtonsoft.Json"
     assert purls.normalize_name(c.ecosystem, c.name) == "newtonsoft.json"
 
 
@@ -197,3 +197,39 @@ def test_module_exports():
     assert {p.name for p in REGISTRY if p.ecosystem == "NuGet"} >= {
         "dotnet-deps-json", "dotnet-packages-lock", "dotnet-project-assets", "dotnet-packages-config",
         "dotnet-project-file", "dotnet-central-packages"}
+
+
+# --------------------------------------------------------------------------- review fixes
+def _csproj(body: str) -> bytes:
+    return f'<Project Sdk="Microsoft.NET.Sdk">{body}</Project>'.encode()
+
+
+def test_msbuild_property_names_are_case_insensitive():
+    """L14"""
+    xml = _csproj('<PropertyGroup><SerilogVersion>3.1.1</SerilogVersion></PropertyGroup>'
+                  '<ItemGroup><PackageReference Include="Serilog" Version="$(serilogversion)" />'
+                  '<PackageReference Include="Other" Version="$(SERILOGVERSION)" /></ItemGroup>')
+    comps, _ = parse_file("a.csproj", xml)
+    assert {(c.name, c.version) for c in comps} == {("Serilog", "3.1.1"), ("Other", "3.1.1")}
+
+
+def test_update_only_reference_is_declared_only_and_condition_recorded():
+    """L15"""
+    xml = _csproj('<ItemGroup Condition="\'$(TargetFramework)\' == \'net8.0\'">'
+                  '<PackageReference Update="Foo" Version="1.0.0" />'
+                  '<PackageReference Include="Bar" Version="2.0.0" Condition="\'$(OS)\' == \'Windows_NT\'" />'
+                  '</ItemGroup><ItemGroup><PackageReference Include="Baz" Version="3.0.0" /></ItemGroup>')
+    got = {c.name: c for c in parse_file("a.csproj", xml)[0]}
+    assert got["Foo"].meta["declared_only"] is True
+    assert "net8.0" in got["Foo"].meta["condition"]
+    assert "declared_only" not in got["Bar"].meta and "Windows_NT" in got["Bar"].meta["condition"]
+    assert "condition" not in got["Baz"].meta and "declared_only" not in got["Baz"].meta
+
+
+def test_nuget_purl_lowercase_dedupes_case_variants():
+    """L9"""
+    a = parse_file("a/packages.config", b'<packages><package id="Newtonsoft.Json" version="13.0.3"/></packages>')[0]
+    b = parse_file("b/packages.config", b'<packages><package id="newtonsoft.json" version="13.0.3"/></packages>')[0]
+    (m,) = dedupe(a + b)
+    assert m.purl == "pkg:nuget/newtonsoft.json@13.0.3" and m.name == "Newtonsoft.Json"
+    assert len(m.meta["paths"]) == 2

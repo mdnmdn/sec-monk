@@ -1,7 +1,7 @@
 """Windows inventory collector: OS identity, installed programs, Appx/MSIX, Chocolatey, Scoop, .NET.
 
 Three input modes (see _docs/tech/collectors/windows.md):
-  * `target` = JSON produced by scripts/windows/secmonk-inventory.ps1 (primary; runs on Linux too)
+  * `target` = JSON produced by the PowerShell script (`secmonk windows-script > secmonk-inventory.ps1`) (primary; runs on Linux too)
   * `-o osquery=<file>` = osquery results (programs + os_version + patches [+ registry])
   * live, when running ON Windows (`sys.platform == "win32"`): stdlib `winreg` for the OS and
     Uninstall keys, PowerShell (best effort) for Appx and hotfixes, plain file reads for
@@ -38,8 +38,8 @@ from ..models import (
 from .base import Collector, register
 
 SCHEMA = "secmonk-windows-inventory/1"
-# shipped as package data (scripts/windows/secmonk-inventory.ps1 is a symlink to it)
-INVENTORY_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "data" / "windows" / "secmonk-inventory.ps1"
+# shipped as package data (secmonk/data/windows/secmonk-inventory.ps1); `secmonk windows-script` prints it
+INVENTORY_SCRIPT_RESOURCE = "windows/secmonk-inventory.ps1"
 
 
 def inventory_script(compact: bool = True) -> str:
@@ -48,10 +48,12 @@ def inventory_script(compact: bool = True) -> str:
     `compact` drops blank and comment-only lines: with `-Command -` PowerShell reads stdin like an
     interactive console, where blank lines are the most likely thing to confuse multi-line blocks.
     """
+    from importlib import resources
+
     try:
-        text = INVENTORY_SCRIPT_PATH.read_text(encoding="utf-8")
-    except OSError as e:  # broken install
-        raise FileNotFoundError(f"inventory script not found at {INVENTORY_SCRIPT_PATH}: {e}") from e
+        text = resources.files("secmonk.data").joinpath(INVENTORY_SCRIPT_RESOURCE).read_text(encoding="utf-8")
+    except (OSError, ModuleNotFoundError) as e:  # broken install
+        raise FileNotFoundError(f"inventory script not found in the secmonk.data package: {e}") from e
     if not compact:
         return text
     lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
@@ -499,7 +501,21 @@ def _hotfixes(items: list[dict]) -> list[dict]:
     return [h for h in items or [] if isinstance(h, dict) and h.get("id")]
 
 
-def parse_inventory_json(data: dict | str | bytes, include_system: bool = True) -> Inventory:
+def _hostname_or_hint(host: Any, hint: str | None, warnings: list[str]) -> str:
+    """The reported hostname; when the document has none, the caller's hint (`-o hostname=` or the
+    input file name) with a warning. Never a silent `windows:unknown`."""
+    if host:
+        return str(host)
+    if hint:
+        warnings.append(f"inventory has no hostname; using {hint!r} (from -o hostname / the input file name)")
+        return str(hint)
+    warnings.append("inventory has no hostname and none was given: asset id is windows:unknown "
+                    "(pass -o hostname=<name>)")
+    return "unknown"
+
+
+def parse_inventory_json(data: dict | str | bytes, include_system: bool = True,
+                         hostname_hint: str | None = None) -> Inventory:
     """`secmonk-windows-inventory/1` document (output of secmonk-inventory.ps1) -> Inventory."""
     if isinstance(data, (str, bytes)):
         data = json.loads(data.decode("utf-8-sig") if isinstance(data, bytes) else data.lstrip("\ufeff"))
@@ -511,7 +527,7 @@ def parse_inventory_json(data: dict | str | bytes, include_system: bool = True) 
     warnings: list[str] = [f"script: {w}" for w in data.get("warnings") or []]
     os_info = data.get("os") or {}
     hotfixes = _hotfixes(data.get("hotfixes"))
-    hostname = str(data.get("hostname") or "unknown")
+    hostname = _hostname_or_hint(data.get("hostname"), hostname_hint, warnings)
 
     extra: dict[str, Any] = {}
     if data.get("dotnet_framework"):
@@ -537,7 +553,8 @@ def parse_inventory_json(data: dict | str | bytes, include_system: bool = True) 
     arch = str(os_info.get("architecture") or "").lower()
     build, ubr = _int(os_info.get("current_build")), _int(os_info.get("ubr"))
     dv = os_info.get("display_version") or os_info.get("release_id")
-    os_version = f"{dv} (build {build}.{ubr})" if dv else (f"build {build}.{ubr}" if build else None)
+    bu = f"{build}.{ubr}" if build is not None and ubr is not None else (str(build) if build is not None else None)
+    os_version = (f"{dv} (build {bu})" if bu else str(dv)) if dv else (f"build {bu}" if bu else None)
     meta = {k: v for k, v in {
         "collected_at": data.get("collected_at"), "domain": data.get("domain"),
         "is_admin": data.get("is_admin"), "installation_type": itype or None,
@@ -567,7 +584,7 @@ def _rows(data: dict, table: str) -> list[dict]:
 
 
 def parse_osquery(data: dict | list | str | bytes, hostname: str | None = None,
-                  include_system: bool = True) -> Inventory:
+                  include_system: bool = True, hostname_is_hint: bool = False) -> Inventory:
     """osquery results -> Inventory. `data` maps table name -> rows, e.g. the merge of
 
         SELECT * FROM programs;  SELECT * FROM os_version;  SELECT * FROM patches;
@@ -597,7 +614,8 @@ def parse_osquery(data: dict | list | str | bytes, hostname: str | None = None,
     if os_info.get("installation_type") is None and "server" in str(os_info.get("product_name") or "").lower():
         os_info["installation_type"] = "Server"
     sysinfo = _rows(data, "system_info")
-    host = hostname or data.get("hostname") or (sysinfo[0].get("hostname") if sysinfo else None) or "unknown"
+    host = (None if hostname_is_hint else hostname) or data.get("hostname") \
+        or (sysinfo[0].get("hostname") if sysinfo else None) or None
     uninstall = [{
         "hive": "HKLM", "scope": "machine", "key_name": r.get("identifying_number") or None,
         "display_name": r.get("name"), "display_version": r.get("version"), "publisher": r.get("publisher"),
@@ -608,7 +626,8 @@ def parse_osquery(data: dict | list | str | bytes, hostname: str | None = None,
                  "installed_on": r.get("installed_on")} for r in _rows(data, "patches")]
     doc = {"schema": SCHEMA, "hostname": host, "os": os_info, "uninstall": uninstall, "hotfixes": hotfixes,
            "appx": [], "chocolatey": [], "scoop": []}
-    inv = parse_inventory_json(doc, include_system=include_system)
+    inv = parse_inventory_json(doc, include_system=include_system,
+                               hostname_hint=hostname if hostname_is_hint else None)
     inv.warnings.insert(0, "osquery input: no Appx/Chocolatey/Scoop/.NET data, per-user installs depend on osquery config")
     return inv
 
@@ -813,23 +832,33 @@ def collect_live(include_system: bool = True) -> Inventory:
 
 # --------------------------------------------------------------------------- collector
 
+def _stem_hint(path: Any) -> str | None:
+    """Host name guess from an input file name (`web01.json` -> `web01`); None for generic names."""
+    stem = Path(str(path)).stem.strip()
+    return None if not stem or stem.lower() in ("inventory", "out", "output", "osquery", "results", "data") \
+        else stem
+
+
 @register
 class WindowsCollector(Collector):
     name = "windows"
-    description = ("Windows host: JSON from scripts/windows/secmonk-inventory.ps1 (target), osquery results "
+    description = ("Windows host: JSON from the PowerShell script (`secmonk windows-script`) (target), osquery results "
                    "(-o osquery=<file>) or live on Windows")
 
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         include_system = opts.get("include_system", True) is not False
         osq = opts.get("osquery")
         if osq:
-            return parse_osquery(load_json_file(osq), hostname=opts.get("hostname"), include_system=include_system)
+            return parse_osquery(load_json_file(osq), hostname=opts.get("hostname") or _stem_hint(osq),
+                                 include_system=include_system, hostname_is_hint=not opts.get("hostname"))
         if target:
             data = load_json_file(target)
             if isinstance(data, dict) and str(data.get("schema", "")).startswith("secmonk-windows-inventory/"):
-                inv = parse_inventory_json(data, include_system=include_system)
+                inv = parse_inventory_json(data, include_system=include_system,
+                                           hostname_hint=opts.get("hostname") or _stem_hint(target))
             elif isinstance(data, dict) and ("programs" in data or "os_version" in data):
-                inv = parse_osquery(data, hostname=opts.get("hostname"), include_system=include_system)
+                inv = parse_osquery(data, hostname=opts.get("hostname") or _stem_hint(target),
+                                    include_system=include_system, hostname_is_hint=not opts.get("hostname"))
             else:
                 raise ValueError(f"{target}: neither a secmonk Windows inventory nor osquery results")
         elif sys.platform == "win32":

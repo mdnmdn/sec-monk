@@ -20,7 +20,9 @@ See _docs/tech/collectors/ssh.md.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import os
+import re
 import shlex
 import stat
 import tarfile
@@ -257,12 +259,17 @@ def detect_script(root: str = "/") -> str:
     r = root.rstrip("/")
     osr, osr2 = quote(f"{r}/etc/os-release"), quote(f"{r}/usr/lib/os-release")
     sec = DETECT_PREFIX
+    mid, mid2 = quote(f"{r}/etc/machine-id"), quote(f"{r}/var/lib/dbus/machine-id")
     return "\n".join([
         f"printf '{sec}kernel@@\\n'; uname -s 2>/dev/null",
         f"printf '{sec}arch@@\\n'; uname -m 2>/dev/null",
         f"printf '{sec}os-release@@\\n'; cat {osr} 2>/dev/null || cat {osr2} 2>/dev/null",
         f"printf '{sec}sw_vers@@\\n'; sw_vers 2>/dev/null",
         f"printf '{sec}hostname@@\\n'; hostname 2>/dev/null",
+        # stable machine identity (read-only): systemd machine-id, or the macOS hardware UUID
+        f"printf '{sec}machine-id@@\\n'; cat {mid} 2>/dev/null || cat {mid2} 2>/dev/null",
+        *([(f"printf '{sec}ioreg@@\\n'; [ \"$(uname -s 2>/dev/null)\" = Darwin ] && "
+            "ioreg -rd1 -c IOPlatformExpertDevice 2>/dev/null | grep IOPlatformUUID")] if not r else []),
         f"printf '{sec}end@@\\n'",
         "",
     ])
@@ -275,6 +282,8 @@ class RemoteInfo:
     os_release: dict[str, str] = field(default_factory=dict)
     sw_vers: dict[str, str] = field(default_factory=dict)
     hostname: str = ""
+    machine_id: str = ""                      # raw /etc/machine-id or IOPlatformUUID (never stored raw)
+    machine_id_source: str = ""
 
     @property
     def family(self) -> str | None:
@@ -292,6 +301,12 @@ class RemoteInfo:
         if self.family == "linux":
             return self.os_release.get("PRETTY_NAME") or "Linux"
         return self.kernel or "unknown"
+
+
+def machine_fingerprint(machine_id: str) -> str:
+    """App-specific digest of a machine id: systemd asks that the raw /etc/machine-id is never
+    exposed, so inventories only carry this salted hash (stable per machine, not reversible)."""
+    return hashlib.sha256(b"secmonk\0machine-id\0" + machine_id.encode()).hexdigest()
 
 
 def parse_detect(text: str) -> RemoteInfo:
@@ -318,7 +333,16 @@ def parse_detect(text: str) -> RemoteInfo:
         k, sep, v = ln.partition(":")
         if sep:
             sw[k.strip()] = v.strip()
-    return RemoteInfo(kernel=first("kernel"), arch=first("arch"),
+    mid, src = "", ""
+    cand = first("machine-id")
+    if re.fullmatch(r"[0-9a-fA-F]{32}", cand):
+        mid, src = cand.lower(), "machine-id"
+    else:
+        m = re.search(r'"IOPlatformUUID"\s*=\s*"([0-9A-Fa-f-]{36})"', "\n".join(sections.get("ioreg", [])))
+        if m:
+            mid, src = m.group(1).upper(), "IOPlatformUUID"
+    return RemoteInfo(machine_id=mid, machine_id_source=src,
+                      kernel=first("kernel"), arch=first("arch"),
                       os_release=parse_os_release("\n".join(sections.get("os-release", []))),
                       sw_vers=sw, hostname=first("hostname"))
 

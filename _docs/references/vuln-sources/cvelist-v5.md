@@ -40,9 +40,10 @@ Probed 2026-11-07 from the dev sandbox.
 | `github.com/.../releases` (and the `all_CVEs_at_midnight.zip.zip` release asset), `codeload`, `api.github.com`, `cveawg.mitre.org` (CVE Services API) | **403, blocked** by egress policy. The release zips (daily midnight snapshot, `_all_CVEs_at_midnight.zip`) are the upstream-recommended bulk path; validate from an open network. |
 | `cves/` directory listing via raw | 404 (raw has no listings); use the sparse clone for listings |
 
-Path rule: `cves/<year>/<floor(n/1000)>xxx/CVE-<year>-<n>.json`, where `n` is the numeric part
-with no zero padding (`CVE-2021-44228` -> `cves/2021/44xxx/`, `CVE-2025-1914` ->
-`cves/2025/1xxx/`, `CVE-2026-119977` -> `cves/2026/119xxx/`). Note 2026 has 6-digit IDs and 86k
+Path rule: `cves/<year>/<floor(n/1000)>xxx/CVE-<year>-<digits>.json`, where the **folder** comes from the
+numeric value `n` and the **file name keeps the id's digits verbatim, zero padding included**
+(`CVE-2021-44228` -> `cves/2021/44xxx/CVE-2021-44228.json`, `CVE-2014-0160` ->
+`cves/2014/0xxx/CVE-2014-0160.json`, `CVE-2026-119977` -> `cves/2026/119xxx/`). Note 2026 has 6-digit IDs and 86k
 files already (CNA block allocations), so do **not** assume 4/5 digits.
 
 **Cadence:** the repo is updated roughly every 7-20 minutes (deltaLog entries are ~15 min apart,
@@ -236,16 +237,25 @@ Code: `src/secmonk/sources/cvelist.py` (`CveListSource`, `import_record`, `parse
 
 1. `opts.path`: one CVE JSON file, or a directory walked recursively for `CVE-*.json`.
 2. `opts.ids`: per-id raw fetch from `raw.githubusercontent.com/.../cves/<year>/<n//1000>xxx/<id>.json`
-   (no zero padding, 6+ digit ids OK); 404 is skipped. `ids == ["@referenced"]` computes the ids from
+   (file name = the id as written, so `CVE-2014-0160` stays zero padded; 6+ digit ids OK); 404 is skipped. `ids == ["@referenced"]` computes the ids from
    `alias` (`CVE-%`) and `kev` that have no cvelist row, capped by `opts.limit`
    (`fetch_missing`, for `secmonk sync cvelist --referenced`).
-3. Default: sparse partial clone in `.cache/secmonk/cvelistV5` (`--depth 1 --filter=blob:none --sparse`),
-   `git sparse-checkout set cves/<year>..` for `opts.since` year .. current (default: last 2 years).
-   Later syncs: `git fetch --depth 1 origin main`, `git diff --name-only <cursor> FETCH_HEAD`, then
-   `git reset --hard FETCH_HEAD` (cache dir only). If the diff fails (shallow history) all checked-out
-   files are re-read and only those with `dateUpdated` newer than the stored row are imported. Newly
-   requested years are walked in full. Cursor = commit sha (not advanced when `limit` truncated the run).
-   Unchanged records (stored `modified` >= `dateUpdated`) are skipped unless `opts.full`.
+3. Default: sparse partial clone in the per-user cache `paths.cache_subdir("cvelistV5")`
+   (`--depth 1 --filter=blob:none --sparse`), `git sparse-checkout add cves/<year>..` for the widest of
+   `opts.since` year, the oldest year synced before (internal row `cvelist:years`, so a `--since` backfill
+   is never abandoned by the next plain sync) and the last 2 years.
+   Every sync with an existing cache **always** `git fetch --depth 1 origin main` and
+   `git reset --hard FETCH_HEAD` (cache dir only), including `--full`. The stored cursor (internal row
+   `cvelist:git`, validated `^[0-9a-f]{40,64}$`) only selects the *scope*: `git diff --name-only
+   --end-of-options <cursor> <new>` limits the import to changed files; no/invalid cursor, `--full` or a
+   failing diff (shallow history) walks all checked-out years (records with `dateUpdated` not newer than
+   the stored row are skipped unless `opts.full`). Newly requested years are walked in full. The cursor and
+   year range advance only after a run without `limit` truncation and without record errors.
+   Hardening (security review): every git call runs with `GIT_CONFIG_NOSYSTEM=1`,
+   `GIT_CONFIG_GLOBAL=/dev/null`, no `GIT_DIR`/`GIT_CONFIG_*` env, `-c core.fsmonitor= -c core.hooksPath=/dev/null`;
+   before reuse the cache's `remote.origin.url` must equal `REPO_URL`, otherwise it is deleted and re-cloned.
+4. Sync state: the source never writes the main `source_sync.cvelist` row (the CLI does, from
+   `SyncResult.records/total/cursor`); internal rows `cvelist:git` / `cvelist:years` hold the cursor/year range.
 
 ### Mapping
 
@@ -281,3 +291,15 @@ Version entry conversion (one row per `affected` version entry):
 - `cpeApplicability`: events from versionStartIncluding/EndExcluding/EndIncluding. A non-version bound (e.g. a URL) is
   recorded in `extra.dropped_bounds` and the row becomes `CVE-UNPARSED` (never matched), so an unparseable bound cannot widen
   the range to all versions (`cvelist.py:_import_cpe_applicability`; earlier text of this doc said such rows stayed `CPE`).
+5. Import robustness: every record is imported inside a SAVEPOINT; any exception (not only ValueError)
+   rolls that record back (the previous version, children included, stays) and counts as an error
+   (status `partial`, git cursor not advanced).
+6. Mapping fixes: `versionStartExcluding` -> `introduced_exclusive`; an unparsable bound or a CPE `update`
+   field (beta/rc/pN, stored in `extra.cpe_update`) -> `CVE-UNPARSED`; wildcard CPE with no bounds ->
+   `[{"introduced":"0"}]`; end-only bounds get `introduced: 0`; `changes[]` inside a bounded entry are sorted,
+   `unaffected` -> `fixed`, `affected` -> `introduced`, changes at/after the bound are dropped; `packageName` is
+   normalized with `purl.normalize_name`; CPE strings are unescaped like nvd.py (`base.cpe_fields`);
+   `defaultStatus: affected` without usable versions is kept as a `CVE-UNPARSED` row (`extra.default_status`);
+   severity labels go through `base.normalize_severity`.
+7. `cvelist.renormalize(conn)` rebuilds all cvelist rows from `raw_record` (no download) so fixes reach an
+   existing DB.

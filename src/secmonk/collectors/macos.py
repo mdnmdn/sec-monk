@@ -27,7 +27,7 @@ from ..models import (
     Component,
     Inventory,
 )
-from .base import Collector, register
+from .base import Collector, read_within, register, resolve_within, strip_url_secrets
 from .homebrew import (  # noqa: F401  (re-exported for backwards compatibility)
     _cask_apps,
     _cask_component,
@@ -37,6 +37,7 @@ from .homebrew import (  # noqa: F401  (re-exported for backwards compatibility)
 )
 
 MAX_APP_DEPTH = 3
+MAX_PLIST_BYTES = 8 * 1024 * 1024
 
 # bundled frameworks reported as runtimes: dir name -> (component name, bundle id, purl type)
 _FRAMEWORKS = {
@@ -46,10 +47,20 @@ _FRAMEWORKS = {
 }
 
 
-def _load_plist(path: Path) -> dict | None:
-    with path.open("rb") as fh:
-        data = plistlib.load(fh)
+def _load_plist(path: Path, boundary: Path | None = None) -> dict | None:
+    """Parse a plist (<= 8 MB). With `boundary`, the file must resolve below it (no symlink escapes)."""
+    if boundary is None:
+        with path.open("rb") as fh:
+            data = plistlib.loads(fh.read(MAX_PLIST_BYTES + 1)[:MAX_PLIST_BYTES])
+    else:
+        data = plistlib.loads(read_within(path, boundary, MAX_PLIST_BYTES))
     return data if isinstance(data, dict) else None
+
+
+def _as_list(v: Any) -> list:
+    if v is None or v == "":
+        return []
+    return list(v) if isinstance(v, (list, tuple, set)) else [v]
 
 
 def _norm(s: str) -> str:
@@ -98,6 +109,7 @@ class MacOSCollector(Collector):
 
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         root = Path(target or "/")
+        boundary = root.resolve()
         live = str(root) == "/"
         include_system = opts.get("include_system", True)
         warnings: list[str] = []
@@ -108,7 +120,7 @@ class MacOSCollector(Collector):
         sv = root / "System/Library/CoreServices/SystemVersion.plist"
         if sv.is_file():
             try:
-                d = _load_plist(sv) or {}
+                d = _load_plist(sv, boundary) or {}
                 ver = d.get("ProductVersion")
                 os_comp = Component(name="macOS", version=ver, category=CAT_OS, vendor="apple",
                                     source_path=_rel(sv, root),
@@ -127,20 +139,27 @@ class MacOSCollector(Collector):
 
         # --- apps
         apps: list[Component] = []
-        app_dirs = [(root / "Applications", CAT_APPLICATION)]
+        explicit_homes = bool(_as_list(opts.get("home")))
+        app_dirs = [(root / "Applications", CAT_APPLICATION, boundary)]
         for h in self._home_dirs(root, live, opts.get("home")):
-            app_dirs.append((h / "Applications", CAT_APPLICATION))
+            # homes given explicitly may live outside `root`; their apps must stay inside the home
+            app_dirs.append((h / "Applications", CAT_APPLICATION,
+                             h.resolve() if explicit_homes else boundary))
         if include_system:
-            app_dirs.append((root / "System/Applications", CAT_SYSTEM_APP))
+            app_dirs.append((root / "System/Applications", CAT_SYSTEM_APP, boundary))
         seen_bundles: set[Path] = set()
-        for base, cat in app_dirs:
+        for base, cat, bound in app_dirs:
             for bundle in self._find_bundles(base, MAX_APP_DEPTH):
-                real = bundle.resolve()
+                try:
+                    real = resolve_within(bundle, bound)
+                except ValueError as e:
+                    warnings.append(f"skipped bundle {_rel(bundle, root)}: {e}")
+                    continue
                 if real in seen_bundles:
                     continue
                 seen_bundles.add(real)
                 try:
-                    apps.extend(self._read_bundle(bundle, root, cat))
+                    apps.extend(self._read_bundle(bundle, root, cat, bound))
                 except Exception as e:  # noqa: BLE001
                     warnings.append(f"cannot read bundle {_rel(bundle, root)}: {e}")
 
@@ -185,12 +204,13 @@ class MacOSCollector(Collector):
                 warnings.append(f"cannot read system_profiler JSON {sp}: {e}")
 
         # --- pkgutil receipts
-        components.extend(self._receipts(root, include_system, warnings))
+        components.extend(self._receipts(root, include_system, warnings, boundary))
         return Inventory(asset=asset, collector=self.name, components=components, warnings=warnings)
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
-    def _home_dirs(root: Path, live: bool, homes: list | None) -> list[Path]:
+    def _home_dirs(root: Path, live: bool, homes: Any) -> list[Path]:
+        homes = _as_list(homes)       # `-o home=/Users/bob` arrives as a plain string
         if homes:
             return [Path(h) for h in homes]
         out: list[Path] = []
@@ -219,11 +239,17 @@ class MacOSCollector(Collector):
         if base.is_dir():
             yield from walk(base, 1)
 
-    def _read_bundle(self, bundle: Path, root: Path, cat: str) -> list[Component]:
+    def _read_bundle(self, bundle: Path, root: Path, cat: str, boundary: Path | None = None) -> list[Component]:
+        boundary = boundary or root.resolve()
         info_path = bundle / "Contents/Info.plist"
+        ios_wrapper = False
         if not info_path.is_file():
-            raise FileNotFoundError("Contents/Info.plist missing")
-        info = _load_plist(info_path)
+            # iOS/iPadOS apps on Apple silicon: <App>.app/Wrapper/<App>.app/Info.plist
+            wrapped = sorted(bundle.glob("Wrapper/*.app/Info.plist"))
+            if not wrapped:
+                raise FileNotFoundError("Contents/Info.plist missing")
+            info_path, ios_wrapper = wrapped[0], True
+        info = _load_plist(info_path, boundary)
         if info is None:
             raise ValueError("Info.plist is not a dictionary")
         bundle_id = info.get("CFBundleIdentifier")
@@ -238,7 +264,9 @@ class MacOSCollector(Collector):
             "copyright": info.get("NSHumanReadableCopyright"),
             "min_os": info.get("LSMinimumSystemVersion"),
             "mas": (bundle / "Contents/_MASReceipt").exists(),
-            "sparkle_feed": info.get("SUFeedURL"),
+            "sparkle_feed": strip_url_secrets(info.get("SUFeedURL")) if isinstance(info.get("SUFeedURL"), str)
+            else None,
+            "ios_app_on_mac": ios_wrapper or None,
             "electron": electron,
             "vendor_hint": hint,
         }
@@ -252,20 +280,20 @@ class MacOSCollector(Collector):
             for fw_name, (rt_name, rt_bundle_id) in _FRAMEWORKS.items():
                 fw = frameworks / fw_name
                 if fw.is_dir():
-                    rt = self._read_framework(fw, rt_name, rt_bundle_id, str(name), root)
+                    rt = self._read_framework(fw, rt_name, rt_bundle_id, str(name), root, boundary)
                     if rt:
                         out.append(rt)
         return out
 
     @staticmethod
     def _read_framework(fw: Path, rt_name: str, rt_bundle_id: str | None, app_name: str,
-                        root: Path) -> Component | None:
+                        root: Path, boundary: Path | None = None) -> Component | None:
         candidates = sorted(fw.glob("Versions/*/Resources/Info.plist")) + [fw / "Resources/Info.plist"]
         for p in candidates:
             if not p.is_file():
                 continue
             try:
-                d = _load_plist(p) or {}
+                d = _load_plist(p, boundary) or {}
             except Exception:  # noqa: BLE001, S112
                 continue
             if rt_name == "Electron":
@@ -298,14 +326,15 @@ class MacOSCollector(Collector):
         return None
 
     @staticmethod
-    def _receipts(root: Path, include_system: bool, warnings: list[str]) -> list[Component]:
+    def _receipts(root: Path, include_system: bool, warnings: list[str],
+                  boundary: Path | None = None) -> list[Component]:
         out: list[Component] = []
         d = root / "var/db/receipts"
         if not d.is_dir():
             return out
         for p in sorted(d.glob("*.plist")):
             try:
-                r = _load_plist(p) or {}
+                r = _load_plist(p, boundary or root.resolve()) or {}
                 pid = r.get("PackageIdentifier")
                 if not pid:
                     raise ValueError("no PackageIdentifier")

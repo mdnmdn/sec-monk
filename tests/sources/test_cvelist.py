@@ -172,7 +172,7 @@ def test_convert_edge_cases():
 def test_cve_path():
     assert cve_path("CVE-2021-44228") == "cves/2021/44xxx/CVE-2021-44228.json"
     assert cve_path("CVE-2025-1914") == "cves/2025/1xxx/CVE-2025-1914.json"
-    assert cve_path("CVE-2023-0001") == "cves/2023/0xxx/CVE-2023-1.json"
+    assert cve_path("CVE-2023-0001") == "cves/2023/0xxx/CVE-2023-0001.json"
     assert cve_path("CVE-2026-119977") == "cves/2026/119xxx/CVE-2026-119977.json"
     with pytest.raises(ValueError):
         cve_path("GHSA-xxxx")
@@ -194,8 +194,8 @@ def test_sync_single_file(conn, cvedir):
 
 
 def test_referenced_and_fetch_missing(conn, cvedir, monkeypatch):
-    conn.execute("INSERT INTO alias VALUES ('GHSA-1','CVE-2025-1914','osv')")
-    conn.execute("INSERT INTO alias VALUES ('GHSA-1','CVE-2021-44228','osv')")
+    conn.execute("INSERT INTO alias(vuln_id, alias, source) VALUES ('GHSA-1','CVE-2025-1914','osv')")
+    conn.execute("INSERT INTO alias(vuln_id, alias, source) VALUES ('GHSA-1','CVE-2021-44228','osv')")
     conn.execute("INSERT INTO kev(cve_id) VALUES ('CVE-2025-7783')")
     import_record(conn, load(cvedir, "CVE-2021-44228"))
     urls = []

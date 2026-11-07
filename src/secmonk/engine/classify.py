@@ -18,6 +18,7 @@ from importlib import resources
 import yaml
 
 from ..models import CAT_LIBRARY, CAT_OS_PACKAGE, Component
+from ..sources.base import norm_vendor_product
 from . import purl as purls
 
 _NOISE = re.compile(
@@ -114,8 +115,11 @@ def brew_seed() -> dict[str, list[dict]]:
     for row in csv.DictReader(text.splitlines()):
         f = (row.get("formula") or "").strip().lower()
         if f and row.get("vendor") and row.get("product"):
-            out.setdefault(f, []).append({"vendor": row["vendor"].strip().lower(),
-                                          "product": row["product"].strip().lower(),
+            vendor, product = norm_vendor_product(row["vendor"]), norm_vendor_product(row["product"])
+            if not vendor or not product:
+                continue
+            # same normalization as affected.vendor/product ('kerberos_5' -> 'kerberos 5')
+            out.setdefault(f, []).append({"vendor": vendor, "product": product,
                                           "evidence": (row.get("evidence") or "").strip()})
     for rows in out.values():
         rows.sort(key=lambda r: _SEED_EVIDENCE_RANK.get(r["evidence"], 9))
@@ -151,7 +155,7 @@ def _classify_brew_formula(c: Component) -> bool:
     rows = brew_seed().get(name)
     if rows:
         first = rows[0]
-        c.vendor = c.vendor or first["vendor"]
+        c.vendor = norm_vendor_product(c.vendor) or first["vendor"]
         c.meta["product"] = first["product"]
         c.meta["product_source"] = "brew-seed"
         c.meta["brew_seed_evidence"] = first["evidence"]

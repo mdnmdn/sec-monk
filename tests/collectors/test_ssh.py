@@ -351,7 +351,7 @@ def test_linux_fixture_matches_rootfs_collector(root):
     assert len(keys(inv)) > 5
     a = inv.asset
     assert (a.id, a.type, a.name, a.os_name, a.os_version) == (
-        "ssh:10.0.0.5", "server", "10.0.0.5", direct_asset.os_name, direct_asset.os_version)
+        "ssh:10.0.0.5:2222", "server", "10.0.0.5", direct_asset.os_name, direct_asset.os_version)
     assert a.meta["transport"] == "local" and a.meta["user"] == "admin" and a.meta["port"] == 2222
     assert a.meta["remote_os"] and a.meta["harvested_files"] >= 2 and a.meta["harvested_bytes"] > 0
     assert inv.collector == "ssh"
@@ -366,7 +366,7 @@ def test_macos_fixture_matches_macos_collector():
     assert any(c.name == "Electron" for c in inv.components)
     assert any(c.meta.get("brew_name") == "curl" for c in inv.components)
     a = inv.asset
-    assert (a.id, a.type, a.name, a.os_name, a.os_version) == ("ssh:10.0.0.5", "desktop", "10.0.0.5", "macOS", "14.5")
+    assert (a.id, a.type, a.name, a.os_name, a.os_version) == ("ssh:10.0.0.5:2222", "desktop", "10.0.0.5", "macOS", "14.5")
     assert a.platform.startswith("darwin/")
     slack = next(c for c in inv.components if c.name == "Slack")
     assert slack.meta["mas"] is True                                           # _MASReceipt marker harvested
@@ -629,7 +629,7 @@ def test_paramiko_end_to_end(sshd, monkeypatch):
     inv = SSHCollector().collect(f"ssh://admin@127.0.0.1:{sshd.port}", **_popts(sshd))
     direct = collect_from_view(DirView(DEBIAN), Asset(id="x", type="server", name="x"), [])
     assert keys(inv) == {c.key for c in direct}
-    assert inv.asset.id == "ssh:127.0.0.1" and inv.asset.meta["transport"] == "paramiko"
+    assert inv.asset.id == f"ssh:127.0.0.1:{sshd.port}" and inv.asset.meta["transport"] == "paramiko"
     assert inv.asset.meta["port"] == sshd.port and inv.asset.meta["harvested_files"] >= 2
     assert sshd.commands[before:] == ["sh -s", "sh -s"]                       # nothing but the fixed commands
 
@@ -665,3 +665,61 @@ def test_paramiko_password_only_from_env(monkeypatch):
     monkeypatch.setenv(ssh.PASSWORD_ENV, "s3cret")
     tr = ssh.make_transport(parse_target("u@h"), {"transport": "paramiko"})
     assert tr.password == "s3cret"
+
+
+# --------------------------------------------------------------------------- review fixes (C1, C7, SEC12)
+
+def test_asset_id_includes_non_default_port():
+    assert ssh.ssh_asset_id(parse_target("root@h:2201")) == "ssh:h:2201"
+    assert ssh.ssh_asset_id(parse_target("alice@h:22")) == "ssh:h"
+    assert ssh.ssh_asset_id(parse_target("bob@[::1]:2222")) == "ssh:[::1]:2222"
+
+
+class _Dropped(LocalTransport):
+    """Connection drops after the marker: garbage instead of a gzip stream, rc 255."""
+
+    def stream(self, cmd, timeout=60, stdin=None):
+        if b"STREAM" in (stdin or b""):
+            cmd = "printf 'SECMONK-STREAM-BEGIN\\n'; head -c 200 /dev/urandom; exit 255"
+            proc = subprocess.Popen(["sh", "-c", cmd], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            return ssh._ProcStream(proc, timeout, stdin)
+        return super().stream(cmd, timeout, stdin)
+
+
+def test_dropped_stream_with_no_files_is_an_error_not_an_empty_scan():
+    with pytest.raises(SSHError, match="rc=255"):
+        SSHCollector().collect("h", transport=_Dropped(), root=str(DEBIAN))
+
+
+def test_truncated_harvest_is_partial(monkeypatch):
+    inv, _ = collect(DEBIAN)
+    assert not inv.partial
+    inv2, _ = collect(DEBIAN, max_files=2)
+    assert inv2.partial and "truncated" in inv2.partial_reason
+
+
+def test_machine_id_is_hashed_and_recorded(tmp_path):
+    root = tmp_path / "r"
+    shutil.copytree(DEBIAN, root, symlinks=True)
+    (root / "etc/machine-id").write_text("0123456789abcdef0123456789abcdef\n")
+    inv, _ = collect(root)
+    mid = inv.asset.meta["machine_id"]
+    assert mid == harvest.machine_fingerprint("0123456789abcdef0123456789abcdef")
+    assert "0123456789abcdef" not in mid and inv.asset.meta["machine_id_source"] == "machine-id"
+
+
+def test_parse_detect_ioreg_uuid():
+    text = ("@@secmonk:kernel@@\nDarwin\n@@secmonk:ioreg@@\n"
+            '    "IOPlatformUUID" = "11111111-2222-3333-4444-555555555555"\n@@secmonk:end@@\n')
+    info = harvest.parse_detect(text)
+    assert info.machine_id == "11111111-2222-3333-4444-555555555555" and info.machine_id_source == "IOPlatformUUID"
+
+
+def test_paramiko_insecure_policy_never_saves_host_keys():
+    policy = ssh._non_saving_autoadd(paramiko)
+    client = paramiko.SSHClient()
+    kh = client.get_host_keys()
+    key = paramiko.RSAKey.generate(1024)
+    policy.missing_host_key(client, "h", key)
+    assert len(kh) == 0                           # not even added to the in-memory store

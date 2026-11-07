@@ -36,14 +36,14 @@ Every parser matches on the **basename** so it works on folders, repos and image
 | `packages["node_modules/a/node_modules/b"]` | name = text after the LAST `node_modules/`; `name` field wins (aliases) |
 | `packages[""]` | root project - skipped; keys without `node_modules/` (workspace folders) skipped |
 | `link: true` | skipped (symlink to workspace) |
-| `inBundle` / `bundled` | skipped (shipped inside another package's tarball) |
+| `inBundle` / `bundled` | emitted with `meta.bundled=true` (shipped inside another package's tarball; still on disk) |
 | `dev`, `optional`, `peer`, `devOptional` | meta `dev`/`optional`/`peer`/`dev_optional` = true |
 | `resolved` | meta `resolved_host` (registry host, `git` for git urls); `file:` skipped |
 | v1 `version: "npm:real@1.0.0"` | alias -> real name/version |
 | v1 `version: "github:o/r#sha"` | emitted with `version=None`, meta `non_registry_version` |
 
 **yarn.lock v1**: blocks `"spec1", "spec2":` then indented `version "x"`, `resolved "url#sha1"`. Name is taken
-from the first spec (`rfind('@')`, so scopes work); `foo@npm:bar@^1` aliases map to `bar`.
+from the first spec (first `@` after index 0, so scopes and git URLs containing `@` work); `foo@npm:bar@^1` aliases map to `bar`.
 
 **yarn berry** (valid YAML): key `"name@npm:^1"`, `resolution: "name@npm:1.2.3"`. Entries whose resolution is
 `workspace:`, `portal:`, `link:`, `exec:`, git or http are skipped. `patch:` resolutions
@@ -78,3 +78,11 @@ with lodash 4.17.20, minimist 1.2.5, @babel/code-frame 7.12.13, semver 7.3.5 (de
 `bun/bun.lock`, `installed/node_modules/**/package.json` (real files; the `lodash/test/fixtures/package.json` one is
 synthetic). Edge cases (aliases, git versions, v5 pnpm keys, patch-only berry) are inline synthetic data in
 `tests/collectors/lang/test_javascript.py`.
+
+
+## YAML safety
+
+yarn berry and pnpm lockfiles are YAML. libyaml's C parser overflows the C stack (segfault, killing the whole
+scan) on deeply nested input, so `load_yaml()` estimates nesting first (flow brackets, indentation, `- - -`
+chains): more than 200 levels is rejected with a warning; more than 40 uses the pure-Python SafeLoader;
+otherwise CSafeLoader. Berry `resolution` suffixes such as `::__archiveUrl=...` are stripped from the version.

@@ -19,6 +19,7 @@ import stat
 import struct
 import tarfile
 import tempfile
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
@@ -32,6 +33,17 @@ MAX_LANG_FILES = 20_000
 MAX_FILE_BYTES = 256 * 1024 * 1024      # package DBs can be large, but cap anyway
 MAX_META_BYTES = 4 * 1024 * 1024        # METADATA / package.json
 MAX_SYMLINK_DEPTH = 40
+# LayeredTarView resource budgets (a hostile layer must not be able to exhaust memory)
+MAX_VIEW_BYTES = 512 * 1024 * 1024      # total bytes retained across all kept files
+MAX_DPKG_TEXT_BYTES = 64 * 1024 * 1024  # one dpkg status / status.d file
+MAX_STATUS_D_FILES = 10_000
+MAX_STATUS_D_BYTES = 64 * 1024 * 1024    # all status.d files together (real ones are a few KB each)
+MAX_LINKS = 1_000_000
+# rpmdb.sqlite is attacker-controlled input: bound the work done on it
+MAX_RPM_ROWS = 200_000
+MAX_RPM_BLOB = 4 * 1024 * 1024
+RPM_VM_BUDGET = 20_000_000              # SQLite VM instructions
+RPM_TIME_BUDGET = 30.0                  # seconds
 
 OS_RELEASE_PATHS = ("etc/os-release", "usr/lib/os-release")
 FIXED_PATHS = frozenset({
@@ -156,6 +168,7 @@ class DirView(FsView):
     """A directory on the host treated as `/` of a Linux system."""
 
     _SKIP_TOP = frozenset({"proc", "sys", "dev", "run"})
+    truncated = False
 
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
@@ -270,8 +283,15 @@ class LayeredTarView(FsView):
         self.files: dict[str, bytes] = {}
         self.links: dict[str, str] = {}
         self._gen: dict[str, int] = {}
+        # directory -> names of its children (files, links, sub-directories): lets a whiteout find
+        # everything below a prefix in O(matches) instead of scanning every stored path.
+        self._dirs: dict[str, set[str]] = {}
         self._layer = 0
         self._lang_count = 0
+        self._bytes = 0
+        self._status_d = 0
+        self._status_d_bytes = 0
+        self._root_opq_layer = -1
         self.truncated = False
         from .lang.walk import LangAccumulator, WalkLimits
 
@@ -279,25 +299,94 @@ class LayeredTarView(FsView):
 
     # ---- building
 
+    def _track(self, path: str) -> None:
+        d, _, name = path.rpartition("/")
+        while True:
+            kids = self._dirs.setdefault(d, set())
+            if name in kids:
+                return
+            kids.add(name)
+            if not d:
+                return
+            d, _, name = d.rpartition("/")
+
+    def _prune(self, node: str) -> None:
+        """Forget `node` in its parent once nothing is stored at or below it."""
+        while node:
+            if node in self.files or node in self.links or self._dirs.get(node):
+                return
+            self._dirs.pop(node, None)
+            parent, _, name = node.rpartition("/")
+            kids = self._dirs.get(parent)
+            if kids is not None:
+                kids.discard(name)
+            node = parent
+
+    def _delete(self, path: str) -> None:
+        data = self.files.pop(path, None)
+        if data is not None:
+            self._bytes -= len(data)
+            if path.startswith(DPKG_STATUS_D + "/"):
+                self._status_d -= 1
+                self._status_d_bytes -= len(data)
+        self.links.pop(path, None)
+        self._gen.pop(path, None)
+
     def _remove_under(self, prefix: str, only_older: bool) -> None:
-        self.lang.remove_under(prefix)
-        pre = prefix + "/"
-        for store in (self.files, self.links):
-            for p in [p for p in store if p == prefix or p.startswith(pre)]:
-                if only_older and self._gen.get(p, -1) >= self._layer:
-                    continue
-                del store[p]
-                self._gen.pop(p, None)
+        self.lang.remove_under(prefix, only_older=only_older, layer=self._layer)
+        nodes: list[str] = []
+        stack = [prefix]
+        while stack:
+            n = stack.pop()
+            nodes.append(n)
+            stack.extend(f"{n}/{k}" if n else k for k in self._dirs.get(n, ()))
+        for n in nodes:
+            if (n in self.files or n in self.links) and not (only_older and self._gen.get(n, -1) >= self._layer):
+                self._delete(n)
+        for n in reversed(nodes):
+            self._prune(n)
+
+    def _remove_everything_older(self) -> None:
+        self.lang.clear(only_older=True, layer=self._layer)
+        if self._root_opq_layer == self._layer:
+            return
+        self._root_opq_layer = self._layer
+        for p in [p for p in (*self.files, *self.links) if self._gen.get(p, -1) < self._layer]:
+            self._delete(p)
+            self._prune(p)
 
     def _put_file(self, path: str, data: bytes) -> None:
-        self.links.pop(path, None)
+        was_link = self.links.pop(path, None) is not None
         if path not in self.files and lang_kind(path):
             if self._lang_count >= MAX_LANG_FILES:
                 self.truncated = True
                 return
             self._lang_count += 1
+        old = self.files.get(path)
+        self._bytes += len(data) - (len(old) if old is not None else 0)
+        if path.startswith(DPKG_STATUS_D + "/"):
+            self._status_d += old is None
+            self._status_d_bytes += len(data) - (len(old) if old is not None else 0)
+        if old is None or was_link:
+            self._track(path)
         self.files[path] = data
         self._gen[path] = self._layer
+
+    def _admit(self, path: str, size: int) -> bool:
+        """Budget check before reading a member of `size` bytes that will be retained."""
+        if path == "var/lib/dpkg/status" or path.startswith(DPKG_STATUS_D + "/"):
+            if size > MAX_DPKG_TEXT_BYTES:
+                return False
+            if path.startswith(DPKG_STATUS_D + "/"):
+                if path not in self.files and self._status_d >= MAX_STATUS_D_FILES:
+                    return False
+                old_n = len(self.files.get(path, b""))
+                if self._status_d_bytes - old_n + size > MAX_STATUS_D_BYTES:
+                    return False
+        elif size > MAX_FILE_BYTES:
+            return False
+        old = self.files.get(path)
+        return self._bytes - (len(old) if old is not None else 0) + size <= MAX_VIEW_BYTES
 
     def add_layer(self, source: BinaryIO | str | Path) -> None:
         """Apply one layer. `source` is a path or a binary stream (plain, gzip or zstd tar)."""
@@ -323,10 +412,7 @@ class LayeredTarView(FsView):
             if d:
                 self._remove_under(d, only_older=True)
             else:  # opaque root: everything older goes
-                self.lang.clear()
-                for store in (self.files, self.links):
-                    for p in [p for p in store if self._gen.get(p, -1) < self._layer]:
-                        del store[p]
+                self._remove_everything_older()
             return
         if base.startswith(".wh."):
             target = f"{d}/{base[4:]}" if d else base[4:]
@@ -334,14 +420,17 @@ class LayeredTarView(FsView):
             return
         if m.issym():
             self._remove_under(path, only_older=False)
+            if len(self.links) >= MAX_LINKS:
+                self.truncated = True
+                return
             self.links[path] = m.linkname
             self._gen[path] = self._layer
+            self._track(path)
         elif m.islnk():
             src = norm_path(m.linkname)
             if is_interesting(path) and src in self.files:
                 self._put_file(path, self.files[src])
-            if src in self.lang.by_path:
-                self.lang.by_path[path] = self.lang.by_path[src]
+            self.lang.alias(path, src, layer=self._layer)
         elif m.isfile():
             wanted_fixed = path in FIXED_PATHS or path.startswith(DPKG_STATUS_D + "/")
             wanted_lang = self.lang.wants(path)
@@ -351,15 +440,15 @@ class LayeredTarView(FsView):
             if f is None:
                 return
             if wanted_fixed:
-                if m.size > MAX_FILE_BYTES:
+                if not self._admit(path, m.size):
                     self.truncated = True
                     return
                 data = f.read()
                 self._put_file(path, data)
                 if wanted_lang:
-                    self.lang.feed(path, m.size, _BytesReader(data).read)
+                    self.lang.feed(path, m.size, _BytesReader(data).read, layer=self._layer, mode=m.mode)
             else:
-                self.lang.feed(path, m.size, f.read)
+                self.lang.feed(path, m.size, f.read, layer=self._layer, mode=m.mode)
 
     # ---- FsView
 
@@ -371,12 +460,7 @@ class LayeredTarView(FsView):
         return None if data is None else data[:limit]
 
     def _listdir_raw(self, path: str) -> list[str]:
-        pre = path + "/" if path else ""
-        out = set()
-        for p in (*self.files, *self.links):
-            if p.startswith(pre):
-                out.add(p[len(pre):].split("/", 1)[0])
-        return sorted(out)
+        return sorted(self._dirs.get(path, ()))
 
     def iter_lang_files(self) -> Iterator[tuple[str, str]]:
         for p in sorted(self.files):
@@ -423,12 +507,17 @@ def _stanzas(text: str) -> Iterator[dict[str, str]]:
 _SRC_RE = re.compile(r"^(\S+)(?:\s+\(([^)]+)\))?$")
 
 
+# Statuses whose files are on disk (unpacked but not yet configured, trigger processing pending, ...).
+DPKG_PRESENT_STATES = frozenset({"installed", "unpacked", "half-configured", "triggers-awaited",
+                                 "triggers-pending"})
+
+
 def parse_dpkg_status(text: str) -> list[dict]:
     out = []
     for st in _stanzas(text):
         name, version = st.get("package"), st.get("version")
         status = st.get("status", "").split()
-        if not name or not version or not status or status[-1] != "installed":
+        if not name or not version or not status or status[-1] not in DPKG_PRESENT_STATES:
             continue
         src_name, src_version = name, version
         if st.get("source"):
@@ -436,7 +525,7 @@ def parse_dpkg_status(text: str) -> list[dict]:
             if m:
                 src_name = m.group(1)
                 src_version = m.group(2) or version
-        out.append({"name": name, "version": version, "arch": st.get("architecture"),
+        out.append({"name": name, "version": version, "arch": st.get("architecture"), "state": status[-1],
                     "source": src_name, "source_version": src_version,
                     "maintainer": st.get("maintainer"), "homepage": st.get("homepage")})
     return out
@@ -504,9 +593,41 @@ def rpm_source_name(srpm: str | None, fallback: str) -> str:
     return fallback
 
 
+def _open_rpmdb_hardened(path: Path) -> sqlite3.Connection:
+    """Open an untrusted rpmdb.sqlite read-only with SQLite's defensive settings."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        conn.execute("PRAGMA trusted_schema=OFF")
+        setconfig = getattr(conn, "setconfig", None)       # Python 3.12+
+        if setconfig is not None and hasattr(sqlite3, "SQLITE_DBCONFIG_DEFENSIVE"):
+            setconfig(sqlite3.SQLITE_DBCONFIG_DEFENSIVE, True)
+        deadline = time.monotonic() + RPM_TIME_BUDGET
+        left = [RPM_VM_BUDGET // 1000]
+
+        def budget() -> int:
+            left[0] -= 1
+            return 1 if left[0] < 0 or time.monotonic() > deadline else 0   # non-zero aborts the query
+
+        conn.set_progress_handler(budget, 1000)
+        schema = conn.execute("SELECT type, name FROM sqlite_master").fetchall()
+    except sqlite3.Error:
+        conn.close()
+        raise
+    # A genuine rpmdb has the real table `Packages` and no views/triggers; a view named `Packages`
+    # (e.g. a recursive CTE) is a denial-of-service vector.
+    if any(t in ("view", "trigger") for t, _ in schema) or ("table", "Packages") not in schema:
+        conn.close()
+        raise sqlite3.DatabaseError("rpmdb.sqlite has no plain `Packages` table (or contains views/triggers)")
+    return conn
+
+
 def parse_rpmdb_sqlite(path: str | Path) -> list[dict]:
     """Packages of an rpmdb.sqlite. The db (and its -wal) is copied to a temp dir first so that
-    it can be opened read-only without touching the source and with the WAL replayed."""
+    it can be opened read-only without touching the source and with the WAL replayed.
+
+    The file is untrusted: opened defensively (trusted_schema off, DEFENSIVE where available), only
+    a real `Packages` table is read, with a VM-instruction/time budget, a row cap and a per-blob cap.
+    """
     path = Path(path)
     with tempfile.TemporaryDirectory(prefix="secmonk-rpm-") as td:
         dst = Path(td) / "rpmdb.sqlite"
@@ -514,9 +635,15 @@ def parse_rpmdb_sqlite(path: str | Path) -> list[dict]:
         wal = Path(str(path) + "-wal")
         if wal.is_file() and wal.stat().st_size > 0:
             shutil.copyfile(wal, Path(td) / "rpmdb.sqlite-wal")
-        conn = sqlite3.connect(f"file:{dst}?mode=ro", uri=True)
+        conn = _open_rpmdb_hardened(dst)
         try:
-            rows = conn.execute("SELECT hnum, blob FROM Packages ORDER BY hnum").fetchall()
+            rows = []
+            cur = conn.execute("SELECT hnum, CASE WHEN length(blob) <= ? THEN blob END FROM Packages "
+                               "ORDER BY hnum", (MAX_RPM_BLOB,))
+            while batch := cur.fetchmany(1000):
+                rows.extend(r for r in batch if r[1] is not None)
+                if len(rows) >= MAX_RPM_ROWS:
+                    break
         finally:
             conn.close()
     out = []
@@ -603,15 +730,62 @@ def detect_os(view: FsView) -> dict[str, str]:
     return {}
 
 
-def distro_ecosystem(osr: dict[str, str]) -> str | None:
+UBUNTU_CODENAMES = {
+    "trusty": "14.04", "xenial": "16.04", "bionic": "18.04", "focal": "20.04", "jammy": "22.04",
+    "kinetic": "22.10", "lunar": "23.04", "mantic": "23.10", "noble": "24.04", "oracular": "24.10",
+    "plucky": "25.04", "questing": "25.10", "resolute": "26.04",
+}
+DEBIAN_CODENAMES = {
+    "jessie": "8", "stretch": "9", "buster": "10", "bullseye": "11", "bookworm": "12",
+    "trixie": "13", "forky": "14", "duke": "15",
+}
+
+
+def _debian_version_of(text: str | None) -> str | None:
+    """Debian major release from /etc/debian_version ('12.5', 'bookworm/sid')."""
+    t = (text or "").strip().lower()
+    if not t:
+        return None
+    if re.fullmatch(r"\d+(\.\d+)*", t):
+        return t.split(".")[0]
+    return DEBIAN_CODENAMES.get(re.split(r"[/\s]", t)[0])
+
+
+def _parent_release(like: str, osr: dict[str, str], debian_version: str | None) -> str | None:
+    """Release of the parent distro of a derivative (Kali, Mint, ...), if the image says which one."""
+    if like == "ubuntu":
+        return UBUNTU_CODENAMES.get(osr.get("UBUNTU_CODENAME", "").lower())
+    if like == "debian":
+        return DEBIAN_CODENAMES.get(osr.get("DEBIAN_CODENAME", "").lower()) or _debian_version_of(debian_version)
+    return None
+
+
+def distro_ecosystem(osr: dict[str, str], debian_version: str | None = None,
+                     warnings: list[str] | None = None) -> str | None:
+    """OSV ecosystem for an os-release. A derivative's own VERSION_ID (Kali 2024.1, Mint 21.3) says
+    nothing about its parent, so for ID_LIKE matches the parent release is derived from
+    UBUNTU_CODENAME / DEBIAN_CODENAME / etc/debian_version; when that is unknown only the bare base
+    ecosystem ('Debian') is returned, with a warning."""
     vid = osr.get("VERSION_ID")
     eco = purls.osv_distro_ecosystem(osr.get("ID", ""), vid)
     if eco:
         return eco
+    first_bare: tuple[str, str] | None = None
     for like in osr.get("ID_LIKE", "").split():
-        eco = purls.osv_distro_ecosystem(like, vid)
-        if eco:
-            return eco
+        bare = purls.osv_distro_ecosystem(like, None)
+        if not bare:
+            continue
+        rel = _parent_release(like, osr, debian_version)
+        if rel:
+            eco = purls.osv_distro_ecosystem(like, rel)
+            if eco:
+                return eco
+        first_bare = first_bare or (like, bare)
+    if first_bare:
+        if warnings is not None:
+            warnings.append(f"{osr.get('ID')} is derived from {first_bare[0]} but its release could not be "
+                            f"determined; matching against all {first_bare[1]} advisories (less precise)")
+        return first_bare[1]
     return None
 
 
@@ -645,7 +819,11 @@ def collect_from_view(view: FsView, asset: Asset, warnings: list[str] | None = N
         comps.setdefault(c.key, c)
 
     osr = detect_os(view)
-    ecosystem = distro_ecosystem(osr) if osr else None
+    ecosystem = None
+    if osr:
+        needs_dv = not purls.osv_distro_ecosystem(osr.get("ID", ""), osr.get("VERSION_ID")) \
+            and "debian" in osr.get("ID_LIKE", "").split()
+        ecosystem = distro_ecosystem(osr, view.read_text("etc/debian_version", 256) if needs_dv else None, warn)
     ns_id = osr.get("ID") or ""
     qual = _distro_qualifier(osr)
     if osr:
@@ -676,7 +854,8 @@ def collect_from_view(view: FsView, asset: Asset, warnings: list[str] | None = N
                 purl=purls.build("deb", p["name"], p["version"], namespace=ns_id or "debian", qualifiers=q),
                 vendor=ns_id or None, source_path=src,
                 meta={"pkg_type": "deb", "arch": p["arch"], "source_package": p["source"],
-                      "source_version": p["source_version"], "maintainer": p["maintainer"]}))
+                      "source_version": p["source_version"], "maintainer": p["maintainer"],
+                      **({"dpkg_state": p["state"]} if p["state"] != "installed" else {})}))
 
     # ---- apk
     t = view.read_text("lib/apk/db/installed", MAX_FILE_BYTES)
@@ -768,12 +947,15 @@ def lang_components(view: FsView, warn: list[str], binaries: bool = True) -> lis
         warn.extend(view.lang.warnings)
         if view.lang.truncated:
             warn.append("language dependency file limit reached")
+            view.truncated = True
         return view.lang.components()
     if isinstance(view, DirView):
         from .lang.walk import WalkLimits, walk_dir
 
         res = walk_dir(view.root, limits=WalkLimits(binaries=binaries), rootfs=True, path_prefix="/")
         warn.extend(res.warnings)
+        if res.truncated:
+            view.truncated = True
         return res.components
     return []
 
@@ -802,5 +984,8 @@ class RootfsCollector(Collector):
                       meta={"path": str(view.root)})
         warnings: list[str] = []
         comps = collect_from_view(view, asset, warnings)
-        return Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)
+        inv = Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)
+        if view.truncated:
+            inv.mark_partial("file/count limits reached while walking the tree")
+        return inv
 

@@ -23,16 +23,26 @@ import re
 import xml.etree.ElementTree as ET
 
 from ...models import Component
-from .base import EV_INSTALLED, EV_LOCKFILE, EV_MANIFEST, LangParser, basename, dedupe, library, register
+from .base import (
+    EV_INSTALLED,
+    EV_LOCKFILE,
+    EV_MANIFEST,
+    LangParser,
+    basename,
+    dedupe,
+    push,
+    register,
+    safe_library,
+)
 
 _RUNTIME_PACK = re.compile(
     r"^Microsoft\.(NETCore|AspNetCore|WindowsDesktop)\.App\.Runtime\.[\w.\-]+$", re.IGNORECASE)
 
 
-def _nuget(name: str, version: str, path: str, evidence: str, parser: str, **meta) -> Component:
+def _nuget(name: str, version: str, path: str, evidence: str, parser: str, **meta) -> Component | None:
     if _RUNTIME_PACK.match(name):
         meta["runtime"] = True
-    return library("nuget", name, version, path=path, evidence=evidence, parser=parser, **meta)
+    return safe_library("nuget", name, version, path=path, evidence=evidence, parser=parser, **meta)
 
 
 def _split_lib(key: str) -> tuple[str, str] | None:
@@ -74,7 +84,7 @@ def parse_deps_json(path: str, data: bytes) -> list[Component]:
             typ = "package"
         if typ != "package":          # project / reference / referenceassembly -> not a NuGet package
             continue
-        out.append(_nuget(name, ver, path, EV_INSTALLED, "dotnet-deps-json", runtime_target=rt, tfm=tfm))
+        push(out, _nuget(name, ver, path, EV_INSTALLED, "dotnet-deps-json", runtime_target=rt, tfm=tfm))
     return dedupe(out)
 
 
@@ -93,6 +103,8 @@ def parse_packages_lock(path: str, data: bytes) -> list[Component]:
             if typ == "Project" or not ver:
                 continue
             c = _nuget(name, ver, path, EV_LOCKFILE, "dotnet-packages-lock", direct=(typ == "Direct"), tfms=[tfm])
+            if c is None:
+                continue
             prev = merged.get((name.lower(), ver))
             if prev:
                 prev.meta["tfms"].append(tfm)
@@ -118,7 +130,7 @@ def parse_project_assets(path: str, data: bytes) -> list[Component]:
         split = _split_lib(key)
         if not split or info.get("type") != "package":
             continue
-        out.append(_nuget(split[0], split[1], path, EV_LOCKFILE, "dotnet-project-assets",
+        push(out, _nuget(split[0], split[1], path, EV_LOCKFILE, "dotnet-project-assets",
                           direct=split[0].lower() in direct))
     return dedupe(out)
 
@@ -134,7 +146,7 @@ def parse_packages_config(path: str, data: bytes) -> list[Component]:
     for p in root.iter("package"):
         pid, ver = p.get("id"), p.get("version")
         if pid and ver:
-            out.append(_nuget(pid, ver, path, EV_LOCKFILE, "dotnet-packages-config",
+            push(out, _nuget(pid, ver, path, EV_LOCKFILE, "dotnet-packages-config",
                               tfm=p.get("targetFramework"),
                               development=True if p.get("developmentDependency", "").lower() == "true" else None))
     return dedupe(out)
@@ -153,7 +165,7 @@ def _msbuild_props(root: ET.Element) -> dict[str, str]:
     for pg in root.iter("PropertyGroup"):
         for p in pg:
             if isinstance(p.tag, str) and p.text and p.text.strip():
-                props.setdefault(p.tag, p.text.strip())
+                props.setdefault(p.tag.lower(), p.text.strip())   # MSBuild property names are case-insensitive
     return props
 
 
@@ -163,7 +175,7 @@ def _exact_version(v: str | None, props: dict[str, str]) -> str | None:
         return None
     v = v.strip()
     for _ in range(5):
-        new = _PROP.sub(lambda m: props.get(m[1], m[0]), v)
+        new = _PROP.sub(lambda m: props.get(m[1].lower(), m[0]), v)
         if new == v:
             break
         v = new
@@ -179,6 +191,7 @@ def _exact_version(v: str | None, props: dict[str, str]) -> str | None:
 def _package_items(root: ET.Element, tags: tuple[str, ...], path: str, parser: str, **extra) -> list[Component]:
     props = _msbuild_props(root)
     out = []
+    parent_of = {c: p for p in root.iter() for c in p}
     for el in root.iter():
         if el.tag not in tags:
             continue
@@ -194,9 +207,16 @@ def _package_items(root: ET.Element, tags: tuple[str, ...], path: str, parser: s
         ver = _exact_version(ver, props)
         if not ver:
             continue
+        conds = [c for c in (el.get("Condition"), (parent_of.get(el).get("Condition")
+                                                    if parent_of.get(el) is not None else None)) if c]
+        meta = dict(extra)
+        if not el.get("Include"):               # `Update=` only modifies an item declared elsewhere
+            meta["declared_only"] = True
+        if conds:
+            meta["condition"] = " && ".join(conds)
         private = el.get("PrivateAssets") or next((c.text for c in el if c.tag == "PrivateAssets" and c.text), "")
-        out.append(_nuget(name.strip(), ver, path, EV_MANIFEST, parser,
-                          development=True if private.strip().lower() == "all" else None, **extra))
+        push(out, _nuget(name.strip(), ver, path, EV_MANIFEST, parser,
+                          development=True if private.strip().lower() == "all" else None, **meta))
     return dedupe(out)
 
 

@@ -166,3 +166,8 @@ curl -sO https://security-tracker.debian.org/tracker/data/json && \
 Check: the key set of a `releases` entry (field names above), the `urgency` values with `*`,
 codenames present, `nodsa`/`nodsa_reason` combinations, and that the JSON and repo imports agree
 on the rows both state (the repo import is a subset).
+
+## Implementation notes (review fixes)
+
+- Replace guard: a snapshot with 0 rows or fewer than 50% of the stored `debian-tracker` rows is refused (status `error`, table untouched) unless `opts.full`. `--limit` upserts the subset without replacing the table (status `partial`, no cursor).
+- Decompression (`.gz`/`.bz2`/`.xz`) is incremental with a 2 GiB output cap (`MAX_DECOMPRESSED`); truncated/corrupt archives and non-object entries are reported as a `SyncResult` error instead of raising. The download is capped at 512 MiB.

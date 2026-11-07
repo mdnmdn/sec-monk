@@ -11,25 +11,30 @@ from __future__ import annotations
 
 import re
 import sqlite3
-import zlib
 from collections.abc import Iterable, Iterator
-from itertools import batched
+from itertools import batched, islice
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 from ..db import executemany, transaction
-from .base import Source, SyncOptions, SyncResult, http_client, register
+from .base import Source, SyncOptions, SyncResult, decompress_stream, http_client, register
 
 BULK_URL = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz"
 API_URL = "https://api.first.org/data/v1/epss"
 API_BATCH = 100
 CHUNK = 5000
+MAX_DECOMPRESSED = 1024**3   # decompression-bomb cap for the bulk file
+MAX_LINE = 64 * 1024         # longest CSV line accepted
 _SCORE_DATE = re.compile(r"score_date:(\d{4}-\d{2}-\d{2})")
 _UPSERT = "INSERT OR REPLACE INTO epss(cve_id, score, percentile, date, source) VALUES (?,?,?,?,'epss')"
 
 Row = tuple[str, float, float, str | None]
+
+
+class _Refused(Exception):
+    """The imported file failed the sanity guard; the surrounding transaction is rolled back."""
 
 
 def _file_chunks(path: Path) -> Iterator[bytes]:
@@ -41,10 +46,8 @@ def _decompressed(chunks: Iterable[bytes], gz: bool) -> Iterator[bytes]:
     if not gz:
         yield from chunks
         return
-    dec = zlib.decompressobj(zlib.MAX_WBITS | 16)  # gzip container
-    for chunk in chunks:
-        yield dec.decompress(chunk)
-    yield dec.flush()
+    # raises DecompressError (a ValueError) on truncated/corrupt gzip or output above the cap
+    yield from decompress_stream(chunks, "gz", MAX_DECOMPRESSED)
 
 
 def _iter_lines(chunks: Iterable[bytes], gz: bool) -> Iterator[str]:
@@ -52,6 +55,8 @@ def _iter_lines(chunks: Iterable[bytes], gz: bool) -> Iterator[str]:
     tail = b""
     for data in _decompressed(chunks, gz):
         *lines, tail = (tail + data).split(b"\n")
+        if len(tail) > MAX_LINE or any(len(x) > MAX_LINE for x in lines):
+            raise ValueError(f"EPSS line longer than {MAX_LINE} bytes")
         for line in lines:
             yield line.decode("utf-8")
     if tail:
@@ -103,29 +108,55 @@ class EpssSource(Source):
     description = "FIRST EPSS exploitation probability scores (daily bulk or API lookup)"
 
     def sync(self, conn: sqlite3.Connection, opts: SyncOptions) -> SyncResult:
+        limited = opts.limit is not None
         try:
             with transaction(conn):
                 if opts.ids:
                     count, cursor, where = self._sync_api(conn, opts)
-                elif opts.path:
-                    path = Path(opts.path)
-                    lines = _iter_lines(_file_chunks(path), gz=path.name.endswith(".gz"))
-                    count, cursor = _insert_bulk(conn, _parse_rows(lines))
-                    where = f"file {path}"
                 else:
-                    with http_client(timeout=120.0) as client, client.stream("GET", BULK_URL) as resp:
-                        resp.raise_for_status()
-                        lines = _iter_lines(resp.iter_raw(), gz=True)
-                        count, cursor = _insert_bulk(conn, _parse_rows(lines))
-                    where = BULK_URL
-        except (httpx.HTTPError, OSError, ValueError) as e:
-            return SyncResult(self.name, status="error", message=str(e))
+                    if opts.path:
+                        path = Path(opts.path)
+                        stream: Iterable[bytes] = _file_chunks(path)
+                        gz, where = path.name.endswith(".gz"), f"file {path}"
+                        client_cm = None
+                    else:
+                        client_cm = http_client(timeout=120.0)
+                        gz, where = True, BULK_URL
+                    try:
+                        if client_cm is None:
+                            count, cursor = self._bulk(conn, stream, gz, opts)
+                        else:
+                            with client_cm as client, client.stream("GET", BULK_URL) as resp:
+                                resp.raise_for_status()
+                                count, cursor = self._bulk(conn, resp.iter_raw(), gz, opts)
+                    except _Refused as r:
+                        raise ValueError(str(r)) from r
+        except (httpx.HTTPError, OSError, ValueError) as e:   # DecompressError is a ValueError
+            return SyncResult(self.name, status="error", message=f"{type(e).__name__}: {e}")
 
-        return SyncResult(self.name, records=count, status="ok", cursor=cursor,
-                          message=f"{count} scores from {where}")
+        return SyncResult(self.name, records=count, status="partial" if limited else "ok",
+                          cursor=None if limited else cursor, message=f"{count} scores from {where}")
+
+    def _bulk(self, conn: sqlite3.Connection, chunks: Iterable[bytes], gz: bool,
+              opts: SyncOptions) -> tuple[int, str | None]:
+        rows: Iterable[Row] = _parse_rows(_iter_lines(chunks, gz))
+        if opts.limit is not None:
+            rows = islice(rows, opts.limit)
+        existing = conn.execute("SELECT COUNT(*) FROM epss WHERE source='epss'").fetchone()[0]
+        count, cursor = _insert_bulk(conn, rows)
+        if opts.limit is None:
+            # a plausible daily file holds ~all CVEs: an empty/tiny one is a broken download
+            if count == 0:
+                raise _Refused("EPSS file has no rows; refusing")
+            if not opts.full and existing and count * 2 < existing:
+                raise _Refused(f"EPSS file has only {count} rows (stored: {existing}, < 50%); "
+                               "refusing (use --full to force)")
+        return count, cursor
 
     def _sync_api(self, conn: sqlite3.Connection, opts: SyncOptions) -> tuple[int, str | None, str]:
         ids = [i.strip().upper() for i in opts.ids if i.strip()]
+        if opts.limit is not None:
+            ids = ids[:opts.limit]
         count = 0
         cursor: str | None = None
         with http_client(timeout=60.0) as client:

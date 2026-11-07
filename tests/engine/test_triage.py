@@ -112,7 +112,7 @@ def test_debian_tracker_source_feeds_matcher(conn, fixtures):
     res = DebianTrackerSource().sync(conn, SyncOptions(path=fixtures / "debian-tracker" / "tracker-sample.json"))
     assert res.status == "ok"
     upsert_vulnerability(conn, "osv", "DEBIAN-CVE-2019-1010022", summary="glibc", cvss_score=9.8)
-    conn.execute("INSERT INTO alias VALUES ('DEBIAN-CVE-2019-1010022','CVE-2019-1010022','osv')")
+    conn.execute("INSERT INTO alias(vuln_id, alias, source) VALUES ('DEBIAN-CVE-2019-1010022','CVE-2019-1010022','osv')")
     add_affected(conn, "osv", "DEBIAN-CVE-2019-1010022", ecosystem="Debian:12", package="glibc",
                  range_type="ECOSYSTEM", events=[{"introduced": "0"}], extra={"urgency": "not yet assigned"})
     v = "2.36-9+deb12u7"
@@ -122,3 +122,20 @@ def test_debian_tracker_source_feeds_matcher(conn, fixtures):
     match_asset(conn, "t:2")
     f = conn.execute("SELECT * FROM finding WHERE asset_id='t:2'").fetchone()
     assert f["triage"] == "unimportant" and f["triage_source"] == "debian-tracker" and f["priority"] == "P4"
+
+
+def test_per_asset_paths_and_meta_are_not_shared(conn):
+    """Two copies on one asset keep both paths; a second asset does not overwrite the first's meta."""
+    from secmonk.engine.inventory import current_components
+    from secmonk.models import CAT_APPLICATION
+
+    def app(path, users):
+        return Component("Foo", "1.0", CAT_APPLICATION, source_path=path, meta={"users": users})
+
+    save_inventory(conn, Inventory(Asset("a:1", "desktop", "a"), "test",
+                                   [app("/Applications/Foo.app", ["alice"]), app("/Users/bob/Applications/Foo.app", ["bob"])]))
+    save_inventory(conn, Inventory(Asset("a:2", "desktop", "b"), "test", [app("/Applications/Foo.app", ["carol"])]))
+    row = current_components(conn, "a:1")[0]
+    assert json.loads(row["paths"]) == ["/Applications/Foo.app", "/Users/bob/Applications/Foo.app"]
+    assert json.loads(row["asset_meta"])["users"] == ["alice"]
+    assert json.loads(current_components(conn, "a:2")[0]["asset_meta"])["users"] == ["carol"]

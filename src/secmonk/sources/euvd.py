@@ -6,7 +6,8 @@ pages `/vulnerabilities`. `opts.path` imports a local JSON file, either a bare l
 `items` or `content`. The endpoint shapes and product fields come from the docs and a synthetic
 fixture, not from a live response, so they are handled defensively.
 
-EUVD never overwrites EPSS: it inserts with INSERT OR IGNORE, so FIRST data stays first.
+EUVD never overwrites FIRST EPSS rows (source='epss'); rows it wrote itself (source='euvd') are refreshed.
+`opts.limit` caps the number of records stored (and the extra `/vulnerabilities` paging).
 """
 
 from __future__ import annotations
@@ -120,9 +121,11 @@ def _store(conn: sqlite3.Connection, rec: dict[str, Any], exploited_view: bool) 
         )
     if epss is not None:
         day = (modified or "")[:10] or None
-        for cve in cves:  # keep first data: never overwrite an existing (FIRST) score
+        for cve in cves:  # never overwrite a FIRST score; refresh our own euvd-sourced one
             conn.execute(
-                "INSERT OR IGNORE INTO epss(cve_id, score, percentile, date, source) VALUES (?,?,NULL,?,'euvd')",
+                """INSERT INTO epss(cve_id, score, percentile, date, source) VALUES (?,?,NULL,?,'euvd')
+                   ON CONFLICT(cve_id) DO UPDATE SET score=excluded.score, date=excluded.date
+                   WHERE epss.source='euvd'""",
                 (cve, float(epss), day),
             )
     return True
@@ -137,7 +140,7 @@ class EuvdSource(Source):
         try:
             if opts.path:
                 doc = json.loads(Path(opts.path).read_text(encoding="utf-8"))
-                batches = [("other", _items(doc))]
+                batches = [("other", _items(doc)[:opts.limit] if opts.limit else _items(doc))]
                 origin = f"from file {opts.path}"
             else:
                 batches = _load_remote(opts)

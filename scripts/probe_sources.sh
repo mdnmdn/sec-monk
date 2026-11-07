@@ -6,7 +6,7 @@
 #   TIMEOUT=20 scripts/probe_sources.sh   per-request timeout in seconds (default 15)
 # Output: "<code> <group> <label> <url>"; code 000 = no connection (DNS/proxy/firewall), 403 from a
 # sandbox proxy = blocked by egress policy. Honours HTTPS_PROXY / CA bundle settings of the shell.
-set -u
+set -u   # no -e: a failed curl must not abort the run
 TIMEOUT="${TIMEOUT:-15}"
 ONLY="${1:-all}"
 UA="secmonk-probe/1 (read-only)"
@@ -75,9 +75,9 @@ printf '%s\n' "$ENDPOINTS" | while IFS='|' read -r group method label url; do
   [ -z "${url:-}" ] && continue
   [ "$ONLY" != all ] && [ "$ONLY" != "$group" ] && continue
   if [ "$method" = R ]; then
-    code=$(curl -sS -o /dev/null -w '%{http_code}' -m "$TIMEOUT" -r 0-0 -A "$UA" "$url" 2>/dev/null)
+    code=$(curl -sS -o /dev/null -w '%{http_code}' -m "$TIMEOUT" -r 0-0 -A "$UA" "$url" 2>/dev/null) || code=000
   else
-    code=$(curl -sS -o /dev/null -w '%{http_code}' -m "$TIMEOUT" -I -A "$UA" "$url" 2>/dev/null)
+    code=$(curl -sS -o /dev/null -w '%{http_code}' -m "$TIMEOUT" -I -A "$UA" "$url" 2>/dev/null) || code=000
   fi
   printf '%s %s %s %s\n' "${code:-000}" "$group" "$label" "$url"
 done

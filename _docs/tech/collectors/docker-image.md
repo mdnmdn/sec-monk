@@ -151,3 +151,20 @@ Tests: `tests/collectors/test_docker.py` (tarball, OCI dir, whiteouts, mocked re
 - Asset: `id = image:<registry>/<repo>@<manifest digest>` (registry pull; `docker.io/library/alpine`), for archives the manifest digest from `index.json` when exactly one manifest, else the sha256 of the canonical config JSON (image id); `type=container-image`; `platform` from the config (`linux/arm64/v8`); meta `ref, digest, config_digest, layers, labels, created, user, exposed_ports, env_names, entrypoint, cmd`. **Only env variable *names* are stored** (values often contain secrets).
 - Smoke test 2026-11-07 (real registries): `alpine:3.20` -> 15 components (OS + 14 apk); `mirror.gcr.io/library/debian:12-slim` -> 89 (OS + 88 dpkg); `mirror.gcr.io/library/python:3.12-slim` -> OS + 87 dpkg + `pip 25.0.1` (pypi).
 - Not done: layer provenance (`history` -> component), SBOM attestations, credential helpers, `--platform` autodetect from host arch, dedupe of python/npm files owned by OS packages.
+
+
+## Review fixes (2026-11)
+
+- **Asset id** is `image:<registry>/<repository>@<manifest digest>` for registry pulls *and* archives (RepoTags are parsed with `parse_reference`, so
+  `localhost:5000/team/app:1.0` keeps its registry); archives with no usable reference (`[]`, `<none>:<none>`, bare OCI tag `latest`) get
+  `image:@<digest>`. The archive file name is never part of the id.
+- **Legacy `docker save`** layouts where `<id>/layer.tar` is a symlink/hardlink to another layer are resolved inside the archive.
+- **Digests are validated** (`sha256:[a-f0-9]{64}` / `sha512:[a-f0-9]{128}`) before any URL or path use (layers, config, index entries, OCI blobs); the blob
+  cache path is checked to stay under the cache root (`paths.cache_subdir("blobs")`), downloads go to a fresh temp file, nothing outside our
+  own temp dir is unlinked, and a **cache hit is re-verified** (a corrupt/planted blob is replaced).
+- **Size caps**: manifest/index 4 MB, config 32 MB, error/token bodies 64 KB (streamed, `Content-Length` pre-checked); archive members are size-checked before reading.
+- **Auth**: Bearer realms must be `https` (`http` only for localhost registries); credentials are only sent to the original scheme+host:port; an https->http redirect is refused. `[::1]:5000` counts as local.
+- **Reference resolution**: a local *directory* named like an image (`nginx`) that is not an OCI layout falls back to the registry reference (with a warning); write `./nginx` to force the directory. `-o tag=` is passed to archives (warning when not found).
+- **Partial**: unreadable/unsupported/foreign/oversized layers and truncation set `Inventory.partial`.
+- `cmd`/`entrypoint` args that look secret (`--password x`, `TOKEN=...`, URLs with userinfo) and secret-looking label keys are stored as `<redacted>`.
+- A file that is not a tar/index raises `ValueError` ("not a readable image archive"), not a traceback.

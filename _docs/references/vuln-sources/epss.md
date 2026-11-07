@@ -110,6 +110,7 @@ Primary key: `(cve_id, date)`. Keep history for trend views. Latest per CVE is a
 ## Implementation notes
 
 - Schema: `epss.cve_id` is the only primary key in `db.py`, not `(cve_id, date)` as this doc says. The import keeps the latest score per CVE and no history. Trend views need a schema change.
-- Precedence: a bulk FIRST import uses `INSERT OR REPLACE` (authoritative). EUVD-derived rows use `INSERT OR IGNORE`, so they never overwrite FIRST data.
+- Precedence: a bulk FIRST import uses `INSERT OR REPLACE` (authoritative). EUVD-derived rows (`source='euvd'`) never overwrite FIRST rows but do refresh their own earlier euvd rows (upsert `WHERE epss.source='euvd'`).
 - Cursor: the `score_date` from the CSV comment line (`YYYY-MM-DD`).
 - API mode (`opts.ids`) sends batches of 100 with no pause between them. Values are parsed from strings to floats.
+- Integrity (review S15/SEC18): gzip is decompressed incrementally with a 1 GiB cap (`epss.MAX_DECOMPRESSED`); a truncated/corrupt stream (no end-of-stream marker) is an `error` and the whole import rolls back; lines over 64 KiB are refused. A bulk file with 0 rows or fewer than 50% of the stored `source='epss'` rows is refused unless `opts.full`. `--limit` imports only the first N rows (status `partial`, no cursor).

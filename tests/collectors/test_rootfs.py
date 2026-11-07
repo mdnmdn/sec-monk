@@ -127,7 +127,8 @@ def test_rpm_legacy_bdb_warns(tmp_path: Path):
 
 
 def test_id_like_fallback():
-    assert rf.distro_ecosystem({"ID": "linuxmint", "ID_LIKE": "ubuntu debian", "VERSION_ID": "22.04"}) == "Ubuntu:22.04"
+    assert rf.distro_ecosystem({"ID": "linuxmint", "ID_LIKE": "ubuntu debian", "VERSION_ID": "21.3",
+                              "UBUNTU_CODENAME": "jammy"}) == "Ubuntu:22.04"
     assert rf.distro_ecosystem({"ID": "weird"}) is None
 
 

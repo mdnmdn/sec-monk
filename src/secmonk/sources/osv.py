@@ -10,24 +10,27 @@ import json
 import math
 import os
 import re
+import secrets
 import sqlite3
 import zipfile
+import zlib
 from collections.abc import Iterable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from ..db import get_sync_cursor, set_sync_state
+from .. import paths
+from ..db import set_sync_state
 from ..engine import purl as purl_mod
 from .base import (
-    CACHE_DIR,
     Source,
     SyncOptions,
     SyncResult,
     add_affected,
     add_alias,
     http_client,
+    normalize_severity,
     register,
     replace_children,
     severity_from_score,
@@ -45,11 +48,25 @@ DELTA_MAX_IDS = 5000
 COMMIT_EVERY = 2000
 LOG_EVERY = 5000
 
-STORE_RAW = True  # override with env SECMONK_OSV_STORE_RAW=0
+MAX_ZIP_BYTES = 4 * 1024**3   # download cap per all.zip (env SECMONK_OSV_MAX_ZIP_MB overrides)
+
+# Raw JSON dominates the DB size (details are stored twice) and is only needed to re-normalize
+# without re-downloading: off by default, enable with env SECMONK_OSV_STORE_RAW=1.
+STORE_RAW = False
+
+# conservative score for a CVSS v4-only record, derived from its severity label (no v4 calculator)
+DERIVED_SCORE = {"LOW": 3.0, "MEDIUM": 5.5, "HIGH": 8.0, "CRITICAL": 9.5}
 
 
 def _store_raw_enabled() -> bool:
-    return STORE_RAW and os.environ.get("SECMONK_OSV_STORE_RAW", "1").strip().lower() not in ("0", "false", "no")
+    return STORE_RAW or os.environ.get("SECMONK_OSV_STORE_RAW", "0").strip().lower() in ("1", "true", "yes")
+
+
+def _max_zip_bytes() -> int:
+    try:
+        return int(os.environ["SECMONK_OSV_MAX_ZIP_MB"]) * 1024 * 1024
+    except (KeyError, ValueError):
+        return MAX_ZIP_BYTES
 
 
 # --------------------------------------------------------------------------- CVSS 3.x
@@ -134,8 +151,12 @@ def _strip_purl(p: str | None) -> str | None:
     return p.split("?", 1)[0].split("#", 1)[0]
 
 
-def _cvss(severity: list[dict] | None) -> tuple[float | None, str | None, str | None, str | None]:
-    """-> (score, vector, version, label_from_word)"""
+def _cvss(severity: list[dict] | None) -> tuple[float | None, str | None, str | None, str | None, str | None]:
+    """-> (score, vector, version, label_from_word, v4_vector_when_v3_chosen)
+
+    A v3 vector wins (we can compute its score; the v4 vector is then returned separately for
+    `extra`). A v4-only record keeps the v4 vector with score None: the caller derives a score
+    from the severity label."""
     v3 = v4 = word = None
     for s in severity or []:
         t, sc = s.get("type"), s.get("score")
@@ -148,10 +169,18 @@ def _cvss(severity: list[dict] | None) -> tuple[float | None, str | None, str | 
         elif t == "Ubuntu" and word is None:
             word = sc
     if v3:
-        return cvss3_score(v3), v3, v3.split("/")[0].split(":")[-1], word
+        return cvss3_score(v3), v3, v3.split("/")[0].split(":")[-1], word, v4
     if v4:
-        return None, v4, "4.0", word
-    return None, None, None, word
+        return None, v4, "4.0", word, None
+    return None, None, None, word, None
+
+
+def _ubuntu_variant(raw: Any) -> str | None:
+    """'Ubuntu:Pro:FIPS-updates:22.04:LTS' -> 'Pro:FIPS-updates' (None for plain releases)."""
+    if not isinstance(raw, str) or not raw.startswith("Ubuntu:"):
+        return None
+    parts = [p for p in raw.split(":")[1:] if p and not p[0].isdigit() and p != "LTS"]
+    return ":".join(parts) or None
 
 
 def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
@@ -171,11 +200,15 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
     summary = rec.get("summary")
     if not summary and details:
         summary = details.strip().split("\n", 1)[0][:300] or None
-    score, vector, cvss_ver, word = _cvss(rec.get("severity"))
+    score, vector, cvss_ver, word, v4_vector = _cvss(rec.get("severity"))
     label = dbs.get("severity") if isinstance(dbs.get("severity"), str) else None
-    label = (label or word or severity_from_score(score))
-    if label:
-        label = label.upper()
+    label = normalize_severity(label) or normalize_severity(word) or severity_from_score(score)
+    vuln_extra: dict[str, Any] = {}
+    if score is None and vector and label in DERIVED_SCORE:
+        score = DERIVED_SCORE[label]           # no CVSS v4 calculator: conservative label-based score
+        vuln_extra["score_derived"] = True
+    if v4_vector:
+        vuln_extra["cvss_v4_vector"] = v4_vector
     cwes = [c for c in (dbs.get("cwe_ids") or []) if isinstance(c, str)]
     if isinstance(dbs.get("cwe_ids"), str):
         cwes = [dbs["cwe_ids"]]
@@ -185,12 +218,14 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
         conn, "osv", rid, summary=summary, details=details, published=rec.get("published"),
         modified=modified, withdrawn=rec.get("withdrawn"), severity=label,
         cvss_score=score, cvss_vector=vector, cvss_version=cvss_ver, cwes=cwes,
-        extra={"source_db": src_db or rid.split("-", 1)[0], "references": refs},
+        extra={"source_db": src_db or rid.split("-", 1)[0], "references": refs, **vuln_extra},
     )
-    for key in ("aliases", "upstream"):
+    # `upstream` ids are the CVEs a downstream advisory (Ubuntu/Debian/...) derives from, NOT
+    # aliases: stored with kind='upstream' so the matcher does not merge them. `related` is ignored.
+    for key, kind in (("aliases", "alias"), ("upstream", "upstream")):
         for a in rec.get(key) or []:
             if isinstance(a, str):
-                add_alias(conn, "osv", rid, a)
+                add_alias(conn, "osv", rid, a, kind)
     if rec.get("withdrawn"):
         return True
 
@@ -205,12 +240,26 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
         espec = aff.get("ecosystem_specific") if isinstance(aff.get("ecosystem_specific"), dict) else {}
         binaries = [b.get("binary_name") for b in (espec.get("binaries") or [])
                     if isinstance(b, dict) and b.get("binary_name")]
+        custom = [r for r in (espec.get("custom_ranges") or []) if isinstance(r, dict) and r.get("events")]
+        if custom:
+            # Go: the SEMVER range is an open-ended `introduced: 0` placeholder and the real
+            # bounds live in custom_ranges. Ingest each custom range as its own row and drop the
+            # placeholder (it would flag every version as vulnerable).
+            ranges = [r for r in ranges if not (r.get("type") in ("ECOSYSTEM", "SEMVER")
+                                                and r.get("events") == [{"introduced": "0"}])]
+            ranges += [{**r, "type": r.get("type") if r.get("type") in ("ECOSYSTEM", "SEMVER", "GIT")
+                        else "ECOSYSTEM", "_custom": True} for r in custom]
+        variant = _ubuntu_variant(pkg.get("ecosystem"))
         has_eco_range = False
         for r in ranges:
             rt = r.get("type")
             if rt not in ("ECOSYSTEM", "SEMVER", "GIT"):
                 continue
             extra: dict[str, Any] = {}
+            if r.get("_custom"):
+                extra["custom_range"] = True
+            if variant:
+                extra["ecosystem_variant"] = variant
             if rt != "GIT":
                 has_eco_range = True
                 extra["raw_ecosystem"] = pkg.get("ecosystem")
@@ -227,6 +276,8 @@ def import_record(conn: sqlite3.Connection, rec: dict) -> bool:
         versions = [v for v in (aff.get("versions") or []) if isinstance(v, str)]
         if versions and not has_eco_range:
             extra = {"raw_ecosystem": pkg.get("ecosystem")}
+            if variant:
+                extra["ecosystem_variant"] = variant
             if binaries:
                 extra["binaries"] = binaries
             add_affected(conn, "osv", rid, ecosystem=eco, package=name, purl=purl,
@@ -289,8 +340,12 @@ def _iter_zip(path: Path, opts: SyncOptions) -> Iterator[dict]:
                 continue
             try:
                 with zf.open(info) as f:
-                    yield json.loads(f.read())
-            except (ValueError, zipfile.BadZipFile) as e:
+                    data = f.read(MAX_MEMBER_SIZE + 1)   # declared sizes can lie: cap the real read
+                if len(data) > MAX_MEMBER_SIZE:
+                    opts.log(f"osv: skipping oversized zip member {info.filename}")
+                    continue
+                yield json.loads(data)
+            except (ValueError, zipfile.BadZipFile, zlib.error) as e:
                 opts.log(f"osv: bad member {info.filename}: {e}")
 
 
@@ -314,27 +369,83 @@ def _import_iter(imp: _Importer, recs: Iterable[dict]) -> None:
         imp.add(rec)
 
 
+def _state(conn: sqlite3.Connection, key: str) -> tuple[str | None, str | None]:
+    row = conn.execute("SELECT status, cursor FROM source_sync WHERE source=?", (key,)).fetchone()
+    return (row["status"], row["cursor"]) if row else (None, None)
+
+
+def _safe_name(eco: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", eco)
+
+
+def _download_zip(client, eco: str, opts: SyncOptions) -> Path:
+    """Stream <Eco>/all.zip to a private temp file (O_EXCL|O_NOFOLLOW) in the user cache, then
+    atomically move it into place. Refuses downloads above the size cap."""
+    cache = paths.cache_subdir("osv")
+    dest = cache / f"{_safe_name(eco)}.zip"
+    tmp = cache / f".{_safe_name(eco)}.{secrets.token_hex(8)}.part"
+    cap = _max_zip_bytes()
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    fd = os.open(tmp, flags, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as f, client.stream("GET", f"{BUCKET}/{quote(eco)}/all.zip") as r:
+            r.raise_for_status()
+            declared = r.headers.get("content-length")
+            if declared and declared.isdigit() and int(declared) > cap:
+                raise ValueError(f"{eco}/all.zip is {declared} bytes, above the {cap} byte limit")
+            total = 0
+            for chunk in r.iter_bytes(1 << 20):
+                total += len(chunk)
+                if total > cap:
+                    raise ValueError(f"{eco}/all.zip exceeds the {cap} byte download limit")
+                f.write(chunk)
+        os.replace(tmp, dest)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return dest
+
+
 @register
 class OsvSource(Source):
     name = "osv"
     description = "OSV.dev bulk (package ecosystems + distro advisories)"
 
     def sync(self, conn: sqlite3.Connection, opts: SyncOptions) -> SyncResult:
+        """Never writes the main `osv` source_sync row (the CLI does, from the SyncResult);
+        per-ecosystem cursors live in `osv:<Eco>`. `records` = imported this run, `.total` = OSV records in the DB."""
         try:
             if opts.path:
-                return self._sync_path(conn, opts)
-            ecos = validate_ecosystems(list(opts.ecosystems) or list(DEFAULT_ECOSYSTEMS))
+                res = self._sync_path(conn, opts)
+            else:
+                ecos = validate_ecosystems(list(opts.ecosystems) or list(DEFAULT_ECOSYSTEMS))
+                res = self._sync_all(conn, opts, ecos)
         except ValueError as e:
             return SyncResult(self.name, status="error", message=str(e))
-        total, errors = 0, []
+        if res.status != "error":
+            total = conn.execute("SELECT COUNT(*) FROM vulnerability WHERE source='osv'").fetchone()[0]
+            res.total = total
+        return res
+
+    def _sync_all(self, conn: sqlite3.Connection, opts: SyncOptions, ecos: list[str]) -> SyncResult:
+        total, errors, ok, partial = 0, [], 0, False
         for eco in ecos:
             try:
-                total += self._sync_ecosystem(conn, opts, eco)
+                n, eco_partial = self._sync_ecosystem(conn, opts, eco)
+                total += n
+                ok += 1
+                partial = partial or eco_partial
             except Exception as e:  # noqa: BLE001
                 conn.commit()
                 errors.append(f"{eco}: {e}")
                 opts.log(f"osv {eco}: failed: {e}")
-        status = "ok" if not errors else ("partial" if total else "error")
+        if errors and not ok:
+            status = "error"
+        else:
+            status = "partial" if (errors or partial) else "ok"
         return SyncResult(self.name, records=total, status=status,
                           message="; ".join(errors) or f"{len(ecos)} ecosystems")
 
@@ -350,13 +461,15 @@ class OsvSource(Source):
         else:
             _import_iter(imp, _iter_json_files([p], opts))
         imp.finish()
-        set_sync_state(conn, "osv", status="ok", records=imp.count, message=f"from {p}")
-        return SyncResult(self.name, records=imp.count, cursor=imp.max_modified_str)
+        return SyncResult(self.name, records=imp.count, cursor=imp.max_modified_str,
+                          message=f"from {p}")
 
     # ---- download
-    def _sync_ecosystem(self, conn: sqlite3.Connection, opts: SyncOptions, eco: str) -> int:
+    def _sync_ecosystem(self, conn: sqlite3.Connection, opts: SyncOptions, eco: str) -> tuple[int, bool]:
         key = f"osv:{eco}"
-        cursor = None if opts.full else get_sync_cursor(conn, key)
+        status, cursor = _state(conn, key)
+        # the delta path needs a trustworthy cursor: only after a complete (status ok) sync
+        cursor = None if (opts.full or status != "ok") else cursor
         enc = quote(eco)
         with http_client(timeout=120.0) as client:
             if cursor:
@@ -366,39 +479,59 @@ class OsvSource(Source):
                 if len(changed) <= DELTA_MAX_IDS:
                     return self._delta(conn, opts, client, eco, key, cursor, changed)
                 opts.log(f"osv {eco}: {len(changed)} changes since cursor, falling back to full zip")
-            return self._full(conn, opts, client, eco, key)
+            return self._full(conn, opts, client, eco, key), bool(opts.limit)
 
     def _full(self, conn, opts, client, eco: str, key: str) -> int:
-        dest = CACHE_DIR / "osv" / f"{eco.replace(' ', '_')}.zip"
-        dest.parent.mkdir(parents=True, exist_ok=True)
         opts.log(f"osv {eco}: downloading {eco}/all.zip")
-        with client.stream("GET", f"{BUCKET}/{quote(eco)}/all.zip") as r:
-            r.raise_for_status()
-            with open(dest, "wb") as f:
-                f.writelines(r.iter_bytes(1 << 20))
+        dest = _download_zip(client, eco, opts)
         imp = _Importer(conn, opts, eco)
         _import_iter(imp, _iter_zip(dest, opts))
         imp.finish()
-        partial = opts.limit is not None and imp.full
-        set_sync_state(conn, key, status="partial" if partial else "ok", records=imp.count,
-                       cursor=imp.max_modified_str, message="full")
+        truncated = opts.limit is not None and imp.full
+        if truncated:
+            # a --limit run imported an arbitrary subset: no cursor, and the next run must be full
+            conn.execute("UPDATE source_sync SET cursor=NULL WHERE source=?", (key,))
+        set_sync_state(conn, key, status="partial" if truncated else "ok", records=imp.count,
+                       cursor=None if truncated else imp.max_modified_str, message="full")
         opts.log(f"osv {eco}: imported {imp.count} records (full)")
         return imp.count
 
     def _delta(self, conn, opts, client, eco: str, key: str, cursor: str,
-               changed: list[tuple[str, str]]) -> int:
+               changed: list[tuple[str, str]]) -> tuple[int, bool]:
         imp = _Importer(conn, opts, eco)
-        changed.sort(key=lambda t: parse_ts(t[0]))  # oldest first so a limit leaves a valid cursor
+        changed.sort(key=lambda t: parse_ts(t[0]))  # oldest first so the cursor can advance contiguously
+        good_ts: list[str] = []                    # successes before the first failure
+        first_fail: str | None = None
+        failures = 0
         for ts, rid in changed:
             if imp.full:
                 break
-            r = client.get(f"{BUCKET}/{quote(eco)}/{quote(rid)}.json")
-            if r.status_code == 404:
+            try:
+                r = client.get(f"{BUCKET}/{quote(eco)}/{quote(rid)}.json")
+                if r.status_code != 404:
+                    r.raise_for_status()
+                    doc = r.json()
+                    if not isinstance(doc, dict):
+                        raise ValueError("record is not a JSON object")
+                    imp.add(doc)
+            except Exception as e:  # noqa: BLE001 - skip this id, keep going
+                failures += 1
+                opts.log(f"osv {eco}: {rid}: {type(e).__name__}: {e}")
+                if first_fail is None:
+                    first_fail = ts
                 continue
-            r.raise_for_status()
-            imp.add(r.json())
+            if first_fail is None:
+                good_ts.append(ts)
         imp.finish()
-        newest = imp.max_modified_str if (imp.max_modified and imp.max_modified > parse_ts(cursor)) else None
-        set_sync_state(conn, key, status="ok", records=imp.count, cursor=newest or cursor, message="delta")
+        newest = None
+        for ts in good_ts:
+            if first_fail is None or parse_ts(ts) < parse_ts(first_fail):
+                newest = ts
+        if newest is not None and parse_ts(newest) <= parse_ts(cursor):
+            newest = None
+        # the per-ecosystem row stays "ok" (cursor valid, failed ids are retried by the next delta);
+        # the failure is surfaced through the returned flag -> overall status "partial"
+        set_sync_state(conn, key, status="ok", records=imp.count, cursor=newest or cursor,
+                       message=f"delta, {failures} failed" if failures else "delta")
         opts.log(f"osv {eco}: imported {imp.count} records (delta)")
-        return imp.count
+        return imp.count, bool(failures)

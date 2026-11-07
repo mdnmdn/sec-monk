@@ -43,7 +43,13 @@ def normalize_ecosystem(ecosystem: str | None) -> str | None:
     and `component.ecosystem`:
 
       'Ubuntu:22.04:LTS' / 'Ubuntu:Pro:18.04:LTS' -> 'Ubuntu:22.04' / 'Ubuntu:18.04'
-      'Red Hat:enterprise_linux:9::appstream' / 'Red Hat:enterprise_linux:10.2' -> 'Red Hat:9' / 'Red Hat:10'
+          (decision: FIPS/Pro/realtime variants ship the same package versions as the base
+          release, so they match under `Ubuntu:<rel>`; the variant is kept by the OSV importer
+          in `affected.extra.ecosystem_variant` and the original string in `raw_ecosystem`)
+      'Red Hat:enterprise_linux:9::appstream' / 'Red Hat:rhel_eus:9.6::baseos' / 'Red Hat:enterprise_linux:10.2'
+          -> 'Red Hat:9' / 'Red Hat:9' / 'Red Hat:10'
+      other Red Hat products ('Red Hat:openshift:4.14::el9') -> unchanged: their version numbers
+          are product versions, not RHEL majors, and must never match an RHEL host
       'Rocky Linux:8', 'AlmaLinux:9', 'Debian:12', 'Alpine:v3.20', 'PyPI' -> unchanged
     """
     if not ecosystem:
@@ -53,9 +59,12 @@ def normalize_ecosystem(ecosystem: str | None) -> str | None:
     if base == "Ubuntu":
         rel = next((p for p in parts[1:] if p and p[0].isdigit()), None)
         return f"Ubuntu:{rel}" if rel else "Ubuntu"
-    if base == "Red Hat":
-        rel = next((p for p in parts[1:] if p and p[0].isdigit()), None)
-        return f"Red Hat:{rel.split('.')[0]}" if rel else "Red Hat"
+    if base == "Red Hat" and len(parts) > 1:
+        product = parts[1]
+        if product == "enterprise_linux" or product.startswith("rhel_") or product[:1].isdigit():
+            rel = next((p for p in parts[1:] if p and p[0].isdigit()), None)
+            return f"Red Hat:{rel.split('.')[0]}" if rel else "Red Hat"
+        return ecosystem
     if base in ("Rocky Linux", "AlmaLinux") and len(parts) > 1:
         return f"{base}:{parts[1].split('.')[0]}"
     return ecosystem

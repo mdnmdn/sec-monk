@@ -20,12 +20,15 @@ from urllib.parse import unquote, urlparse
 from ..engine import purl as purls
 from ..engine.versions import compare
 from ..models import CAT_APPLICATION, CAT_LIBRARY, CAT_PACKAGE, Asset, Component, Inventory
-from .base import Collector, register
+from .base import Collector, read_within, register, resolve_within, strip_url_secrets
 from .lang.walk import WalkLimits, walk_dir
 
 KNOWN_PREFIXES = ("opt/homebrew", "usr/local", "home/linuxbrew/.linuxbrew")
 _REVISION = re.compile(r"_\d+$")
 _CVE = re.compile(r"CVE-\d{4}-\d{4,}", re.IGNORECASE)
+MAX_RB_BYTES = 1024 * 1024               # formula / cask Ruby source (data, never evaluated)
+MAX_JSON_BYTES = 16 * 1024 * 1024        # receipts, SBOMs, cask JSON
+MAX_LINE = 2000                          # longer lines are cut: keeps every regex below linear
 
 
 # --------------------------------------------------------------------------- components
@@ -188,11 +191,7 @@ def _strings(s: str) -> list[str]:
     return re.findall(r'"([^"]*)"', s)
 
 
-def _license(text: str) -> str | None:
-    m = re.search(r"^  license\s+(.*?)(?=^  \S)", text, re.MULTILINE | re.DOTALL)
-    if not m:
-        return None
-    body = m.group(1)
+def _license_of(body: str) -> str | None:
     ids = [x for x in _strings(body) if x]
     if not ids:
         return None
@@ -224,7 +223,7 @@ def _patch_cves(lines: list[str]) -> list[str]:
             while k < len(lines) and lines[k].strip() != hd.group(1):
                 chunk.append(lines[k])
                 k += 1
-        elif re.search(r"\bdo\s*(?:\|[^|]*\|)?\s*$", rest):
+        elif rest.rstrip().endswith("do") or re.search(r"\bdo\s*\|[^|]*\|\s*$", rest[:200]):
             while k < len(lines) and not re.match(rf"^{indent}end\b", lines[k]):
                 chunk.append(lines[k])
                 k += 1
@@ -236,32 +235,65 @@ def _patch_cves(lines: list[str]) -> list[str]:
     return found
 
 
+_STANZA = re.compile(r"^  (\w+[!?]?)(?:\s+(.*))?$")
+_STR = re.compile(r'^"([^"]*)"')
+
+
 def parse_formula_rb(text: str) -> dict[str, Any]:
-    """Regex extraction from formula Ruby source. The text is data: nothing is evaluated."""
+    """Line-based extraction from formula Ruby source (single pass, linear time). The text is data:
+    nothing is evaluated."""
     out: dict[str, Any] = {}
-    for key in ("desc", "homepage"):
-        m = re.search(rf'^  {key}\s+"([^"]*)"', text, re.MULTILINE)
+    lines = [ln[:MAX_LINE] for ln in text[:MAX_RB_BYTES].splitlines()]
+    block: str | None = None                  # "stable" / "head" while inside `stable do` / `head do`
+    license_lines: list[str] | None = None
+    stable_url = head_url = None
+    for ln in lines:
+        if license_lines is not None:
+            if ln.startswith("  ") and not ln.startswith("   ") and ln.strip():
+                out["license"] = _license_of(" ".join(license_lines))
+                license_lines = None
+            else:
+                license_lines.append(ln)
+                continue
+        m = _STANZA.match(ln)
         if m:
-            out[key] = m.group(1)
-    m = re.search(r'^  url\s+"([^"]+)"', text, re.MULTILINE)
-    if not m:
-        m = re.search(r'^  stable do\b.*?^    url\s+"([^"]+)"', text, re.MULTILINE | re.DOTALL)
-    if m:
-        out["url"] = m.group(1)
-    m = re.search(r'^  head\s+"([^"]+)"', text, re.MULTILINE) or re.search(
-        r'^  head do\b.*?^    url\s+"([^"]+)"', text, re.MULTILINE | re.DOTALL)
-    if m:
-        out["head"] = m.group(1)
-    lic = _license(text)
-    if lic:
-        out["license"] = lic
-    cves = _patch_cves(text.splitlines())
+            key, rest = m.group(1), (m.group(2) or "").strip()
+            sm = _STR.match(rest)
+            if key == "end":
+                block = None
+            elif key in ("stable", "head") and rest.startswith("do"):
+                block = key
+            elif key in ("desc", "homepage") and sm:
+                out.setdefault(key, sm.group(1))
+            elif key == "url" and sm:
+                out.setdefault("url", sm.group(1))
+            elif key == "head" and sm:
+                head_url = head_url or sm.group(1)
+            elif key == "license":
+                license_lines = [rest]
+            elif key == "deprecate!":
+                out["deprecated"] = True
+            elif key == "disable!":
+                out["disabled"] = True
+            continue
+        if block and ln.startswith("    url"):
+            sm = _STR.match(ln[7:].strip())
+            if sm:
+                if block == "stable":
+                    stable_url = stable_url or sm.group(1)
+                else:
+                    head_url = head_url or sm.group(1)
+    if license_lines is not None:
+        out["license"] = _license_of(" ".join(license_lines))
+    if "url" not in out and stable_url:
+        out["url"] = stable_url
+    if head_url:
+        out["head"] = head_url
+    if not out.get("license"):
+        out.pop("license", None)
+    cves = _patch_cves(lines)
     if cves:
         out["patched_cves"] = cves
-    if re.search(r"^  deprecate!", text, re.MULTILINE):
-        out["deprecated"] = True
-    if re.search(r"^  disable!", text, re.MULTILINE):
-        out["disabled"] = True
     return out
 
 
@@ -328,25 +360,32 @@ def _link_target(p: Path) -> str | None:
         return None
 
 
-def _read_json(path: Path, root: Path | None, warnings: list[str]) -> dict | None:
+def _read_json(path: Path, root: Path | None, warnings: list[str], boundary: Path | None = None) -> dict | None:
     try:
-        d = json.loads(path.read_text(errors="replace"))
+        d = json.loads(read_within(path, boundary or root or path.parent, MAX_JSON_BYTES).decode("utf-8", "replace"))
     except Exception as e:  # noqa: BLE001
         warnings.append(f"cannot read {_rel(path, root)}: {e}")
         return None
     return d if isinstance(d, dict) else None
 
 
-def _read_text(path: Path) -> str | None:
+def _read_text(path: Path, boundary: Path | None = None) -> str | None:
+    """A formula/cask .rb (<= 1 MB), only when it resolves inside `boundary` (no symlink escapes)."""
     try:
-        return path.read_text(errors="replace")
-    except OSError:
+        return read_within(path, boundary or path.parent, MAX_RB_BYTES).decode("utf-8", "replace")
+    except (OSError, ValueError):
         return None
 
 
-def _vendored(sub: Path, root: Path | None, formula: str | None, warnings: list[str]) -> list[Component]:
+def _vendored(sub: Path, root: Path | None, formula: str | None, warnings: list[str],
+              boundary: Path | None = None) -> list[Component]:
     if not sub.is_dir() or sub.is_symlink():
         return []
+    if boundary is not None:
+        try:
+            resolve_within(sub, boundary)
+        except ValueError:
+            return []
     res = walk_dir(sub, limits=WalkLimits(binaries=False), path_prefix=_rel(sub, root).rstrip("/") + "/",
                    match_prefix=f"{sub.name}/")        # parsers key on node_modules/ and site-packages/
     warnings.extend(f"{formula or 'homebrew'}: {w}" for w in res.warnings)
@@ -358,7 +397,8 @@ def _vendored(sub: Path, root: Path | None, formula: str | None, warnings: list[
     return res.components
 
 
-def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: list[str]) -> list[Component]:
+def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: list[str],
+                        boundary: Path | None = None) -> list[Component]:
     cellar = prefix / "Cellar"
     if not cellar.is_dir():
         return []
@@ -386,7 +426,7 @@ def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: l
             is_active = keg.name == active
             if not is_active and not all_kegs:
                 continue
-            c = _keg_component(prefix, root, name, keg, is_active, guess and is_active, warnings)
+            c = _keg_component(prefix, root, name, keg, is_active, guess and is_active, warnings, boundary)
             if is_active:
                 c.meta["keg_only"] = (not linked) if linked is not None else None
                 c.meta["linked"] = linked
@@ -395,19 +435,19 @@ def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: l
             c.meta["pinned"] = pinned or None
             c.meta = {k: v for k, v in c.meta.items() if v is not None}
             out.append(c)
-            out.extend(_keg_libraries(keg, root, name, c, warnings))
+            out.extend(_keg_libraries(keg, root, name, c, warnings, boundary))
     return out
 
 
 def _keg_component(prefix: Path, root: Path | None, name: str, keg: Path, active: bool, guess: bool,
-                   warnings: list[str]) -> Component:
+                   warnings: list[str], boundary: Path | None = None) -> Component:
     receipt: dict = {}
     rp = keg / "INSTALL_RECEIPT.json"
     if rp.is_file():
-        receipt = _read_json(rp, root, warnings) or {}
+        receipt = _read_json(rp, root, warnings, boundary) or {}
     src = receipt.get("source") or {}
     deps = receipt.get("runtime_dependencies") or []
-    rb = _read_text(keg / ".brew" / f"{name}.rb")
+    rb = _read_text(keg / ".brew" / f"{name}.rb", boundary)
     f = parse_formula_rb(rb) if rb else {}
     meta: dict[str, Any] = {
         "active": active, "active_guess": guess or None,
@@ -419,7 +459,7 @@ def _keg_component(prefix: Path, root: Path | None, name: str, keg: Path, active
         "poured_from_bottle": receipt.get("poured_from_bottle"),
         "installed_at": receipt.get("time"),
         "no_receipt": None if rp.is_file() else True,
-        "desc": f.get("desc"), "homepage": f.get("homepage"), "source_url": f.get("url"),
+        "desc": f.get("desc"), "homepage": f.get("homepage"), "source_url": strip_url_secrets(f.get("url")),
         "license": f.get("license"), "patched_cves": f.get("patched_cves"),
         "deprecated": f.get("deprecated"), "disabled": f.get("disabled"),
     }
@@ -427,7 +467,7 @@ def _keg_component(prefix: Path, root: Path | None, name: str, keg: Path, active
     sbom: dict = {}
     sp = keg / "sbom.spdx.json"
     if sp.is_file():
-        d = _read_json(sp, root, warnings)
+        d = _read_json(sp, root, warnings, boundary)
         sbom = parse_sbom(d) if d else {}
     download = sbom.get("download") or f.get("url")
     purl_list = list(sbom.get("purls") or [])
@@ -453,7 +493,7 @@ def _keg_component(prefix: Path, root: Path | None, name: str, keg: Path, active
 
 
 def _keg_libraries(keg: Path, root: Path | None, name: str, formula: Component,
-                   warnings: list[str]) -> list[Component]:
+                   warnings: list[str], boundary: Path | None = None) -> list[Component]:
     """Registry component for the formula itself + vendored language dependencies."""
     out: list[Component] = []
     for p in formula.meta.get("upstream_purls") or []:
@@ -469,7 +509,7 @@ def _keg_libraries(keg: Path, root: Path | None, name: str, formula: Component,
         break
     subs = [keg / "libexec", keg / "lib/node_modules", *sorted(keg.glob("lib/python3.*/site-packages"))]
     for sub in subs:
-        for c in _vendored(sub, root, name, warnings):
+        for c in _vendored(sub, root, name, warnings, boundary):
             c.meta["brew_keg_version"] = formula.meta["brew_version"]
             out.append(c)
     return out
@@ -478,24 +518,51 @@ def _keg_libraries(keg: Path, root: Path | None, name: str, formula: Component,
 # --------------------------------------------------------------------------- casks
 
 def _cask_text_fields(rb: str) -> dict[str, Any]:
-    f: dict[str, Any] = {}
-    m = re.search(r'^\s*version\s+(:latest|"([^"]*)"|\'([^\']*)\')', rb, re.MULTILINE)
-    if m:
-        f["latest"] = m.group(1) == ":latest"
-        f["version"] = None if f["latest"] else (m.group(2) or m.group(3))
-    f["auto_updates"] = bool(re.search(r"^\s*auto_updates\s+true", rb, re.MULTILINE))
-    f["names"] = re.findall(r'^\s*name\s+"([^"]+)"', rb, re.MULTILINE)
-    m = re.search(r'^\s*homepage\s+"([^"]+)"', rb, re.MULTILINE)
-    f["homepage"] = m.group(1) if m else None
-    f["apps"] = re.findall(r'^\s*app\s+"([^"]+\.app)"', rb, re.MULTILINE)
+    """Line-based (linear time) extraction of the stanzas sec-monk uses from a cask's Ruby source."""
+    f: dict[str, Any] = {"auto_updates": False, "names": [], "homepage": None, "apps": []}
     quit_ids: list[str] = []
-    for m in re.finditer(r"\bquit:\s*(\[[^\]]*\]|\"[^\"]+\")", rb):
-        quit_ids += _strings(m.group(1))
+    pending: list[str] | None = None          # lines of a multi-line `quit: [ ... ]`
+    for ln in rb[:MAX_RB_BYTES].splitlines():
+        ln = ln[:MAX_LINE]
+        if pending is not None:
+            pending.append(ln)
+            if "]" in ln or len(pending) > 50:
+                quit_ids += _strings(" ".join(pending).split("]", 1)[0])
+                pending = None
+            continue
+        t = ln.strip()
+        if "version" not in f:
+            m = re.match(r"^version\s+(:latest|\"([^\"]*)\"|'([^']*)')", t)
+            if m:
+                f["latest"] = m.group(1) == ":latest"
+                f["version"] = None if f["latest"] else (m.group(2) or m.group(3))
+        if re.match(r"^auto_updates\s+true", t):
+            f["auto_updates"] = True
+        m = re.match(r'^name\s+"([^"]+)"', t)
+        if m:
+            f["names"].append(m.group(1))
+        m = re.match(r'^homepage\s+"([^"]+)"', t)
+        if m and not f["homepage"]:
+            f["homepage"] = m.group(1)
+        m = re.match(r'^app\s+"([^"]+\.app)"', t)
+        if m:
+            f["apps"].append(m.group(1))
+        i = t.find("quit:")
+        if i >= 0:
+            rest = t[i + 5:].strip()
+            if rest.startswith("["):
+                if "]" in rest:
+                    quit_ids += _strings(rest.split("]", 1)[0])
+                else:
+                    pending = [rest]
+            elif rest.startswith('"'):
+                quit_ids += _strings(rest)[:1]
     f["bundle_ids"] = quit_ids
     return f
 
 
-def _cask_components(prefix: Path, root: Path | None, warnings: list[str]) -> list[Component]:
+def _cask_components(prefix: Path, root: Path | None, warnings: list[str],
+                     boundary: Path | None = None) -> list[Component]:
     caskroom = prefix / "Caskroom"
     if not caskroom.is_dir():
         return []
@@ -522,7 +589,7 @@ def _cask_components(prefix: Path, root: Path | None, warnings: list[str]) -> li
         bundle_ids: list[str] = []
         if newest is not None:
             casks_dir = newest / "Casks"
-            rb = _read_text(casks_dir / f"{token}.rb")
+            rb = _read_text(casks_dir / f"{token}.rb", boundary)
             if rb:
                 f = _cask_text_fields(rb)
                 names, homepage, apps = f["names"], f["homepage"], f["apps"]
@@ -533,7 +600,7 @@ def _cask_components(prefix: Path, root: Path | None, warnings: list[str]) -> li
             for jn in (f"{token}.json", f"{token}.internal.json"):
                 jp = casks_dir / jn
                 if jp.is_file():
-                    j = _read_json(jp, root, warnings) or {}
+                    j = _read_json(jp, root, warnings, boundary) or {}
                     n = j.get("name")
                     names = names or ([n] if isinstance(n, str) else list(n or []))
                     homepage = homepage or j.get("homepage")
@@ -542,7 +609,7 @@ def _cask_components(prefix: Path, root: Path | None, warnings: list[str]) -> li
                     auto_updates = auto_updates or bool(j.get("auto_updates"))
                     if isinstance(j.get("version"), str) and j["version"] != "latest":
                         version = j["version"]
-        receipt = _read_json(cask / ".metadata/INSTALL_RECEIPT.json", root, []) \
+        receipt = _read_json(cask / ".metadata/INSTALL_RECEIPT.json", root, [], boundary) \
             if (cask / ".metadata/INSTALL_RECEIPT.json").is_file() else {}
         receipt = receipt or {}
         tap = tap or (receipt.get("source") or {}).get("tap")
@@ -570,12 +637,13 @@ def collect_prefixes(root: Path, opts: dict | None = None) -> tuple[list[Compone
     root = Path(root)
     warnings: list[str] = []
     comps: list[Component] = []
+    boundary = root.resolve()                         # nothing outside the scanned tree is ever read
     for prefix in find_prefixes(root):
         base = None if prefix == root else root       # root is the prefix itself: show absolute paths
-        comps += _formula_components(prefix, base, opts, warnings)
-        comps += _cask_components(prefix, base, warnings)
+        comps += _formula_components(prefix, base, opts, warnings, boundary)
+        comps += _cask_components(prefix, base, warnings, boundary)
         for sub in [prefix / "lib/node_modules", *sorted(prefix.glob("lib/python3.*/site-packages"))]:
-            comps += _vendored(sub, base, None, warnings)
+            comps += _vendored(sub, base, None, warnings, boundary)
     return _dedupe(comps), warnings
 
 

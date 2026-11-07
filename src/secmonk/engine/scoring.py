@@ -9,11 +9,18 @@ EPSS_HIGH = 0.1
 MINOR_TRIAGE = frozenset({"unimportant", "ignored", "end-of-life"})
 DEFERRED_TRIAGE = frozenset({"no-dsa", "postponed"})
 
+# Score assumed for a finding that only has a severity label (e.g. OSV records with a CVSS v4 vector
+# only, whose numeric score is not computed): the lower bound of the CVSS band.
+SEVERITY_SCORE = {"CRITICAL": 9.0, "HIGH": 7.0, "MEDIUM": 5.0, "MODERATE": 5.0, "LOW": 3.0}
+
 
 def priority(*, cvss: float | None, epss: float | None, kev: bool, asset_meta: dict | None = None,
-             triage: str | None = None) -> str:
+             triage: str | None = None, severity: str | None = None) -> str:
     """Priority P1..P4. Distro triage (Debian tracker / OSV urgency) caps it unless the CVE is in
-    KEV: minor (unimportant, ignored, end-of-life) → P4; deferred (no-dsa, postponed) → at most P3."""
+    KEV: minor (unimportant, ignored, end-of-life) → P4; deferred (no-dsa, postponed) → at most P3.
+    Without a CVSS score the severity label stands in (CRITICAL 9.0, HIGH 7.0, MEDIUM 5.0, LOW 3.0)."""
+    if cvss is None and severity:
+        cvss = SEVERITY_SCORE.get(severity.strip().upper())
     p = _base_priority(cvss=cvss, epss=epss, kev=kev, asset_meta=asset_meta)
     if kev or not triage:
         return p

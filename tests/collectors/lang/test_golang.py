@@ -133,3 +133,77 @@ def test_osv_range_real_records():
     ev = aff["ranges"][0]["events"]
     assert in_osv_range("1.15.4", ev, scheme) and not in_osv_range("1.15.5", ev, scheme)
     assert not in_osv_range(std.version, ev, scheme)               # 1.24.7 is long past those fixes
+
+
+# --------------------------------------------------------------------------- review fixes (L2, L3, L5)
+from secmonk.collectors.lang import parse_file
+
+from .builders import GO_MAGIC, elf_with_section, go_blob, macho_with_section, pe_with_data
+
+
+def _purls(comps):
+    return {c.purl for c in comps}
+
+
+def test_buildinfo_found_via_section_table_beyond_64mib():
+    """L2: an 81 MB real Go binary has .go.buildinfo past 64 MiB; the section table finds it directly."""
+    data = elf_with_section(go_blob(), pad=70 * 1024 * 1024)
+    assert len(data) > 70 * 1024 * 1024
+    comps, warns = parse_file("usr/local/bin/big", data)
+    assert not warns
+    assert "pkg:golang/golang.org/x/net@0.1.0" in _purls(comps)
+    assert any(c.name == "stdlib" and c.version == "1.22.3" for c in comps)
+
+
+def test_buildinfo_fallback_scan_without_section_headers():
+    """L2: no section table (stripped / odd container) -> aligned magic scan of the whole file."""
+    data = elf_with_section(go_blob(), pad=66 * 1024 * 1024, with_sections=False)
+    comps, _ = parse_file("usr/local/bin/big", data)
+    assert "pkg:golang/golang.org/x/net@0.1.0" in _purls(comps)
+
+
+@pytest.mark.parametrize("build", [macho_with_section, pe_with_data])
+def test_buildinfo_via_macho_and_pe_section_tables(build, monkeypatch):
+    monkeypatch.setattr(golang, "SCAN_LIMIT", 16)          # prove the section path, not the scan, is used
+    path = "usr/local/bin/app.exe" if build is pe_with_data else "usr/local/bin/app"
+    comps, _ = parse_file(path, build(go_blob()))
+    assert "pkg:golang/golang.org/x/net@0.1.0" in _purls(comps)
+
+
+def test_go_looking_binary_without_buildinfo_warns_but_plain_elf_does_not():
+    plain = elf_with_section(b"\0" * 64, pad=4096, section_name=b".text")
+    assert parse_file("bin/plain", plain) == ([], [])
+    gobin = elf_with_section(b"\0" * 64, pad=4096, section_name=b".text") + b"\0" * 8
+    gobin = gobin[:200] + b"Go build ID: abc" + gobin[216:]
+    comps, warns = parse_file("bin/stripped-go", gobin)
+    assert comps == [] and len(warns) == 1 and "Go binary" in warns[0]
+
+
+def test_go_buildinfo_header_validation_skips_decoys():
+    """L5: the magic quoted in .rodata (bad ptrsize / flags / truncated varints) must not shadow
+    the real, later header, even when the decoy happens to be 16-byte aligned."""
+    bad_ptr = GO_MAGIC + bytes([0x41, 2]) + b"\0" * 16 + b"\x06go1.22"
+    bad_flags = GO_MAGIC + bytes([8, 0xF2]) + b"\0" * 16 + b"\x06go1.22"
+    trunc = GO_MAGIC + bytes([8, 2]) + b"\0" * 16 + b"\xff\xff"
+    for decoy in (bad_ptr, bad_flags, trunc):
+        data = b"\x7fELF" + b"\0" * 12 + decoy.ljust(64, b"\0") + go_blob()
+        assert golang.find_buildinfo(data) is not None
+        info = golang.read_buildinfo(data)
+        assert info is not None and info[0] == "go1.22.3"
+
+
+def test_gosum_dropped_only_for_go_117_plus():
+    """L3: go < 1.17 go.mod lacks indirect deps, so go.sum entries must be kept."""
+    sum_ = b"github.com/a/b v1.0.0 h1:x\ngithub.com/c/d v2.0.0 h1:y\n"
+
+    def run(gomod: bytes):
+        c1, _ = parse_file("app/go.mod", gomod)
+        c2, _ = parse_file("app/go.sum", sum_)
+        return {c.purl for c in lang.dedupe(c1 + c2)}
+
+    new = run(b"module m\ngo 1.21\nrequire github.com/a/b v1.0.0\n")
+    assert new == {"pkg:golang/github.com/a/b@1.0.0"}
+    old = run(b"module m\ngo 1.16\nrequire github.com/a/b v1.0.0\n")
+    assert old == {"pkg:golang/github.com/a/b@1.0.0", "pkg:golang/github.com/c/d@2.0.0"}
+    nodirective = run(b"module m\nrequire github.com/a/b v1.0.0\n")
+    assert "pkg:golang/github.com/c/d@2.0.0" in nodirective

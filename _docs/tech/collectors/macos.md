@@ -186,3 +186,11 @@ Code: `src/secmonk/collectors/macos.py` (`MacOSCollector`, `parse_system_profile
 **Dedupe rule**: a cask is not emitted when an app bundle matches its app name, token, display name (normalized, alphanumerics only) or `uninstall quit:` bundle id; the app gets `meta.also_cask=<token>`. Casks without an installed app stay as separate components.
 
 **Known gaps**: stale non-Apple receipts are not flagged low-confidence; Apple system apps keep their bundle version (not mapped to the macOS release); MacPorts and nested helper apps are not handled; a `latest` cask without an app bundle has no version; all plist errors become `Inventory.warnings`.
+
+
+## Review fixes (2026-11)
+
+- `-o home=/Users/bob` (a string) is one home, not iterated per character.
+- Scanning a mounted tree never follows a symlink out of it: bundles, plists, receipts must resolve under the scan root (explicit homes: under that home); symlink loops are skipped with a warning. Plists are capped at 8 MB.
+- iOS/iPadOS apps on Apple silicon (`<App>.app/Wrapper/<App>.app/Info.plist`) are read (`meta.ios_app_on_mac`).
+- `meta.sparkle_feed` has userinfo/query/fragment removed.

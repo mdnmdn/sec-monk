@@ -17,7 +17,7 @@ from typing import Any
 from urllib.parse import quote, urlsplit
 
 from ..models import Asset, Inventory
-from .base import Collector, register
+from .base import Collector, redact_labels, register
 from .docker_image import inventory_from_archive
 from .rootfs import LayeredTarView, collect_from_view
 
@@ -67,13 +67,15 @@ def candidate_sockets(opts: dict[str, Any] | None = None) -> list[str]:
             str(home / ".colima/default/docker.sock"), str(home / ".rd/docker.sock"),
             str(home / ".orbstack/run/docker.sock")]
     if xdg:
+        out.append(f"{xdg}/docker.sock")          # rootless Docker
         out.append(f"{xdg}/podman/podman.sock")
     out.append("/run/podman/podman.sock")
     return out
 
 
 def find_endpoint(opts: dict[str, Any] | None = None) -> Endpoint:
-    """opts['socket'] > $DOCKER_HOST > well-known socket paths."""
+    """opts['socket'] > $DOCKER_HOST > well-known socket paths. An explicit but missing socket is an
+    error (no fallback to the defaults)."""
     opts = opts or {}
     tried: list[str] = []
     explicit = opts.get("socket") or os.environ.get("DOCKER_HOST")
@@ -81,9 +83,11 @@ def find_endpoint(opts: dict[str, Any] | None = None) -> Endpoint:
         ep = _parse_host(explicit)
         if ep is None:
             raise RuntimeError(f"Unsupported Docker host {explicit!r} (use unix:///path or tcp://host:port)")
-        if ep.unix is None or os.path.exists(ep.unix):
-            return ep
-        tried.append(ep.unix)
+        # An explicitly requested endpoint is never silently replaced by another one.
+        if ep.unix is not None and not os.path.exists(ep.unix):
+            src = "--socket" if opts.get("socket") else "DOCKER_HOST"
+            raise RuntimeError(f"Docker socket {ep.unix} (from {src}) does not exist")
+        return ep
     for path in candidate_sockets(opts):
         if path in tried:
             continue
@@ -206,10 +210,12 @@ class DockerEngineCollector(Collector):
         view = LayeredTarView()
         conn, resp = client.open(f"/containers/{cid}/export")
         warnings: list[str] = []
+        partial: str | None = None
         try:
             view.add_layer(resp)
         except Exception as e:  # noqa: BLE001  truncated stream, daemon error mid-export ...
-            warnings.append(f"container export incomplete: {e}")
+            partial = f"container export incomplete: {e}"
+            warnings.append(partial)
         finally:
             conn.close()
         ports = (info.get("NetworkSettings") or {}).get("Ports") or {}
@@ -217,11 +223,16 @@ class DockerEngineCollector(Collector):
         asset = Asset(
             id=f"container:{name}", type="container", name=name,
             meta={"container_id": cid, "image": cfg.get("Image"), "image_id": info.get("Image"),
-                  "labels": cfg.get("Labels") or {}, "state": st.get("Status"),
+                  "labels": redact_labels(cfg.get("Labels")), "state": st.get("Status"),
                   "privileged": bool(host.get("Privileged")), "published_ports": published,
                   "user": cfg.get("User") or None, "engine": str(client.endpoint)})
         comps = collect_from_view(view, asset, warnings)
-        return Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)
+        inv = Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)
+        if partial:
+            inv.mark_partial(partial)
+        if view.truncated:
+            inv.mark_partial("file/count limits reached while reading the export")
+        return inv
 
 
 def _arch(client: EngineClient) -> str:

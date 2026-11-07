@@ -86,3 +86,10 @@ matched to a bundle by app name, token, display name or `cask_bundle_ids` == `CF
   `BREW-*` advisory database are not implemented; only `patched_cves` suppression is.
 - `patched_cves` is a union over patch stanzas: a CVE named in a *comment* above a patch is treated as fixed.
 - Casks `version`/receipts of non-installed older versions are ignored; only the newest metadata stamp is reported.
+
+
+## Review fixes (2026-11)
+
+- Formula/cask `.rb` parsing is a single-pass line-based scan (lines cut at 2000 chars, files capped at 1 MB; no backtracking regexes), so a hostile Ruby file cannot make a scan quadratic.
+- Receipts/SBOM/cask JSON (<= 16 MB) and `.rb` files are only read when they resolve inside the scanned root (a symlinked `INSTALL_RECEIPT.json` pointing outside is ignored with a warning); vendored language dirs likewise.
+- `meta.source_url` has userinfo/query stripped.

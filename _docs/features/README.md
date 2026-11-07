@@ -29,7 +29,7 @@ distro triage are described in [matching](../tech/engine/matching.md). There is 
 
 ## CLI at a glance
 
-Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Every command also accepts `--db PATH` (env `SECMONK_DB`, default `./secmonk.db`).
+Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every data command accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched and scan (json/csv go to stdout, notes to stderr; tables are not truncated when piped).
 
 ```text
 secmonk status                          freshness + table sizes
@@ -40,23 +40,27 @@ secmonk sync NAMES... | all             fetch into the mirror
     --id ID             specific record ids ('@referenced' for cvelist)
     --since S           only records modified since (ISO date / year)
     --full              ignore the stored delta cursor
-    --limit N           max records (debug)
+    -n, --limit N       max records (debug)
     --api-key K         NVD API key (env NVD_API_KEY)
-    (`all` = kev epss osv cvelist nvd euvd; msrc and debian-tracker must be named)
+    (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` is skipped)
 
 secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos rootfs ssh windows)
 secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     --save/--no-save    store the inventory in the DB (default: save)
-    --json PATH         write inventory JSON
-    --quiet
+    -O, --output PATH   write inventory JSON (--json is a deprecated alias)
+    -q, --quiet         don't print the component table (warnings are always shown)
     -o, --opt KEY=VAL   collector option (repeatable), e.g. -o use_brew_cli=true -o platform=linux/arm64
 secmonk scan COLLECTOR [TARGET]         collect + save + match, then print findings
     --min-confidence F  drop name-based matches below F (default 0.5)
+    --fail-on P1..P4    exit 3 if any open finding is at or above this priority
+    --priority/--fixable/--hide-minor/--hide-deferred/-n   same filters as `findings`
+    --save/--no-save    --no-save matches in a temporary overlay and writes nothing (needs an existing mirror)
+    -f, --format table|json|csv   -q, --quiet
     -o, --opt KEY=VAL
 secmonk match ASSET                     (re)match a stored asset against the current mirror
     --min-confidence F  (default 0.5)
-secmonk windows-script [--compact]      print the read-only PowerShell inventory script
-secmonk containers [--socket PATH]      list containers of the local Docker/Podman engine
+secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
+secmonk containers [--socket PATH] [--all] [-f FMT]   list containers of the local Docker/Podman engine (table)
 
 secmonk findings [ASSET]                list findings ordered by priority
     --priority P1..P4
@@ -64,17 +68,20 @@ secmonk findings [ASSET]                list findings ordered by priority
     --fixable           only findings with a known fixed version
     --hide-minor        hide distro-triaged minor issues (unimportant, ignored, end-of-life)
     --hide-deferred     also hide no-dsa / postponed
-    --limit N           (default 200)
+    -n, --limit N       (default 200)
+    -f, --format table|json|csv
 
 secmonk vuln show VULN_ID [--raw]       everything known about an id across sources
 secmonk vuln search                     advisories for a package or product
-    --package P  --ecosystem E  --product P  --version V  --limit N (default 50)
-secmonk inventory assets                list assets
-secmonk inventory show ASSET [--category C]   components of the latest scan
+    --package P  --ecosystem E  --product P  --version V  -n/--limit N (default 50)
+secmonk inventory assets [-f FMT]       list assets
+secmonk inventory show ASSET [--category C] [-f FMT]   components of the latest scan
 secmonk inventory unmatched             apps whose identity is only a normalized name (alias-table candidates)
 ```
 
 ### Collector options (`-o key=value`)
+
+Values stay strings, except `true/false/yes/no` for the boolean keys (binaries, sudo, all_kegs, use_brew_cli, include_system, insecure_host_key, xdev, no_cache, lang, verbose) and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`).
 
 | Collector | Target | Options (from the feature docs and code) |
 |---|---|---|

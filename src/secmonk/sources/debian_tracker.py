@@ -7,16 +7,15 @@ Spec: _docs/references/vuln-sources/debian-tracker.md. Two inputs, auto-detected
 * a checkout of the security-tracker git repo (`data/CVE/list`, `data/DSA/list`, `data/DLA/list`),
   parsed from its text format. DSA/DLA lists attach `advisory` ids.
 
-The tracker is a snapshot, so each sync replaces every row with source='debian-tracker'.
+The tracker is a snapshot, so each sync replaces every row with source='debian-tracker', unless the new
+snapshot is empty or under 50% of the stored rows (refused; `opts.full` forces). `--limit` upserts a subset
+without replacing. Decompression is capped (MAX_DECOMPRESSED) and truncated archives are errors.
 """
 
 from __future__ import annotations
 
-import bz2
-import gzip
 import hashlib
 import json
-import lzma
 import re
 import sqlite3
 from collections.abc import Iterable, Iterator
@@ -27,11 +26,13 @@ from typing import Any
 import httpx
 
 from ..db import transaction
-from .base import Source, SyncOptions, SyncResult, http_client, register
+from .base import Source, SyncOptions, SyncResult, decompress_stream, http_client, register, snapshot_guard
 
 SOURCE = "debian-tracker"
 TRACKER_URL = "https://security-tracker.debian.org/tracker/data/json"
 CHUNK = 5000
+MAX_DECOMPRESSED = 2 * 1024**3   # decompression-bomb cap (the real tracker JSON is ~100 MB)
+MAX_DOWNLOAD = 512 * 1024**2     # cap on the downloaded (possibly compressed) bytes
 
 # codename -> OSV Debian release. 'sid' (unstable) has no OSV ecosystem and is skipped:
 # the matcher can only look up 'Debian:<n>', and sid is a rolling target, not a deployed release.
@@ -103,10 +104,14 @@ def rows_from_json(doc: dict[str, Any], stats: Stats, limit: int | None = None) 
             continue
         pkg_l = pkg.lower()
         for cve, entry in cves.items():
+            if not isinstance(entry, dict):
+                continue
             if not cve.startswith("CVE-"):
                 stats.temp += 1          # TEMP-* (no stable id, cannot match advisories)
                 continue
             for codename, rel in (entry.get("releases") or {}).items():
+                if not isinstance(rel, dict):
+                    continue
                 release = _release_of(codename, stats)
                 if release is None:
                     continue
@@ -329,13 +334,17 @@ def load_repo(root: Path, stats: Stats, limit: int | None = None) -> list[Row]:
 # --------------------------------------------------------------------------- loading
 
 def _decompress(raw: bytes) -> bytes:
+    """Sniff gzip/bzip2/xz and decompress with an output cap; raises DecompressError (a
+    ValueError) on truncated/corrupt data or a decompression bomb."""
     if raw[:2] == b"\x1f\x8b":
-        return gzip.decompress(raw)
-    if raw[:3] == b"BZh":
-        return bz2.decompress(raw)
-    if raw[:6] == b"\xfd7zXZ\x00":
-        return lzma.decompress(raw)
-    return raw
+        fmt = "gz"
+    elif raw[:3] == b"BZh":
+        fmt = "bz2"
+    elif raw[:6] == b"\xfd7zXZ\x00":
+        fmt = "xz"
+    else:
+        return raw
+    return b"".join(decompress_stream([raw], fmt, MAX_DECOMPRESSED))
 
 
 def load_json_bytes(raw: bytes) -> tuple[dict[str, Any], str]:
@@ -348,14 +357,19 @@ def load_json_bytes(raw: bytes) -> tuple[dict[str, Any], str]:
 
 
 def _download() -> tuple[bytes, str | None]:
-    with http_client(timeout=300.0) as client:
-        resp = client.get(TRACKER_URL)
+    with http_client(timeout=300.0) as client, client.stream("GET", TRACKER_URL) as resp:
         resp.raise_for_status()
-        return resp.content, resp.headers.get("etag") or resp.headers.get("last-modified")
+        buf = bytearray()
+        for chunk in resp.iter_bytes(1 << 20):
+            buf += chunk
+            if len(buf) > MAX_DOWNLOAD:
+                raise ValueError(f"tracker download exceeds {MAX_DOWNLOAD} bytes")
+        return bytes(buf), resp.headers.get("etag") or resp.headers.get("last-modified")
 
 
-def _insert(conn: sqlite3.Connection, rows: Iterable[Row]) -> int:
-    conn.execute("DELETE FROM distro_triage WHERE source=?", (SOURCE,))
+def _insert(conn: sqlite3.Connection, rows: Iterable[Row], replace: bool = True) -> int:
+    if replace:
+        conn.execute("DELETE FROM distro_triage WHERE source=?", (SOURCE,))
     n = 0
     for chunk in batched(rows, CHUNK):
         conn.executemany(_UPSERT, chunk)
@@ -388,13 +402,21 @@ class DebianTrackerSource(Source):
             with transaction(conn):
                 if not isinstance(rows, list):
                     rows = list(rows)       # stats must be complete before the message is built
-                n = _insert(conn, rows)
-        except (httpx.HTTPError, OSError, ValueError, KeyError, TypeError) as e:
-            return SyncResult(self.name, status="error", message=str(e))
+                limited = opts.limit is not None
+                if not limited:
+                    refusal = snapshot_guard(conn, "distro_triage", len(rows), opts,
+                                             "source=?", (SOURCE,))
+                    if refusal:
+                        return SyncResult(self.name, status="error", message=f"debian-tracker: {refusal}")
+                # --limit is a debug subset: upsert it without wiping the other rows
+                n = _insert(conn, rows, replace=not limited)
+        except (httpx.HTTPError, OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+            return SyncResult(self.name, status="error", message=f"{type(e).__name__}: {e}")
         if cursor is None:
             cursor = hashlib.sha256(repr(sorted(rows)).encode()).hexdigest()
         msg = (f"{n} triage rows from {origin}; skipped {stats.temp} TEMP ids, "
                f"{stats.sid} sid entries, {stats.unknown_release} unknown-release entries")
         if stats.orphan_advisories:
             msg += f"; {stats.orphan_advisories} advisory refs without a matching row"
-        return SyncResult(self.name, records=n, status="ok", cursor=cursor, message=msg)
+        return SyncResult(self.name, records=n, status="partial" if limited else "ok",
+                          cursor=None if limited else cursor, message=msg)

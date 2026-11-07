@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from . import paths
+
 SCHEMA_VERSION = 2
 
 SCHEMA = """
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS alias (
     vuln_id       TEXT NOT NULL,
     alias         TEXT NOT NULL,
     source        TEXT NOT NULL,
+    kind          TEXT DEFAULT 'alias',      -- alias | upstream | related (OSV); only 'alias' edges mean "same vulnerability"
     PRIMARY KEY (vuln_id, alias, source)
 );
 CREATE INDEX IF NOT EXISTS ix_alias_alias ON alias(alias);
@@ -172,6 +175,8 @@ CREATE TABLE IF NOT EXISTS asset_component (
     first_seen    TEXT,
     last_seen     TEXT,
     last_scan_id  INTEGER,
+    paths         TEXT,                      -- JSON list: every location of this component on the asset
+    meta          TEXT,                      -- JSON: per-asset facts (users, install_location, scope…)
     PRIMARY KEY (asset_id, component_id)
 );
 
@@ -205,11 +210,33 @@ def now() -> str:
 
 
 def default_db_path() -> Path:
-    return Path(os.environ.get("SECMONK_DB", "secmonk.db"))
+    """Per-user database location (see secmonk/paths.py); never relative to the CWD."""
+    return paths.default_db_path()
+
+
+def _create_private_file(path: Path) -> None:
+    """Create an empty DB file with mode 0600 before SQLite would create it with the umask."""
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return
+    os.close(fd)
 
 
 def connect(path: str | Path | None = None) -> sqlite3.Connection:
+    if str(path) == ":memory:":
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        init_schema(conn)
+        return conn
     path = Path(path) if path else default_db_path()
+    if path == default_db_path():
+        paths.ensure_private_dir(path.parent)
+    elif not path.parent.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        _create_private_file(path)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -220,7 +247,9 @@ def connect(path: str | Path | None = None) -> sqlite3.Connection:
 
 
 # columns added after a table was first created: (table, column, type)
-_ADDED_COLUMNS = (("finding", "triage", "TEXT"), ("finding", "triage_source", "TEXT"))
+_ADDED_COLUMNS = (("finding", "triage", "TEXT"), ("finding", "triage_source", "TEXT"),
+                  ("alias", "kind", "TEXT DEFAULT 'alias'"),
+                  ("asset_component", "paths", "TEXT"), ("asset_component", "meta", "TEXT"))
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
@@ -229,7 +258,9 @@ def init_schema(conn: sqlite3.Connection) -> None:
         cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
         if col not in cols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typ}")
-    conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+    # Only ever raise the version: a DB written by a newer secmonk must not be stamped back down.
+    if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+        conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
     conn.commit()
 
 
@@ -264,14 +295,28 @@ def set_sync_state(
     cursor: str | None = None,
     message: str | None = None,
 ) -> None:
-    conn.execute(
-        """INSERT INTO source_sync(source, last_sync, cursor, records, status, message)
-           VALUES (?,?,?,?,?,?)
-           ON CONFLICT(source) DO UPDATE SET last_sync=excluded.last_sync,
-             cursor=COALESCE(excluded.cursor, source_sync.cursor),
-             records=excluded.records, status=excluded.status, message=excluded.message""",
-        (source, now(), cursor, records, status, message),
-    )
+    """Record the outcome of a sync run.
+
+    `last_sync` only moves for status ok/partial. An `error` run keeps the previous records and
+    cursor (and last_sync) and only updates status + message, so a failure never zeroes the
+    totals of the last good sync.
+    """
+    if status in ("ok", "partial"):
+        conn.execute(
+            """INSERT INTO source_sync(source, last_sync, cursor, records, status, message)
+               VALUES (?,?,?,?,?,?)
+               ON CONFLICT(source) DO UPDATE SET last_sync=excluded.last_sync,
+                 cursor=COALESCE(excluded.cursor, source_sync.cursor),
+                 records=excluded.records, status=excluded.status, message=excluded.message""",
+            (source, now(), cursor, records, status, message),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO source_sync(source, last_sync, cursor, records, status, message)
+               VALUES (?,NULL,NULL,0,?,?)
+               ON CONFLICT(source) DO UPDATE SET status=excluded.status, message=excluded.message""",
+            (source, status, message),
+        )
     conn.commit()
 
 

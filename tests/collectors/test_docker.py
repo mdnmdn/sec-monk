@@ -55,7 +55,7 @@ def test_alpine_mini_tar():
     inv = REGISTRY["docker-image"]().collect(str(FX / "alpine-mini.tar"))
     a = inv.asset
     assert a.type == "container-image" and a.name == "alpine:3.20" and a.platform == "linux/amd64"
-    assert a.id == "image:alpine@sha256:ed121134e825270d8e5208f8dc97e11da3f678222594e0c4ea5a9a547116db9c"
+    assert a.id == "image:docker.io/library/alpine@sha256:ed121134e825270d8e5208f8dc97e11da3f678222594e0c4ea5a9a547116db9c"
     assert a.os_name == "Alpine Linux"
     pk = [c for c in inv.components if c.category == "os-package"]
     assert len(pk) == 5 and all(c.ecosystem == "Alpine:v3.20" for c in pk)
@@ -68,7 +68,7 @@ def test_oci_layout_dir(tmp_path: Path):
     (tmp_path / "manifest.json").unlink()                         # force the index.json path
     inv = REGISTRY["docker-image"]().collect(str(tmp_path))
     assert len([c for c in inv.components if c.category == "os-package"]) == 5
-    assert inv.asset.meta["ref"] == "3.20"
+    assert inv.asset.meta["ref"] is None          # a bare OCI tag annotation is not a repository ref
 
 
 def test_dir_that_is_not_a_layout(tmp_path: Path):
@@ -129,7 +129,7 @@ def test_collect_two_layer_image(tmp_path: Path):
     names = {c.name for c in inv.components if c.category == "os-package"}
     assert names == {"musl", "xz-libs", "curl"}
     assert inv.asset.platform == "linux/arm64/v8" and inv.asset.meta["labels"] == {"a": "b"}
-    assert inv.asset.meta["env_names"] == ["PATH", "SECRET"] and inv.asset.id.startswith("image:x/y@sha256:")
+    assert inv.asset.meta["env_names"] == ["PATH", "SECRET"] and inv.asset.id.startswith("image:docker.io/x/y@sha256:")
 
 
 # --------------------------------------------------------------------------- references
@@ -178,7 +178,10 @@ def test_registry_pull_with_token_redirect_and_retry():
                                       "mediaType": "application/vnd.oci.image.config.v1+json"},
                            "layers": [{"digest": lay_d, "size": len(layer),
                                        "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip"}]}).encode()
-    amd64 = di.select_manifest(json.loads(index)["manifests"], "linux/amd64")["digest"]
+    idx = json.loads(index)
+    amd64 = "sha256:" + hashlib.sha256(manifest).hexdigest()          # fetched by digest => verified
+    di.select_manifest(idx["manifests"], "linux/amd64")["digest"] = amd64
+    index = json.dumps(idx).encode()
     seen: list[httpx.Request] = []
     state = {"429": 0}
 
