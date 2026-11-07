@@ -3,7 +3,7 @@
  * design pages. Deep link: index.html#<story-id>. */
 (function () {
   "use strict";
-  if (!window.Vue) { document.body.textContent = "Vue could not be loaded from https://unpkg.com (offline?)."; return; }
+  if (!window.Vue) { document.body.textContent = "Vue could not be loaded from src/secmonk/web/static/vendor."; return; }
   const { createApp, ref, computed, onMounted, defineComponent } = Vue;
   const UI = window.SecMonkUI;
   const stories = window.SECMONK_STORIES;

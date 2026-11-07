@@ -2,7 +2,7 @@
 title: ADR-0008 — Local web interface stack
 type: decision
 context: decisions
-status: accepted
+status: superseded
 tags: [web-ui, architecture, security]
 updated: 2026-11-07
 related: [features/web-ui.md, tech/web-ui.md, decisions/0001-language-python-uv-mise.md, decisions/0007-process-monitor.md]
@@ -10,6 +10,8 @@ code: src/secmonk/web/
 ---
 
 # ADR-0008 — Local web interface stack
+
+> Superseded by [ADR-0009](0009-web-ui-vendored-libraries.md): same stack, but Vue and Vue Router are vendored in the package (no CDN, no external origin in the CSP).
 
 ## Context
 sec-monk needs a graphical interface, starting with the process monitor and later hosting every feature. It runs on the

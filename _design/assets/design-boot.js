@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   if (!window.Vue || !window.VueRouter) {
-    document.body.textContent = "Vue could not be loaded from https://unpkg.com (offline?). See _design/README.md.";
+    document.body.textContent = "Vue could not be loaded from src/secmonk/web/static/vendor. See _design/README.md.";
     return;
   }
   const b = document.body.dataset;

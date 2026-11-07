@@ -1,4 +1,4 @@
-"""Local web server for `secmonk ui`: static files + JSON API, Python stdlib only (ADR-0008).
+"""Local web server for `secmonk ui`: static files + JSON API, Python stdlib only (ADR-0009).
 
 Local and unauthenticated by design, hardened for that setting:
   * binds 127.0.0.1 unless told otherwise;
@@ -26,9 +26,8 @@ from .. import __version__
 from .api import ApiError, ProcessMonitor
 
 STATIC = Path(__file__).parent / "static"
-CDN = "https://unpkg.com"
 CSP = ("default-src 'self'; "
-       f"script-src 'self' 'unsafe-eval' {CDN}; "        # unsafe-eval: Vue's in-browser template compiler
+       "script-src 'self' 'unsafe-eval'; "               # unsafe-eval: Vue's in-browser template compiler; vendored libs
        "style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; "
        "frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'")
 CSRF_HEADER = "X-SecMonk-Request"

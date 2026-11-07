@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /* Screenshots of the _design sample pages and storybook (documentation only).
  *
- *   node scripts/design_screenshots.js                 # needs Node + the `playwright` package and its Chromium
- *   SECMONK_VENDOR=/path/to/vendor node scripts/...    # serve Vue from a local copy when unpkg.com is unreachable:
- *                                                        <vendor>/vue@3.5.13/dist/..., <vendor>/vue-router@4.5.0/dist/...
+ *   node scripts/design_screenshots.js      # needs Node + the `playwright` package and its Chromium; no network
+ *                                            (Vue is vendored in src/secmonk/web/static/vendor)
  *
  * Serves the repository root on a free port, opens every page in headless Chromium (1440x900, 2x), fails on any
  * console error or page error, writes _design/screenshots/<name>.png.
@@ -16,7 +15,6 @@ const path = require("path");
 
 const REPO = path.resolve(__dirname, "..");
 const OUT = path.join(REPO, "_design", "screenshots");
-const VENDOR = process.env.SECMONK_VENDOR;
 const SHOTS = [
   ["01-processes", "_design/pages/processes.html"],
   ["02-process-detail", "_design/pages/process-detail.html"],
@@ -54,12 +52,7 @@ function serve() {
   let failed = false;
   for (const [name, rel, wait = 0, scheme = "light"] of SHOTS) {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: scheme });
-    if (VENDOR) {
-      await ctx.route("https://unpkg.com/**", (route) => {
-        const f = path.join(VENDOR, new URL(route.request().url()).pathname);
-        route.fulfill({ path: f, contentType: "application/javascript" });
-      });
-    }
+    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());   // prove nothing external is needed
     const page = await ctx.newPage();
     const errors = [];
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errors.push(`${m.type()}: ${m.text()}`); });

@@ -5,21 +5,21 @@ context: tech
 status: implemented
 tags: [web-ui, architecture, security, cli]
 updated: 2026-11-07
-code: src/secmonk/web/, scripts/design_mock.py, scripts/design_screenshots.js
-related: [features/web-ui.md, decisions/0008-web-ui-stack.md, tech/collectors/process.md, features/process-monitor.md, tech/architecture.md]
+code: src/secmonk/web/, scripts/design_mock.py, scripts/design_screenshots.js, scripts/vendor_web.py
+related: [features/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, decisions/0008-web-ui-stack.md, tech/collectors/process.md, features/process-monitor.md, tech/architecture.md]
 ---
 
 # Web interface — architecture
 
 What the user gets, the views and the navigation: [features/web-ui.md](../features/web-ui.md). Why this stack:
-[ADR-0008](../decisions/0008-web-ui-stack.md). Design system, sample pages and storybook: [`_design/`](../../_design/README.md)
+[ADR-0009](../decisions/0009-web-ui-vendored-libraries.md). Design system, sample pages and storybook: [`_design/`](../../_design/README.md)
 ([storybook](../../_design/storybook/index.html), [screenshots](../../_design/screenshots/)).
 
 ## Layout
 
 ```
 secmonk ui ──> web/server.py  ThreadingHTTPServer (stdlib)          browser
-                 │  GET /                -> static/index.html  ───────────>  Vue 3.5.13 + Vue Router 4.5.0 (unpkg, pinned)
+                 │  GET /                -> static/index.html  ───────────>  Vue 3.5.13 + Vue Router 4.5.0 (static/vendor)
                  │  GET /static/*        -> css/secmonk.css               secmonk-ui.js     base components (sm-*)
                  │                          js/secmonk-ui.js              secmonk-views.js  store, sources, views, router
                  │                          js/secmonk-views.js           boot.js           mountApp(ApiSource())
@@ -42,6 +42,7 @@ scripts/design_mock.py ──> runs ProcessMonitor on the fixtures ──> _desi
 | `static/css/secmonk.css` | design tokens (light / dark) + every component style |
 | `static/js/secmonk-ui.js` | vocabulary (launch kinds, flags, methods, events), formatting, toasts, theme, base components |
 | `static/js/secmonk-views.js` | `ApiSource` / `MockSource`, store, `NAV`, `ROUTES`, views, `mountApp()` |
+| `static/vendor/` | Vue and Vue Router global builds + LICENSE, `MANIFEST.json` (sha256), README; written by `scripts/vendor_web.py` |
 | `cli.py` `ui` | `secmonk ui [--host] [--port] [--snapshot F] [--open] [-o k=v] [--db]` |
 
 ## API (phase 1)
@@ -71,11 +72,12 @@ anything unexpected -> 500 with the exception type and message (never a tracebac
 | Other machines on the network | bind `127.0.0.1` by default; `--host` elsewhere prints a warning |
 | DNS rebinding (a web page resolving its name to 127.0.0.1) | `Host` must be `127.0.0.1:<port>`, `localhost:<port>`, `[::1]:<port>` or the bind address, else 421 |
 | CSRF (a web page posting to localhost) | mutations are POST + `X-SecMonk-Request: 1`; a custom header forces a CORS preflight, which the server never answers |
-| XSS from collected data (process names, paths, plist values) | only `{{ }}` / attribute bindings; the single `v-html` renders static icon paths from `secmonk-ui.js`; CSP `script-src 'self' 'unsafe-eval' https://unpkg.com` (no inline), `style-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` |
+| XSS from collected data (process names, paths, plist values) | only `{{ }}` / attribute bindings; the single `v-html` renders static icon paths from `secmonk-ui.js`; CSP `script-src 'self' 'unsafe-eval'` (no inline, no external origin), `style-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` |
+| Tampered or swapped third-party code | libraries vendored from the npm registry after sha512 integrity verification; sha256 per file in `static/vendor/MANIFEST.json`, checked by the tests |
 | Path traversal on static files | resolved under `static/` only, else 404 |
 | Leaking secrets | payloads come from the collector, which already redacts command lines and URLs (see [process collector](collectors/process.md)) |
 
-`'unsafe-eval'` is required by Vue's in-browser template compiler (ADR-0008). Tested in `tests/test_web.py`.
+`'unsafe-eval'` is required by Vue's in-browser template compiler (ADR-0009). Tested in `tests/test_web.py`.
 
 ## Frontend structure
 
@@ -112,16 +114,17 @@ uv run secmonk ui --snapshot tests/fixtures/collectors/process/snapshot.json   #
 uv run secmonk ui                                                             # this Mac, live
 uv run python scripts/design_mock.py                                          # regenerate _design/mock/data.js
 python3 -m http.server -d . 8000    # then http://localhost:8000/_design/ (or open the files directly)
-node scripts/design_screenshots.js  # _design/screenshots/*.png; needs Node + playwright
+node scripts/design_screenshots.js  # _design/screenshots/*.png; needs Node + playwright; blocks all external requests
+uv run python scripts/vendor_web.py --check   # vendored libraries match MANIFEST.json
 uv run pytest -q tests/test_web.py
 ```
 
-Vue is pinned in `static/index.html`, every `_design` page and the storybook (`vue@3.5.13`, `vue-router@4.5.0`): bump
-all of them together and re-run the screenshots (they fail on any console error).
+Upgrading Vue / Vue Router: change the version in `scripts/vendor_web.py`, run it (needs the npm registry), delete the old
+`static/vendor/<pkg>@<old>` directory, update the script tags in `static/index.html`, every `_design` page and the
+storybook (`tests/test_web.py` fails on a mismatch), re-run the screenshots (they fail on any console error).
 
 ## Limitations
 
-- Needs the CDN (unpkg.com) in the browser; offline the page shows a message. Vendoring the two files is a later step.
 - Single-user state in the server process; a restart forgets the current snapshot and the watch baseline.
 - The watch is client-driven polling (one tick per request); a closed tab stops it.
 - No pagination: fine for a few thousand processes; later views (findings across assets) will need server-side paging.

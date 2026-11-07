@@ -110,6 +110,7 @@ def test_static_files_and_security_headers(server):
     assert s == 200 and b'id="app"' in body
     csp = h["Content-Security-Policy"]
     assert "default-src 'self'" in csp and "frame-ancestors 'none'" in csp and "'unsafe-inline'" not in csp
+    assert "http" not in csp                                                # no third-party origin allowed
     assert h["X-Content-Type-Options"] == "nosniff"
     s, h, _ = call(server, "/static/js/secmonk-ui.js")
     assert s == 200 and "javascript" in h["Content-Type"]
@@ -117,12 +118,12 @@ def test_static_files_and_security_headers(server):
         assert call(server, bad)[0] == 404, bad
 
 
-def test_index_loads_only_pinned_cdn_and_no_inline_script():
+def test_index_loads_only_local_scripts_and_no_inline_script():
     html = (STATIC / "index.html").read_text()
     srcs = re.findall(r'<script src="([^"]+)"', html)
-    cdn = [s for s in srcs if s.startswith("http")]
-    assert cdn == ["https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js",
-                   "https://unpkg.com/vue-router@4.5.0/dist/vue-router.global.prod.js"]
+    assert srcs[:2] == ["/static/vendor/vue@3.5.13/vue.global.prod.js",
+                        "/static/vendor/vue-router@4.5.0/vue-router.global.prod.js"]
+    assert all(s.startswith("/static/") for s in srcs)                       # vendored: nothing external
     assert not re.search(r"<script>(?!\s*</script>)", html)                  # CSP: no inline scripts
     js = (STATIC / "js/secmonk-views.js").read_text() + (STATIC / "js/secmonk-ui.js").read_text()
     assert re.findall(r'v-html="[^"]*"', js) == ['v-html="svg"']              # only the static icon paths
@@ -135,7 +136,9 @@ def test_design_pages_use_the_shared_files():
     assert len(pages) >= 8
     for p in pages:
         html = p.read_text()
-        for f in ("css/secmonk.css", "js/secmonk-ui.js", "js/secmonk-views.js"):
+        assert "http://" not in html and "https://" not in html, p.name  # no CDN: works offline
+        for f in ("css/secmonk.css", "js/secmonk-ui.js", "js/secmonk-views.js", "vendor/vue@3.5.13/vue.global.prod.js",
+                  "vendor/vue-router@4.5.0/vue-router.global.prod.js"):
             assert f"../../src/secmonk/web/static/{f}" in html, (p.name, f)
     assert not list(design.rglob("secmonk.css")) and not list(design.rglob("secmonk-ui.js"))
     mock = (design / "mock/data.js").read_text()
@@ -176,3 +179,19 @@ def test_live_snapshot_unsupported_is_a_503_with_hint(mirror, monkeypatch):
 def test_cli_ui_rejects_missing_snapshot(tmp_path):
     r = CliRunner().invoke(app, ["ui", "--snapshot", str(tmp_path / "nope.json")])
     assert r.exit_code == 2 and "no snapshot file" in r.output
+
+
+def test_vendored_libraries_match_manifest():
+    """static/vendor holds exactly the files in MANIFEST.json, unmodified (scripts/vendor_web.py --check)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("vendor_web", Path(__file__).parents[1] / "scripts/vendor_web.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.check() == []
+    assert (STATIC / "vendor/vue@3.5.13/LICENSE").read_text().startswith("The MIT License")
+
+
+def test_vendored_files_are_served(server):
+    s, h, body = call(server, "/static/vendor/vue@3.5.13/vue.global.prod.js")
+    assert s == 200 and "javascript" in h["Content-Type"] and len(body) > 100_000

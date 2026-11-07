@@ -95,7 +95,8 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [ADR-0005 — Prototype scope (November 2026)](decisions/0005-prototype-scope-nov-2026.md) | accepted | 2026-11-07 | scope, roadmap |
 | [ADR-0006 — Per-user state locations (security)](decisions/0006-per-user-state-locations.md) | accepted | 2026-11-07 | security, storage, cli |
 | [ADR-0007 — Process / executable monitor](decisions/0007-process-monitor.md) | accepted | 2026-11-07 | process, collector, architecture, macos |
-| [ADR-0008 — Local web interface stack](decisions/0008-web-ui-stack.md) | accepted | 2026-11-07 | web-ui, architecture, security |
+| [ADR-0008 — Local web interface stack](decisions/0008-web-ui-stack.md) | superseded | 2026-11-07 | web-ui, architecture, security |
+| [ADR-0009 — Web interface stack with vendored libraries](decisions/0009-web-ui-vendored-libraries.md) | accepted | 2026-11-07 | web-ui, architecture, security |
 
 ## meta
 
@@ -110,7 +111,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **agentless**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
 - **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
-- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
+- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
 - **backlog**: [next-sources](plans/next-sources.md)
 - **backports**: [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md)
 - **binary**: [go](references/package-formats/go.md), [rust](references/package-formats/rust.md)
@@ -187,7 +188,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **rust**: [inventory-dependencies](features/inventory-dependencies.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [docker-image](tech/collectors/docker-image.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
-- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [web-ui](tech/web-ui.md)
+- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](tech/web-ui.md)
 - **server**: [windows](tech/collectors/windows.md)
 - **sqlite**: [data-model](tech/data-model.md)
 - **ssh**: [inventory-ssh](features/inventory-ssh.md), [on-linux-docker](plans/on-linux-docker.md), [on-macos](plans/on-macos.md), [on-windows](plans/on-windows.md), [ssh](tech/collectors/ssh.md)
@@ -201,5 +202,5 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **versions**: [engine-and-quality](plans/engine-and-quality.md), [matching](tech/engine/matching.md)
 - **vision**: [vision](product/vision.md)
 - **vuln-source**: [vuln-sync](features/vuln-sync.md), [next-sources](plans/next-sources.md), [on-open-network](plans/on-open-network.md), [README](references/vuln-sources/README.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [epss](references/vuln-sources/epss.md), [euvd](references/vuln-sources/euvd.md), [ghsa](references/vuln-sources/ghsa.md), [kev](references/vuln-sources/kev.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [osv](references/vuln-sources/osv.md), [architecture](tech/architecture.md)
-- **web-ui**: [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [web-ui](features/web-ui.md), [web-ui](tech/web-ui.md)
+- **web-ui**: [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](features/web-ui.md), [web-ui](tech/web-ui.md)
 - **windows**: [inventory-ssh](features/inventory-ssh.md), [inventory-windows](features/inventory-windows.md), [on-windows](plans/on-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)

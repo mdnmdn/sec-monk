@@ -1,6 +1,6 @@
 /* sec-monk UI kit: formatting helpers, vocabulary (launch kinds, flags, methods) and the base Vue components.
  *
- * Classic script (no modules, no bundler): needs the global `Vue` (CDN) and defines `window.SecMonkUI`.
+ * Classic script (no modules, no bundler): needs the global `Vue` (vendored in static/vendor) and defines `window.SecMonkUI`.
  * Loaded unchanged by the app, the _design sample pages and the storybook; every component here has a story in
  * _design/storybook/stories.js. Untrusted data is only ever rendered with {{ }} / attribute bindings (never v-html).
  * Docs: _docs/tech/web-ui.md.

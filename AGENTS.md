@@ -73,10 +73,11 @@ uv run python scripts/docs_index.py --check  # frontmatter, paths, links, anchor
 ## Web interface specifics
 
 Feature: [web-ui](_docs/features/web-ui.md); architecture and "Adding a feature": [tech/web-ui](_docs/tech/web-ui.md);
-design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0008](_docs/decisions/0008-web-ui-stack.md).
+design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0009](_docs/decisions/0009-web-ui-vendored-libraries.md).
 
-- **No build step**: Vue 3 + Vue Router from unpkg (pinned in `static/index.html`, every `_design` page and the
-  storybook: bump together), classic scripts exposing `window.SecMonkUI`. No npm dependency in the app.
+- **No build step, no network**: Vue 3 + Vue Router are vendored in `static/vendor/` (written only by
+  `scripts/vendor_web.py`, checksummed in `MANIFEST.json`, never edited by hand); every page references them by path, no
+  page loads anything from another origin. Classic scripts exposing `window.SecMonkUI`. No npm dependency in the app.
 - **One component library**: `static/css/secmonk.css`, `static/js/secmonk-ui.js`, `static/js/secmonk-views.js` are used
   by the app, the `_design` pages and the storybook. Never copy them; a new component gets a story, a new view gets a
   sample page; regenerate `_design/mock/data.js` (`scripts/design_mock.py`) when a payload changes.

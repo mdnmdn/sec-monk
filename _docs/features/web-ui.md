@@ -6,7 +6,7 @@ status: implemented
 tags: [web-ui, cli, process, design]
 updated: 2026-11-07
 code: src/secmonk/web/, src/secmonk/cli.py
-related: [tech/web-ui.md, decisions/0008-web-ui-stack.md, features/process-monitor.md, features/scan-and-findings.md, features/README.md]
+related: [tech/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, features/process-monitor.md, features/scan-and-findings.md, features/README.md]
 ---
 
 # Web interface (local)
@@ -26,7 +26,7 @@ Design system, sample pages and the component storybook: [`_design/`](../../_des
 |---|---|
 | User | One analyst on their own machine (security engineer, IT admin, developer checking a laptop). |
 | Deployment | Local only: bound to `127.0.0.1`, **no authentication**, no multi-user state. The same Python process that runs the CLI serves it. |
-| Data | Only the local mirror (SQLite) and local collectors, like the CLI. No external call except the pinned Vue CDN scripts loaded by the browser. |
+| Data | Only the local mirror (SQLite) and local collectors, like the CLI. No external call at all: Vue and Vue Router are vendored in the package. |
 
 ### Functional (phase 1: process monitor)
 
@@ -52,8 +52,8 @@ Design system, sample pages and the component storybook: [`_design/`](../../_des
 
 ### Non-functional
 
-- **No build step**: Vue 3 from a CDN (pinned versions), plain CSS, classic scripts; works from `file://` for the design
-  pages. No Node toolchain needed to run or change it.
+- **No build step, works offline**: Vue 3 + Vue Router vendored in the package (`static/vendor`, checksummed), plain CSS,
+  classic scripts; the design pages work from `file://`. No Node toolchain needed to run or change it.
 - **One component library**: the CSS and the Vue components used by the app are the very files used by the design sample
   pages and the storybook (no copies).
 - **Secure by default for a local tool**: loopback bind, `Host` header check (DNS rebinding), state-changing requests
