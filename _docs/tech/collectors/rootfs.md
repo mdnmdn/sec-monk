@@ -62,6 +62,8 @@ Tests: `tests/collectors/test_rootfs.py`.
 
 ## Limitations
 
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-linux-docker.md](../../plans/on-linux-docker.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
+
 Whiteout/hardlink logic is spec-based (base images have a single layer); layers whose directories are replaced by regular files are not purged from the view.
 
 

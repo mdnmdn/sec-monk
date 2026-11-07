@@ -93,6 +93,8 @@ exact package matching too.
 
 ## Known gaps
 
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [engine-and-quality.md](../../plans/engine-and-quality.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
+
 - Interpreters installed from source (e.g. CPython in `python:*` images under `/usr/local`) are not
   detected as runtimes yet.
 - Go binaries built without modules (GOPATH mode) expose only the stdlib version.

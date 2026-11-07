@@ -1,5 +1,5 @@
 """Prioritization — draft rules from vision §8. Thresholds are deliberately simple; tune them
-once real data is in (see _docs/tech/engine/matching.md#prioritization)."""
+once real data is in (see _docs/tech/engine/matching.md, section "Prioritization")."""
 
 from __future__ import annotations
 

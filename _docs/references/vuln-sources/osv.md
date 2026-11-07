@@ -170,9 +170,10 @@ from the source package. An installed `libssl3` (binary) must be mapped to its s
 lookup (dpkg `Source:` field; apk `o:` origin; rpm `SOURCERPM`). Debian version strings: `5.6.1+really5.4.5-1`;
 Alpine: `5.6.1-r2`; RPM: `epoch:version-release` with explicit epoch (`0:3.23.12-10.el10_2.5`, `1:0.1.15-2.git...`).
 
-## Mapping
+## Mapping (design sketch)
 
-Planned tables (see `tech/` data model; names are the plan, not yet final):
+> **Design sketch, written before the importer existed.** Table and column names below (`affected_range`, `ecosystem_base`, `package_name`) are not the implemented schema. The tables that exist are in [tech/data-model.md](../../tech/data-model.md); what the importer really writes is under *Implementation notes*.
+
 
 **vulnerability** (one row per OSV `id`)
 
@@ -290,7 +291,7 @@ version-compare, plus `versions[]` membership.
 2. First sync: download `<Eco>/all.zip` (resumable, `Range`), stream entries from the zip without extracting, upsert per record, store
    `max(modified)` as cursor per ecosystem.
 3. Delta: GET `<Eco>/modified_id.csv` (conditional with ETag), read lines until `modified <= cursor` (file is newest first), GET
-   `<Eco>/<ID>.json` for each, delete rows of `withdrawn`, replace `affected_range` rows for that id wholesale. Fall back to full zip if > ~5k changes or cursor older than 30 days.
+   `<Eco>/<ID>.json` for each, delete rows of `withdrawn`, replace the `affected` rows for that id wholesale. Fall back to full zip if > ~5k changes or cursor older than 30 days.
 4. Run daily; the CSV is regenerated roughly every few minutes upstream.
 
 ## Implementation notes

@@ -3,11 +3,11 @@ title: CVE List v5 (+ CISA Vulnrichment)
 type: reference
 context: references
 code: src/secmonk/sources/cvelist.py
-status: implemented  # draft | implemented | blocked
+status: implemented
 tags: [vuln-source, cve, adp, ssvc]
 updated: 2026-11-07
-sample: real         # real | synthetic | mixed
-reachable: partial   # yes | partial | no  (from dev sandbox)
+sample: real
+reachable: partial
 fixtures: tests/fixtures/sources/cvelist/
 related: [references/vuln-sources/osv.md, references/vuln-sources/nvd.md]
 ---
@@ -146,7 +146,10 @@ SSVC (`metrics[].other.type == "ssvc"`):
 `options` is a list of single-key objects (flatten to a dict).
 KEV hint (`other.type == "kev"`, 189 in 2025): `content:{dateAdded, reference}` (+ ADP `timeline` entry "added to CISA KEV"). This is a convenience; the authoritative KEV source is KEV (kev.md, sibling doc).
 
-## Mapping into our tables
+## Mapping (design sketch) into our tables
+
+> **Design sketch, written before the importer existed.** Table and column names below (`affected_range`, `ssvc` table`) are not the implemented schema. The tables that exist are in [tech/data-model.md](../../tech/data-model.md); what the importer really writes is under *Implementation notes*.
+
 
 Use the **CNA container first**, fall back to ADP (CISA-ADP) for CVSS/CWE.
 
@@ -184,7 +187,7 @@ Use the **CNA container first**, fall back to ADP (CISA-ADP) for CVSS/CWE.
 | `changes` | expand into extra rows: each `at` with status `unaffected` closes the previous range (`fixed = at`), `affected` opens a new one (`introduced = at`) |
 | `raw_version` | the original `version` string when it is an expression (kept for the fallback parser) |
 
-`ssvc` (new small table, or JSON column on vulnerability): `cve_id, exploitation, automatable, technical_impact, version, timestamp, role` from `adp[CISA-ADP].metrics[other.type=="ssvc"].content`. `kev_hint`: `dateAdded` from `other.type=="kev"` (defer to the KEV source for truth).
+SSVC is stored in `vulnerability.extra.ssvc` (no separate table; the columns would have been `cve_id, exploitation, automatable, technical_impact, version, timestamp, role` from `adp[CISA-ADP].metrics[other.type=="ssvc"].content`). `kev_hint`: `dateAdded` from `other.type=="kev"` (defer to the KEV source for truth).
 
 ## Quirks & pitfalls
 
@@ -226,7 +229,8 @@ Importer rule: parse each file with `json` only, tolerate unknown `dataVersion`,
 - [x] Format analysed on the full 2025 set (45,479 records).
 - [x] Importer (directory walker + per-ID fetcher + git delta), `changes[]` expansion, version-expression parser and vendor/product normalization are implemented (see Implementation notes; alias table in `src/secmonk/data/product_aliases.yaml`).
 - [ ] Validate release-zip bulk path and `cveawg` API from an unrestricted network (blocked: 403).
-- [ ] Decide SSVC storage (table vs JSON column); cross-check KEV hints against KEV (kev.md, sibling doc).
+- [x] SSVC storage decided: JSON in `vulnerability.extra.ssvc`, no separate table.
+- [ ] Cross-check the ADP KEV hints (`extra.adp_kev`) against the KEV table ([kev.md](kev.md)).
 
 ## Implementation notes
 
@@ -239,7 +243,7 @@ Code: `src/secmonk/sources/cvelist.py` (`CveListSource`, `import_record`, `parse
 2. `opts.ids`: per-id raw fetch from `raw.githubusercontent.com/.../cves/<year>/<n//1000>xxx/<id>.json`
    (file name = the id as written, so `CVE-2014-0160` stays zero padded; 6+ digit ids OK); 404 is skipped. `ids == ["@referenced"]` computes the ids from
    `alias` (`CVE-%`) and `kev` that have no cvelist row, capped by `opts.limit`
-   (`fetch_missing`, for `secmonk sync cvelist --referenced`).
+   (`fetch_missing`, for `secmonk sync cvelist --id @referenced`).
 3. Default: sparse partial clone in the per-user cache `paths.cache_subdir("cvelistV5")`
    (`--depth 1 --filter=blob:none --sparse`), `git sparse-checkout add cves/<year>..` for the widest of
    `opts.since` year, the oldest year synced before (internal row `cvelist:years`, so a `--since` backfill

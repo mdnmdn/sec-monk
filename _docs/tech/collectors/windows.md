@@ -7,11 +7,13 @@ tags: [collector, windows, desktop, server, registry, msrc]
 updated: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/windows/
-code: src/secmonk/collectors/windows.py, src/secmonk/data/windows/secmonk-inventory.ps1 (print it with `secmonk windows-script > secmonk-inventory.ps1`)
+code: [src/secmonk/collectors/windows.py, src/secmonk/data/windows/secmonk-inventory.ps1]
 related: [references/windows-inventory.md, features/inventory-windows.md, tech/engine/classification.md, tech/engine/matching.md, references/vuln-sources/msrc.md]
 ---
 
 # Windows collector
+
+The PowerShell script ships in `src/secmonk/data/windows/`; print it with `secmonk windows-script > secmonk-inventory.ps1`.
 
 ## Summary
 
@@ -111,6 +113,8 @@ The default OpenSSH shell on Windows is `cmd.exe`: a command longer than 8191 ch
 Detection: `ssh host ver` / `cmd /c ver` printing `Microsoft Windows` (uname does not exist).
 
 ## Limitations
+
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-windows.md](../../plans/on-windows.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
 - Script untested on real Windows; live-mode `winreg` tested only against a fake module.
 - Per-user software of users whose hive is not loaded is invisible (reported in warnings). Run as SYSTEM or while users are logged on.

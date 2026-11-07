@@ -120,7 +120,7 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
 | `scan docker-image <ref / tar / dir>` | docker-image (`LayeredTarView`) | whitelisted files of each layer in order with whiteouts; lang files parsed while streaming (`LangAccumulator`) | `image:<repo>@<digest>` | same as rootfs |
 | `scan docker-engine <name / image:ref>` | docker-engine (`LayeredTarView`) | container `export` stream (or image save) through the engine socket | `container:<name>` | same as rootfs |
 | `scan fs <dir>` | fs | lockfiles, manifests, installed metadata, Go/Rust/jar binaries via `walk_dir` | `repo:<path>` / `dir:<path>` | osv-package (7 ecosystems) |
-| `scan ssh user@host` | ssh + harvest | fixed read-only `find` + `tar` stream, extracted to a temp dir, then rootfs / macOS code; Windows hosts: PowerShell inventory script on stdin | `ssh:<host>` (Windows: `windows:<host>`) | as rootfs / macOS / windows |
+| `scan ssh user@host` | ssh + harvest | fixed read-only `find` + `tar` stream, extracted to a temp dir, then rootfs / macOS code; Windows hosts: PowerShell inventory script on stdin | `ssh:<host>[:<port>]` (also for Windows hosts) | as rootfs / macOS / windows |
 | `scan windows [inv.json]` | windows | script JSON, osquery rows, or live registry: OS build + UBR, Uninstall keys, Appx, Chocolatey, Scoop, .NET | `windows:<host>` | cve-product on per-build ranges (CNA/MSRC) + alias-table apps |
 
 ## Principles
@@ -132,4 +132,4 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
 - **Same CVE, many sources:** rows are keyed `(source, id)`; `alias` links ids; the matcher
   canonicalizes to the CVE id and picks facts by source preference `nvd > cvelist > osv > euvd`.
 - **Read-only collection:** nothing is executed on the target except the fixed SSH scripts and the read-only Windows script; archives are never extracted blindly.
-- **Evidence-based docs:** see [`_meta`](../_meta/README.md).
+- **Evidence-based docs:** see [`_meta`](../_meta/README.md). What was validated on real data and which hosts are reachable: [probe log](../references/probes.md); open work: [plans](../plans/README.md).

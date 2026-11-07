@@ -57,7 +57,7 @@ Takeaway: **GitHub raw/git, GitLab raw, the OSV bucket and parts of ubuntu.com a
 
 ## Backlog table (priority order)
 
-Effort: S <= 1 day, M = 2-4 days, L = 1+ week. Priority reflects scan-quality gain per effort for Linux/Docker first (ADR-0003: macOS desktop, Docker images).
+Effort: S <= 1 day, M = 2-4 days, L = 1+ week. Priority reflects scan-quality gain per effort for Linux/Docker first (ADR-0005: macOS desktop, Docker images, SSH, Windows).
 
 | # | Source | Adds | Format | Access / reachability (2026-11-07) | Target tables | Effort | Develop (D) / validate (V) |
 |---|---|---|---|---|---|---|---|

@@ -126,7 +126,7 @@ Fixtures go to `tests/fixtures/collectors/docker/real/` and `tests/fixtures/coll
 
 - [ ] **Rootfs of a live `/`** (not an unpacked image).
   ```bash
-  sudo uv run secmonk collect rootfs / --json /tmp/host.json --db /tmp/lx.db
+  sudo uv run secmonk collect rootfs / -O /tmp/host.json --db /tmp/lx.db
   dpkg -l | awk 'NR>5' | wc -l      # or: rpm -qa | wc -l / apk list -I | wc -l
   jq '[.components[]|select(.category=="package")]|length' /tmp/host.json; jq .warnings /tmp/host.json
   ```

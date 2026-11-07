@@ -32,7 +32,7 @@ Never commit hostnames, user names, serials, or full paths under `/Users/<name>`
 
 - [ ] **First real run, Apple Silicon and (if available) Intel.**
   ```bash
-  uv run secmonk collect macos / --json /tmp/mac-inv.json --db /tmp/mac.db
+  uv run secmonk collect macos / -O /tmp/mac-inv.json --db /tmp/mac.db
   uv run secmonk inventory assets --db /tmp/mac.db
   uv run secmonk inventory show macos:$(hostname -s) --db /tmp/mac.db | head -80
   jq '[.components[].category] | group_by(.) | map({(.[0]): length}) | add' /tmp/mac-inv.json
@@ -71,7 +71,7 @@ Never commit hostnames, user names, serials, or full paths under `/Users/<name>`
 - [ ] **`system_profiler` input.**
   ```bash
   system_profiler SPApplicationsDataType -json > /tmp/sp-apps.json
-  uv run secmonk collect macos / -o system_profiler=/tmp/sp-apps.json --json /tmp/mac-inv-sp.json
+  uv run secmonk collect macos / -o system_profiler=/tmp/sp-apps.json -O /tmp/mac-inv-sp.json
   diff <(jq -r '.components[].name' /tmp/mac-inv.json | sort -u) <(jq -r '.components[].name' /tmp/mac-inv-sp.json | sort -u)
   ```
   Verify: field names of real output equal the synthetic fixture `system_profiler-applications.json` (`_name`, `path`, `version`,
@@ -128,7 +128,7 @@ Never commit hostnames, user names, serials, or full paths under `/Users/<name>`
 - [ ] **`-o use_brew_cli=true` (`brew info --json=v2 --installed`).**
   ```bash
   brew info --json=v2 --installed > /tmp/brew-info.json
-  uv run secmonk collect macos / -o use_brew_cli=true --json /tmp/mac-inv-cli.json
+  uv run secmonk collect macos / -o use_brew_cli=true -O /tmp/mac-inv-cli.json
   diff <(jq -S '[.components[]|select(.purl|startswith("pkg:brew"))|.purl]' /tmp/mac-inv.json) \
        <(jq -S '[.components[]|select(.purl|startswith("pkg:brew"))|.purl]' /tmp/mac-inv-cli.json)
   ```

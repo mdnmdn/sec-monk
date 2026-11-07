@@ -2,12 +2,14 @@
 title: ADR-0002 — SQLite local mirror
 type: decision
 context: decisions
-status: accepted
+status: superseded
 tags: [data-model, storage]
 updated: 2026-11-07
 ---
 
 # ADR-0002 — SQLite as the local vulnerability mirror and inventory store
+
+> Superseded by [ADR-0004](0004-sqlite-schema-v2.md) (current tables and migrations) and [ADR-0006](0006-per-user-state-locations.md) (DB location: no longer `./secmonk.db`).
 
 ## Context
 Vision §6: "scans never hit external APIs directly"; a sync job mirrors sources locally.

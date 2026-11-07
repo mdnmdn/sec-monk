@@ -16,6 +16,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 
 | Feature | Doc | Status | Platforms | CLI entry point | Validation caveat |
 |---|---|---|---|---|---|
+| Scan, match and findings | [scan-and-findings.md](scan-and-findings.md) | implemented | any | `secmonk scan`, `match`, `findings`, `inventory *`, `vuln show/search` | engine and CLI covered by offline tests (`tests/engine/`, `tests/test_cli.py`); priorities are draft rules |
 | Vulnerability data sync (8 sources) | [vuln-sync.md](vuln-sync.md) | implemented | any (needs network per source, or `--path` import) | `secmonk sync <source>`, `sources`, `status`, `vuln show/search` | osv, cvelist, kev run on real data; epss, nvd, euvd, msrc, debian-tracker only on fixtures (hosts blocked in the dev sandbox) |
 | macOS inventory | [inventory-macos.md](inventory-macos.md) | implemented | macOS host or a copied Mac directory tree (analysed on any OS) | `secmonk collect\|scan macos [/]` | fixtures synthetic; not run on a real Mac |
 | Homebrew inventory | [inventory-homebrew.md](inventory-homebrew.md) | implemented | macOS and Linuxbrew prefixes (any OS can read a mounted prefix) | `secmonk collect\|scan homebrew [prefix]` | fixtures built from real registry manifests and formulae; real-prefix scan not done |
@@ -24,12 +25,12 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Agentless SSH inventory | [inventory-ssh.md](inventory-ssh.md) | implemented | target Linux, macOS, Windows (OpenSSH); analyst machine any | `secmonk collect\|scan ssh user@host[:port]` | fixture trees + in-process sshd only; no real sshd, no real macOS/Windows host |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 
-Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`) are shared by all inventory features; priorities and
-distro triage are described in [matching](../tech/engine/matching.md). There is no separate feature doc for them yet.
+Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `vuln ...`) are shared by all inventory features and are described in
+[scan-and-findings.md](scan-and-findings.md); priorities and distro triage in [matching](../tech/engine/matching.md).
 
 ## CLI at a glance
 
-Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every data command accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched and scan (json/csv go to stdout, notes to stderr; tables are not truncated when piped).
+Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every command that reads or writes the database (all but `sources`, `collectors`, `containers`, `windows-script`) accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched and scan (json/csv go to stdout, notes to stderr; tables are not truncated when piped).
 
 ```text
 secmonk status                          freshness + table sizes
@@ -42,12 +43,12 @@ secmonk sync NAMES... | all             fetch into the mirror
     --full              ignore the stored delta cursor
     -n, --limit N       max records (debug)
     --api-key K         NVD API key (env NVD_API_KEY)
-    (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` is skipped)
+    (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` would be skipped, none currently is)
 
 secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos rootfs ssh windows)
 secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     --save/--no-save    store the inventory in the DB (default: save)
-    -O, --output PATH   write inventory JSON (--json is a deprecated alias)
+    -O, --output PATH   write inventory JSON (a hidden `--json` still works but is deprecated)
     -q, --quiet         don't print the component table (warnings are always shown)
     -o, --opt KEY=VAL   collector option (repeatable), e.g. -o use_brew_cli=true -o platform=linux/arm64
 secmonk scan COLLECTOR [TARGET]         collect + save + match, then print findings
@@ -76,23 +77,26 @@ secmonk vuln search                     advisories for a package or product
     --package P  --ecosystem E  --product P  --version V  -n/--limit N (default 50)
 secmonk inventory assets [-f FMT]       list assets
 secmonk inventory show ASSET [--category C] [-f FMT]   components of the latest scan
-secmonk inventory unmatched             apps whose identity is only a normalized name (alias-table candidates)
+secmonk inventory unmatched [-f FMT]    apps whose identity is only a normalized name (alias-table candidates)
 ```
 
 ### Collector options (`-o key=value`)
 
-Values stay strings, except `true/false/yes/no` for the boolean keys (binaries, sudo, all_kegs, use_brew_cli, include_system, insecure_host_key, xdev, no_cache, lang, verbose) and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`).
+Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`)
+and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`). Keys marked *(API)* are read by the collector but are not
+boolean/list-parsed on the command line (use them from Python, or pass a value the collector treats as truthy); `0`/`false` strings are **not** falsy for them.
+A key a collector does not know is silently ignored.
 
-| Collector | Target | Options (from the feature docs and code) |
+| Collector | Target | Options (every key the collector reads; defaults in brackets) |
 |---|---|---|
-| `macos` | `/` or a Mac root dir | `use_brew_cli`, `include_system`, `home`, `hostname`, `system_profiler` |
-| `homebrew` | prefix or root (default: search known prefixes) | `all_kegs`, `hostname` |
-| `rootfs` | directory | none |
-| `docker-image` | registry ref, `docker save` tar, OCI dir | `platform` (default `linux/amd64`), `username`, `password` (or `SECMONK_REGISTRY_PASSWORD`), `no_cache`, `cache_dir`, `max_layer_bytes` |
-| `docker-engine` | container name/id or `image:<ref>` | `socket` (or `$DOCKER_HOST`) |
-| `fs` | folder or repo (default `.`) | `binaries` (default true), `max_files` (default 200000), `asset_id` |
-| `ssh` | `user@host[:port]` or `ssh://` | `transport` (auto/openssh/paramiko), `identity`, `ssh_option`, `insecure_host_key`, `sudo`, `binaries`, `lang`, `root`, `exclude`, `xdev`, `max_files`, `max_mb`, `max_binary_mb`, `os` (`macos`/`windows`), `verbose`, `connect_timeout`, `timeout`; `SECMONK_SSH_PASSWORD` |
-| `windows` | `inv.json` (script output), none = live on Windows | `osquery=<file>`, `hostname`, `include_system` |
+| `macos` | `/` (live) or a Mac root dir | `use_brew_cli` (false; ask `brew` for the live prefix), `include_system` (true), `home` (list of user homes; default: all under `/Users`), `hostname`, `system_profiler` (path of a saved `system_profiler -json` file) |
+| `homebrew` | prefix or root (default: search known prefixes) | `all_kegs` (false; also inactive kegs), `hostname` |
+| `rootfs` | directory | none (asset `rootfs:<path>`) |
+| `docker-image` | registry ref, `docker save` tar, OCI dir | `platform` (`linux/amd64`), `tag` (which tag of a multi-image tar), `username` + `password` (or `$SECMONK_REGISTRY_PASSWORD`; else inline `auths` of `~/.docker/config.json`), `no_cache` (false), `cache_dir` (blobs under `<dir>/blobs`; default per-user cache), `max_layer_bytes` (4 GiB) |
+| `docker-engine` | container name/id or `image:<ref>` | `socket` (else `$DOCKER_HOST`, else well-known paths), `timeout` (30 s) *(API)* |
+| `fs` | folder or repo (default `.`) | `binaries` (true; Go/Rust binaries and jars), `max_files` (200000), `asset_id` (override `repo:<path>` / `dir:<path>`) |
+| `ssh` | `user@host[:port]`, `ssh://user@host:port` | transport: `transport` (auto/openssh/paramiko), `identity`, `ssh_option` (repeatable; OpenSSH), `ssh_bin`, `known_hosts`, `ssh_config`, `allow_agent` (true), `look_for_keys` (true) (the last four: paramiko), `insecure_host_key` (false, unsafe), `connect_timeout` (15 s), `timeout` (900 s). Harvest: `os` (`linux`\|`macos`\|`windows`; default auto-detected), `root` (`/`), `sudo` (false), `lang` (true), `binaries` (**false** here), `max_binary_mb` (50), `max_files` (200000), `max_mb` (512), `xdev`, `exclude` (list), `include_system` (true; macOS/Windows), `verbose`. Password only via `SECMONK_SSH_PASSWORD` |
+| `windows` | `inv.json` (script output), none = live on Windows | `osquery=<file>` (osquery results JSON), `hostname`, `include_system` (true) |
 
 ## Adding a feature doc
 

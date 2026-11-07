@@ -1,4 +1,5 @@
-"""secmonk command line. See _docs/features/README.md.
+"""secmonk command line. Command reference: _docs/features/README.md (CLI at a glance);
+scan/match/findings contract: _docs/features/scan-and-findings.md.
 
 Exit codes: 0 ok; 1 runtime error (unknown asset, missing database, collector failure, a sync source
 that failed); 2 usage error (unknown source/collector, bad option); 3 `scan --fail-on` threshold hit.
@@ -64,7 +65,8 @@ SYNC_ALL_ORDER = ("kev", "epss", "osv", "cvelist", "nvd", "euvd", "msrc", "debia
 
 # Collector options that really are booleans / comma-separated lists (see _parse_opts).
 BOOL_OPTS = frozenset({"binaries", "sudo", "all_kegs", "use_brew_cli", "include_system",
-                       "insecure_host_key", "xdev", "no_cache", "lang", "verbose"})
+                       "insecure_host_key", "xdev", "no_cache", "lang", "verbose",
+                       "allow_agent", "look_for_keys"})
 LIST_OPTS = frozenset({"exclude", "home", "ecosystems"})
 
 COLLECT_ERRORS = (OSError, RuntimeError, ValueError, KeyError, tarfile.TarError, zipfile.BadZipFile,

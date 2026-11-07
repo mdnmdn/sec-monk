@@ -83,6 +83,8 @@ asset type `container` (id = `<engine host>/<container id[:12]>`, name from `Nam
 
 ## Limitations / gotchas
 
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-linux-docker.md](../../plans/on-linux-docker.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
+
 - Docker Desktop (macOS/Windows) engine runs in a VM: socket paths are on the host but the container FS is in the VM; the API hides this (works over the socket). Colima/Podman Machine likewise.
 - `/containers/{id}/export` of a running container is not a consistent snapshot; large (GBs) - stream, set a size cap, avoid `/export` when `/archive` is enough.
 - Image stores: Docker >= 25 with the containerd image store changes `/images/*/get` output to OCI layout (`index.json` + `blobs/`, still includes `manifest.json`) and `RepoDigests`/`Id` semantics (Id = manifest digest). Handle both layouts.

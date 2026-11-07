@@ -21,21 +21,25 @@ updated: 2026-11-07          # required — last meaningful edit
 platform: macos              # plans: macos | linux | windows | open-network | any
 sample: real                 # references/collectors: real | synthetic | mixed
 reachable: partial           # references: yes | partial | no  (from the dev sandbox network)
-fixtures: tests/fixtures/sources/cvelist/   # where the samples / test fixtures live
-code: src/secmonk/sources/cvelist.py        # implementing module(s)
+fixtures: tests/fixtures/sources/cvelist/   # repo-relative paths only (one, comma-separated, or a YAML list; globs ok)
+code: src/secmonk/sources/cvelist.py        # implementing module(s): paths only, prose belongs in the body
 related: [references/vuln-sources/osv.md]   # paths relative to _docs/
 supersedes: decisions/0001-…                # decisions only
 ---
 ```
+
+`uv run python scripts/docs_index.py --check` enforces this page: required keys; `context` = the folder (`_meta/` = `meta`); `type` and `status` legal for
+the folder (table below); `platform` only on plans; `sample` / `reachable` values; every `code`, `fixtures`, `related` and `supersedes` path exists; relative
+markdown links and `#anchors` resolve; `INDEX.md` is current. (`reachable: no` is read as the string `no`, not YAML false.)
 
 ## `status` values
 
 | Value | Meaning | Used by |
 |---|---|---|
 | `draft` | Being written; may be incomplete. | all |
-| `reference` | Stable informational doc. | product, meta, references |
-| `implemented` | Describes something that exists in code and is tested. | feature, tech, references |
-| `blocked` | Cannot proceed (e.g. source unreachable); reason in the doc. | references, features |
+| `reference` | Stable informational doc (also a source doc without an importer). | product, meta, references |
+| `implemented` | Describes something that exists in code and is tested. For a vuln source: an importer exists; how far it was validated is `sample` + `reachable`. | feature, tech, references |
+| `blocked` | Cannot proceed; reason in the doc. Not used for sources whose importer exists but whose host is unreachable from the sandbox (that is `reachable: no`). | references, features |
 | `proposed` / `accepted` / `superseded` | ADR lifecycle. | decisions |
 | `open` / `done` | Plan checklist state (a plan stays `open` while any item is unchecked). | plans |
 

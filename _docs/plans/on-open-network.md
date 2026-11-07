@@ -12,7 +12,7 @@ related: [references/vuln-sources/README.md, features/vuln-sync.md, references/v
 # Plan: validate vulnerability sources from an unrestricted network
 
 Any OS works (Linux/macOS/Windows with bash or WSL). The dev sandbox blocked: `security-tracker.debian.org`, `salsa.debian.org`, `secdb.alpinelinux.org`,
-`access.redhat.com`, `security.access.redhat.com`, `api.first.org`/`epss.cyentia.com`, `services.nvd.nist.gov`, `euvdservices.enisa.europa.eu`, `www.cisa.gov`,
+`access.redhat.com`, `security.access.redhat.com`, `api.first.org`/`epss.empiricalsecurity.com`, `services.nvd.nist.gov`, `euvdservices.enisa.europa.eu`, `www.cisa.gov`,
 `api.msrc.microsoft.com`, `api.osv.dev`, `formulae.brew.sh`, `repology.org`, GitHub releases/API. Importers for all of them exist and pass **synthetic-fixture** tests; the job
 is to replace the synthetic fixtures with real (trimmed) samples, correct wrong assumptions, and record sizes/timings.
 
@@ -122,10 +122,10 @@ and each source doc's Status/TODO. Everything below is the follow-up per source.
 
 ## 3. EPSS, KEV, NVD, EUVD (prioritization inputs; fixtures are synthetic or mirror-derived)
 
-- [ ] **EPSS** (`api.first.org`, `epss.cyentia.com`).
+- [ ] **EPSS** (`api.first.org`, `epss.empiricalsecurity.com`).
   ```bash
   curl -s 'https://api.first.org/data/v1/epss?cve=CVE-2021-44228' | jq .
-  curl -s https://epss.cyentia.com/epss_scores-current.csv.gz | gunzip | head -4
+  curl -s https://epss.empiricalsecurity.com/epss_scores-current.csv.gz | gunzip | head -4
   curl -sI 'https://api.first.org/data/v1/epss?limit=100000' | head; uv run secmonk sync epss --db /tmp/t.db; sqlite3 /tmp/t.db "select count(*),max(score) from epss"
   ```
   Verify: exact header/comment line (`#model_version:...,score_date:...`), decimal width, daily file size (~250k rows), API max `limit` and rate limits; importer skips `#` lines. Replace the synthetic CSV; update [epss.md](../references/vuln-sources/epss.md) TODO.

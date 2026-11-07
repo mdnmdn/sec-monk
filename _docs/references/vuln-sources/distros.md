@@ -2,7 +2,7 @@
 title: Linux distribution security data sources
 type: reference
 context: references
-status: draft
+status: reference
 tags: [vuln-source, linux, distro, backports]
 updated: 2026-11-07
 sample: mixed

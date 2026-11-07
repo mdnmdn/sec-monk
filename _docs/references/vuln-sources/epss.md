@@ -77,7 +77,10 @@ Response envelope:
 
 Fixture: `tests/fixtures/sources/epss/api-sample.json` (synthetic, two rows).
 
-## Mapping
+## Mapping (design sketch)
+
+> **Design sketch, written before the importer existed.** Table and column names below (`(cve_id, date)` key, history view`) are not the implemented schema. The tables that exist are in [tech/data-model.md](../../tech/data-model.md); what the importer really writes is under *Implementation notes*.
+
 
 | EPSS field | Our table / column |
 |---|---|

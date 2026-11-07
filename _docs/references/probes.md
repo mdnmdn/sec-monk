@@ -91,7 +91,8 @@ Not probed at all: `learn.microsoft.com` and other vendor documentation sites (W
 
 ## 4. Real-data validation runs
 
-Numbers below are copied from the referenced docs (measured 2026-11-07 unless stated).
+Numbers below are copied from the referenced docs (measured 2026-11-07 unless stated). This section is the single home for measurements; tech and feature docs link here instead of repeating them.
+Runs that report finding counts or component counts (image scans, `scan fs`, Debian urgency) were taken **before** the review-fix commit 97e72b9 (distinct-CVE canonicalization, withdrawn handling, Go buildinfo via section tables, jar/NuGet fixes) and have not been re-measured: expect small differences. Sync timings and fixture-based rows are unaffected.
 
 | Run | Result | Where documented |
 |---|---|---|

@@ -5,7 +5,7 @@ context: references
 status: implemented
 tags: [package-format, dependencies, dotnet]
 updated: 2026-11-07
-sample: real
+sample: mixed
 fixtures: tests/fixtures/lang/dotnet/
 code: src/secmonk/collectors/lang/dotnet.py
 related: [tech/collectors/dependencies.md, references/vuln-sources/osv.md]

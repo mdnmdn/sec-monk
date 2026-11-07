@@ -2,7 +2,7 @@
 title: Debian Security Tracker
 type: reference
 context: references
-status: draft
+status: implemented
 tags: [vuln-source, linux, distro, backports, matching]
 updated: 2026-11-07
 sample: synthetic

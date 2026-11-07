@@ -11,14 +11,15 @@ related: [tech/engine/classification.md, tech/data-model.md]
 
 # Matching
 
-`engine.match.match_asset(conn, asset_id)` evaluates the components of the asset's latest scan.
+`engine.match.match_asset(conn, asset_id, min_confidence=0.0)` evaluates the components of the asset's current inventory (see *Partial scans* in the [data model](../data-model.md)).
+`min_confidence` drops matches below it; the function default is 0.0 (keep everything) whereas `secmonk scan` / `secmonk match` pass 0.5 (see [scan-and-findings](../../features/scan-and-findings.md)).
 
 ## Strategies
 
 | Strategy (`matched_by`) | Applies to | Lookup | Version semantics | Confidence |
 |---|---|---|---|---|
-| `osv-package` | `library`, `os-package` with an ecosystem | `affected.ecosystem = component.ecosystem AND package IN (name, meta.source_package)`; range types ECOSYSTEM / SEMVER / VERSIONS | ecosystem-specific via `univers` (Debian, RPM, Alpine, PEP 440, semver, Maven, Go…) on `meta.source_version` if present | 1.0 |
-| `cve-product` / `cpe-product` | everything else (apps, brew, runtimes, OS) | `affected.product IN (meta.product, normalized name)` with range types CVE / CPE; vendor must match when both known | generic tolerant comparator (see *Generic versions*); a version without any digit never matches | base by `meta.product_source`: `brew-seed` 0.85, `alias-table` 0.8, `brew-name-vendor` 0.7, `normalized-name` 0.5 (0.4 for brew formulae); −0.2 without vendor confirmation, −0.2 unparseable version (generic: does not start with a digit, e.g. `build 120`); with `meta.vendor_hint` (no `vendor`): a row vendor consistent with the hint keeps the base, a different one is −0.4 |
+| `osv-package` | any `library`, `os-package` or `runtime` component with an OSV ecosystem (so the Go stdlib `pkg:golang/stdlib` and Electron `pkg:npm/electron` match exactly) | `affected.ecosystem = component.ecosystem AND package IN (name, meta.source_package)`; range types ECOSYSTEM / SEMVER / VERSIONS | ecosystem-specific via `univers` (Debian, RPM, Alpine, PEP 440, semver, Maven, Go…) on `meta.source_version` if present | 1.0 |
+| `cve-product` / `cpe-product` | everything else (apps, brew formulae, runtimes without an OSV ecosystem, the OS) | `affected.product IN (meta.product, normalized name)` with range types CVE / CPE; vendor must match when both known | generic tolerant comparator (see *Generic versions*); a version without any digit never matches | base by `meta.product_source`: `brew-seed` 0.85, `alias-table` 0.8, `brew-name-vendor` 0.7, `normalized-name` 0.5 (0.4 for brew formulae); −0.2 without vendor confirmation, −0.2 unparseable version (generic: does not start with a digit, e.g. `build 120`); with `meta.vendor_hint` (no `vendor`): a row vendor consistent with the hint keeps the base, a different one is −0.4 |
 
 Distro backports are handled by construction: OS packages only ever match distro ecosystems,
 never upstream CVE ranges (vision §7).
@@ -97,7 +98,9 @@ Facts come from all aliases: CVSS/severity by source preference `nvd > cvelist >
 `kev` from the KEV table, `epss` = max score across the finding's CVE (or its CVE aliases when the key
 is not a CVE). The key's own records win over its aliases' records.
 
-## Prioritization (vision §8, `engine/scoring.py`)
+## Prioritization
+
+Implemented in `engine/scoring.py` (draft rules from vision §8).
 
 ```
 KEV                         → P1
@@ -144,6 +147,8 @@ Measured 2026-11-07 on real `python:3.12-slim` (Debian 13) with OSV urgency only
 data (no-dsa/postponed/not-affected) is expected to reduce noise further.
 
 ## Known gaps
+
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [engine-and-quality.md](../../plans/engine-and-quality.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
 - **Unfixed distro CVEs:** OSV Debian carries open ranges (no `fixed` event) for CVEs the Debian
   tracker marks *unimportant* / *no-dsa* (e.g. CVE-2019-1010022 on glibc). A real

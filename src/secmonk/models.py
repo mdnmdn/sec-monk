@@ -27,7 +27,10 @@ class Component:
     cpe: str | None = None
     vendor: str | None = None
     ecosystem: str | None = None       # OSV ecosystem for matching ('PyPI', 'Debian:12', 'Alpine:v3.20')
-    source_path: str | None = None     # where it was found on the target
+    source_path: str | None = None     # where it was found on the target (extra locations: meta['paths'])
+    # Identity facts used for matching (vendor/product hints, source package, ...) are shared by every
+    # asset with the same key; per-asset facts (users, install_location, scope) are stored per asset in
+    # asset_component.meta by engine/inventory.py (see _docs/tech/data-model.md).
     meta: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -40,8 +43,9 @@ class Component:
 
 @dataclass
 class Asset:
+    # id examples: macos:<host>, ssh:<host>[:<port>], image:<repo>@<digest>, container:<name>, repo:<path>
     id: str
-    type: str                          # desktop | server | container-image | container | repo
+    type: str                          # desktop | server | container-image | container | repo | directory
     name: str
     os_name: str | None = None
     os_version: str | None = None

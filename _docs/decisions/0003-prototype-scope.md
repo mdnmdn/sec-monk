@@ -2,12 +2,14 @@
 title: ADR-0003 — Prototype scope and ordering
 type: decision
 context: decisions
-status: accepted
+status: superseded
 tags: [scope, roadmap]
 updated: 2026-11-07
 ---
 
 # ADR-0003 — Prototype scope and ordering
+
+> Superseded by [ADR-0005](0005-prototype-scope-nov-2026.md): current scope; collectors do not emit CycloneDX (deferred).
 
 ## Context
 The vision roadmap starts with images/repos via Syft→Grype and Dependency-Track. For the first

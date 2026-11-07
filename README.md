@@ -19,7 +19,7 @@ Without mise: any Python ≥ 3.12 plus `uv` works.
 ```bash
 # 1. Mirror vulnerability data. SQLite lives in the per-user data dir
 #    ($XDG_DATA_HOME/secmonk/secmonk.db, ~/.local/share/secmonk/secmonk.db, %LOCALAPPDATA%\secmonk on Windows),
-#    never in the current directory; override with $SECMONK_DB or --db. Read-only commands refuse to
+#    never in the current directory (downloads: $SECMONK_CACHE or ~/.cache/secmonk); override with $SECMONK_DB, $SECMONK_HOME or --db. Read-only commands refuse to
 #    create an empty database ("no database at X — run `secmonk sync …` first").
 uv run secmonk sources                             # cvelist debian-tracker epss euvd kev msrc nvd osv
 uv run secmonk sync kev epss
@@ -65,8 +65,8 @@ Every command and option: [`_docs/features/README.md`](_docs/features/README.md#
 
 ```bash
 uv run pytest -q                         # tests run offline on fixtures in tests/fixtures/
-uv run ruff check src tests
-uv run python scripts/docs_index.py      # regenerate _docs/INDEX.md from frontmatter (--check: fail on stale index / missing frontmatter)
+uv run ruff check src tests scripts
+uv run python scripts/docs_index.py      # regenerate _docs/INDEX.md from frontmatter (--check: also validates frontmatter values, referenced paths and markdown links/anchors)
 scripts/probe_sources.sh                 # read-only reachability probe of every external endpoint
 ```
 
@@ -77,4 +77,4 @@ scripts/probe_sources.sh                 # read-only reachability probe of every
 | `src/secmonk/engine/` | Classification, versions, matching, scoring |
 | `src/secmonk/data/` | `product_aliases.yaml` (curated name → vendor/product), `brew_cpe_seed.csv` (Homebrew identity seed), `windows/secmonk-inventory.ps1` |
 | `_docs/` | Documentation, organized by context with YAML frontmatter |
-| `tests/fixtures/` | Trimmed real samples of every source and collector input |
+| `tests/fixtures/` | Trimmed real samples where the source was reachable, otherwise synthetic or reconstructed ones (each doc's `sample:` frontmatter says which) |

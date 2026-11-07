@@ -69,7 +69,10 @@ CSV (`known_exploited_vulnerabilities.csv`) has the same fields in this header o
 `cwes` is one string, comma+space separated (e.g. `CWE-306, CWE-862, CWE-345`; 112 rows have more
 than one). Prefer JSON.
 
-## Mapping
+## Mapping (design sketch)
+
+> **Design sketch, written before the importer existed.** Table and column names below (`kev.ransomware` as 1/0`) are not the implemented schema. The tables that exist are in [tech/data-model.md](../../tech/data-model.md); what the importer really writes is under *Implementation notes*.
+
 
 | KEV field | Our table / column |
 |---|---|

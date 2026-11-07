@@ -84,7 +84,10 @@ returns 200 with `vulnStatus: "Awaiting Analysis"`. `CVE-2021/CVE-2021-44xxx/CVE
 returned 404 (the repo does not carry that year at the expected path). The GitHub API listing
 for the repo is blocked (`GitHub access not enabled for this session`).
 
-## Mapping
+## Mapping (design sketch)
+
+> **Design sketch, written before the importer existed.** Table and column names below (`vulnerability.cve_id`, `cpe_match`, `nvd_status`) are not the implemented schema. The tables that exist are in [tech/data-model.md](../../tech/data-model.md); what the importer really writes is under *Implementation notes*.
+
 
 | NVD field | Our table / column |
 |---|---|

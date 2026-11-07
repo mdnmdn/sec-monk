@@ -1,7 +1,8 @@
 """SQLite storage: schema + small helpers.
 
 The schema is the integration contract between sources, collectors and the engine.
-Documented in _docs/tech/data-model.md — keep both in sync.
+Documented in _docs/tech/data-model.md (history: _docs/decisions/0004-sqlite-schema-v2.md) — keep
+them in sync. The file lives in the per-user data directory, mode 0600 (secmonk/paths.py).
 """
 
 from __future__ import annotations
@@ -22,11 +23,12 @@ SCHEMA_VERSION = 2
 SCHEMA = """
 -- ------------------------------------------------------------------ vuln data
 CREATE TABLE IF NOT EXISTS source_sync (
-    source        TEXT PRIMARY KEY,          -- 'osv', 'cvelist', 'kev', 'epss', 'nvd', 'euvd'
+    source        TEXT PRIMARY KEY,          -- 'cvelist' 'kev' 'epss' 'nvd' 'euvd' 'msrc' 'debian-tracker', 'osv:<Ecosystem>'
+                                             -- (one row per OSV ecosystem); internal: 'cvelist:git', 'cvelist:years', 'nvd:progress'
     last_sync     TEXT,                      -- ISO timestamp of last successful sync
     cursor        TEXT,                      -- source-specific delta cursor (e.g. modified date)
     records       INTEGER DEFAULT 0,
-    status        TEXT,                      -- ok | error | partial
+    status        TEXT,                      -- ok | error | partial (partial: some records skipped, last_sync still moves)
     message       TEXT
 );
 
@@ -55,7 +57,7 @@ CREATE TABLE IF NOT EXISTS vulnerability (
     cvss_vector   TEXT,
     cvss_version  TEXT,
     cwes          TEXT,                      -- JSON list
-    extra         TEXT,                      -- JSON: ssvc, references, ...
+    extra         TEXT,                      -- JSON: ssvc, adp_kev, references, cvss_source ...
     PRIMARY KEY (source, id)
 );
 CREATE INDEX IF NOT EXISTS ix_vuln_id ON vulnerability(id);
@@ -83,7 +85,8 @@ CREATE TABLE IF NOT EXISTS affected (
     vendor        TEXT,                      -- normalized vendor (product-based)
     product       TEXT,                      -- normalized product (product-based)
     cpe           TEXT,                      -- cpe criteria, if any
-    range_type    TEXT,                      -- ECOSYSTEM | SEMVER | GIT | VERSIONS | CPE | CVE
+    range_type    TEXT,                      -- ECOSYSTEM | SEMVER | VERSIONS (osv, matched as osv-package) | CVE (CNA, matched as
+                                             -- cve-product) | CPE (matched as cpe-product) | GIT and CVE-UNPARSED (stored, never matched)
     version_type  TEXT,                      -- cvelist versionType (semver, custom, git, ...)
     events        TEXT,                      -- JSON list of {introduced|introduced_exclusive|fixed|last_affected|limit: v}
     versions      TEXT,                      -- JSON list of explicitly affected versions
@@ -134,8 +137,9 @@ CREATE INDEX IF NOT EXISTS ix_triage_cve ON distro_triage(cve_id);
 
 -- ------------------------------------------------------------------ inventory
 CREATE TABLE IF NOT EXISTS asset (
-    id            TEXT PRIMARY KEY,          -- stable id, e.g. 'macos:<hostname>', 'image:<digest>'
-    type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo
+    id            TEXT PRIMARY KEY,          -- stable id: 'macos:<host>', 'homebrew:<host>', 'windows:<host>', 'ssh:<host>[:<port>]',
+                                             -- 'image:<repo>@<digest>', 'container:<name>', 'rootfs:<path>', 'repo:<path>', 'dir:<path>'
+    type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory
     name          TEXT,
     os_name       TEXT,
     os_version    TEXT,
@@ -158,6 +162,7 @@ CREATE TABLE IF NOT EXISTS scan (
 CREATE TABLE IF NOT EXISTS component (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     key           TEXT NOT NULL UNIQUE,      -- purl if any, else 'name:<category>/<vendor>/<name>@<version>'
+                                             -- (meta below = identity facts shared by every asset with this key)
     name          TEXT NOT NULL,
     version       TEXT,
     category      TEXT NOT NULL,             -- os | os-package | library | application | runtime | ...
@@ -186,7 +191,7 @@ CREATE TABLE IF NOT EXISTS finding (
     component_id  INTEGER NOT NULL,
     vuln_id       TEXT NOT NULL,             -- canonical id (CVE when available)
     advisory_ids  TEXT,                      -- JSON list of all matched advisory ids/aliases
-    matched_by    TEXT,                      -- osv-purl | cve-affected | nvd-cpe
+    matched_by    TEXT,                      -- osv-package | cve-product | cpe-product (see engine/match.py)
     confidence    REAL,                      -- 1.0 exact package match, lower for name-based
     fixed_version TEXT,
     severity      TEXT,

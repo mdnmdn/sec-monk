@@ -2,7 +2,7 @@
 title: Microsoft MSRC CVRF
 type: reference
 context: references
-status: blocked
+status: implemented
 tags: [vuln-source, msrc, windows, cve]
 updated: 2026-11-07
 sample: synthetic

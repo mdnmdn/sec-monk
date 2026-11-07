@@ -164,6 +164,8 @@ Note `homebrew/core` is also available as the public JSON API `https://formulae.
 
 ## Limitations
 
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-macos.md](../../plans/on-macos.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
+
 - Fixtures synthetic; real-Mac behaviour (symlinked bundles, `Contents/Info.plist` missing for iOS-on-Mac `Wrapper/*.app`, Rosetta) untested.
 - Apps outside standard folders (Setapp, `~/Downloads`, external volumes, Xcode-bundled simulators) missed; Spotlight (`mdfind kMDItemKind=Application`) would find more.
 - Nested helper apps (`Contents/Library/LoginItems/*.app`, `Contents/Frameworks/*Helper.app`) are not listed individually.

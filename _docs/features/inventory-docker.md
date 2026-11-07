@@ -20,11 +20,13 @@ The software inside a container image, a running container or a Linux directory 
 ## Usage
 
 ```bash
-# registry image (anonymous pull; default platform linux/amd64)
+# registry image (anonymous pull by default; default platform linux/amd64)
 secmonk collect docker-image alpine:3.20
 secmonk collect docker-image ghcr.io/org/app:1.4
 secmonk collect docker-image mirror.gcr.io/library/debian:12-slim     # mirror when Docker Hub rate-limits (429)
 secmonk collect docker-image alpine@sha256:<digest>
+# private registry: -o username=U with SECMONK_REGISTRY_PASSWORD in the environment (or inline `auths` in ~/.docker/config.json)
+SECMONK_REGISTRY_PASSWORD=... secmonk collect docker-image registry.example.com/app:1 -o username=ci
 
 # offline: `docker save` / `skopeo copy ... oci:dir`
 secmonk collect docker-image ./image.tar
@@ -43,8 +45,8 @@ secmonk containers                            # list containers of the local Doc
 
 ## Behaviour & rules
 
-- Image assets are identified by manifest digest, so re-scanning a re-tagged image creates a new asset; container assets by name.
-- Layers are cached in `.cache/secmonk/blobs/` (digest-verified) and applied in order with whiteouts; later layers win.
+- Image assets are `image:<repo>@<digest>` (manifest digest; for tarballs the image id), so re-scanning a re-tagged image creates a new asset; container assets by name.
+- Layers are cached in the per-user cache (`~/.cache/secmonk/blobs/`, or `$SECMONK_CACHE`; digest-verified, never inside the current directory) and applied in order with whiteouts; later layers win.
 - Language files are parsed while the layers stream (`LangAccumulator`): only parsed components are kept, so memory does not grow with binary size; later layers and whiteouts replace or remove them. Directory trees (`rootfs`) use `walk_dir`. Installed metadata beats binaries beats lockfiles beats manifests.
 - Packages are matched on their *source* package (dpkg `Source`, apk origin, rpm source rpm). rpm versions are shown with an epoch (`0:1.2-3.el9`).
 - Warnings are shown, never silent: unsupported rpm BerkeleyDB, no package DB (distroless), skipped zstd layers.

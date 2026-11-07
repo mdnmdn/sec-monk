@@ -5,7 +5,7 @@ context: tech
 status: implemented
 tags: [collector, homebrew, linuxbrew, macos, identity]
 updated: 2026-11-07
-sample: real
+sample: mixed
 fixtures: tests/fixtures/collectors/homebrew/
 code: src/secmonk/collectors/homebrew.py
 related: [references/homebrew.md, tech/collectors/macos.md, tech/engine/classification.md, tech/engine/matching.md, features/inventory-homebrew.md]
@@ -77,6 +77,8 @@ Formulae go through the brew identity block of [classification](../engine/classi
 matched to a bundle by app name, token, display name or `cask_bundle_ids` == `CFBundleIdentifier`.
 
 ## Limitations
+
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-macos.md](../../plans/on-macos.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
 - Fixture kegs are reconstructed from registry data (see fixture README); real-Mac validation of cask `.metadata`
   shape, source-build receipts and Intel/Linuxbrew paths is still open.

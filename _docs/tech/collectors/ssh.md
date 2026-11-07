@@ -3,19 +3,21 @@ title: SSH collector (agentless)
 type: tech
 context: tech
 status: implemented
-tags: [collector, ssh, agentless, linux, macos]
+tags: [collector, ssh, agentless, linux, macos, windows]
 updated: 2026-11-07
 sample: synthetic
-fixtures: tests/fixtures/collectors/docker/ (debian-12, alpine-3.20) and tests/fixtures/collectors/macos/root, used as fake remote roots
+fixtures: [tests/fixtures/collectors/docker/, tests/fixtures/collectors/macos/root]
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py
 related: [tech/collectors/rootfs.md, tech/collectors/macos.md, tech/collectors/docker-image.md, features/inventory-ssh.md]
 ---
 
 # SSH collector (agentless)
 
+Fixtures: the docker `debian-12` / `alpine-3.20` trees and the macOS root are used as fake remote roots.
+
 ## Summary
 
-`secmonk scan ssh user@host[:port]` inventories a remote Linux server or macOS machine over SSH, read-only, with nothing
+`secmonk scan ssh user@host[:port]` inventories a remote Linux server, macOS machine or Windows host (OpenSSH server) over SSH, read-only, with nothing
 installed on the target. It does **not** re-implement any parsing: it *harvests* the metadata files the existing collectors
 read into a private local temp directory and runs the normal collector on that directory ("harvest, then reuse").
 
@@ -109,8 +111,8 @@ Both implement `Transport.stream(cmd, timeout, stdin) -> Stream` (`read(n)`, `fi
 
 Options (`-o key=value`): `transport`, `identity`, `ssh_option`, `ssh_bin`, `known_hosts`, `insecure_host_key`, `allow_agent`, `look_for_keys`, `ssh_config`,
 `connect_timeout` (15), `timeout` (total harvest seconds, 900), `sudo`, `lang` (true), `binaries`, `max_binary_mb` (50), `max_files`, `max_mb`, `xdev`,
-`exclude`, `root` (path prefix for every remote path; default `/`; used by tests with fixture roots), `os` (`linux|macos`: skip detection result),
-`include_system` (macOS), `verbose`.
+`exclude`, `root` (path prefix for every remote path; default `/`; used by tests with fixture roots), `os` (`linux|macos|windows`: override the detected family; `windows` skips the POSIX probe),
+`include_system` (macOS and Windows), `verbose`.
 
 Target forms: `user@host`, `user@host:2222`, `ssh://user@host:2222`, `host`, `user@[fe80::1]:22`. Host/user are validated (no leading `-`, no spaces).
 
@@ -123,6 +125,8 @@ Unchanged: Linux packages -> `os-package` with deb/apk/rpm PURLs and distro ecos
 meta={transport, user, port, remote_os, remote_hostname, harvested_files, harvested_bytes, sudo, truncated[, root]})`.
 
 ## Limitations
+
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-linux-docker.md](../../plans/on-linux-docker.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
 * Language parsers are whatever `collectors/lang` has (all seven ecosystems, see [dependencies.md](dependencies.md)); the harvest only guarantees the *files* arrive, then the rootfs collector runs `walk_dir` over the temp dir. Jars and Go/Rust binaries are harvested only with `-o binaries=true`.
 * `-path` globs over-approximate (`*/node_modules/*/package.json` also matches deeper fixture `package.json`s inside a package).
@@ -144,7 +148,7 @@ script fails. The collector then probes `powershell … [Environment]::OSVersion
 `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -` with the script on stdin
 (compact form: no blank/comment lines). The JSON on stdout (BOM/banner tolerated) goes to
 `windows.parse_inventory_json`. `-o os=windows` skips the POSIX probe.
-Tested with a fake transport only (no Windows host in the dev sandbox).
+Asset id, `ssh_*` timeouts and `include_system` behave as for POSIX targets. Tested with a fake transport only (`tests/collectors/test_ssh_windows.py`; no Windows host in the dev sandbox).
 
 ## Review fixes (2026-11)
 

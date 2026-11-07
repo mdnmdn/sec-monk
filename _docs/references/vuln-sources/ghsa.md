@@ -2,7 +2,7 @@
 title: GitHub Advisory Database
 type: reference
 context: references
-status: draft
+status: reference
 tags: [vuln-source, ghsa, osv, github]
 updated: 2026-11-07
 sample: real
@@ -55,7 +55,7 @@ Unreviewed advisories (NVD-imported, GitHub has not matched packages) usually ha
 
 ## Mapping
 
-Identical to [osv.md](osv.md#mapping). GHSA specifics: `database_specific.cwe_ids` -> cwe column, `database_specific.severity`
+Identical to [osv.md](osv.md#implementation-notes). GHSA specifics: `database_specific.cwe_ids` -> cwe column, `database_specific.severity`
 (`LOW|MODERATE|HIGH|CRITICAL`) -> severity label, `aliases` normally holds the CVE id.
 
 ## Quirks & pitfalls

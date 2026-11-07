@@ -6,7 +6,7 @@ status: implemented
 tags: [data-model, sqlite, matching]
 updated: 2026-11-07
 code: src/secmonk/db.py
-related: [decisions/0002-sqlite-local-mirror.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
+related: [decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
 ---
 
 # Data model
@@ -19,10 +19,12 @@ The authoritative DDL is in `src/secmonk/db.py` (`SCHEMA`, `SCHEMA_VERSION = 2`)
 |---|---|
 | `PRAGMA user_version` | Set to `SCHEMA_VERSION` (2) on every connect. |
 | Create | `init_schema()` runs the whole `SCHEMA` with `CREATE TABLE/INDEX IF NOT EXISTS`, so new tables (e.g. `distro_triage`) appear on existing DBs. |
-| Added columns | `_ADDED_COLUMNS` (`finding.triage`, `finding.triage_source`) are added with `ALTER TABLE ... ADD COLUMN` when missing (lightweight, additive only; no data rewrite). |
+| Added columns | `_ADDED_COLUMNS` (`finding.triage`, `finding.triage_source`, `alias.kind`, `asset_component.paths`, `asset_component.meta`) are added with `ALTER TABLE ... ADD COLUMN` when missing (lightweight, additive only; no data rewrite). |
 | Connection | WAL, `synchronous=NORMAL`, foreign keys on. |
 
-Schema v2 = v1 + `distro_triage` + `finding.triage` / `finding.triage_source`.
+Schema v2 = v1 + `distro_triage` + `finding.triage` / `finding.triage_source` + `alias.kind` + `asset_component.paths` / `.meta`. Rationale and history: [ADR-0004](../decisions/0004-sqlite-schema-v2.md) (supersedes ADR-0002); file location and permissions: [ADR-0006](../decisions/0006-per-user-state-locations.md).
+
+**Location.** The database is `$SECMONK_DB` (a file) or `<data dir>/secmonk.db`, where the data dir is `$SECMONK_HOME`, else `$XDG_DATA_HOME/secmonk`, else `~/.local/share/secmonk` (`%LOCALAPPDATA%\secmonk` on Windows); `--db` overrides. Caches (cvelist git clone, image blobs) live in `$SECMONK_CACHE`, else `$XDG_CACHE_HOME/secmonk`, else `~/.cache/secmonk` (`%LOCALAPPDATA%\secmonk\cache`). Never relative to the current directory; directories are 0700, the DB file 0600 (`src/secmonk/paths.py`).
 
 ## Vulnerability mirror
 
@@ -77,10 +79,10 @@ Filled by `sync debian-tracker` (full snapshot replace). Read by `engine/match.p
 
 | Table | Key | Purpose |
 |---|---|---|
-| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>`, `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>`, `windows:<host>`) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`) + OS + platform + `meta` (labels, env, exposure, git info). |
+| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>`, `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
 | `scan` | autoinc | One collector run. |
-| `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets. |
-| `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. |
+| `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets; `meta` = identity facts used for matching (vendor/product hints, source package...), shared by every asset with this key (the last writer wins). |
+| `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. Per-asset facts: `paths` (JSON list of **every** location of the component on this asset; `source_path` = the first) and `meta` (JSON: this asset's own users, install location, scope...). |
 
 ### Partial scans
 
@@ -88,12 +90,11 @@ A collector can mark its `Inventory` `partial` (`partial_reason`): SSH stream ab
 file/count limits hit. `save_inventory` still records the scan (`scan.meta = {"partial": true, "partial_reason": ...}`) and upserts the components it saw, but a partial scan is
 **not** a reference for removal. `current_components(asset)` = components whose `last_scan_id >=` the latest *non-partial* scan (so: everything the last complete scan saw, plus anything
 seen by later partial scans; components absent from the last complete scan stay removed). An asset with only partial scans shows everything ever seen.
-Not yet stored per asset (deferred): the full list of paths when a component is installed in several places (`asset_component.source_path` keeps the last one) and per-asset component meta
-(`users`, `install_location` live in the shared `component.meta`, last writer wins).
+Several copies of one component on an asset (two `Foo.app` bundles, a library in two virtualenvs) share one row; `asset_component.paths` lists all of them and `asset_component.meta` is that asset's own copy of the collector's `meta`.
 
 ## Findings
 
-`finding (asset_id, component_id, vuln_id)` — `vuln_id` is canonical (CVE when known);
+`finding (asset_id, component_id, vuln_id)` — `vuln_id` is canonical (a CVE id when the advisory's alias set or `upstream` list has one; see [matching](engine/matching.md#canonicalization--dedupe));
 `advisory_ids` lists every matched id/alias; `matched_by` (`osv-package`, `cve-product`,
 `cpe-product`), `confidence`, `fixed_version`, enrichment snapshot (severity, CVSS, EPSS, KEV),
 `priority` P1–P4, lifecycle `status` (`open` → `fixed` when no longer detected; `suppressed`

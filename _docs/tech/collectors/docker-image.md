@@ -7,7 +7,7 @@ tags: [collector, docker, oci, registry, dpkg, apk, rpm, sbom]
 updated: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/collectors/docker/
-code: src/secmonk/collectors/docker_image.py (+ collectors/rootfs.py)
+code: [src/secmonk/collectors/docker_image.py, src/secmonk/collectors/rootfs.py]
 related: [tech/collectors/docker-engine.md, features/inventory-docker.md, tech/engine/classification.md]
 ---
 
@@ -44,17 +44,9 @@ Flow (all HTTPS GET; Python stdlib `urllib` was enough):
 7. Layer blobs: `GET /v2/<repo>/blobs/<digest>` -> **307 redirect to a CDN** (Docker Hub: Cloudflare/`production.cloudflare.docker.com`); **drop the `Authorization` header when following** (urllib does this automatically across hosts; `requests` too). Verify `sha256(body) == digest` (done: all layers matched). Layer media types: `...layer.v1.tar+gzip` / `...rootfs.diff.tar.gzip`, `...layer.v1.tar` (uncompressed), `...layer.v1.tar+zstd`, and legacy `...foreign.diff.tar.gzip` (Windows, has `urls`; skip). **Detect compression by magic bytes** (gzip `1f 8b`, zstd `28 b5 2f fd`, xz `fd 37 7a 58 5a 00` - rocky's source used xz internally but the OCI layer is gzip), not only by mediaType. zstd needs a 3rd-party lib (`zstandard`; Python 3.14 has `compression.zstd`).
 8. Reference parsing: `alpine` -> `docker.io/library/alpine:latest`; `ghcr.io/owner/img:tag`; `repo@sha256:...` digest pins. Default registry host for Docker Hub is `registry-1.docker.io`.
 
-**Observed in this sandbox (2026-11-07)**
+**Observed in this sandbox (2026-11-07)**: per-registry results (Docker Hub anonymous token then 429 rate limit, `mirror.gcr.io` anonymous, `ghcr.io` anonymous token, `public.ecr.aws` blob redirect blocked, `quay.io` blocked) are kept in one place, the [probe log section 2](../../references/probes.md#2-registries-and-package-indexes). Use `mirror.gcr.io/library/<image>` when Docker Hub rate-limits.
 
-| Registry | Result |
-|---|---|
-| `registry-1.docker.io` | 401 -> anonymous token works. Manifest GETs started returning **`429 TOOMANYREQUESTS`** ("unauthenticated pull rate limit": 100 pulls/6h per IP, shared egress IP here) after 3 images; implement retry with backoff and surface the message. `HEAD` requests do not count toward the limit - use `HEAD` to resolve digests when possible. |
-| `mirror.gcr.io` | **Anonymous, no token needed**; serves Docker Hub official images (`mirror.gcr.io/library/rockylinux:9-minimal`), blobs 302 to `artifact-registry` URLs - worked, and was used to fetch rocky. Good fallback for official images. |
-| `ghcr.io` | `/v2/` 401 with `Bearer realm="https://ghcr.io/token",service="ghcr.io"`; anonymous `GET https://ghcr.io/token?scope=repository:anchore/syft:pull` returned a token (public repos). Blob pull not exercised. |
-| `public.ecr.aws` | Token `GET https://public.ecr.aws/token/?scope=repository:docker/library/rockylinux:pull` OK and manifests OK, but **blob redirect goes to `*.cloudfront.net` which the sandbox proxy blocks (403)** (environment-specific). |
-| `quay.io`, `registry.access.redhat.com`, `docker.io` | blocked by sandbox proxy (CONNECT 403). |
-
-Private registries: Basic credentials from `~/.docker/config.json` (`auths.<host>.auth` base64 `user:pass`; `credsStore`/`credHelpers` need helper binaries - out of scope) sent to the token realm as `Authorization: Basic`. Prototype: anonymous + optional `--username/--password-env`.
+Private registries: Basic credentials from `~/.docker/config.json` (`auths.<host>.auth` base64 `user:pass`; `credsStore`/`credHelpers` need helper binaries - out of scope) sent to the token realm as `Authorization: Basic`. Implemented: anonymous by default; `-o username=U` with the password from `-o password=` or `$SECMONK_REGISTRY_PASSWORD` (preferred, keeps it off the command line); otherwise inline `auths` from `~/.docker/config.json`. Credentials are only sent to the registry's own scheme+host:port.
 
 ### B. `docker save` tarball / OCI layout (fixture `alpine-mini.tar`)
 
@@ -95,7 +87,7 @@ PURL: `pkg:apk/alpine/musl@1.2.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=m
 Locations: RHEL 9+/Fedora 33+/Rocky/Alma 9/Amazon Linux 2023/openEuler: `/var/lib/rpm/rpmdb.sqlite` (on Fedora 36+/RHEL 9 hosts the real dir is `/usr/lib/sysimage/rpm/` with `/var/lib/rpm` a symlink to it: **check both**; the minimal Rocky image has it directly in `/var/lib/rpm/`). RHEL 7/8, CentOS 7/8, Amazon Linux 2, older Fedora: BerkeleyDB `/var/lib/rpm/Packages` (hash DB; needs a BDB hash parser - not feasible in stdlib quickly; defer). SUSE/openSUSE: `Packages.db` (NDB format, `/usr/lib/sysimage/rpm/`; defer). Fallback for all: **run `rpm --root`** is rejected (executes tooling).
 rpmdb.sqlite schema (real): `Packages(hnum INTEGER PRIMARY KEY AUTOINCREMENT, blob BLOB NOT NULL)` plus index tables (`Name`, `Basenames`, `Providename`, ... `key,hnum,idx`) that we can ignore. Real full DB in rockylinux:9-minimal: 118 rows, 4.9 MB (+`-shm`, empty `-wal`: open with `mode=ro` URI; if a non-empty `-wal` is present copy db+wal to a temp dir so SQLite can replay - `immutable=1` would ignore the WAL).
 
-**Header blob format - confirmed by a working prototype** (scratchpad `scripts/rpmhdr.py`, parsed all 118 rows):
+**Header blob format - confirmed by a working prototype** (an exploratory prototype, not kept in the repo; the production parser is in `collectors/rootfs.py`; it parsed all 118 rows):
 - No magic bytes (unlike `.rpm` files' `8e ad e8 01`): blob = `il` (uint32 BE, number of index entries) + `dl` (uint32 BE, data store length) + `il` x 16-byte entries + `dl` bytes data store.
 - Entry = `tag` uint32, `type` uint32, `offset` int32 (into the data store), `count` uint32; all big-endian (`>IIiI`). First blob example: `0000004E 00005C28` -> 78 entries, 23592 bytes of data.
 - Types: 0 NULL, 1 CHAR, 2 INT8, 3 INT16, 4 INT32, 5 INT64, 6 STRING (NUL-terminated at offset), 7 BIN (`count` bytes), 8 STRING_ARRAY (`count` NUL-terminated strings), 9 I18N_STRING (read first string like STRING).
@@ -130,6 +122,8 @@ Image-level asset properties: reference, digest (manifest), platform, `created`,
 
 ## Limitations / gotchas
 
+*Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-linux-docker.md](../../plans/on-linux-docker.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
+
 - Docker Hub anonymous rate limit (429); mirror.gcr.io workaround; need retries and `--offline` tarball path for tests.
 - Attestation manifests inside indexes (`unknown/unknown`); multi-arch selection.
 - `etc/os-release` symlink inside the layer; symlinks must be resolved *within the image view*, never on the host. Never extract to disk blindly: path traversal, absolute symlinks, device files.
@@ -147,7 +141,7 @@ Tests: `tests/collectors/test_docker.py` (tarball, OCI dir, whiteouts, mocked re
 - Targets: file -> `docker save`/OCI tar (`manifest.json` preferred, else `index.json` walk incl. nested indexes); directory with `index.json` -> OCI layout; anything else -> registry reference. A directory without `index.json`/`manifest.json` is rejected with a hint to use `rootfs`.
 - Options (`collect(target, **opts)`): `platform` (default `linux/amd64`), `no_cache`, `cache_dir`, `username`/`password` (or `SECMONK_REGISTRY_PASSWORD`; else inline `auths` of `~/.docker/config.json`), `max_layer_bytes` (4 GiB), `client` (inject an `httpx.Client`, used by tests), `sleep`.
 - Registry client: anonymous Bearer token from the `WWW-Authenticate` challenge (realm/service/scope), Basic fallback, retries with backoff on 429/5xx (honours `Retry-After`, max 4), then a `RegistryError` that suggests `mirror.gcr.io`. Redirects are followed **manually** and `Authorization` is dropped on any cross-host hop (httpx >= 0.20 also strips it - `_client.py` `_redirect_headers` - but we do not depend on it). Blob digests are verified (sha256) before the blob enters the cache.
-- Layer blobs stream to `.cache/secmonk/blobs/sha256/<hex>` (written as `.part`, renamed after verification); `no_cache` uses a temp dir deleted after each layer. Layers are gzip / plain / zstd (sniffed by magic; zstd needs `compression.zstd` (py3.14) or `zstandard`, else the layer is skipped with a warning). Foreign layers are skipped with a warning.
+- Layer blobs stream to `<cache dir>/blobs/sha256/<hex>` (`$SECMONK_CACHE` or `$XDG_CACHE_HOME/secmonk`, default `~/.cache/secmonk`; `%LOCALAPPDATA%\secmonk\cache` on Windows; never CWD-relative, see [ADR-0006](../../decisions/0006-per-user-state-locations.md)) (written as `.part`, renamed after verification); `no_cache` uses a temp dir deleted after each layer. Layers are gzip / plain / zstd (sniffed by magic; zstd needs `compression.zstd` (py3.14) or `zstandard`, else the layer is skipped with a warning). Foreign layers are skipped with a warning.
 - Asset: `id = image:<registry>/<repo>@<manifest digest>` (registry pull; `docker.io/library/alpine`), for archives the manifest digest from `index.json` when exactly one manifest, else the sha256 of the canonical config JSON (image id); `type=container-image`; `platform` from the config (`linux/arm64/v8`); meta `ref, digest, config_digest, layers, labels, created, user, exposed_ports, env_names, entrypoint, cmd`. **Only env variable *names* are stored** (values often contain secrets).
 - Smoke test 2026-11-07 (real registries): `alpine:3.20` -> 15 components (OS + 14 apk); `mirror.gcr.io/library/debian:12-slim` -> 89 (OS + 88 dpkg); `mirror.gcr.io/library/python:3.12-slim` -> OS + 87 dpkg + `pip 25.0.1` (pypi).
 - Not done: layer provenance (`history` -> component), SBOM attestations, credential helpers, `--platform` autodetect from host arch, dedupe of python/npm files owned by OS packages.

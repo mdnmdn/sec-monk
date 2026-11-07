@@ -2,10 +2,10 @@
 title: Homebrew (inventory and vulnerability identity)
 type: reference
 context: references
-status: draft
+status: reference
 tags: [homebrew, macos, linuxbrew, collector, identity]
 updated: 2026-11-07
-sample: real
+sample: mixed
 reachable: partial
 fixtures: tests/fixtures/collectors/homebrew/
 related: [tech/collectors/macos.md, tech/engine/classification.md]

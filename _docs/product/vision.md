@@ -159,7 +159,7 @@ Detailed collector notes live in [`../tech/collectors/`](../tech/collectors/).
 | macOS | `/Applications/*.app/Contents/Info.plist` (`CFBundleIdentifier`, `CFBundleShortVersionString`), Homebrew, pkgutil | osquery, MDM (Jamf) |
 | Kubernetes | Running image digests per workload | Trivy Operator, kube API |
 
-**Common output:** **CycloneDX 1.6 JSON** SBOM + asset metadata envelope (asset id, type, hostname, OS, owner, environment, exposure, scan timestamp, collector version).
+**Common output (vision; planned, not implemented):** **CycloneDX 1.6 JSON** SBOM + asset metadata envelope (asset id, type, hostname, OS, owner, environment, exposure, scan timestamp, collector version). *Prototype reality:* collectors emit an `Inventory` dataclass stored in SQLite (`collect -O` writes it as JSON); a CycloneDX exporter is deferred ([ADR-0005](../decisions/0005-prototype-scope-nov-2026.md)).
 
 ---
 
@@ -239,9 +239,13 @@ priority =
   else EPSS ≥ 0.1             → P2
   else CVSS ≥ 7               → P3
   else                        → P4
-modifiers: production +1, internet-facing +1, VEX not_affected → suppress,
-           fix available → flag "actionable"
+modifiers: production +1 priority step, internet-facing +1 step (never above P1)   [implemented]
+           VEX not_affected → suppress, fix available → flag "actionable"   [vision only:
+           no VEX ingestion; use `findings --fixable` for "fix available"]
 ```
+
+Implemented in `engine/scoring.py`: the production / internet-facing modifiers raise the priority (read from `asset.meta`, which nothing populates yet);
+see [matching](../tech/engine/matching.md#prioritization).
 
 Tune thresholds after the first real data set.
 
@@ -258,8 +262,8 @@ Tune thresholds after the first real data set.
 | **4 – Desktops** | osquery/MDM collector, name→CPE resolver, alias table, vendor CSAF | Endpoint coverage |
 | **5 – Hardening** | VEX support, reachability (optional), reporting, RBAC | Production-ready |
 
-> The prototype ([ADR-0003](../decisions/0003-prototype-scope.md)) reorders this: macOS desktop first,
-> then Docker images / live containers, with a native Python engine instead of Grype/D-Track.
+> The prototype ([ADR-0005](../decisions/0005-prototype-scope-nov-2026.md), which supersedes [ADR-0003](../decisions/0003-prototype-scope.md)) reorders this: macOS desktop first,
+> then Docker images / live containers, SSH and Windows, with a native Python engine instead of Grype/D-Track and no CycloneDX output yet.
 
 ---
 

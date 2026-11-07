@@ -24,6 +24,7 @@ with the fixed build as the target; a host at or above it gets none. The collect
 # 1. collect on the Windows host (PowerShell 5.1, any account; elevated also lists Appx packages of all users)
 powershell -NoProfile -ExecutionPolicy Bypass -File secmonk-inventory.ps1 -OutFile inv.json
 #    add -Winget for `winget export` (slow, per-user, optional)
+#    get the script with `secmonk windows-script > secmonk-inventory.ps1` (`--compact` strips blank/comment lines, used for stdin over SSH)
 
 # 2. match on the analyst machine
 secmonk scan windows inv.json              # collect + save + match
@@ -35,8 +36,9 @@ secmonk scan windows
 # osquery results (programs, os_version, patches, registry rows for UBR, system_info) merged in one JSON object
 secmonk scan windows -o osquery=results.json
 
-# remotely: stdin script over OpenSSH on the Windows host (Intune: deploy the script and collect the -OutFile)
-ssh admin@win-host "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -" < secmonk-inventory.ps1 > inv.json   # script: `secmonk windows-script > secmonk-inventory.ps1`
+# remotely over OpenSSH on the Windows host (Intune: deploy the script and collect the -OutFile instead)
+secmonk scan ssh admin@win-host
+secmonk windows-script --compact | ssh admin@win-host 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command -' > inv.json
 ```
 
 Vulnerability data: `secmonk sync cvelist` (Microsoft CNA records carry per-build fixed versions for Windows, .NET, Edge, Visual Studio) and optionally
@@ -66,11 +68,3 @@ All Windows fixtures are **synthetic**; the 10 Microsoft CNA records they are ma
 ## Implemented by
 
 [tech/collectors/windows.md](../tech/collectors/windows.md), [references/windows-inventory.md](../references/windows-inventory.md)
-
-## Getting the script
-```bash
-secmonk windows-script > secmonk-inventory.ps1     # copy to the Windows host, then:
-# powershell -NoProfile -ExecutionPolicy Bypass -File secmonk-inventory.ps1 -OutFile inv.json
-secmonk scan windows inv.json
-secmonk scan ssh admin@win-host                    # or run it remotely over OpenSSH
-```

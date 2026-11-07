@@ -6,7 +6,7 @@ status: open
 platform: any
 tags: [plan, index]
 updated: 2026-11-07
-related: [_meta/README.md, product/vision.md, decisions/0003-prototype-scope.md]
+related: [_meta/README.md, product/vision.md, decisions/0005-prototype-scope-nov-2026.md]
 ---
 
 # Plans
