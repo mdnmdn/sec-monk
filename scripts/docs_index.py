@@ -21,7 +21,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 ROOT = REPO / "_docs"
 REQUIRED = ("title", "type", "context", "status", "tags", "updated")
-ORDER = ("product", "features", "tech", "references", "plans", "decisions", "meta")
+ORDER = ("product", "features", "tech", "references", "plans", "decisions", "inbox", "meta")
 # folder -> (type, legal statuses); see _docs/_meta/frontmatter.md
 FOLDERS = {
     "product": ("product", {"draft", "reference"}),
@@ -30,6 +30,7 @@ FOLDERS = {
     "references": ("reference", {"draft", "reference", "implemented", "blocked"}),
     "plans": ("plan", {"draft", "open", "done"}),
     "decisions": ("decision", {"draft", "proposed", "accepted", "superseded"}),
+    "inbox": ("proposal", {"draft", "proposed", "accepted", "rejected"}),
     "meta": ("meta", {"draft", "reference"}),
 }
 PLATFORMS = {"macos", "linux", "windows", "open-network", "any"}

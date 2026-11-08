@@ -4,7 +4,7 @@ type: meta
 context: meta
 status: reference
 tags: [docs, conventions, frontmatter]
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 # Frontmatter schema
@@ -12,8 +12,8 @@ updated: 2026-11-07
 ```yaml
 ---
 title: CVE List v5           # required — human title
-type: reference              # required — meta | product | feature | tech | reference | decision | plan
-context: references          # required — top-level folder: meta | product | features | tech | references | decisions | plans
+type: reference              # required — meta | product | feature | tech | reference | decision | plan | proposal
+context: references          # required — top-level folder: meta | product | features | tech | references | decisions | plans | inbox
 status: draft                # required — see below
 tags: [vuln-source, cve]     # required — free-form, lowercase, kebab-case; reuse existing tags
 updated: 2026-11-07          # required — last meaningful edit
@@ -41,6 +41,7 @@ markdown links and `#anchors` resolve; `INDEX.md` is current. (`reachable: no` i
 | `implemented` | Describes something that exists in code and is tested. For a vuln source: an importer exists; how far it was validated is `sample` + `reachable`. | feature, tech, references |
 | `blocked` | Cannot proceed; reason in the doc. Not used for sources whose importer exists but whose host is unreachable from the sandbox (that is `reachable: no`). | references, features |
 | `proposed` / `accepted` / `superseded` | ADR lifecycle. | decisions |
+| `proposed` / `accepted` / `rejected` | Inbox proposal lifecycle (an accepted proposal becomes ADRs and plans). | inbox |
 | `open` / `done` | Plan checklist state (a plan stays `open` while any item is unchecked). | plans |
 
 ## Common tags

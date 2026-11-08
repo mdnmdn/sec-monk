@@ -98,12 +98,18 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [ADR-0008 — Local web interface stack](decisions/0008-web-ui-stack.md) | superseded | 2026-11-07 | web-ui, architecture, security |
 | [ADR-0009 — Web interface stack with vendored libraries](decisions/0009-web-ui-vendored-libraries.md) | accepted | 2026-11-07 | web-ui, architecture, security |
 
+## inbox
+
+| Doc | Status | Updated | Tags |
+|---|---|---|---|
+| [Proposal — port sec-monk to a compiled stack (Rust), multi-database, desktop app](inbox/2026-11-08-port-to-compiled-stack.md) | proposed | 2026-11-08 | architecture, language, data-model, web-ui, desktop, effort |
+
 ## meta
 
 | Doc | Status | Updated | Tags |
 |---|---|---|---|
-| [How the sec-monk docs are organized](_meta/README.md) | reference | 2026-11-07 | docs, conventions |
-| [Frontmatter schema](_meta/frontmatter.md) | reference | 2026-11-07 | docs, conventions, frontmatter |
+| [How the sec-monk docs are organized](_meta/README.md) | reference | 2026-11-08 | docs, conventions |
+| [Frontmatter schema](_meta/frontmatter.md) | reference | 2026-11-08 | docs, conventions, frontmatter |
 
 ## By tag
 
@@ -111,7 +117,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **agentless**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
 - **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
-- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
+- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
 - **backlog**: [next-sources](plans/next-sources.md)
 - **backports**: [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md)
 - **binary**: [go](references/package-formats/go.md), [rust](references/package-formats/rust.md)
@@ -125,15 +131,16 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **cve**: [vuln-sync](features/vuln-sync.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [windows-inventory](references/windows-inventory.md)
 - **cvss**: [nvd](references/vuln-sources/nvd.md)
 - **cwe**: [nvd](references/vuln-sources/nvd.md)
-- **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [data-model](tech/data-model.md)
+- **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [data-model](tech/data-model.md)
 - **dependencies**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-docker](features/inventory-docker.md), [inventory-ssh](features/inventory-ssh.md), [README](references/package-formats/README.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **design**: [web-ui](features/web-ui.md)
-- **desktop**: [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
+- **desktop**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
 - **distro**: [next-sources](plans/next-sources.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [on-linux-docker](plans/on-linux-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md)
 - **docs**: [README](_meta/README.md), [frontmatter](_meta/frontmatter.md)
 - **dotnet**: [inventory-dependencies](features/inventory-dependencies.md), [dotnet](references/package-formats/dotnet.md), [dependencies](tech/collectors/dependencies.md)
 - **dpkg**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
+- **effort**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
 - **engine**: [engine-and-quality](plans/engine-and-quality.md), [architecture](tech/architecture.md), [classification](tech/engine/classification.md), [matching](tech/engine/matching.md)
 - **engine-api**: [docker-engine](tech/collectors/docker-engine.md)
 - **enisa**: [euvd](references/vuln-sources/euvd.md)
@@ -155,7 +162,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **inventory**: [inventory-docker](features/inventory-docker.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [inventory-windows](features/inventory-windows.md), [windows-inventory](references/windows-inventory.md)
 - **java**: [inventory-dependencies](features/inventory-dependencies.md), [java](references/package-formats/java.md), [dependencies](tech/collectors/dependencies.md)
 - **kev**: [vuln-sync](features/vuln-sync.md), [kev](references/vuln-sources/kev.md)
-- **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
+- **language**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
 - **launchd**: [process](tech/collectors/process.md)
 - **linux**: [inventory-docker](features/inventory-docker.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-ssh](features/inventory-ssh.md), [on-linux-docker](plans/on-linux-docker.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [ssh](tech/collectors/ssh.md)
 - **linuxbrew**: [inventory-homebrew](features/inventory-homebrew.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md)
@@ -202,5 +209,5 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **versions**: [engine-and-quality](plans/engine-and-quality.md), [matching](tech/engine/matching.md)
 - **vision**: [vision](product/vision.md)
 - **vuln-source**: [vuln-sync](features/vuln-sync.md), [next-sources](plans/next-sources.md), [on-open-network](plans/on-open-network.md), [README](references/vuln-sources/README.md), [cvelist-v5](references/vuln-sources/cvelist-v5.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [epss](references/vuln-sources/epss.md), [euvd](references/vuln-sources/euvd.md), [ghsa](references/vuln-sources/ghsa.md), [kev](references/vuln-sources/kev.md), [msrc](references/vuln-sources/msrc.md), [nvd](references/vuln-sources/nvd.md), [osv](references/vuln-sources/osv.md), [architecture](tech/architecture.md)
-- **web-ui**: [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](features/web-ui.md), [web-ui](tech/web-ui.md)
+- **web-ui**: [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [web-ui](features/web-ui.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [web-ui](tech/web-ui.md)
 - **windows**: [inventory-ssh](features/inventory-ssh.md), [inventory-windows](features/inventory-windows.md), [on-windows](plans/on-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [ssh](tech/collectors/ssh.md), [windows](tech/collectors/windows.md)
