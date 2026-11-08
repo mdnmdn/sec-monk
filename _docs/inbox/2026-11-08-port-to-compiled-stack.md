@@ -26,7 +26,7 @@ knowledge, not by building a prototype. Items marked **(verify)** need a short s
 
 | Question | Answer |
 |---|---|
-| Size of what we port | 16.9k lines of Python in 64 modules, 581 tests (8.8k lines), 7.6 MB of fixtures. The Vue front end (2.8k lines) and the fixtures can be **reused as they are**. |
+| Size of what we port | 16.9k lines of Python in 64 modules, 581 test functions, 783 test cases (8.8k lines), 7.6 MB of fixtures. The Vue front end (2.8k lines) and the fixtures can be **reused as they are**. |
 | Rust port, same features, SQLite only | **About 40 person-weeks** for one senior Rust developer working the usual way. **About 8–12 calendar weeks** when coding agents do most of the work and one person reviews (that is how this repository was built). |
 | Add PostgreSQL and MySQL | **+5–7 person-weeks**, mainly to put a storage layer between the engine and SQL, write migrations for each database and test on all three. |
 | Tauri desktop app | **+3–5 person-weeks**, including code signing, notarization and the updater. The current Vue app runs inside Tauri with few changes. |
@@ -235,7 +235,7 @@ differential checks and takes the decisions. It is the method this repository wa
 | 11 | Process monitor (core, macOS backend, watch, procmon views) | ~1,930 | 3 | 1 |
 | 12 | Reports, ops, jobs, CLI (exit codes, formats, `_t`/`_e` escaping) | ~1,160 | 2.5 | 1 |
 | 13 | Web server (routes, Host check, CSRF header, static embed) | ~820 | 1.5 | 0.5 |
-| 14 | Tests: port the 581 tests (most become table-driven fixture tests) | 8,800 | 4 | 1.5 |
+| 14 | Tests: port the 581 test functions (most become table-driven fixture tests) | 8,800 | 4 | 1.5 |
 | 15 | CI matrix (3 OS), release (musl static, macOS universal, Windows), docs rewrite | — | 2 | 1 |
 | | **Subtotal: same features, SQLite** | **~16,900** | **~45** (range 38–50) | **~15** of work, in parallel streams **8–12 weeks** |
 | 16 | PostgreSQL + MySQL backends, migrations, conformance suite, concurrency hardening | | 5–7 | 2–3 |
