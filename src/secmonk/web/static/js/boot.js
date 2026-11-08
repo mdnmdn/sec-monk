@@ -6,5 +6,5 @@
       "Could not load the vendored Vue files (/static/vendor). Reinstall sec-monk or run scripts/vendor_web.py.";
     return;
   }
-  window.SecMonkUI.mountApp("#app", { source: window.SecMonkUI.ApiSource(), initialRoute: "/processes" });
+  window.SecMonkUI.mountApp("#app", { source: window.SecMonkUI.ApiSource(), initialRoute: "/overview" });
 })();

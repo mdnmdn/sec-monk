@@ -28,9 +28,8 @@ from rich.table import Table
 from rich.text import Text
 
 from . import db as dbm
-from . import paths
+from . import ops, paths, reports
 from .engine import queries
-from .engine.match import canonical_ids
 from .errors import COLLECT_ERRORS
 
 app = typer.Typer(no_args_is_help=True, add_completion=False,
@@ -56,15 +55,8 @@ DbOpt = Annotated[Path | None, typer.Option(
 FmtOpt = Annotated[Fmt, typer.Option("--format", "-f", help="Output format: table, json or csv")]
 LimitOpt = Annotated[int, typer.Option("--limit", "-n", min=1, help="Maximum rows")]
 
-# Sources run by `sync all`, in this order; any other registered source follows, unless it sets
-# `in_all = False` (e.g. one that needs credentials or a very large download).
-SYNC_ALL_ORDER = ("kev", "epss", "osv", "cvelist", "nvd", "euvd", "msrc", "debian-tracker")
-
-# Collector options that really are booleans / comma-separated lists (see _parse_opts).
-BOOL_OPTS = frozenset({"binaries", "sudo", "all_kegs", "use_brew_cli", "include_system",
-                       "insecure_host_key", "xdev", "no_cache", "lang", "verbose",
-                       "allow_agent", "look_for_keys"})
-LIST_OPTS = frozenset({"exclude", "home", "ecosystems"})
+# shared with the web UI's jobs (ops.py)
+SYNC_ALL_ORDER, BOOL_OPTS, LIST_OPTS = ops.SYNC_ALL_ORDER, ops.BOOL_OPTS, ops.LIST_OPTS
 
 
 
@@ -186,15 +178,11 @@ PrioOpt = Annotated[str | None, typer.Option("--priority", callback=_check_prior
 
 
 def _sources():
-    from . import sources  # noqa: F401  (registers)
-    from .sources.base import REGISTRY
-    return REGISTRY
+    return ops.sources_registry()
 
 
 def _collectors():
-    from . import collectors  # noqa: F401  (registers)
-    from .collectors.base import REGISTRY
-    return REGISTRY
+    return ops.collectors_registry()
 
 
 # --------------------------------------------------------------------------- db / status
@@ -203,12 +191,11 @@ def _collectors():
 def status(db: DbOpt = None, fmt: FmtOpt = Fmt.table):
     """Show mirror freshness and table sizes."""
     with _open(db) as conn:
-        srcs = [dict(r) for r in queries.source_status(conn)]
-        counts = queries.table_counts(conn)
+        payload = reports.status_payload(conn, _db_path(db))
     if fmt is Fmt.json:
-        typer.echo(json.dumps({"db": str(_db_path(db)), "sources": srcs, "tables": counts}, indent=2,
-                              default=str))
+        typer.echo(json.dumps(payload, indent=2, default=str))
         return
+    srcs, counts = payload["sources"], payload["tables"]
     cols = ["source", "last_sync", "records", "status", "cursor", "message"]
     if fmt is Fmt.csv:
         _emit(srcs, cols, fmt)
@@ -230,14 +217,7 @@ def list_sources():
 
 
 def _expand_sources(names: list[str], reg: dict) -> list[str]:
-    out: list[str] = []
-    for n in names:
-        if n == "all":
-            ordered = [x for x in SYNC_ALL_ORDER if x in reg] + sorted(x for x in reg if x not in SYNC_ALL_ORDER)
-            out += [x for x in ordered if getattr(reg[x], "in_all", True)]
-        else:
-            out.append(n)
-    return list(dict.fromkeys(out))
+    return ops.expand_sources(names, reg)
 
 
 @app.command()
@@ -257,7 +237,7 @@ def sync(
 
     Exit code 1 if any source failed (status error); a partial sync exits 0 with a yellow note.
     """
-    from .sources.base import SyncOptions, SyncResult
+    from .sources.base import SyncOptions
 
     reg = _sources()
     todo = _expand_sources(names, reg)
@@ -270,19 +250,12 @@ def sync(
             opts = SyncOptions(path=path, ecosystems=ecosystem or [], ids=ids or [], since=since, full=full,
                                limit=limit, api_key=api_key,
                                progress=None if _state.quiet else (lambda m: err_console.log(_t(m))))
-            t0 = time.monotonic()
             with err_console.status(f"syncing {name}…"):
-                try:
-                    res = reg[name]().sync(conn, opts)
-                except Exception as e:  # noqa: BLE001  # keep the CLI alive for the remaining sources
-                    _traceback()
-                    res = SyncResult(name, status="error", message=f"{type(e).__name__}: {e}")
-            total = res.total if getattr(res, "total", None) is not None else res.records
-            dbm.set_sync_state(conn, name, status=res.status, records=total, cursor=res.cursor,
-                               message=res.message)
+                # an exception becomes status 'error' (the CLI keeps going with the remaining sources)
+                res, secs = ops.sync_source(conn, name, reg[name], opts, on_exception=lambda e: _traceback())
             colour = {"ok": "green", "partial": "yellow"}.get(res.status, "red")
             console.print(f"[{colour}]{_e(name)}: {_e(res.status)}[/] {res.records:,} records "
-                          f"in {time.monotonic() - t0:.1f}s {_e(res.message)}")
+                          f"in {secs:.1f}s {_e(res.message)}")
             if res.status == "error":
                 failed.append(name)
             elif res.status == "partial":
@@ -300,36 +273,42 @@ def vuln_show(
     vuln_id: Annotated[str, typer.Argument(help="CVE / GHSA / OSV / EUVD … id")],
     db: DbOpt = None,
     raw: Annotated[bool, typer.Option(help="Print raw records")] = False,
+    fmt: Annotated[Fmt, typer.Option("--format", "-f", help="Output format: table or json")] = Fmt.table,
 ):
     """Everything known about a vulnerability id (CVE, GHSA, OSV, EUVD…) across sources."""
+    if fmt is Fmt.csv:
+        raise typer.BadParameter("vuln show supports --format table or json")
     with _open(db) as conn:
-        canon, ids = canonical_ids(conn, vuln_id)
-        vulns = queries.vulnerabilities(conn, ids)
-        k, ep = queries.kev_entry(conn, ids), queries.epss_entry(conn, ids)
-        aff = queries.affected_for(conn, ids)
-        raws = queries.raw_records(conn, ids) if raw else []
-    if not (vulns or k or ep or aff):
+        d = reports.vuln_detail(conn, vuln_id, raw=raw)
+    if d is None:
         raise _fail(f"unknown vulnerability id {vuln_id!r}")
-    console.print(f"[bold]{_e(canon)}[/] aliases: {_e(', '.join(sorted(ids - {canon})) or '-')}")
-    for r in vulns:
+    if fmt is Fmt.json:
+        typer.echo(json.dumps(d, indent=2, default=str))
+        return
+    console.print(f"[bold]{_e(d['id'])}[/] aliases: {_e(', '.join(d['aliases']) or '-')}")
+    for r in d["records"]:
         cvss = "" if r["cvss_score"] is None else r["cvss_score"]
         console.print(f"  [cyan]{_e(r['source']):8}[/] {_e(r['id']):24} {_e(r['severity']):9} "
                       f"{_e(cvss):5} {_e((r['summary'] or '')[:90])}")
-    if k:
+    if k := d["kev"]:
         console.print(f"  [red]KEV[/] added {_e(k['date_added'])} due {_e(k['due_date'])} "
                       f"ransomware={_e(k['ransomware'])}")
-    if ep:
+    if ep := d["epss"]:
         console.print(f"  EPSS {ep['score']:.4f} (pct {ep['percentile'] or 0:.3f}) {_e(ep['date'])}")
     t = Table(title="Affected")
     for col in ("source", "ecosystem/vendor", "package/product", "type", "ranges / versions"):
         t.add_column(col, overflow="fold")
-    for r in aff:
+    for r in d["affected"][:60]:
         t.add_row(_t(r["source"]), _t(r["ecosystem"] or r["vendor"]), _t(r["package"] or r["product"]),
-                  _t(r["range_type"]), _t((r["events"] or r["versions"] or "")[:80]))
+                  _t(r["range_type"]), _t(_ranges(r)[:80]))
     _print(t)
-    for r in raws:
+    for r in d.get("raw", []):
         console.rule(_e(r["source"]))
-        console.print_json(r["data"])
+        console.print_json(json.dumps(r["data"], default=str))
+
+
+def _ranges(r: dict) -> str:
+    return json.dumps(r["events"] or r["versions"]) if (r["events"] or r["versions"]) else ""
 
 
 @vuln_app.command("search")
@@ -339,31 +318,24 @@ def vuln_search(
     product: Annotated[str | None, typer.Option(help="Product name (CVE/NVD)")] = None,
     version: Annotated[str | None, typer.Option(help="Only advisories affecting this version")] = None,
     limit: LimitOpt = 50,
+    fmt: FmtOpt = Fmt.table,
     db: DbOpt = None,
 ):
     """Find advisories for a package or product (optionally a specific version)."""
-    from .db import loads
-    from .engine.purl import normalize_name
-    from .engine.versions import in_osv_range, scheme_for_ecosystem
-
     if not (package or ecosystem or product):
         raise typer.BadParameter("give --package, --ecosystem and/or --product")
     with _open(db) as conn:
-        rows = queries.affected_search(conn, package=normalize_name(ecosystem, package) if package else None,
-                                       ecosystem=ecosystem, product=product)
-    n = 0
+        rows = reports.vuln_search(conn, package=package, ecosystem=ecosystem, product=product, version=version,
+                                   limit=limit)
+    if fmt is not Fmt.table:
+        _emit([{**r, "ranges": _ranges(r)} for r in rows] if fmt is Fmt.csv else rows,
+              ["vuln_id", "source", "ecosystem", "vendor", "package", "product", "range_type", "ranges",
+               "severity", "cvss_score"], fmt)
+        return
     for r in rows:
-        events, versions = loads(r["events"], []), loads(r["versions"], [])
-        if version:
-            scheme = scheme_for_ecosystem(r["ecosystem"])
-            if not (version in versions or (events and in_osv_range(version, events, scheme))):
-                continue
         console.print(f"{_e(r['vuln_id']):28} {_e(r['source']):8} {_e(r['ecosystem'] or r['vendor']):14} "
-                      f"{_e(r['package'] or r['product']):24} {_e((r['events'] or r['versions'] or '')[:70])}")
-        n += 1
-        if n >= limit:
-            break
-    _info(f"[dim]{n} result(s)[/]")
+                      f"{_e(r['package'] or r['product']):24} {_e(_ranges(r)[:70])}")
+    _info(f"[dim]{len(rows)} result(s)[/]")
 
 
 # --------------------------------------------------------------------------- collect / scan
@@ -374,25 +346,11 @@ OptsOpt = Annotated[list[str] | None, typer.Option(
 
 
 def _parse_opts(items: list[str] | None) -> dict:
-    """`-o key=value` -> kwargs. Values stay strings, except: true/false/yes/no for known boolean keys,
-    comma lists for list keys (exclude, home, ecosystems); a repeated key accumulates into a list."""
-    out: dict[str, Any] = {}
-    for item in items or []:
-        key, sep, val = item.partition("=")
-        if not sep or not key:
-            raise typer.BadParameter(f"expected key=value, got {item!r}")
-        low = val.lower()
-        value: Any = val
-        if key in BOOL_OPTS and low in ("true", "yes", "false", "no"):
-            value = low in ("true", "yes")
-        elif key in LIST_OPTS and "," in val:
-            value = [v for v in val.split(",") if v]
-        if key in out:
-            prev = out[key] if isinstance(out[key], list) else [out[key]]
-            out[key] = prev + (value if isinstance(value, list) else [value])
-        else:
-            out[key] = value
-    return out
+    """`-o key=value` -> kwargs (rules in ops.parse_opts)."""
+    try:
+        return ops.parse_opts(items)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from None
 
 
 def _collect(collector: str, target: str | None, opts: dict):
@@ -400,7 +358,7 @@ def _collect(collector: str, target: str | None, opts: dict):
     if collector not in reg:
         raise _fail(f"unknown collector {collector} (known: {', '.join(sorted(reg))})", 2)
     try:
-        return reg[collector]().collect(target, **opts)
+        return ops.collect(collector, target, opts)   # components classified
     except COLLECT_ERRORS as e:  # connection/permission/target/format errors: no traceback
         _traceback()
         raise _fail(f"{collector}: {type(e).__name__}: {e}") from None
@@ -459,7 +417,6 @@ def collect(
         output = output or json_path
     quiet = quiet or _state.quiet
     inv = _collect(collector, target, _parse_opts(opt))
-    _prepare(inv)
     if not quiet:
         _print_inventory(inv)
     _report_inventory_notes(inv)
@@ -482,24 +439,30 @@ def ui(
     open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the browser")] = False,
     allow_host: Annotated[list[str] | None, typer.Option(
         "--allow-host", help="Extra name accepted in the Host header (e.g. the machine's DNS name); repeatable")] = None,
+    allow_actions: Annotated[bool | None, typer.Option(
+        "--allow-actions/--no-actions",
+        help="Allow scans and syncs from the browser (default: only when listening on loopback)")] = None,
     min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
     opt: OptsOpt = None,
     db: DbOpt = None,
 ):
-    """Local web interface (phase 1: process monitor). Ctrl-C stops it."""
+    """Local web interface: dashboard, assets, findings, vulnerabilities, sources, scans and the process monitor.
+    Ctrl-C stops it."""
     from .web.api import ProcessMonitor
     from .web.server import make_server
 
     if host not in ("127.0.0.1", "localhost", "::1"):
         err_console.print(f"[yellow]warning: listening on {_e(host)} — the UI has no authentication; anyone who can "
-                          "reach this address can see the process list and save to the database[/]")
+                          "reach this address can read the database, the process list and findings"
+                          + (", and run scans and syncs" if allow_actions else
+                             " (scans and syncs stay disabled unless --allow-actions)") + "[/]")
     if snapshot is not None and not snapshot.is_file():
         raise _fail(f"no snapshot file {snapshot}", 2)
     monitor = ProcessMonitor(db_path=_db_path(db), target=str(snapshot) if snapshot else None,
                              opts=_parse_opts(opt), min_confidence=min_confidence)
     try:
         srv = make_server(monitor, host, port, mode="snapshot" if snapshot else "live", verbose=_state.verbose,
-                          allow_hosts=allow_host)
+                          allow_hosts=allow_host, actions=allow_actions)
     except OSError as e:
         raise _fail(f"cannot listen on {host}:{port}: {e}") from None
     shown = "localhost" if host in ("127.0.0.1", "::1", "localhost") else (f"[{host}]" if ":" in host else host)
@@ -563,20 +526,11 @@ _FINDING_CELLS: dict[str, Callable[[Any], str]] = {
 }
 
 
-def _finding_dict(r: sqlite3.Row) -> dict:
-    return {"asset_id": r["asset_id"], "priority": r["priority"], "vuln_id": r["vuln_id"],
-            "component": r["name"], "version": r["version"], "category": r["category"],
-            "fixed_version": r["fixed_version"], "severity": r["severity"], "cvss_score": r["cvss_score"],
-            "epss": r["epss"], "kev": bool(r["kev"]), "triage": r["triage"], "matched_by": r["matched_by"],
-            "confidence": r["confidence"], "status": r["status"]}
-
-
 def _render_findings(conn: sqlite3.Connection, fmt: Fmt, *, asset: str | None = None,
                      priority: str | None = None, all_: bool = False, fixable: bool = False,
                      hide_minor: bool = False, hide_deferred: bool = False, limit: int = 200) -> list[dict]:
-    rows = [_finding_dict(r) for r in queries.findings(
-        conn, asset=asset, priority=priority, include_closed=all_, fixable=fixable, hide_minor=hide_minor,
-        hide_deferred=hide_deferred, limit=limit)]
+    rows = reports.findings(conn, asset=asset, priority=priority, include_closed=all_, fixable=fixable,
+                            hide_minor=hide_minor, hide_deferred=hide_deferred, limit=limit)
     if fmt is not Fmt.json:      # scan embeds the json rows in its own document
         _emit(rows, FINDING_COLS if fmt is Fmt.table else FINDING_COLS + ["asset_id", "status"], fmt,
               title="Findings", cell=_FINDING_CELLS)
@@ -611,19 +565,14 @@ def scan(
     db: DbOpt = None,
 ):
     """collect + save + match, then print findings (json/csv: findings on stdout, notes on stderr)."""
-    from .engine.inventory import save_inventory
-    from .engine.match import match_asset
-
     quiet = quiet or _state.quiet
     inv = _collect(collector, target, _parse_opts(opt))
-    _prepare(inv)
     if fmt is not Fmt.json:
         _report_inventory_notes(inv)
     with _open(db, create=save) as conn:
         if not save:
             _ephemeral(conn)
-        save_inventory(conn, inv)
-        stats = match_asset(conn, inv.asset.id, min_confidence=min_confidence)
+        _, stats = ops.save_and_match(conn, inv, min_confidence=min_confidence)
         if fmt is Fmt.json:
             rows = _render_findings(conn, fmt, asset=inv.asset.id, priority=priority, fixable=fixable,
                                     hide_minor=hide_minor, hide_deferred=hide_deferred, limit=limit)
@@ -835,9 +784,7 @@ def findings(
 def inv_assets(db: DbOpt = None, fmt: FmtOpt = Fmt.table):
     """List assets."""
     with _open(db) as conn:
-        rows = [{"id": r["id"], "type": r["type"], "os": f"{r['os_name'] or ''} {r['os_version'] or ''}".strip(),
-                 "platform": r["platform"], "last_seen": r["last_seen"], "components": r["n"] or 0,
-                 "open_findings": r["f"]} for r in queries.assets(conn)]
+        rows = reports.asset_rows(conn)
     _emit(rows, ["id", "type", "os", "platform", "last_seen", "components", "open_findings"], fmt,
           right=("components", "open_findings"))
 
@@ -850,14 +797,9 @@ def inv_show(
     fmt: FmtOpt = Fmt.table,
 ):
     """Components of an asset (latest scan)."""
-    from .engine.inventory import current_components
-
     with _open(db) as conn:
         _require_asset(conn, asset)
-        rows = [{"category": r["category"], "name": r["name"], "version": r["version"],
-                 "ecosystem": r["ecosystem"], "vendor": r["vendor"], "purl": r["purl"], "cpe": r["cpe"],
-                 "path": r["source_path"]}
-                for r in current_components(conn, asset) if not category or r["category"] == category]
+        rows = reports.component_rows(conn, asset, category)
     _emit(rows, ["category", "name", "version", "ecosystem", "vendor", "purl", "cpe", "path"], fmt, title=asset)
 
 
@@ -865,8 +807,7 @@ def inv_show(
 def inv_unmatched(db: DbOpt = None, fmt: FmtOpt = Fmt.table):
     """Applications whose product identity is only a normalized name (alias-table candidates)."""
     with _open(db) as conn:
-        rows = [{"category": r["category"], "name": r["name"], "version": r["version"], "product": r["p"],
-                 "bundle_id": r["b"]} for r in queries.unmatched(conn)]
+        rows = reports.unmatched_rows(conn)
     _emit(rows, ["category", "name", "version", "product", "bundle_id"], fmt)
 
 

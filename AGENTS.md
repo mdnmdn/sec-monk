@@ -17,7 +17,9 @@ collectors/  targets -> Inventory(Asset, [Component]) ; never touch the DB, neve
              process/  process monitor: platform-neutral core + per-OS backends (macOS now)
 engine/      classify -> versions -> match (osv-package | cve-product | cpe-product) -> scoring P1..P4
 procmon.py   `secmonk procs` views (process tree + findings, --watch differ); payload builders shared with web/
-web/         local web UI (`secmonk ui`): stdlib server + JSON API, static Vue app (static/css, static/js)
+reports.py   JSON payloads shared by the CLI's --format json and the web API (findings, assets, vulns, status)
+ops.py       operations shared by the CLI and web jobs (collector options, sync one source, collect/save/match)
+web/         local web UI (`secmonk ui`): stdlib server + JSON API, background jobs, static Vue app (static/css, static/js)
 cli.py       Typer CLI (`secmonk ...`)
 _design/     interface design: sample pages, storybook, screenshots (loads web/static files, never copies)
 data/        product_aliases.yaml, brew_cpe_seed.csv, windows/secmonk-inventory.ps1
@@ -84,8 +86,9 @@ design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0009](
 - **Security rules**: render data only with `{{ }}` / bindings (no `v-html`), no inline scripts or styles (CSP): no static
   `style=""` attributes (use classes; `:style` bindings only for computed values), reads are GET, actions are POST, every
   `/api/` call carries `X-SecMonk-Request: 1`, keep the `Host` check. The server stays stdlib-only.
-- Payloads are built by functions shared with the CLI's JSON output (`procmon.snapshot_payload`, `event_dict`), not
-  re-shaped in the server.
+- Payloads are built by functions shared with the CLI's JSON output (`reports.*`, `procmon.snapshot_payload`, `event_dict`),
+  not re-shaped in the server; long actions (scan, sync) are jobs (`web/jobs.py`) running the CLI's own steps (`ops.py`).
+  Jobs are refused when the server listens on a non-loopback address unless `--allow-actions`.
 
 ## Tests and fixtures
 

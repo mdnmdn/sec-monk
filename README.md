@@ -42,7 +42,7 @@ uv run secmonk windows-script > secmonk-inventory.ps1   # run on Windows -> inv.
 uv run secmonk scan windows inv.json               # (or -o osquery=results.json; live on Windows: no target)
 uv run secmonk procs                               # running processes (macOS): launch origin, version, findings, provenance
 uv run secmonk procs --watch 10 --suspicious       # monitor: report new executables / launch items
-uv run secmonk ui                                  # local web interface (http://127.0.0.1:8765; --snapshot F on any OS)
+uv run secmonk ui                                  # local web interface: dashboard, findings, scans, syncs (http://127.0.0.1:8765)
 
 # 3. Explore
 uv run secmonk findings --priority P1

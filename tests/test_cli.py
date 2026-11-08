@@ -297,6 +297,13 @@ def test_vuln_show_and_search(db):
     assert vid in run("vuln", "search", "--package", pkg, "--ecosystem", eco, "-n", "5").output
     run("vuln", "search", code=2)
     run("vuln", "search", "--product", "nonexistent")      # NULL package/product rows must not crash
+    doc = json.loads(run("vuln", "show", vid, "-f", "json").stdout)
+    assert doc["id"] and {"aliases", "records", "affected", "kev", "epss", "findings"} <= set(doc) and "raw" not in doc
+    assert "raw" in json.loads(run("vuln", "show", vid, "--raw", "-f", "json").stdout)
+    run("vuln", "show", vid, "-f", "csv", code=2)
+    rows = json.loads(run("vuln", "search", "--package", pkg, "--ecosystem", eco, "-f", "json").stdout)
+    assert rows and rows[0]["vuln_id"] and isinstance(rows[0]["events"], list)
+    assert "vuln_id" in run("vuln", "search", "--package", pkg, "--ecosystem", eco, "-f", "csv").stdout
 
 
 # --------------------------------------------------------------------------- misc commands

@@ -10,8 +10,16 @@ window.SECMONK_MOCK = {
    "exists": true
   },
   "features": [
-   "processes"
-  ]
+   "processes",
+   "overview",
+   "assets",
+   "findings",
+   "vulns",
+   "sources",
+   "scan",
+   "jobs"
+  ],
+  "actions": true
  },
  "snapshot": {
   "asset": "process:fixture-mac",
@@ -1201,6 +1209,6855 @@ window.SECMONK_MOCK = {
    "program": "/Users/alice/.local/bin/agent",
    "source": "/Users/alice/Library/LaunchAgents/com.example.newagent.plist",
    "scope": "user:alice"
+  }
+ ],
+ "overview": {
+  "db": "~/.local/share/secmonk/secmonk.db",
+  "totals": {
+   "assets": 5,
+   "components": 105,
+   "open_findings": 10,
+   "fixable": 10,
+   "P1": 1,
+   "P2": 0,
+   "P3": 7,
+   "P4": 2,
+   "kev": 1
+  },
+  "assets": [
+   {
+    "id": "dir:/srv/payments-api",
+    "type": "directory",
+    "os": "",
+    "platform": null,
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "components": 44,
+    "open_findings": 1,
+    "name": "payments-api",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "findings_by_priority": {
+     "P1": 1,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 1
+    }
+   },
+   {
+    "id": "dir:/srv/web-frontend",
+    "type": "directory",
+    "os": "",
+    "platform": null,
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "components": 18,
+    "open_findings": 2,
+    "name": "web-frontend",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 2,
+     "P4": 0,
+     "kev": 0
+    }
+   },
+   {
+    "id": "macos:macbook",
+    "type": "desktop",
+    "os": "macOS 14.5",
+    "platform": "darwin/unknown",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "components": 14,
+    "open_findings": 2,
+    "name": "macbook",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 1,
+     "kev": 0
+    }
+   },
+   {
+    "id": "process:fixture-mac",
+    "type": "host-processes",
+    "os": "macOS 14.5",
+    "platform": "darwin",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "components": 13,
+    "open_findings": 4,
+    "name": "fixture-mac",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 3,
+     "P4": 1,
+     "kev": 0
+    }
+   },
+   {
+    "id": "rootfs:/srv/alpine-rootfs",
+    "type": "server",
+    "os": "Alpine Linux 3.20.10",
+    "platform": null,
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "components": 16,
+    "open_findings": 1,
+    "name": "alpine-rootfs",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0
+    }
+   }
+  ],
+  "top_findings": [
+   {
+    "asset_id": "dir:/srv/payments-api",
+    "priority": "P1",
+    "vuln_id": "CVE-2021-44228",
+    "component": "org.apache.logging.log4j:log4j-core",
+    "version": "2.14.1",
+    "category": "library",
+    "fixed_version": "2.15.0",
+    "severity": "CRITICAL",
+    "cvss_score": 10.0,
+    "epss": 0.97431,
+    "kev": true,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 51,
+    "advisory_ids": [
+     "CVE-2021-44228",
+     "EUVD-2021-30001",
+     "GHSA-jfh8-c2jp-5v3q"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": "Maven",
+    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+   },
+   {
+    "asset_id": "rootfs:/srv/alpine-rootfs",
+    "priority": "P3",
+    "vuln_id": "CVE-2024-3094",
+    "component": "xz-libs",
+    "version": "5.6.0-r0",
+    "category": "os-package",
+    "fixed_version": "5.6.1-r2",
+    "severity": "CRITICAL",
+    "cvss_score": 10.0,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 91,
+    "advisory_ids": [
+     "ALPINE-CVE-2024-3094",
+     "CVE-2024-3094"
+    ],
+    "triage_source": null,
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": "Alpine:v3.20",
+    "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+   },
+   {
+    "asset_id": "dir:/srv/web-frontend",
+    "priority": "P3",
+    "vuln_id": "CVE-2021-44906",
+    "component": "minimist",
+    "version": "1.2.5",
+    "category": "library",
+    "fixed_version": "1.2.6",
+    "severity": "CRITICAL",
+    "cvss_score": 9.8,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 71,
+    "advisory_ids": [
+     "CVE-2021-44906",
+     "GHSA-xvch-5gv4-984h"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": "npm",
+    "purl": "pkg:npm/minimist@1.2.5"
+   },
+   {
+    "asset_id": "process:fixture-mac",
+    "priority": "P3",
+    "vuln_id": "MOCK-2026-0001",
+    "component": "ExampleUpdater",
+    "version": "2.4.1",
+    "category": "application",
+    "fixed_version": "2.5.0",
+    "severity": "CRITICAL",
+    "cvss_score": 9.8,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "cve-product",
+    "confidence": 0.5,
+    "status": "open",
+    "component_id": 2,
+    "advisory_ids": [
+     "MOCK-2026-0001"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": null,
+    "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
+   },
+   {
+    "asset_id": "dir:/srv/web-frontend",
+    "priority": "P3",
+    "vuln_id": "CVE-2022-25883",
+    "component": "semver",
+    "version": "7.3.5",
+    "category": "library",
+    "fixed_version": "7.5.2",
+    "severity": "HIGH",
+    "cvss_score": 7.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 73,
+    "advisory_ids": [
+     "CVE-2022-25883",
+     "GHSA-c2qf-rxjj-qqgw"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": "npm",
+    "purl": "pkg:npm/semver@7.3.5"
+   },
+   {
+    "asset_id": "process:fixture-mac",
+    "priority": "P3",
+    "vuln_id": "CVE-2024-6197",
+    "component": "curl",
+    "version": "8.7.1",
+    "category": "package",
+    "fixed_version": "8.9.0",
+    "severity": "MEDIUM",
+    "cvss_score": 7.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "cve-product",
+    "confidence": 0.85,
+    "status": "open",
+    "component_id": 8,
+    "advisory_ids": [
+     "CVE-2024-6197"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": null,
+    "purl": "pkg:brew/curl@8.7.1"
+   },
+   {
+    "asset_id": "macos:macbook",
+    "priority": "P3",
+    "vuln_id": "CVE-2024-6197",
+    "component": "curl",
+    "version": "8.7.1",
+    "category": "package",
+    "fixed_version": "8.9.0",
+    "severity": "MEDIUM",
+    "cvss_score": 7.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "cve-product",
+    "confidence": 0.85,
+    "status": "open",
+    "component_id": 8,
+    "advisory_ids": [
+     "CVE-2024-6197"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": null,
+    "purl": "pkg:brew/curl@8.7.1"
+   },
+   {
+    "asset_id": "process:fixture-mac",
+    "priority": "P3",
+    "vuln_id": "GO-2022-1059",
+    "component": "golang.org/x/text",
+    "version": "0.3.7",
+    "category": "library",
+    "fixed_version": "0.3.8",
+    "severity": "HIGH",
+    "cvss_score": 7.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 12,
+    "advisory_ids": [
+     "GO-2022-1059"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": "Go",
+    "purl": "pkg:golang/golang.org/x/text@0.3.7"
+   },
+   {
+    "asset_id": "process:fixture-mac",
+    "priority": "P4",
+    "vuln_id": "CVE-2024-7264",
+    "component": "curl",
+    "version": "8.7.1",
+    "category": "package",
+    "fixed_version": "8.9.1",
+    "severity": "MEDIUM",
+    "cvss_score": 6.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "cve-product",
+    "confidence": 0.85,
+    "status": "open",
+    "component_id": 8,
+    "advisory_ids": [
+     "CVE-2024-7264"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": null,
+    "purl": "pkg:brew/curl@8.7.1"
+   },
+   {
+    "asset_id": "macos:macbook",
+    "priority": "P4",
+    "vuln_id": "CVE-2024-7264",
+    "component": "curl",
+    "version": "8.7.1",
+    "category": "package",
+    "fixed_version": "8.9.1",
+    "severity": "MEDIUM",
+    "cvss_score": 6.5,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "cve-product",
+    "confidence": 0.85,
+    "status": "open",
+    "component_id": 8,
+    "advisory_ids": [
+     "CVE-2024-7264"
+    ],
+    "triage_source": "osv",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:36+00:00",
+    "fixed_at": null,
+    "ecosystem": null,
+    "purl": "pkg:brew/curl@8.7.1"
+   }
+  ],
+  "sources": [
+   {
+    "source": "cvelist",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": null,
+    "records": 1,
+    "status": "ok",
+    "message": "imported 1 from /files/cvelist/CVE-2021-44228.json"
+   },
+   {
+    "source": "epss",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": "2026-11-06",
+    "records": 10,
+    "status": "ok",
+    "message": "10 scores from file /files/epss/epss_scores-sample.csv"
+   },
+   {
+    "source": "euvd",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": null,
+    "records": 2,
+    "status": "ok",
+    "message": "2 records from file /files/euvd/exploited-sample.json"
+   },
+   {
+    "source": "kev",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": "2026.11.06",
+    "records": 9,
+    "status": "ok",
+    "message": "9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+   },
+   {
+    "source": "nvd",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": null,
+    "records": 1,
+    "status": "ok",
+    "message": "from file /files/nvd/cve-2021-44228.json"
+   },
+   {
+    "source": "osv",
+    "last_sync": "2026-11-07T16:22:35+00:00",
+    "cursor": "2026-11-02T11:17:50.087142138Z",
+    "records": 2,
+    "status": "ok",
+    "message": "from /files/osv/alpine-ALPINE-CVE-2024-3094.json"
+   }
+  ],
+  "tables": {
+   "vulnerability": 13,
+   "alias": 6,
+   "affected": 31,
+   "kev": 9,
+   "epss": 10,
+   "asset": 5,
+   "component": 101,
+   "finding": 11
+  }
+ },
+ "assets": [
+  {
+   "id": "dir:/srv/payments-api",
+   "type": "directory",
+   "os": "",
+   "platform": null,
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "components": 44,
+   "open_findings": 1,
+   "name": "payments-api",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "findings_by_priority": {
+    "P1": 1,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 1
+   }
+  },
+  {
+   "id": "dir:/srv/web-frontend",
+   "type": "directory",
+   "os": "",
+   "platform": null,
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "components": 18,
+   "open_findings": 2,
+   "name": "web-frontend",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 2,
+    "P4": 0,
+    "kev": 0
+   }
+  },
+  {
+   "id": "macos:macbook",
+   "type": "desktop",
+   "os": "macOS 14.5",
+   "platform": "darwin/unknown",
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "components": 14,
+   "open_findings": 2,
+   "name": "macbook",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 1,
+    "kev": 0
+   }
+  },
+  {
+   "id": "process:fixture-mac",
+   "type": "host-processes",
+   "os": "macOS 14.5",
+   "platform": "darwin",
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "components": 13,
+   "open_findings": 4,
+   "name": "fixture-mac",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 3,
+    "P4": 1,
+    "kev": 0
+   }
+  },
+  {
+   "id": "rootfs:/srv/alpine-rootfs",
+   "type": "server",
+   "os": "Alpine Linux 3.20.10",
+   "platform": null,
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "components": 16,
+   "open_findings": 1,
+   "name": "alpine-rootfs",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0
+   }
+  }
+ ],
+ "asset_details": {
+  "dir:/srv/payments-api": {
+   "asset": {
+    "id": "dir:/srv/payments-api",
+    "type": "directory",
+    "name": "payments-api",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "meta": {
+     "path": "/srv/payments-api",
+     "files_parsed": 5
+    }
+   },
+   "scans": [
+    {
+     "id": 2,
+     "collector": "fs",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 44,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "library",
+     "name": "ch.qos.logback:logback-classic",
+     "version": "1.5.15",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/ch.qos.logback/logback-classic@1.5.15",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 15,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "ch.qos.logback:logback-core",
+     "version": "1.5.15",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/ch.qos.logback/logback-core@1.5.15",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 16,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "com.example:demo-app",
+     "version": "1.0.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/com.example/demo-app@1.0.0",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 53,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "com.example:springboot-app",
+     "version": "0.1.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/com.example/springboot-app@0.1.0",
+     "cpe": null,
+     "path": "springboot-app-0.1.0.jar",
+     "id": 57,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "com.fasterxml.jackson.core:jackson-annotations",
+     "version": "2.9.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-annotations@2.9.0",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 55,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "com.fasterxml.jackson.core:jackson-core",
+     "version": "2.9.8",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.9.8",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 56,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "com.fasterxml.jackson.core:jackson-databind",
+     "version": "2.9.8",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 52,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "commons-codec:commons-codec",
+     "version": "1.17.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/commons-codec/commons-codec@1.17.1",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 17,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "commons-io:commons-io",
+     "version": "2.16.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/commons-io/commons-io@2.16.1",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 18,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "net.bytebuddy:byte-buddy",
+     "version": "1.15.11",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/net.bytebuddy/byte-buddy@1.15.11",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 20,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "net.bytebuddy:byte-buddy-agent",
+     "version": "1.15.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/net.bytebuddy/byte-buddy-agent@1.15.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 19,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "net.sf.jopt-simple:jopt-simple",
+     "version": "5.0.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/net.sf.jopt-simple/jopt-simple@5.0.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 21,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "nl.jqno.equalsverifier:equalsverifier",
+     "version": "3.18",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/nl.jqno.equalsverifier/equalsverifier@3.18",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 22,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.commons:commons-compress",
+     "version": "1.27.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.commons/commons-compress@1.27.1",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 23,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.commons:commons-lang3",
+     "version": "3.12.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.commons/commons-lang3@3.12.0",
+     "cpe": null,
+     "path": "commons-lang3-3.12.0.jar",
+     "id": 14,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.commons:commons-lang3",
+     "version": "3.16.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.commons/commons-lang3@3.16.0",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 24,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.commons:commons-math3",
+     "version": "3.6.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.commons/commons-math3@3.6.1",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 25,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.logging.log4j:log4j-api",
+     "version": "2.14.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-api@2.14.1",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 54,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apache.logging.log4j:log4j-core",
+     "version": "2.14.1",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+     "cpe": null,
+     "path": "shaded-demo-app-1.0.0.jar",
+     "id": 51,
+     "findings": {
+      "P1": 1,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 1,
+      "total": 1
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.apiguardian:apiguardian-api",
+     "version": "1.1.2",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.apiguardian/apiguardian-api@1.1.2",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 26,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.assertj:assertj-core",
+     "version": "3.27.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.assertj/assertj-core@3.27.0",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 27,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.jacoco:org.jacoco.agent",
+     "version": "0.8.12",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.jacoco/org.jacoco.agent@0.8.12",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 28,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.jacoco:org.jacoco.ant",
+     "version": "0.8.12",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.jacoco/org.jacoco.ant@0.8.12",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 29,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.jacoco:org.jacoco.core",
+     "version": "0.8.12",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.jacoco/org.jacoco.core@0.8.12",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 30,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.jacoco:org.jacoco.report",
+     "version": "0.8.12",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.jacoco/org.jacoco.report@0.8.12",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 31,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit.jupiter:junit-jupiter-api",
+     "version": "5.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-api@5.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 32,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit.jupiter:junit-jupiter-engine",
+     "version": "5.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-engine@5.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 33,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit.jupiter:junit-jupiter-params",
+     "version": "5.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-params@5.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 34,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit.platform:junit-platform-commons",
+     "version": "1.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit.platform/junit-platform-commons@1.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 35,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit.platform:junit-platform-engine",
+     "version": "1.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit.platform/junit-platform-engine@1.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 36,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.junit:junit-bom",
+     "version": "5.11.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.junit/junit-bom@5.11.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 37,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.mockito:mockito-core",
+     "version": "5.14.2",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.mockito/mockito-core@5.14.2",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 38,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.objenesis:objenesis",
+     "version": "3.4",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.objenesis/objenesis@3.4",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 39,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.openjdk.jmh:jmh-core",
+     "version": "1.37",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.openjdk.jmh/jmh-core@1.37",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 40,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.openjdk.jmh:jmh-generator-annprocess",
+     "version": "1.37",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-annprocess@1.37",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 41,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.openjdk.jmh:jmh-generator-asm",
+     "version": "1.25",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-asm@1.25",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 42,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.openjdk.jmh:jmh-generator-bytecode",
+     "version": "1.25",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-bytecode@1.25",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 43,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.openjdk.jmh:jmh-generator-reflection",
+     "version": "1.25",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-reflection@1.25",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 44,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.opentest4j:opentest4j",
+     "version": "1.3.0",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.opentest4j/opentest4j@1.3.0",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 45,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.ow2.asm:asm",
+     "version": "5.0.3",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.ow2.asm/asm@5.0.3",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 48,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.ow2.asm:asm",
+     "version": "9.7",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.ow2.asm/asm@9.7",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 49,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.ow2.asm:asm-commons",
+     "version": "9.7",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.ow2.asm/asm-commons@9.7",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 46,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.ow2.asm:asm-tree",
+     "version": "9.7",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.ow2.asm/asm-tree@9.7",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 47,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "org.slf4j:slf4j-api",
+     "version": "2.0.16",
+     "ecosystem": "Maven",
+     "vendor": null,
+     "purl": "pkg:maven/org.slf4j/slf4j-api@2.0.16",
+     "cpe": null,
+     "path": "gradle.lockfile",
+     "id": 50,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "dir:/srv/payments-api",
+     "priority": "P1",
+     "vuln_id": "CVE-2021-44228",
+     "component": "org.apache.logging.log4j:log4j-core",
+     "version": "2.14.1",
+     "category": "library",
+     "fixed_version": "2.15.0",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "epss": 0.97431,
+     "kev": true,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 51,
+     "advisory_ids": [
+      "CVE-2021-44228",
+      "EUVD-2021-30001",
+      "GHSA-jfh8-c2jp-5v3q"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "Maven",
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    }
+   ],
+   "summary": {
+    "components": 44,
+    "open": {
+     "P1": 1,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 1,
+     "total": 1
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 44,
+    "matches": 1,
+    "findings": 1,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "dir:/srv/web-frontend": {
+   "asset": {
+    "id": "dir:/srv/web-frontend",
+    "type": "directory",
+    "name": "web-frontend",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "meta": {
+     "path": "/srv/web-frontend",
+     "files_parsed": 1
+    }
+   },
+   "scans": [
+    {
+     "id": 6,
+     "collector": "fs",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 18,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    },
+    {
+     "id": 3,
+     "collector": "fs",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 18,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "library",
+     "name": "@babel/code-frame",
+     "version": "7.12.13",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 58,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "@babel/helper-validator-identifier",
+     "version": "7.29.7",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 59,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "@babel/highlight",
+     "version": "7.25.9",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/%40babel/highlight@7.25.9",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 60,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "ansi-styles",
+     "version": "3.2.1",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/ansi-styles@3.2.1",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 61,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "chalk",
+     "version": "2.4.2",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/chalk@2.4.2",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 62,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "color-convert",
+     "version": "1.9.3",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/color-convert@1.9.3",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 63,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "color-name",
+     "version": "1.1.3",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/color-name@1.1.3",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 64,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "escape-string-regexp",
+     "version": "1.0.5",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/escape-string-regexp@1.0.5",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 65,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "fsevents",
+     "version": "2.3.2",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/fsevents@2.3.2",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 66,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "has-flag",
+     "version": "3.0.0",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/has-flag@3.0.0",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 67,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "js-tokens",
+     "version": "4.0.0",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/js-tokens@4.0.0",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 68,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "lodash",
+     "version": "4.17.21",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/lodash@4.17.21",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 117,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "lru-cache",
+     "version": "6.0.0",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/lru-cache@6.0.0",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 70,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "minimist",
+     "version": "1.2.5",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/minimist@1.2.5",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 71,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "library",
+     "name": "picocolors",
+     "version": "1.1.1",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/picocolors@1.1.1",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 72,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "semver",
+     "version": "7.3.5",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/semver@7.3.5",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 73,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "library",
+     "name": "supports-color",
+     "version": "5.5.0",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/supports-color@5.5.0",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 74,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "yallist",
+     "version": "4.0.0",
+     "ecosystem": "npm",
+     "vendor": null,
+     "purl": "pkg:npm/yallist@4.0.0",
+     "cpe": null,
+     "path": "package-lock.json",
+     "id": 75,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2021-44906",
+     "component": "minimist",
+     "version": "1.2.5",
+     "category": "library",
+     "fixed_version": "1.2.6",
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 71,
+     "advisory_ids": [
+      "CVE-2021-44906",
+      "GHSA-xvch-5gv4-984h"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "npm",
+     "purl": "pkg:npm/minimist@1.2.5"
+    },
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2022-25883",
+     "component": "semver",
+     "version": "7.3.5",
+     "category": "library",
+     "fixed_version": "7.5.2",
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 73,
+     "advisory_ids": [
+      "CVE-2022-25883",
+      "GHSA-c2qf-rxjj-qqgw"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "npm",
+     "purl": "pkg:npm/semver@7.3.5"
+    },
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2021-23337",
+     "component": "lodash",
+     "version": "4.17.20",
+     "category": "library",
+     "fixed_version": "4.17.21",
+     "severity": "HIGH",
+     "cvss_score": 7.2,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "fixed",
+     "component_id": 69,
+     "advisory_ids": [
+      "CVE-2021-23337",
+      "GHSA-35jh-r3h4-6jhm"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:35+00:00",
+     "fixed_at": "2026-11-07T16:22:35+00:00",
+     "ecosystem": "npm",
+     "purl": "pkg:npm/lodash@4.17.20"
+    }
+   ],
+   "summary": {
+    "components": 18,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 2,
+     "P4": 0,
+     "kev": 0,
+     "total": 2
+    },
+    "closed": 1,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 18,
+    "matches": 2,
+    "findings": 2,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "macos:macbook": {
+   "asset": {
+    "id": "macos:macbook",
+    "type": "desktop",
+    "name": "macbook",
+    "os_name": "macOS",
+    "os_version": "14.5",
+    "platform": "darwin/unknown",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "meta": {}
+   },
+   "scans": [
+    {
+     "id": 5,
+     "collector": "macos",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 14,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "application",
+     "name": "Disk Utility",
+     "version": "22.6",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/apple/Disk%20Utility@22.6?bundle_id=com.apple.DiskUtility",
+     "cpe": null,
+     "path": "/Applications/Utilities/Disk Utility.app",
+     "id": 97,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Firefox",
+     "version": "127.0.2",
+     "ecosystem": null,
+     "vendor": "mozilla",
+     "purl": "pkg:generic/mozilla/Firefox@127.0.2?bundle_id=org.mozilla.firefox",
+     "cpe": "cpe:2.3:a:mozilla:firefox:127.0.2:*:*:*:*:*:*:*",
+     "path": "/Applications/Firefox.app",
+     "id": 93,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Google Chrome",
+     "version": "126.0.6478.127",
+     "ecosystem": null,
+     "vendor": "google",
+     "purl": "pkg:generic/google/Google%20Chrome@126.0.6478.127?bundle_id=com.google.Chrome",
+     "cpe": "cpe:2.3:a:google:chrome:126.0.6478.127:*:*:*:*:*:*:*",
+     "path": "/Applications/Google Chrome.app",
+     "id": 5,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Slack",
+     "version": "4.38.125",
+     "ecosystem": null,
+     "vendor": "slack",
+     "purl": "pkg:generic/tinyspeck/Slack@4.38.125?bundle_id=com.tinyspeck.slackmacgap",
+     "cpe": "cpe:2.3:a:slack:slack:4.38.125:*:*:*:*:*:*:*",
+     "path": "/Applications/Slack.app",
+     "id": 3,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Something",
+     "version": "2.1",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/example/Something@2.1?bundle_id=com.example.something",
+     "cpe": null,
+     "path": "/Applications/Utilities/Something.app",
+     "id": 98,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Visual Studio Code",
+     "version": "1.90.0",
+     "ecosystem": null,
+     "vendor": "microsoft",
+     "purl": "pkg:generic/microsoft/Visual%20Studio%20Code@1.90.0?bundle_id=com.microsoft.VSCode",
+     "cpe": "cpe:2.3:a:microsoft:visual_studio_code:1.90.0:*:*:*:*:*:*:*",
+     "path": "/Applications/Visual Studio Code.app",
+     "id": 99,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os",
+     "name": "macOS",
+     "version": "14.5",
+     "ecosystem": null,
+     "vendor": "apple",
+     "purl": null,
+     "cpe": "cpe:2.3:o:apple:macos:14.5:*:*:*:*:*:*:*",
+     "path": "/System/Library/CoreServices/SystemVersion.plist",
+     "id": 1,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "package",
+     "name": "com.apple.pkg.CLTools_Executables",
+     "version": "15.3.0.0.1.1708646388",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/com.apple.pkg.CLTools_Executables@15.3.0.0.1.1708646388",
+     "cpe": null,
+     "path": "/var/db/receipts/com.apple.pkg.CLTools_Executables.plist",
+     "id": 104,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "package",
+     "name": "com.example.pkg",
+     "version": "1.4.2",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/com.example.pkg@1.4.2",
+     "cpe": null,
+     "path": "/var/db/receipts/com.example.pkg.plist",
+     "id": 105,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "package",
+     "name": "curl",
+     "version": "8.7.1",
+     "ecosystem": null,
+     "vendor": "curl",
+     "purl": "pkg:brew/curl@8.7.1",
+     "cpe": "cpe:2.3:a:curl:curl:8.7.1:*:*:*:*:*:*:*",
+     "path": "/opt/homebrew/Cellar/curl/8.7.1",
+     "id": 8,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 1,
+      "kev": 0,
+      "total": 2
+     }
+    },
+    {
+     "category": "package",
+     "name": "openssl@3",
+     "version": "3.3.1",
+     "ecosystem": null,
+     "vendor": "openssl",
+     "purl": "pkg:brew/openssl%403@3.3.1",
+     "cpe": "cpe:2.3:a:openssl:openssl:3.3.1:*:*:*:*:*:*:*",
+     "path": "/opt/homebrew/Cellar/openssl@3/3.3.1",
+     "id": 103,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "runtime",
+     "name": "Electron",
+     "version": "30.1.2",
+     "ecosystem": "npm",
+     "vendor": "electronjs",
+     "purl": "pkg:npm/electron@30.1.2",
+     "cpe": "cpe:2.3:a:electronjs:electron:30.1.2:*:*:*:*:*:*:*",
+     "path": "/Applications/Slack.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist",
+     "id": 4,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "runtime",
+     "name": "Electron",
+     "version": "29.4.0",
+     "ecosystem": "npm",
+     "vendor": "electronjs",
+     "purl": "pkg:npm/electron@29.4.0",
+     "cpe": "cpe:2.3:a:electronjs:electron:29.4.0:*:*:*:*:*:*:*",
+     "path": "/Applications/Visual Studio Code.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist",
+     "id": 100,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "system-app",
+     "name": "Safari",
+     "version": "17.5",
+     "ecosystem": null,
+     "vendor": "apple",
+     "purl": "pkg:generic/apple/Safari@17.5?bundle_id=com.apple.Safari",
+     "cpe": "cpe:2.3:a:apple:safari:17.5:*:*:*:*:*:*:*",
+     "path": "/System/Applications/Safari.app",
+     "id": 101,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "macos:macbook",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-6197",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.0",
+     "severity": "MEDIUM",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-6197"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    },
+    {
+     "asset_id": "macos:macbook",
+     "priority": "P4",
+     "vuln_id": "CVE-2024-7264",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.1",
+     "severity": "MEDIUM",
+     "cvss_score": 6.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-7264"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    }
+   ],
+   "summary": {
+    "components": 14,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 1,
+     "kev": 0,
+     "total": 2
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 14,
+    "matches": 2,
+    "findings": 2,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "process:fixture-mac": {
+   "asset": {
+    "id": "process:fixture-mac",
+    "type": "host-processes",
+    "name": "fixture-mac",
+    "os_name": "macOS",
+    "os_version": "14.5",
+    "platform": "darwin",
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "meta": {
+     "taken_at": "2026-11-07T10:00:00+00:00",
+     "process_count": 21,
+     "launch_items": 4,
+     "launch_kinds": {
+      "kernel": 2,
+      "service": 4,
+      "gui-app": 3,
+      "child": 4,
+      "agent": 1,
+      "interactive": 4,
+      "remote-session": 1,
+      "scheduled": 2
+     },
+     "without_exe": 1,
+     "processes": "(21 items)",
+     "launch_items_missing_program": "(1 items)"
+    }
+   },
+   "scans": [
+    {
+     "id": 1,
+     "collector": "process",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 13,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "application",
+     "name": "ExampleUpdater",
+     "version": "2.4.1",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater",
+     "cpe": null,
+     "path": "/Library/PrivilegedHelperTools/com.example.updater",
+     "id": 2,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "application",
+     "name": "Google Chrome",
+     "version": "126.0.6478.127",
+     "ecosystem": null,
+     "vendor": "google",
+     "purl": "pkg:generic/google/Google%20Chrome@126.0.6478.127?bundle_id=com.google.Chrome",
+     "cpe": "cpe:2.3:a:google:chrome:126.0.6478.127:*:*:*:*:*:*:*",
+     "path": "/Applications/Google Chrome.app",
+     "id": 5,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "application",
+     "name": "Slack",
+     "version": "4.38.125",
+     "ecosystem": null,
+     "vendor": "slack",
+     "purl": "pkg:generic/tinyspeck/Slack@4.38.125?bundle_id=com.tinyspeck.slackmacgap",
+     "cpe": "cpe:2.3:a:slack:slack:4.38.125:*:*:*:*:*:*:*",
+     "path": "/Applications/Slack.app",
+     "id": 3,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "executable",
+     "name": "syncd",
+     "version": null,
+     "ecosystem": null,
+     "vendor": null,
+     "purl": null,
+     "cpe": null,
+     "path": "/Users/alice/Library/Application Support/Sync/syncd",
+     "id": 6,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "executable",
+     "name": "x",
+     "version": null,
+     "ecosystem": null,
+     "vendor": null,
+     "purl": null,
+     "cpe": null,
+     "path": "/tmp/x",
+     "id": 13,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "example.com/secmonk-hello",
+     "version": null,
+     "ecosystem": "Go",
+     "vendor": null,
+     "purl": "pkg:golang/example.com/secmonk-hello",
+     "cpe": null,
+     "path": "/usr/local/bin/hello",
+     "id": 9,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "github.com/google/uuid",
+     "version": "1.3.1",
+     "ecosystem": "Go",
+     "vendor": null,
+     "purl": "pkg:golang/github.com/google/uuid@1.3.1",
+     "cpe": null,
+     "path": "/usr/local/bin/hello",
+     "id": 11,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "library",
+     "name": "golang.org/x/text",
+     "version": "0.3.7",
+     "ecosystem": "Go",
+     "vendor": null,
+     "purl": "pkg:golang/golang.org/x/text@0.3.7",
+     "cpe": null,
+     "path": "/usr/local/bin/hello",
+     "id": 12,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "os",
+     "name": "macOS",
+     "version": "14.5",
+     "ecosystem": null,
+     "vendor": "apple",
+     "purl": null,
+     "cpe": "cpe:2.3:o:apple:macos:14.5:*:*:*:*:*:*:*",
+     "path": null,
+     "id": 1,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "package",
+     "name": "curl",
+     "version": "8.7.1",
+     "ecosystem": null,
+     "vendor": "curl",
+     "purl": "pkg:brew/curl@8.7.1",
+     "cpe": "cpe:2.3:a:curl:curl:8.7.1:*:*:*:*:*:*:*",
+     "path": "/opt/homebrew/Cellar/curl/8.7.1",
+     "id": 8,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 1,
+      "kev": 0,
+      "total": 2
+     }
+    },
+    {
+     "category": "runtime",
+     "name": "Electron",
+     "version": "30.1.2",
+     "ecosystem": "npm",
+     "vendor": "electronjs",
+     "purl": "pkg:npm/electron@30.1.2",
+     "cpe": "cpe:2.3:a:electronjs:electron:30.1.2:*:*:*:*:*:*:*",
+     "path": "/Applications/Slack.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist",
+     "id": 4,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "runtime",
+     "name": "stdlib",
+     "version": "1.24.7",
+     "ecosystem": "Go",
+     "vendor": null,
+     "purl": "pkg:golang/stdlib@1.24.7",
+     "cpe": null,
+     "path": "/usr/local/bin/hello",
+     "id": 10,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "system-app",
+     "name": "Terminal",
+     "version": "2.14",
+     "ecosystem": null,
+     "vendor": null,
+     "purl": "pkg:generic/apple/Terminal@2.14?bundle_id=com.apple.Terminal",
+     "cpe": null,
+     "path": "/System/Applications/Utilities/Terminal.app",
+     "id": 7,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "MOCK-2026-0001",
+     "component": "ExampleUpdater",
+     "version": "2.4.1",
+     "category": "application",
+     "fixed_version": "2.5.0",
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.5,
+     "status": "open",
+     "component_id": 2,
+     "advisory_ids": [
+      "MOCK-2026-0001"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
+    },
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-6197",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.0",
+     "severity": "MEDIUM",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-6197"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    },
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "GO-2022-1059",
+     "component": "golang.org/x/text",
+     "version": "0.3.7",
+     "category": "library",
+     "fixed_version": "0.3.8",
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 12,
+     "advisory_ids": [
+      "GO-2022-1059"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "Go",
+     "purl": "pkg:golang/golang.org/x/text@0.3.7"
+    },
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P4",
+     "vuln_id": "CVE-2024-7264",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.1",
+     "severity": "MEDIUM",
+     "cvss_score": 6.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-7264"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    }
+   ],
+   "summary": {
+    "components": 13,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 3,
+     "P4": 1,
+     "kev": 0,
+     "total": 4
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 13,
+    "matches": 4,
+    "findings": 4,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "rootfs:/srv/alpine-rootfs": {
+   "asset": {
+    "id": "rootfs:/srv/alpine-rootfs",
+    "type": "server",
+    "name": "alpine-rootfs",
+    "os_name": "Alpine Linux",
+    "os_version": "3.20.10",
+    "platform": null,
+    "first_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-07T16:22:35+00:00",
+    "meta": {
+     "path": "/srv/alpine-rootfs"
+    }
+   },
+   "scans": [
+    {
+     "id": 4,
+     "collector": "rootfs",
+     "started_at": "2026-11-07T16:22:35+00:00",
+     "finished_at": "2026-11-07T16:22:35+00:00",
+     "components": 16,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "os",
+     "name": "Alpine Linux",
+     "version": "3.20.10",
+     "ecosystem": null,
+     "vendor": "alpine",
+     "purl": "pkg:generic/alpine@3.20.10",
+     "cpe": null,
+     "path": "etc/os-release",
+     "id": 76,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 77,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout-data",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout-data@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=alpine-baselayout",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 78,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-keys",
+     "version": "2.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-keys@2.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 79,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "apk-tools",
+     "version": "2.14.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/apk-tools@2.14.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 80,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 81,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox-binsh",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox-binsh@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 82,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "ca-certificates-bundle",
+     "version": "20260413-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/ca-certificates-bundle@20260413-r0?arch=x86_64&distro=alpine-3.20.10&upstream=ca-certificates",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 83,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "libcrypto3",
+     "version": "3.3.7-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/libcrypto3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 84,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "libssl3",
+     "version": "3.3.7-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/libssl3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 85,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "musl",
+     "version": "1.2.5-r3",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/musl@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 86,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "musl-utils",
+     "version": "1.2.5-r3",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/musl-utils@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10&upstream=musl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 87,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "scanelf",
+     "version": "1.3.7-r2",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/scanelf@1.3.7-r2?arch=x86_64&distro=alpine-3.20.10&upstream=pax-utils",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 88,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "ssl_client",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/ssl_client@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 89,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "xz-libs",
+     "version": "5.6.0-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 91,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "zlib",
+     "version": "1.3.2-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/zlib@1.3.2-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 90,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "rootfs:/srv/alpine-rootfs",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-3094",
+     "component": "xz-libs",
+     "version": "5.6.0-r0",
+     "category": "os-package",
+     "fixed_version": "5.6.1-r2",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 91,
+     "advisory_ids": [
+      "ALPINE-CVE-2024-3094",
+      "CVE-2024-3094"
+     ],
+     "triage_source": null,
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "Alpine:v3.20",
+     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+    }
+   ],
+   "summary": {
+    "components": 16,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0,
+     "total": 1
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 16,
+    "matches": 1,
+    "findings": 1,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  }
+ },
+ "unmatched": [
+  {
+   "category": "application",
+   "name": "Disk Utility",
+   "version": "22.6",
+   "product": "disk utility",
+   "bundle_id": "com.apple.DiskUtility"
+  },
+  {
+   "category": "application",
+   "name": "ExampleUpdater",
+   "version": "2.4.1",
+   "product": "exampleupdater",
+   "bundle_id": "com.example.updater"
+  },
+  {
+   "category": "application",
+   "name": "Something",
+   "version": "2.1",
+   "product": "something",
+   "bundle_id": "com.example.something"
+  },
+  {
+   "category": "executable",
+   "name": "syncd",
+   "version": null,
+   "product": "syncd",
+   "bundle_id": null
+  },
+  {
+   "category": "executable",
+   "name": "x",
+   "version": null,
+   "product": "x",
+   "bundle_id": null
+  },
+  {
+   "category": "os",
+   "name": "Alpine Linux",
+   "version": "3.20.10",
+   "product": "alpine linux",
+   "bundle_id": null
+  },
+  {
+   "category": "package",
+   "name": "com.apple.pkg.CLTools_Executables",
+   "version": "15.3.0.0.1.1708646388",
+   "product": "com.apple.pkg.cltools executables",
+   "bundle_id": null
+  },
+  {
+   "category": "package",
+   "name": "com.example.pkg",
+   "version": "1.4.2",
+   "product": "com.example.pkg",
+   "bundle_id": null
+  },
+  {
+   "category": "runtime",
+   "name": "stdlib",
+   "version": "1.24.7",
+   "product": "stdlib",
+   "bundle_id": null
+  },
+  {
+   "category": "system-app",
+   "name": "Terminal",
+   "version": "2.14",
+   "product": "terminal",
+   "bundle_id": "com.apple.Terminal"
+  }
+ ],
+ "findings": [
+  {
+   "asset_id": "dir:/srv/payments-api",
+   "priority": "P1",
+   "vuln_id": "CVE-2021-44228",
+   "component": "org.apache.logging.log4j:log4j-core",
+   "version": "2.14.1",
+   "category": "library",
+   "fixed_version": "2.15.0",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0,
+   "epss": 0.97431,
+   "kev": true,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 51,
+   "advisory_ids": [
+    "CVE-2021-44228",
+    "EUVD-2021-30001",
+    "GHSA-jfh8-c2jp-5v3q"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": "Maven",
+   "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+  },
+  {
+   "asset_id": "rootfs:/srv/alpine-rootfs",
+   "priority": "P3",
+   "vuln_id": "CVE-2024-3094",
+   "component": "xz-libs",
+   "version": "5.6.0-r0",
+   "category": "os-package",
+   "fixed_version": "5.6.1-r2",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 91,
+   "advisory_ids": [
+    "ALPINE-CVE-2024-3094",
+    "CVE-2024-3094"
+   ],
+   "triage_source": null,
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": "Alpine:v3.20",
+   "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+  },
+  {
+   "asset_id": "dir:/srv/web-frontend",
+   "priority": "P3",
+   "vuln_id": "CVE-2021-44906",
+   "component": "minimist",
+   "version": "1.2.5",
+   "category": "library",
+   "fixed_version": "1.2.6",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 71,
+   "advisory_ids": [
+    "CVE-2021-44906",
+    "GHSA-xvch-5gv4-984h"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": "npm",
+   "purl": "pkg:npm/minimist@1.2.5"
+  },
+  {
+   "asset_id": "process:fixture-mac",
+   "priority": "P3",
+   "vuln_id": "MOCK-2026-0001",
+   "component": "ExampleUpdater",
+   "version": "2.4.1",
+   "category": "application",
+   "fixed_version": "2.5.0",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "cve-product",
+   "confidence": 0.5,
+   "status": "open",
+   "component_id": 2,
+   "advisory_ids": [
+    "MOCK-2026-0001"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": null,
+   "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
+  },
+  {
+   "asset_id": "dir:/srv/web-frontend",
+   "priority": "P3",
+   "vuln_id": "CVE-2022-25883",
+   "component": "semver",
+   "version": "7.3.5",
+   "category": "library",
+   "fixed_version": "7.5.2",
+   "severity": "HIGH",
+   "cvss_score": 7.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 73,
+   "advisory_ids": [
+    "CVE-2022-25883",
+    "GHSA-c2qf-rxjj-qqgw"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": "npm",
+   "purl": "pkg:npm/semver@7.3.5"
+  },
+  {
+   "asset_id": "macos:macbook",
+   "priority": "P3",
+   "vuln_id": "CVE-2024-6197",
+   "component": "curl",
+   "version": "8.7.1",
+   "category": "package",
+   "fixed_version": "8.9.0",
+   "severity": "MEDIUM",
+   "cvss_score": 7.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "cve-product",
+   "confidence": 0.85,
+   "status": "open",
+   "component_id": 8,
+   "advisory_ids": [
+    "CVE-2024-6197"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": null,
+   "purl": "pkg:brew/curl@8.7.1"
+  },
+  {
+   "asset_id": "process:fixture-mac",
+   "priority": "P3",
+   "vuln_id": "CVE-2024-6197",
+   "component": "curl",
+   "version": "8.7.1",
+   "category": "package",
+   "fixed_version": "8.9.0",
+   "severity": "MEDIUM",
+   "cvss_score": 7.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "cve-product",
+   "confidence": 0.85,
+   "status": "open",
+   "component_id": 8,
+   "advisory_ids": [
+    "CVE-2024-6197"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": null,
+   "purl": "pkg:brew/curl@8.7.1"
+  },
+  {
+   "asset_id": "process:fixture-mac",
+   "priority": "P3",
+   "vuln_id": "GO-2022-1059",
+   "component": "golang.org/x/text",
+   "version": "0.3.7",
+   "category": "library",
+   "fixed_version": "0.3.8",
+   "severity": "HIGH",
+   "cvss_score": 7.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 12,
+   "advisory_ids": [
+    "GO-2022-1059"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": "Go",
+   "purl": "pkg:golang/golang.org/x/text@0.3.7"
+  },
+  {
+   "asset_id": "dir:/srv/web-frontend",
+   "priority": "P3",
+   "vuln_id": "CVE-2021-23337",
+   "component": "lodash",
+   "version": "4.17.20",
+   "category": "library",
+   "fixed_version": "4.17.21",
+   "severity": "HIGH",
+   "cvss_score": 7.2,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "fixed",
+   "component_id": 69,
+   "advisory_ids": [
+    "CVE-2021-23337",
+    "GHSA-35jh-r3h4-6jhm"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:35+00:00",
+   "fixed_at": "2026-11-07T16:22:35+00:00",
+   "ecosystem": "npm",
+   "purl": "pkg:npm/lodash@4.17.20"
+  },
+  {
+   "asset_id": "macos:macbook",
+   "priority": "P4",
+   "vuln_id": "CVE-2024-7264",
+   "component": "curl",
+   "version": "8.7.1",
+   "category": "package",
+   "fixed_version": "8.9.1",
+   "severity": "MEDIUM",
+   "cvss_score": 6.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "cve-product",
+   "confidence": 0.85,
+   "status": "open",
+   "component_id": 8,
+   "advisory_ids": [
+    "CVE-2024-7264"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": null,
+   "purl": "pkg:brew/curl@8.7.1"
+  },
+  {
+   "asset_id": "process:fixture-mac",
+   "priority": "P4",
+   "vuln_id": "CVE-2024-7264",
+   "component": "curl",
+   "version": "8.7.1",
+   "category": "package",
+   "fixed_version": "8.9.1",
+   "severity": "MEDIUM",
+   "cvss_score": 6.5,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "cve-product",
+   "confidence": 0.85,
+   "status": "open",
+   "component_id": 8,
+   "advisory_ids": [
+    "CVE-2024-7264"
+   ],
+   "triage_source": "osv",
+   "first_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-07T16:22:36+00:00",
+   "fixed_at": null,
+   "ecosystem": null,
+   "purl": "pkg:brew/curl@8.7.1"
+  }
+ ],
+ "triage": {
+  "minor": [
+   "end-of-life",
+   "ignored",
+   "unimportant"
+  ],
+  "deferred": [
+   "no-dsa",
+   "postponed"
+  ]
+ },
+ "vulns": {
+  "ALPINE-CVE-2024-3094": {
+   "id": "ALPINE-CVE-2024-3094",
+   "query": "ALPINE-CVE-2024-3094",
+   "aliases": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0,
+   "records": [
+    {
+     "source": "osv",
+     "id": "ALPINE-CVE-2024-3094",
+     "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+     "details": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r\nThrough a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library.",
+     "published": "2024-03-29T17:15:21.150Z",
+     "modified": "2026-11-02T11:17:50.087142138Z",
+     "withdrawn": null,
+     "state": null,
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+     "cvss_version": "3.1",
+     "cwes": [],
+     "references": [
+      "https://security.alpinelinux.org/vuln/CVE-2024-3094"
+     ]
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.15",
+     "package": "lighttpd",
+     "purl": "pkg:apk/alpine/lighttpd",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "1.4.76-r0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.16",
+     "package": "lighttpd",
+     "purl": "pkg:apk/alpine/lighttpd",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "1.4.76-r0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.17",
+     "package": "lighttpd",
+     "purl": "pkg:apk/alpine/lighttpd",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "1.4.76-r0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.18",
+     "package": "lighttpd",
+     "purl": "pkg:apk/alpine/lighttpd",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "1.4.76-r0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.20",
+     "package": "xz",
+     "purl": "pkg:apk/alpine/xz",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.6.1-r2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.21",
+     "package": "xz",
+     "purl": "pkg:apk/alpine/xz",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.6.1-r2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.22",
+     "package": "xz",
+     "purl": "pkg:apk/alpine/xz",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.6.1-r2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.23",
+     "package": "xz",
+     "purl": "pkg:apk/alpine/xz",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.6.1-r2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "ALPINE-CVE-2024-3094",
+     "ecosystem": "Alpine:v3.24",
+     "package": "xz",
+     "purl": "pkg:apk/alpine/xz",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.6.1-r2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [],
+   "raw": []
+  },
+  "CVE-2021-23337": {
+   "id": "CVE-2021-23337",
+   "query": "CVE-2021-23337",
+   "aliases": [
+    "GHSA-35jh-r3h4-6jhm"
+   ],
+   "summary": "Command Injection in lodash",
+   "severity": "HIGH",
+   "cvss_score": 7.2,
+   "records": [
+    {
+     "source": "osv",
+     "id": "GHSA-35jh-r3h4-6jhm",
+     "summary": "Command Injection in lodash",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "HIGH",
+     "cvss_score": 7.2,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-35jh-r3h4-6jhm",
+     "ecosystem": "npm",
+     "package": "lodash",
+     "purl": "pkg:npm/lodash",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "4.17.21"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2021-23337",
+     "component": "lodash",
+     "version": "4.17.20",
+     "category": "library",
+     "fixed_version": "4.17.21",
+     "severity": "HIGH",
+     "cvss_score": 7.2,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "fixed",
+     "component_id": 69,
+     "advisory_ids": [
+      "CVE-2021-23337",
+      "GHSA-35jh-r3h4-6jhm"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:35+00:00",
+     "fixed_at": "2026-11-07T16:22:35+00:00",
+     "ecosystem": "npm",
+     "purl": "pkg:npm/lodash@4.17.20"
+    }
+   ],
+   "raw": []
+  },
+  "CVE-2021-44228": {
+   "id": "CVE-2021-44228",
+   "query": "CVE-2021-44228",
+   "aliases": [
+    "EUVD-2021-30001",
+    "GHSA-jfh8-c2jp-5v3q"
+   ],
+   "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0,
+   "records": [
+    {
+     "source": "cvelist",
+     "id": "CVE-2021-44228",
+     "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+     "details": null,
+     "published": "2021-12-10T00:00:00.000Z",
+     "modified": "2025-10-21T23:25:23.121Z",
+     "withdrawn": null,
+     "state": "PUBLISHED",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+     "cvss_version": "3.1",
+     "cwes": [
+      "CWE-502",
+      "CWE-400",
+      "CWE-20"
+     ],
+     "references": [
+      "https://logging.apache.org/log4j/2.x/security.html",
+      "http://www.openwall.com/lists/oss-security/2021/12/10/1",
+      "http://www.openwall.com/lists/oss-security/2021/12/10/2",
+      "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd",
+      "http://www.openwall.com/lists/oss-security/2021/12/10/3",
+      "https://security.netapp.com/advisory/ntap-20211210-0007/",
+      "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
+      "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2021-0032",
+      "https://www.oracle.com/security-alerts/alert-cve-2021-44228.html",
+      "https://www.debian.org/security/2021/dsa-5020",
+      "https://lists.debian.org/debian-lts-announce/2021/12/msg00007.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/VU57UJDCFIASIO35GC55JMKSRXJMCDFM/",
+      "https://msrc-blog.microsoft.com/2021/12/11/microsofts-response-to-cve-2021-44228-apache-log4j2/",
+      "http://www.openwall.com/lists/oss-security/2021/12/13/2",
+      "http://www.openwall.com/lists/oss-security/2021/12/13/1",
+      "http://www.openwall.com/lists/oss-security/2021/12/14/4",
+      "https://www.kb.cert.org/vuls/id/930724",
+      "https://twitter.com/kurtseifried/status/1469345530182455296",
+      "https://cert-portal.siemens.com/productcert/pdf/ssa-661247.pdf",
+      "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html"
+     ]
+    },
+    {
+     "source": "euvd",
+     "id": "EUVD-2021-30001",
+     "summary": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+     "details": null,
+     "published": "2021-12-10T00:00:00.000Z",
+     "modified": "2026-11-06T00:00:00.000Z",
+     "withdrawn": null,
+     "state": null,
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+     "cvss_version": "3.1",
+     "cwes": [],
+     "references": []
+    },
+    {
+     "source": "nvd",
+     "id": "CVE-2021-44228",
+     "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+     "details": null,
+     "published": "2021-12-10T10:15:09.143",
+     "modified": "2026-11-06T00:00:00.000",
+     "withdrawn": null,
+     "state": "Analyzed",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+     "cvss_version": "3.1",
+     "cwes": [
+      "CWE-917"
+     ],
+     "references": []
+    },
+    {
+     "source": "osv",
+     "id": "GHSA-jfh8-c2jp-5v3q",
+     "summary": "Remote code injection in Log4j",
+     "details": "# Summary\n\nLog4j versions prior to 2.16.0 are subject to a remote code execution vulnerability via the ldap JNDI parser.\nAs per [Apache's Log4j security guide](https://logging.apache.org/log4j/2.x/security.html): Apache Log4j2 <=2.14.1 JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.16.0, this behavior has been disabled by default.\n\nLog4j version 2.15.0 contained an earlier fix for the vulnerability, but that patch did not disable attacker-controlled JNDI lookups in all situations. For more information, see the `Updated advice for version 2.16.0` section of this advisory.\n\n# Impact\n\nLogging untrusted or user controlled data with a vulnerable version of Log4J may result in Remote Code Execution (RCE) against your application. This includes untrusted data included in logged errors such as exception traces, authentication failures, and other unexpected vectors of user controlled input. \n\n# Affected versions\n\nAny Log4J version prior to v2.15.0 is affected to this specific issue.\n\nThe v1 branch of Log4J which is considered End Of Life (EOL) is vulnerable to other RCE vectors so the recommendation is to still update to 2.16.0 where possible.\n\n## Security releases\nAdditional backports of this fix have been made available in versions 2.3.1, 2.12.2, and 2.12.3\n\n## Affected packages\nOnly the `org.apache.logging.log4j:log4j-core` package is directly affected by this vulnerability. The `org.apache.logging.log4j:log4j-api` should be kept at the same version as the `org.apache.logging.log4j:log4j-core` package to ensure compatability if in use.\n\n# Remediation Advice\n\n## Updated advice for version 2.16.0\n\nThe Apache Logging Services team provided updated mitigation advice upon the release of version 2.16.0, which [disables JNDI by default and completely removes support for message lookups](https://logging.apache.org/log4j/2.x/changes-report.html#a2.16.0).\nEven in version 2.15.0, lookups used in layouts to provide specific pieces of context information will still recursively resolve, possibly triggering JNDI lookups. This problem is being tracked as [CVE-2021-45046](https://nvd.nist.gov/vuln/detail/CVE-2021-45046). More information is available on the [GitHub Security Advisory for CVE-2021-45046](https://github.com/advisories/GHSA-7rjr-3q55-vv33).\n\nUsers who want to avoid attacker-controlled JNDI lookups but cannot upgrade to 2.16.0 must [ensure that no such lookups resolve to attacker-provided data and ensure that the the JndiLookup class is not loaded](https://issues.apache.org/jira/browse/LOG4J2-3221).\n\nPlease note that Log4J v1 is End Of Life (EOL) and will not receive patches for this issue. Log4J v1 is also vulnerable to other RCE vectors and we recommend you migrate to Log4J 2.16.0 where possible.",
+     "published": "2021-12-10T00:40:56Z",
+     "modified": "2025-10-22T19:37:02.616807Z",
+     "withdrawn": null,
+     "state": null,
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H/E:H",
+     "cvss_version": "3.1",
+     "cwes": [
+      "CWE-20",
+      "CWE-400",
+      "CWE-502",
+      "CWE-917"
+     ],
+     "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+      "https://github.com/apache/logging-log4j2/pull/608",
+      "https://github.com/github/advisory-database/pull/5501",
+      "https://cert-portal.siemens.com/productcert/pdf/ssa-397453.pdf",
+      "https://packetstormsecurity.com/files/165673/UniFi-Network-Application-Unauthenticated-Log4Shell-Remote-Code-Execution.html",
+      "https://packetstormsecurity.com/files/167794/Open-Xchange-App-Suite-7.10.x-Cross-Site-Scripting-Command-Injection.html",
+      "https://packetstormsecurity.com/files/167917/MobileIron-Log4Shell-Remote-Command-Execution.html",
+      "https://packetstormsecurity.com/files/171626/AD-Manager-Plus-7122-Remote-Code-Execution.html",
+      "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2021-0032",
+      "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+     ]
+    }
+   ],
+   "kev": {
+    "cve_id": "CVE-2021-44228",
+    "vendor": "Apache",
+    "product": "Log4j2",
+    "name": "Apache Log4j2 Remote Code Execution Vulnerability",
+    "date_added": "2021-12-10",
+    "due_date": "2021-12-24",
+    "ransomware": "1",
+    "source": "kev",
+    "extra": "{\"shortDescription\":\"Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution.\",\"requiredAction\":\"For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.\",\"forensicTriage\":\"No\",\"notes\":\"https://nvd.nist.gov/vuln/detail/CVE-2021-44228\",\"cwes\":[\"CWE-20\",\"CWE-400\",\"CWE-502\"]}"
+   },
+   "epss": {
+    "score": 0.97431,
+    "percentile": 0.99986,
+    "date": "2026-11-06"
+   },
+   "affected": [
+    {
+     "source": "cvelist",
+     "vuln_id": "CVE-2021-44228",
+     "ecosystem": null,
+     "package": null,
+     "purl": null,
+     "vendor": "apache software foundation",
+     "product": "apache log4j2",
+     "cpe": null,
+     "range_type": "CVE",
+     "version_type": "custom",
+     "events": [
+      {
+       "introduced": "2.0-beta9"
+      },
+      {
+       "fixed": "2.3.1"
+      },
+      {
+       "introduced": "2.4"
+      },
+      {
+       "fixed": "2.12.2"
+      },
+      {
+       "introduced": "2.13.0"
+      },
+      {
+       "fixed": "2.15.0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "nvd",
+     "vuln_id": "CVE-2021-44228",
+     "ecosystem": null,
+     "package": null,
+     "purl": null,
+     "vendor": "apache",
+     "product": "log4j",
+     "cpe": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+     "range_type": "CPE",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "2.0"
+      },
+      {
+       "fixed": "2.15.0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.apache.logging.log4j:log4j-core",
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "2.13.0"
+      },
+      {
+       "fixed": "2.15.0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.apache.logging.log4j:log4j-core",
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "2.0-beta9"
+      },
+      {
+       "fixed": "2.3.1"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.apache.logging.log4j:log4j-core",
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "2.4"
+      },
+      {
+       "fixed": "2.12.2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "com.guicedee.services:log4j-core",
+     "purl": "pkg:maven/com.guicedee.services/log4j-core",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "last_affected": "1.2.1.2-jre17"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.xbib.elasticsearch:log4j",
+     "purl": "pkg:maven/org.xbib.elasticsearch/log4j",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "VERSIONS",
+     "version_type": null,
+     "events": [],
+     "versions": [
+      "6.3.2.1"
+     ],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "uk.co.nichesolutions.logging.log4j:log4j-core",
+     "purl": "pkg:maven/uk.co.nichesolutions.logging.log4j/log4j-core",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "VERSIONS",
+     "version_type": null,
+     "events": [],
+     "versions": [
+      "2.6.3-CUSTOM"
+     ],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+     "purl": "pkg:maven/org.ops4j.pax.logging/pax-logging-log4j2",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "1.8.0"
+      },
+      {
+       "fixed": "1.9.2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+     "purl": "pkg:maven/org.ops4j.pax.logging/pax-logging-log4j2",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "1.10.0"
+      },
+      {
+       "fixed": "1.10.8"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+     "purl": "pkg:maven/org.ops4j.pax.logging/pax-logging-log4j2",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "1.11.0"
+      },
+      {
+       "fixed": "1.11.10"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+     "ecosystem": "Maven",
+     "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+     "purl": "pkg:maven/org.ops4j.pax.logging/pax-logging-log4j2",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "ECOSYSTEM",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "2.0.0"
+      },
+      {
+       "fixed": "2.0.11"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "dir:/srv/payments-api",
+     "priority": "P1",
+     "vuln_id": "CVE-2021-44228",
+     "component": "org.apache.logging.log4j:log4j-core",
+     "version": "2.14.1",
+     "category": "library",
+     "fixed_version": "2.15.0",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "epss": 0.97431,
+     "kev": true,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 51,
+     "advisory_ids": [
+      "CVE-2021-44228",
+      "EUVD-2021-30001",
+      "GHSA-jfh8-c2jp-5v3q"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "Maven",
+     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    }
+   ],
+   "raw": [
+    {
+     "source": "kev",
+     "data": {
+      "cveID": "CVE-2021-44228",
+      "vendorProject": "Apache",
+      "product": "Log4j2",
+      "vulnerabilityName": "Apache Log4j2 Remote Code Execution Vulnerability",
+      "dateAdded": "2021-12-10",
+      "shortDescription": "Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution.",
+      "requiredAction": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+      "dueDate": "2021-12-24",
+      "knownRansomwareCampaignUse": "Known",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+      "cwes": [
+       "CWE-20",
+       "CWE-400",
+       "CWE-502"
+      ]
+     }
+    },
+    {
+     "source": "cvelist",
+     "data": {
+      "dataType": "CVE_RECORD",
+      "dataVersion": "5.1",
+      "cveMetadata": {
+       "state": "PUBLISHED",
+       "cveId": "CVE-2021-44228",
+       "assignerOrgId": "f0158376-9dc2-43b6-827c-5f631a4d8d09",
+       "assignerShortName": "apache",
+       "dateUpdated": "2025-10-21T23:25:23.121Z",
+       "dateReserved": "2021-11-26T00:00:00.000Z",
+       "datePublished": "2021-12-10T00:00:00.000Z"
+      },
+      "containers": {
+       "cna": {
+        "title": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+        "providerMetadata": {
+         "orgId": "f0158376-9dc2-43b6-827c-5f631a4d8d09",
+         "shortName": "apache",
+         "dateUpdated": "2023-04-03T00:00:00.000Z"
+        },
+        "descriptions": [
+         {
+          "lang": "en",
+          "value": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects."
+         }
+        ],
+        "affected": [
+         {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Log4j2",
+          "versions": [
+           {
+            "version": "2.0-beta9",
+            "status": "affected",
+            "lessThan": "log4j-core*",
+            "versionType": "custom",
+            "changes": [
+             {
+              "at": "2.3.1",
+              "status": "unaffected"
+             },
+             {
+              "at": "2.4",
+              "status": "affected"
+             },
+             {
+              "at": "2.12.2",
+              "status": "unaffected"
+             },
+             {
+              "at": "2.13.0",
+              "status": "affected"
+             },
+             {
+              "at": "2.15.0",
+              "status": "unaffected"
+             }
+            ]
+           }
+          ]
+         }
+        ],
+        "references": [
+         {
+          "url": "https://logging.apache.org/log4j/2.x/security.html"
+         },
+         {
+          "name": "[oss-security] 20211210 CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/10/1"
+         },
+         {
+          "name": "[oss-security] 20211210 Re: CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/10/2"
+         },
+         {
+          "name": "20211210 Vulnerability in Apache Log4j Library Affecting Cisco Products: December 2021",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+         },
+         {
+          "name": "[oss-security] 20211210 Re: CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/10/3"
+         },
+         {
+          "url": "https://security.netapp.com/advisory/ntap-20211210-0007/"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html"
+         },
+         {
+          "url": "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2021-0032"
+         },
+         {
+          "url": "https://www.oracle.com/security-alerts/alert-cve-2021-44228.html"
+         },
+         {
+          "name": "DSA-5020",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://www.debian.org/security/2021/dsa-5020"
+         },
+         {
+          "name": "[debian-lts-announce] 20211212 [SECURITY] [DLA 2842-1] apache-log4j2 security update",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "https://lists.debian.org/debian-lts-announce/2021/12/msg00007.html"
+         },
+         {
+          "name": "FEDORA-2021-f0f501d01f",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/VU57UJDCFIASIO35GC55JMKSRXJMCDFM/"
+         },
+         {
+          "name": "Microsoft\u2019s Response to CVE-2021-44228 Apache Log4j 2",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://msrc-blog.microsoft.com/2021/12/11/microsofts-response-to-cve-2021-44228-apache-log4j2/"
+         },
+         {
+          "name": "[oss-security] 20211213 Re: CVE-2021-4104: Deserialization of untrusted data in JMSAppender in Apache Log4j 1.2",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/13/2"
+         },
+         {
+          "name": "[oss-security] 20211213 CVE-2021-4104: Deserialization of untrusted data in JMSAppender in Apache Log4j 1.2",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/13/1"
+         },
+         {
+          "name": "[oss-security] 20211214 CVE-2021-45046: Apache Log4j2 Thread Context Message Pattern and Context Lookup Pattern vulnerable to a denial of service attack",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/14/4"
+         },
+         {
+          "name": "20211210 A Vulnerability in Apache Log4j Library Affecting Cisco Products: December 2021",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+         },
+         {
+          "name": "VU#930724",
+          "tags": [
+           "third-party-advisory"
+          ],
+          "url": "https://www.kb.cert.org/vuls/id/930724"
+         },
+         {
+          "url": "https://twitter.com/kurtseifried/status/1469345530182455296"
+         },
+         {
+          "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-661247.pdf"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165270/Apache-Log4j2-2.14.1-Remote-Code-Execution.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165261/Apache-Log4j2-2.14.1-Information-Disclosure.html"
+         },
+         {
+          "url": "https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00646.html"
+         },
+         {
+          "name": "20211210 Vulnerabilities in Apache Log4j Library Affecting Cisco Products: December 2021",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+         },
+         {
+          "name": "[oss-security] 20211215 Re: CVE-2021-45046: Apache Log4j2 Thread Context Message Pattern and Context Lookup Pattern vulnerable to a denial of service attack",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://www.openwall.com/lists/oss-security/2021/12/15/3"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165282/Log4j-Payload-Generator.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165281/Log4j2-Log4Shell-Regexes.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165307/Log4j-Remote-Code-Execution-Word-Bypassing.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165311/log4j-scan-Extensive-Scanner.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165306/L4sh-Log4j-Remote-Code-Execution.html"
+         },
+         {
+          "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-714170.pdf"
+         },
+         {
+          "name": "FEDORA-2021-66d6c484f3",
+          "tags": [
+           "vendor-advisory"
+          ],
+          "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/M5CSVUNV4HWZZXGOKNSK6L7RPM7BOKIB/"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165371/VMware-Security-Advisory-2021-0028.4.html"
+         },
+         {
+          "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-397453.pdf"
+         },
+         {
+          "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-479842.pdf"
+         },
+         {
+          "url": "https://www.oracle.com/security-alerts/cpujan2022.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165532/Log4Shell-HTTP-Header-Injection.html"
+         },
+         {
+          "url": "https://github.com/cisagov/log4j-affected-db/blob/develop/SOFTWARE-LIST.md"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165642/VMware-vCenter-Server-Unauthenticated-Log4Shell-JNDI-Injection-Remote-Code-Execution.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/165673/UniFi-Network-Application-Unauthenticated-Log4Shell-Remote-Code-Execution.html"
+         },
+         {
+          "name": "20220314 APPLE-SA-2022-03-14-7 Xcode 13.3",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://seclists.org/fulldisclosure/2022/Mar/23"
+         },
+         {
+          "url": "https://www.bentley.com/en/common-vulnerability-exposure/be-2022-0001"
+         },
+         {
+          "url": "https://github.com/cisagov/log4j-affected-db"
+         },
+         {
+          "url": "https://support.apple.com/kb/HT213189"
+         },
+         {
+          "url": "https://www.oracle.com/security-alerts/cpuapr2022.html"
+         },
+         {
+          "url": "https://github.com/nu11secur1ty/CVE-mitre/tree/main/CVE-2021-44228"
+         },
+         {
+          "url": "https://www.nu11secur1ty.com/2021/12/cve-2021-44228.html"
+         },
+         {
+          "name": "20220721 Open-Xchange Security Advisory 2022-07-21",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://seclists.org/fulldisclosure/2022/Jul/11"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/167794/Open-Xchange-App-Suite-7.10.x-Cross-Site-Scripting-Command-Injection.html"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/167917/MobileIron-Log4Shell-Remote-Command-Execution.html"
+         },
+         {
+          "name": "20221208 Intel Data Center Manager <= 5.1 Local Privileges Escalation",
+          "tags": [
+           "mailing-list"
+          ],
+          "url": "http://seclists.org/fulldisclosure/2022/Dec/2"
+         },
+         {
+          "url": "http://packetstormsecurity.com/files/171626/AD-Manager-Plus-7122-Remote-Code-Execution.html"
+         }
+        ],
+        "credits": [
+         {
+          "lang": "en",
+          "value": "This issue was discovered by Chen Zhaojun of Alibaba Cloud Security Team."
+         }
+        ],
+        "metrics": [
+         {
+          "other": {
+           "type": "unknown",
+           "content": {
+            "other": "critical"
+           }
+          }
+         }
+        ],
+        "problemTypes": [
+         {
+          "descriptions": [
+           {
+            "type": "CWE",
+            "lang": "en",
+            "description": "CWE-502 Deserialization of Untrusted Data",
+            "cweId": "CWE-502"
+           }
+          ]
+         },
+         {
+          "descriptions": [
+           {
+            "type": "CWE",
+            "lang": "en",
+            "description": "CWE-400 Uncontrolled Resource Consumption",
+            "cweId": "CWE-400"
+           }
+          ]
+         },
+         {
+          "descriptions": [
+           {
+            "type": "CWE",
+            "lang": "en",
+            "description": "CWE-20 Improper Input Validation",
+            "cweId": "CWE-20"
+           }
+          ]
+         }
+        ],
+        "x_generator": {
+         "engine": "Vulnogram 0.0.9"
+        },
+        "source": {
+         "discovery": "UNKNOWN"
+        }
+       },
+       "adp": [
+        {
+         "providerMetadata": {
+          "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+          "shortName": "CVE",
+          "dateUpdated": "2024-08-04T04:17:24.696Z"
+         },
+         "title": "CVE Program Container",
+         "references": [
+          {
+           "url": "https://logging.apache.org/log4j/2.x/security.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "[oss-security] 20211210 CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/10/1"
+          },
+          {
+           "name": "[oss-security] 20211210 Re: CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/10/2"
+          },
+          {
+           "name": "20211210 Vulnerability in Apache Log4j Library Affecting Cisco Products: December 2021",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+          },
+          {
+           "name": "[oss-security] 20211210 Re: CVE-2021-44228: Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/10/3"
+          },
+          {
+           "url": "https://security.netapp.com/advisory/ntap-20211210-0007/",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2021-0032",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://www.oracle.com/security-alerts/alert-cve-2021-44228.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "DSA-5020",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://www.debian.org/security/2021/dsa-5020"
+          },
+          {
+           "name": "[debian-lts-announce] 20211212 [SECURITY] [DLA 2842-1] apache-log4j2 security update",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "https://lists.debian.org/debian-lts-announce/2021/12/msg00007.html"
+          },
+          {
+           "name": "FEDORA-2021-f0f501d01f",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/VU57UJDCFIASIO35GC55JMKSRXJMCDFM/"
+          },
+          {
+           "name": "Microsoft\u2019s Response to CVE-2021-44228 Apache Log4j 2",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://msrc-blog.microsoft.com/2021/12/11/microsofts-response-to-cve-2021-44228-apache-log4j2/"
+          },
+          {
+           "name": "[oss-security] 20211213 Re: CVE-2021-4104: Deserialization of untrusted data in JMSAppender in Apache Log4j 1.2",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/13/2"
+          },
+          {
+           "name": "[oss-security] 20211213 CVE-2021-4104: Deserialization of untrusted data in JMSAppender in Apache Log4j 1.2",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/13/1"
+          },
+          {
+           "name": "[oss-security] 20211214 CVE-2021-45046: Apache Log4j2 Thread Context Message Pattern and Context Lookup Pattern vulnerable to a denial of service attack",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/14/4"
+          },
+          {
+           "name": "20211210 A Vulnerability in Apache Log4j Library Affecting Cisco Products: December 2021",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+          },
+          {
+           "name": "VU#930724",
+           "tags": [
+            "third-party-advisory",
+            "x_transferred"
+           ],
+           "url": "https://www.kb.cert.org/vuls/id/930724"
+          },
+          {
+           "url": "https://twitter.com/kurtseifried/status/1469345530182455296",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-661247.pdf",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165270/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165261/Apache-Log4j2-2.14.1-Information-Disclosure.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00646.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "20211210 Vulnerabilities in Apache Log4j Library Affecting Cisco Products: December 2021",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd"
+          },
+          {
+           "name": "[oss-security] 20211215 Re: CVE-2021-45046: Apache Log4j2 Thread Context Message Pattern and Context Lookup Pattern vulnerable to a denial of service attack",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://www.openwall.com/lists/oss-security/2021/12/15/3"
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165282/Log4j-Payload-Generator.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165281/Log4j2-Log4Shell-Regexes.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165307/Log4j-Remote-Code-Execution-Word-Bypassing.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165311/log4j-scan-Extensive-Scanner.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165306/L4sh-Log4j-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-714170.pdf",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "FEDORA-2021-66d6c484f3",
+           "tags": [
+            "vendor-advisory",
+            "x_transferred"
+           ],
+           "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/M5CSVUNV4HWZZXGOKNSK6L7RPM7BOKIB/"
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165371/VMware-Security-Advisory-2021-0028.4.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-397453.pdf",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://cert-portal.siemens.com/productcert/pdf/ssa-479842.pdf",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://www.oracle.com/security-alerts/cpujan2022.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165532/Log4Shell-HTTP-Header-Injection.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://github.com/cisagov/log4j-affected-db/blob/develop/SOFTWARE-LIST.md",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165642/VMware-vCenter-Server-Unauthenticated-Log4Shell-JNDI-Injection-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/165673/UniFi-Network-Application-Unauthenticated-Log4Shell-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "20220314 APPLE-SA-2022-03-14-7 Xcode 13.3",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://seclists.org/fulldisclosure/2022/Mar/23"
+          },
+          {
+           "url": "https://www.bentley.com/en/common-vulnerability-exposure/be-2022-0001",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://github.com/cisagov/log4j-affected-db",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://support.apple.com/kb/HT213189",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://www.oracle.com/security-alerts/cpuapr2022.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://github.com/nu11secur1ty/CVE-mitre/tree/main/CVE-2021-44228",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "https://www.nu11secur1ty.com/2021/12/cve-2021-44228.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "20220721 Open-Xchange Security Advisory 2022-07-21",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://seclists.org/fulldisclosure/2022/Jul/11"
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/167794/Open-Xchange-App-Suite-7.10.x-Cross-Site-Scripting-Command-Injection.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/167917/MobileIron-Log4Shell-Remote-Command-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          },
+          {
+           "name": "20221208 Intel Data Center Manager <= 5.1 Local Privileges Escalation",
+           "tags": [
+            "mailing-list",
+            "x_transferred"
+           ],
+           "url": "http://seclists.org/fulldisclosure/2022/Dec/2"
+          },
+          {
+           "url": "http://packetstormsecurity.com/files/171626/AD-Manager-Plus-7122-Remote-Code-Execution.html",
+           "tags": [
+            "x_transferred"
+           ]
+          }
+         ]
+        },
+        {
+         "metrics": [
+          {
+           "cvssV3_1": {
+            "scope": "CHANGED",
+            "version": "3.1",
+            "baseScore": 10,
+            "attackVector": "NETWORK",
+            "baseSeverity": "CRITICAL",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+            "integrityImpact": "HIGH",
+            "userInteraction": "NONE",
+            "attackComplexity": "LOW",
+            "availabilityImpact": "HIGH",
+            "privilegesRequired": "NONE",
+            "confidentialityImpact": "HIGH"
+           }
+          },
+          {
+           "other": {
+            "type": "ssvc",
+            "content": {
+             "id": "CVE-2021-44228",
+             "role": "CISA Coordinator",
+             "options": [
+              {
+               "Exploitation": "active"
+              },
+              {
+               "Automatable": "yes"
+              },
+              {
+               "Technical Impact": "total"
+              }
+             ],
+             "version": "2.0.3",
+             "timestamp": "2025-02-04T14:25:34.416117Z"
+            }
+           }
+          },
+          {
+           "other": {
+            "type": "kev",
+            "content": {
+             "dateAdded": "2021-12-10",
+             "reference": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2021-44228"
+            }
+           }
+          }
+         ],
+         "references": [
+          {
+           "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2021-44228",
+           "tags": [
+            "government-resource"
+           ]
+          }
+         ],
+         "timeline": [
+          {
+           "time": "2021-12-10T00:00:00.000Z",
+           "lang": "en",
+           "value": "CVE-2021-44228 added to CISA KEV"
+          }
+         ],
+         "title": "CISA ADP Vulnrichment",
+         "providerMetadata": {
+          "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+          "shortName": "CISA-ADP",
+          "dateUpdated": "2025-10-21T23:25:23.121Z"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "source": "nvd",
+     "data": {
+      "id": "CVE-2021-44228",
+      "sourceIdentifier": "psirt@apache.org",
+      "published": "2021-12-10T10:15:09.143",
+      "lastModified": "2026-11-06T00:00:00.000",
+      "vulnStatus": "Analyzed",
+      "cveTags": [],
+      "descriptions": [
+       {
+        "lang": "en",
+        "value": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints."
+       }
+      ],
+      "metrics": {
+       "cvssMetricV31": [
+        {
+         "source": "nvd@nist.gov",
+         "type": "Primary",
+         "cvssData": {
+          "version": "3.1",
+          "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+          "attackVector": "NETWORK",
+          "attackComplexity": "LOW",
+          "privilegesRequired": "NONE",
+          "userInteraction": "NONE",
+          "scope": "CHANGED",
+          "confidentialityImpact": "HIGH",
+          "integrityImpact": "HIGH",
+          "availabilityImpact": "HIGH",
+          "baseScore": 10.0,
+          "baseSeverity": "CRITICAL"
+         },
+         "exploitabilityScore": 3.9,
+         "impactScore": 6.0
+        }
+       ]
+      },
+      "weaknesses": [
+       {
+        "source": "nvd@nist.gov",
+        "type": "Primary",
+        "description": [
+         {
+          "lang": "en",
+          "value": "CWE-917"
+         }
+        ]
+       }
+      ],
+      "configurations": [
+       {
+        "nodes": [
+         {
+          "operator": "OR",
+          "negate": false,
+          "cpeMatch": [
+           {
+            "vulnerable": true,
+            "criteria": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+            "versionStartIncluding": "2.0",
+            "versionEndExcluding": "2.15.0",
+            "matchCriteriaId": "00000000-0000-0000-0000-000000000000"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "references": [
+       {
+        "url": "https://logging.apache.org/log4j/2.x/security.html",
+        "source": "psirt@apache.org"
+       }
+      ]
+     }
+    },
+    {
+     "source": "euvd",
+     "data": {
+      "id": "EUVD-2021-30001",
+      "enisaUuid": "00000000-0000-4000-8000-000000000001",
+      "description": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+      "datePublished": "2021-12-10T00:00:00.000Z",
+      "dateUpdated": "2026-11-06T00:00:00.000Z",
+      "baseScore": 10,
+      "baseScoreVersion": "3.1",
+      "baseScoreVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "references": "https://logging.apache.org/log4j/2.x/security.html\nhttps://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+      "aliases": "CVE-2021-44228",
+      "assigner": "psirt@apache.org",
+      "epss": 0.97431,
+      "exploited": true,
+      "enisaIdProduct": [],
+      "enisaIdVendor": [],
+      "enisaIdVulnerability": []
+     }
+    }
+   ]
+  },
+  "CVE-2021-44906": {
+   "id": "CVE-2021-44906",
+   "query": "CVE-2021-44906",
+   "aliases": [
+    "GHSA-xvch-5gv4-984h"
+   ],
+   "summary": "Prototype Pollution in minimist",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8,
+   "records": [
+    {
+     "source": "osv",
+     "id": "GHSA-xvch-5gv4-984h",
+     "summary": "Prototype Pollution in minimist",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-xvch-5gv4-984h",
+     "ecosystem": "npm",
+     "package": "minimist",
+     "purl": "pkg:npm/minimist",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "0.2.4"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-xvch-5gv4-984h",
+     "ecosystem": "npm",
+     "package": "minimist",
+     "purl": "pkg:npm/minimist",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "1.0.0"
+      },
+      {
+       "fixed": "1.2.6"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2021-44906",
+     "component": "minimist",
+     "version": "1.2.5",
+     "category": "library",
+     "fixed_version": "1.2.6",
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 71,
+     "advisory_ids": [
+      "CVE-2021-44906",
+      "GHSA-xvch-5gv4-984h"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "npm",
+     "purl": "pkg:npm/minimist@1.2.5"
+    }
+   ],
+   "raw": []
+  },
+  "CVE-2022-25883": {
+   "id": "CVE-2022-25883",
+   "query": "CVE-2022-25883",
+   "aliases": [
+    "GHSA-c2qf-rxjj-qqgw"
+   ],
+   "summary": "semver vulnerable to Regular Expression Denial of Service",
+   "severity": "HIGH",
+   "cvss_score": 7.5,
+   "records": [
+    {
+     "source": "osv",
+     "id": "GHSA-c2qf-rxjj-qqgw",
+     "summary": "semver vulnerable to Regular Expression Denial of Service",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+     "ecosystem": "npm",
+     "package": "semver",
+     "purl": "pkg:npm/semver",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "5.7.2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+     "ecosystem": "npm",
+     "package": "semver",
+     "purl": "pkg:npm/semver",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "6.0.0"
+      },
+      {
+       "fixed": "6.3.1"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    },
+    {
+     "source": "osv",
+     "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+     "ecosystem": "npm",
+     "package": "semver",
+     "purl": "pkg:npm/semver",
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "7.0.0"
+      },
+      {
+       "fixed": "7.5.2"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "dir:/srv/web-frontend",
+     "priority": "P3",
+     "vuln_id": "CVE-2022-25883",
+     "component": "semver",
+     "version": "7.3.5",
+     "category": "library",
+     "fixed_version": "7.5.2",
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 73,
+     "advisory_ids": [
+      "CVE-2022-25883",
+      "GHSA-c2qf-rxjj-qqgw"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "npm",
+     "purl": "pkg:npm/semver@7.3.5"
+    }
+   ],
+   "raw": []
+  },
+  "CVE-2024-6197": {
+   "id": "CVE-2024-6197",
+   "query": "CVE-2024-6197",
+   "aliases": [],
+   "summary": "curl CVE-2024-6197",
+   "severity": "MEDIUM",
+   "cvss_score": 7.5,
+   "records": [
+    {
+     "source": "cvelist",
+     "id": "CVE-2024-6197",
+     "summary": "curl CVE-2024-6197",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "MEDIUM",
+     "cvss_score": 7.5,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "cvelist",
+     "vuln_id": "CVE-2024-6197",
+     "ecosystem": null,
+     "package": null,
+     "purl": null,
+     "vendor": "haxx",
+     "product": "curl",
+     "cpe": null,
+     "range_type": "CVE",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "8.6.0"
+      },
+      {
+       "fixed": "8.9.0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "macos:macbook",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-6197",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.0",
+     "severity": "MEDIUM",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-6197"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    },
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-6197",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.0",
+     "severity": "MEDIUM",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-6197"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    }
+   ],
+   "raw": []
+  },
+  "CVE-2024-7264": {
+   "id": "CVE-2024-7264",
+   "query": "CVE-2024-7264",
+   "aliases": [],
+   "summary": "curl CVE-2024-7264",
+   "severity": "MEDIUM",
+   "cvss_score": 6.5,
+   "records": [
+    {
+     "source": "cvelist",
+     "id": "CVE-2024-7264",
+     "summary": "curl CVE-2024-7264",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "MEDIUM",
+     "cvss_score": 6.5,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "cvelist",
+     "vuln_id": "CVE-2024-7264",
+     "ecosystem": null,
+     "package": null,
+     "purl": null,
+     "vendor": "haxx",
+     "product": "curl",
+     "cpe": null,
+     "range_type": "CVE",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "7.32.0"
+      },
+      {
+       "fixed": "8.9.1"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "macos:macbook",
+     "priority": "P4",
+     "vuln_id": "CVE-2024-7264",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.1",
+     "severity": "MEDIUM",
+     "cvss_score": 6.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-7264"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    },
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P4",
+     "vuln_id": "CVE-2024-7264",
+     "component": "curl",
+     "version": "8.7.1",
+     "category": "package",
+     "fixed_version": "8.9.1",
+     "severity": "MEDIUM",
+     "cvss_score": 6.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.85,
+     "status": "open",
+     "component_id": 8,
+     "advisory_ids": [
+      "CVE-2024-7264"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:brew/curl@8.7.1"
+    }
+   ],
+   "raw": []
+  },
+  "EUVD-2026-00002": {
+   "id": "EUVD-2026-00002",
+   "query": "EUVD-2026-00002",
+   "aliases": [],
+   "summary": "Synthetic placeholder entry for an exploited vulnerability with no CVE alias.",
+   "severity": "HIGH",
+   "cvss_score": 7.5,
+   "records": [
+    {
+     "source": "euvd",
+     "id": "EUVD-2026-00002",
+     "summary": "Synthetic placeholder entry for an exploited vulnerability with no CVE alias.",
+     "details": null,
+     "published": "2026-10-01T00:00:00.000Z",
+     "modified": "2026-10-02T00:00:00.000Z",
+     "withdrawn": null,
+     "state": null,
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+     "cvss_version": "3.1",
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [],
+   "affected_limit_reached": false,
+   "findings": [],
+   "raw": [
+    {
+     "source": "euvd",
+     "data": {
+      "id": "EUVD-2026-00002",
+      "enisaUuid": "00000000-0000-4000-8000-000000000002",
+      "description": "Synthetic placeholder entry for an exploited vulnerability with no CVE alias.",
+      "datePublished": "2026-10-01T00:00:00.000Z",
+      "dateUpdated": "2026-10-02T00:00:00.000Z",
+      "baseScore": 7.5,
+      "baseScoreVersion": "3.1",
+      "baseScoreVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "references": "",
+      "aliases": "",
+      "assigner": "cna@example.invalid",
+      "epss": null,
+      "exploited": true,
+      "enisaIdProduct": [],
+      "enisaIdVendor": [],
+      "enisaIdVulnerability": []
+     }
+    }
+   ]
+  },
+  "GO-2022-1059": {
+   "id": "GO-2022-1059",
+   "query": "GO-2022-1059",
+   "aliases": [],
+   "summary": "golang.org/x/text: denial of service via crafted Accept-Language",
+   "severity": "HIGH",
+   "cvss_score": 7.5,
+   "records": [
+    {
+     "source": "osv",
+     "id": "GO-2022-1059",
+     "summary": "golang.org/x/text: denial of service via crafted Accept-Language",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "osv",
+     "vuln_id": "GO-2022-1059",
+     "ecosystem": "Go",
+     "package": "golang.org/x/text",
+     "purl": null,
+     "vendor": null,
+     "product": null,
+     "cpe": null,
+     "range_type": "SEMVER",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "0.3.8"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "GO-2022-1059",
+     "component": "golang.org/x/text",
+     "version": "0.3.7",
+     "category": "library",
+     "fixed_version": "0.3.8",
+     "severity": "HIGH",
+     "cvss_score": 7.5,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 12,
+     "advisory_ids": [
+      "GO-2022-1059"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": "Go",
+     "purl": "pkg:golang/golang.org/x/text@0.3.7"
+    }
+   ],
+   "raw": []
+  },
+  "MOCK-2026-0001": {
+   "id": "MOCK-2026-0001",
+   "query": "MOCK-2026-0001",
+   "aliases": [],
+   "summary": "Fictional advisory for the design mock",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8,
+   "records": [
+    {
+     "source": "cvelist",
+     "id": "MOCK-2026-0001",
+     "summary": "Fictional advisory for the design mock",
+     "details": null,
+     "published": null,
+     "modified": null,
+     "withdrawn": null,
+     "state": null,
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "cvss_vector": null,
+     "cvss_version": null,
+     "cwes": [],
+     "references": []
+    }
+   ],
+   "kev": null,
+   "epss": null,
+   "affected": [
+    {
+     "source": "cvelist",
+     "vuln_id": "MOCK-2026-0001",
+     "ecosystem": null,
+     "package": null,
+     "purl": null,
+     "vendor": "example",
+     "product": "exampleupdater",
+     "cpe": null,
+     "range_type": "CVE",
+     "version_type": null,
+     "events": [
+      {
+       "introduced": "0"
+      },
+      {
+       "fixed": "2.5.0"
+      }
+     ],
+     "versions": [],
+     "status": "affected"
+    }
+   ],
+   "affected_limit_reached": false,
+   "findings": [
+    {
+     "asset_id": "process:fixture-mac",
+     "priority": "P3",
+     "vuln_id": "MOCK-2026-0001",
+     "component": "ExampleUpdater",
+     "version": "2.4.1",
+     "category": "application",
+     "fixed_version": "2.5.0",
+     "severity": "CRITICAL",
+     "cvss_score": 9.8,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "cve-product",
+     "confidence": 0.5,
+     "status": "open",
+     "component_id": 2,
+     "advisory_ids": [
+      "MOCK-2026-0001"
+     ],
+     "triage_source": "osv",
+     "first_seen": "2026-11-07T16:22:35+00:00",
+     "last_seen": "2026-11-07T16:22:36+00:00",
+     "fixed_at": null,
+     "ecosystem": null,
+     "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
+    }
+   ],
+   "raw": []
+  }
+ },
+ "vuln_ids": {
+  "ALPINE-CVE-2024-3094": "ALPINE-CVE-2024-3094",
+  "CVE-2021-23337": "CVE-2021-23337",
+  "CVE-2021-44228": "CVE-2021-44228",
+  "CVE-2021-44906": "CVE-2021-44906",
+  "CVE-2022-25883": "CVE-2022-25883",
+  "CVE-2024-6197": "CVE-2024-6197",
+  "CVE-2024-7264": "CVE-2024-7264",
+  "EUVD-2021-30001": "CVE-2021-44228",
+  "EUVD-2026-00002": "EUVD-2026-00002",
+  "GHSA-35jh-r3h4-6jhm": "CVE-2021-23337",
+  "GHSA-c2qf-rxjj-qqgw": "CVE-2022-25883",
+  "GHSA-jfh8-c2jp-5v3q": "CVE-2021-44228",
+  "GHSA-xvch-5gv4-984h": "CVE-2021-44906",
+  "GO-2022-1059": "GO-2022-1059",
+  "MOCK-2026-0001": "MOCK-2026-0001"
+ },
+ "vuln_index": [
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.15",
+   "vendor": null,
+   "package": "lighttpd",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "1.4.76-r0"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.16",
+   "vendor": null,
+   "package": "lighttpd",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "1.4.76-r0"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.17",
+   "vendor": null,
+   "package": "lighttpd",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "1.4.76-r0"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.18",
+   "vendor": null,
+   "package": "lighttpd",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "1.4.76-r0"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.20",
+   "vendor": null,
+   "package": "xz",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.6.1-r2"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.21",
+   "vendor": null,
+   "package": "xz",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.6.1-r2"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.22",
+   "vendor": null,
+   "package": "xz",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.6.1-r2"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.23",
+   "vendor": null,
+   "package": "xz",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.6.1-r2"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "ALPINE-CVE-2024-3094",
+   "source": "osv",
+   "ecosystem": "Alpine:v3.24",
+   "vendor": null,
+   "package": "xz",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.6.1-r2"
+    }
+   ],
+   "versions": [],
+   "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GO-2022-1059",
+   "source": "osv",
+   "ecosystem": "Go",
+   "vendor": null,
+   "package": "golang.org/x/text",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "0.3.8"
+    }
+   ],
+   "versions": [],
+   "summary": "golang.org/x/text: denial of service via crafted Accept-Language",
+   "severity": "HIGH",
+   "cvss_score": 7.5
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "com.guicedee.services:log4j-core",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "last_affected": "1.2.1.2-jre17"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.apache.logging.log4j:log4j-core",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "2.13.0"
+    },
+    {
+     "fixed": "2.15.0"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.apache.logging.log4j:log4j-core",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "2.0-beta9"
+    },
+    {
+     "fixed": "2.3.1"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.apache.logging.log4j:log4j-core",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "2.4"
+    },
+    {
+     "fixed": "2.12.2"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "1.8.0"
+    },
+    {
+     "fixed": "1.9.2"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "1.10.0"
+    },
+    {
+     "fixed": "1.10.8"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "1.11.0"
+    },
+    {
+     "fixed": "1.11.10"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.ops4j.pax.logging:pax-logging-log4j2",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "events": [
+    {
+     "introduced": "2.0.0"
+    },
+    {
+     "fixed": "2.0.11"
+    }
+   ],
+   "versions": [],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "org.xbib.elasticsearch:log4j",
+   "product": null,
+   "range_type": "VERSIONS",
+   "events": [],
+   "versions": [
+    "6.3.2.1"
+   ],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q",
+   "source": "osv",
+   "ecosystem": "Maven",
+   "vendor": null,
+   "package": "uk.co.nichesolutions.logging.log4j:log4j-core",
+   "product": null,
+   "range_type": "VERSIONS",
+   "events": [],
+   "versions": [
+    "2.6.3-CUSTOM"
+   ],
+   "summary": "Remote code injection in Log4j",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "GHSA-35jh-r3h4-6jhm",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "lodash",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "4.17.21"
+    }
+   ],
+   "versions": [],
+   "summary": "Command Injection in lodash",
+   "severity": "HIGH",
+   "cvss_score": 7.2
+  },
+  {
+   "vuln_id": "GHSA-xvch-5gv4-984h",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "minimist",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "0.2.4"
+    }
+   ],
+   "versions": [],
+   "summary": "Prototype Pollution in minimist",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8
+  },
+  {
+   "vuln_id": "GHSA-xvch-5gv4-984h",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "minimist",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "1.0.0"
+    },
+    {
+     "fixed": "1.2.6"
+    }
+   ],
+   "versions": [],
+   "summary": "Prototype Pollution in minimist",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8
+  },
+  {
+   "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "semver",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "5.7.2"
+    }
+   ],
+   "versions": [],
+   "summary": "semver vulnerable to Regular Expression Denial of Service",
+   "severity": "HIGH",
+   "cvss_score": 7.5
+  },
+  {
+   "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "semver",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "6.0.0"
+    },
+    {
+     "fixed": "6.3.1"
+    }
+   ],
+   "versions": [],
+   "summary": "semver vulnerable to Regular Expression Denial of Service",
+   "severity": "HIGH",
+   "cvss_score": 7.5
+  },
+  {
+   "vuln_id": "GHSA-c2qf-rxjj-qqgw",
+   "source": "osv",
+   "ecosystem": "npm",
+   "vendor": null,
+   "package": "semver",
+   "product": null,
+   "range_type": "SEMVER",
+   "events": [
+    {
+     "introduced": "7.0.0"
+    },
+    {
+     "fixed": "7.5.2"
+    }
+   ],
+   "versions": [],
+   "summary": "semver vulnerable to Regular Expression Denial of Service",
+   "severity": "HIGH",
+   "cvss_score": 7.5
+  },
+  {
+   "vuln_id": "CVE-2021-44228",
+   "source": "cvelist",
+   "ecosystem": null,
+   "vendor": "apache software foundation",
+   "package": null,
+   "product": "apache log4j2",
+   "range_type": "CVE",
+   "events": [
+    {
+     "introduced": "2.0-beta9"
+    },
+    {
+     "fixed": "2.3.1"
+    },
+    {
+     "introduced": "2.4"
+    },
+    {
+     "fixed": "2.12.2"
+    },
+    {
+     "introduced": "2.13.0"
+    },
+    {
+     "fixed": "2.15.0"
+    }
+   ],
+   "versions": [],
+   "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  },
+  {
+   "vuln_id": "CVE-2024-6197",
+   "source": "cvelist",
+   "ecosystem": null,
+   "vendor": "haxx",
+   "package": null,
+   "product": "curl",
+   "range_type": "CVE",
+   "events": [
+    {
+     "introduced": "8.6.0"
+    },
+    {
+     "fixed": "8.9.0"
+    }
+   ],
+   "versions": [],
+   "summary": "curl CVE-2024-6197",
+   "severity": "MEDIUM",
+   "cvss_score": 7.5
+  },
+  {
+   "vuln_id": "CVE-2024-7264",
+   "source": "cvelist",
+   "ecosystem": null,
+   "vendor": "haxx",
+   "package": null,
+   "product": "curl",
+   "range_type": "CVE",
+   "events": [
+    {
+     "introduced": "7.32.0"
+    },
+    {
+     "fixed": "8.9.1"
+    }
+   ],
+   "versions": [],
+   "summary": "curl CVE-2024-7264",
+   "severity": "MEDIUM",
+   "cvss_score": 6.5
+  },
+  {
+   "vuln_id": "MOCK-2026-0001",
+   "source": "cvelist",
+   "ecosystem": null,
+   "vendor": "example",
+   "package": null,
+   "product": "exampleupdater",
+   "range_type": "CVE",
+   "events": [
+    {
+     "introduced": "0"
+    },
+    {
+     "fixed": "2.5.0"
+    }
+   ],
+   "versions": [],
+   "summary": "Fictional advisory for the design mock",
+   "severity": "CRITICAL",
+   "cvss_score": 9.8
+  },
+  {
+   "vuln_id": "CVE-2021-44228",
+   "source": "nvd",
+   "ecosystem": null,
+   "vendor": "apache",
+   "package": null,
+   "product": "log4j",
+   "range_type": "CPE",
+   "events": [
+    {
+     "introduced": "2.0"
+    },
+    {
+     "fixed": "2.15.0"
+    }
+   ],
+   "versions": [],
+   "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0
+  }
+ ],
+ "sources": {
+  "db": {
+   "path": "~/.local/share/secmonk/secmonk.db",
+   "exists": true
+  },
+  "registry": [
+   {
+    "name": "cvelist",
+    "description": "CVE List v5 (CVEProject/cvelistV5) with CISA Vulnrichment ADP data",
+    "in_all": true
+   },
+   {
+    "name": "debian-tracker",
+    "description": "Debian Security Tracker: per-release status, urgency, no-dsa and DSA/DLA ids",
+    "in_all": true
+   },
+   {
+    "name": "epss",
+    "description": "FIRST EPSS exploitation probability scores (daily bulk or API lookup)",
+    "in_all": true
+   },
+   {
+    "name": "euvd",
+    "description": "ENISA EUVD: exploited and recent EU vulnerability records, with CVE aliases",
+    "in_all": true
+   },
+   {
+    "name": "kev",
+    "description": "CISA Known Exploited Vulnerabilities catalog (full snapshot)",
+    "in_all": true
+   },
+   {
+    "name": "msrc",
+    "description": "Microsoft MSRC CVRF v3: per-product fixed builds + KBs for Windows/Office/.NET (API blocked in sandbox)",
+    "in_all": true
+   },
+   {
+    "name": "nvd",
+    "description": "NVD CVE API 2.0: CVSS, CWE and CPE applicability",
+    "in_all": true
+   },
+   {
+    "name": "osv",
+    "description": "OSV.dev bulk (package ecosystems + distro advisories)",
+    "in_all": true
+   }
+  ],
+  "sync_all_order": [
+   "kev",
+   "epss",
+   "osv",
+   "cvelist",
+   "nvd",
+   "euvd",
+   "msrc",
+   "debian-tracker"
+  ],
+  "status": {
+   "db": "~/.local/share/secmonk/secmonk.db",
+   "sources": [
+    {
+     "source": "cvelist",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": null,
+     "records": 1,
+     "status": "ok",
+     "message": "imported 1 from /files/cvelist/CVE-2021-44228.json"
+    },
+    {
+     "source": "epss",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": "2026-11-06",
+     "records": 10,
+     "status": "ok",
+     "message": "10 scores from file /files/epss/epss_scores-sample.csv"
+    },
+    {
+     "source": "euvd",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": null,
+     "records": 2,
+     "status": "ok",
+     "message": "2 records from file /files/euvd/exploited-sample.json"
+    },
+    {
+     "source": "kev",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": "2026.11.06",
+     "records": 9,
+     "status": "ok",
+     "message": "9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+    },
+    {
+     "source": "nvd",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": null,
+     "records": 1,
+     "status": "ok",
+     "message": "from file /files/nvd/cve-2021-44228.json"
+    },
+    {
+     "source": "osv",
+     "last_sync": "2026-11-07T16:22:35+00:00",
+     "cursor": "2026-11-02T11:17:50.087142138Z",
+     "records": 2,
+     "status": "ok",
+     "message": "from /files/osv/alpine-ALPINE-CVE-2024-3094.json"
+    }
+   ],
+   "tables": {
+    "vulnerability": 13,
+    "alias": 6,
+    "affected": 31,
+    "kev": 9,
+    "epss": 10,
+    "asset": 5,
+    "component": 101,
+    "finding": 11
+   }
+  }
+ },
+ "collectors": [
+  {
+   "name": "docker-engine",
+   "description": "Live container (or local image) via the Docker/Podman engine socket",
+   "in_all": true
+  },
+  {
+   "name": "docker-image",
+   "description": "Container image: registry reference, docker-save tarball or OCI layout dir (no daemon)",
+   "in_all": true
+  },
+  {
+   "name": "fs",
+   "description": "Language dependencies in a folder/repo: lockfiles, manifests, installed packages, binaries",
+   "in_all": true
+  },
+  {
+   "name": "homebrew",
+   "description": "Homebrew/Linuxbrew formulae (active kegs), casks and vendored language dependencies",
+   "in_all": true
+  },
+  {
+   "name": "macos",
+   "description": "macOS apps (.app bundles), Homebrew formulae/casks, pkgutil receipts and OS version",
+   "in_all": true
+  },
+  {
+   "name": "process",
+   "description": "Running processes: launch origin (service/agent/app/shell...), software identity + version, provenance",
+   "in_all": true
+  },
+  {
+   "name": "rootfs",
+   "description": "Linux root filesystem directory (dpkg/apk/rpm + python/npm packages)",
+   "in_all": true
+  },
+  {
+   "name": "ssh",
+   "description": "Remote Linux/macOS host over SSH (agentless, read-only): `secmonk scan ssh user@host[:port]`",
+   "in_all": true
+  },
+  {
+   "name": "windows",
+   "description": "Windows host: JSON from the PowerShell script (`secmonk windows-script`) (target), osquery results (-o osquery=<file>) or live on Windows",
+   "in_all": true
+  }
+ ],
+ "jobs": [
+  {
+   "id": 2,
+   "kind": "scan",
+   "title": "scan fs /srv/web-frontend",
+   "params": {
+    "collector": "fs",
+    "target": "/srv/web-frontend",
+    "options": [],
+    "save": true,
+    "min_confidence": 0.5
+   },
+   "started": "2026-11-07T16:22:35+00:00",
+   "finished": "2026-11-07T16:22:35+00:00",
+   "status": "ok",
+   "error": null,
+   "result": {
+    "asset": "dir:/srv/web-frontend",
+    "saved": true,
+    "scan_id": 6,
+    "stats": {
+     "components": 18,
+     "matches": 2,
+     "findings": 2,
+     "withdrawn": 0,
+     "patched": 0
+    },
+    "warnings": [],
+    "partial": false,
+    "findings": [
+     {
+      "asset_id": "dir:/srv/web-frontend",
+      "priority": "P3",
+      "vuln_id": "CVE-2021-44906",
+      "component": "minimist",
+      "version": "1.2.5",
+      "category": "library",
+      "fixed_version": "1.2.6",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "epss": null,
+      "kev": false,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 71,
+      "advisory_ids": [
+       "CVE-2021-44906",
+       "GHSA-xvch-5gv4-984h"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-07T16:22:35+00:00",
+      "last_seen": "2026-11-07T16:22:35+00:00",
+      "fixed_at": null,
+      "ecosystem": "npm",
+      "purl": "pkg:npm/minimist@1.2.5"
+     },
+     {
+      "asset_id": "dir:/srv/web-frontend",
+      "priority": "P3",
+      "vuln_id": "CVE-2022-25883",
+      "component": "semver",
+      "version": "7.3.5",
+      "category": "library",
+      "fixed_version": "7.5.2",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "epss": null,
+      "kev": false,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 73,
+      "advisory_ids": [
+       "CVE-2022-25883",
+       "GHSA-c2qf-rxjj-qqgw"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-07T16:22:35+00:00",
+      "last_seen": "2026-11-07T16:22:35+00:00",
+      "fixed_at": null,
+      "ecosystem": "npm",
+      "purl": "pkg:npm/semver@7.3.5"
+     }
+    ],
+    "counts": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 2,
+     "P4": 0,
+     "kev": 0,
+     "total": 2
+    }
+   },
+   "log_lines": 4,
+   "log": [
+    "collecting with fs on /srv/web-frontend\u2026",
+    "dir:/srv/web-frontend: 18 components",
+    "matching against the local mirror\u2026",
+    "18 components \u00b7 2 matches \u00b7 2 findings \u00b7 0 withdrawn \u00b7 0 patched"
+   ]
+  },
+  {
+   "id": 1,
+   "kind": "sync",
+   "title": "sync kev",
+   "params": {
+    "sources": [
+     "kev"
+    ],
+    "ecosystems": [],
+    "since": null,
+    "full": false,
+    "limit": null,
+    "path": "/files/kev/known_exploited_vulnerabilities.json"
+   },
+   "started": "2026-11-07T16:22:35+00:00",
+   "finished": "2026-11-07T16:22:35+00:00",
+   "status": "ok",
+   "error": null,
+   "result": {
+    "sources": [
+     {
+      "source": "kev",
+      "status": "ok",
+      "records": 9,
+      "seconds": 0.0,
+      "message": "9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+     }
+    ]
+   },
+   "log_lines": 2,
+   "log": [
+    "syncing kev\u2026",
+    "kev: ok \u2014 9 records in 0.0s 9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+   ]
   }
  ]
 };

@@ -23,7 +23,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 | [Process / executable monitor](features/process-monitor.md) | implemented | 2026-11-07 | process, macos, cli, collector, provenance |
 | [Scan, match and findings](features/scan-and-findings.md) | implemented | 2026-11-07 | cli, matching, prioritization, findings |
 | [Vulnerability data sync](features/vuln-sync.md) | implemented | 2026-11-07 | cli, vuln-source, sync, osv, cve, kev, epss, nvd, euvd, msrc |
-| [Web interface (local)](features/web-ui.md) | implemented | 2026-11-07 | web-ui, cli, process, design |
+| [Web interface (local)](features/web-ui.md) | implemented | 2026-11-07 | web-ui, cli, process, findings, sync, design |
 
 ## tech
 
@@ -143,7 +143,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **exploitation-probability**: [epss](references/vuln-sources/epss.md)
 - **exploited**: [euvd](references/vuln-sources/euvd.md), [kev](references/vuln-sources/kev.md)
 - **features**: [README](features/README.md)
-- **findings**: [scan-and-findings](features/scan-and-findings.md)
+- **findings**: [scan-and-findings](features/scan-and-findings.md), [web-ui](features/web-ui.md)
 - **frontmatter**: [frontmatter](_meta/frontmatter.md)
 - **ghsa**: [ghsa](references/vuln-sources/ghsa.md), [osv](references/vuln-sources/osv.md)
 - **github**: [ghsa](references/vuln-sources/ghsa.md)
@@ -194,7 +194,7 @@ Structure and conventions: [_meta/README.md](_meta/README.md).
 - **ssh**: [inventory-ssh](features/inventory-ssh.md), [on-linux-docker](plans/on-linux-docker.md), [on-macos](plans/on-macos.md), [on-windows](plans/on-windows.md), [ssh](tech/collectors/ssh.md)
 - **ssvc**: [cvelist-v5](references/vuln-sources/cvelist-v5.md)
 - **storage**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md)
-- **sync**: [vuln-sync](features/vuln-sync.md), [on-open-network](plans/on-open-network.md)
+- **sync**: [vuln-sync](features/vuln-sync.md), [web-ui](features/web-ui.md), [on-open-network](plans/on-open-network.md)
 - **tests**: [engine-and-quality](plans/engine-and-quality.md)
 - **tooling**: [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
 - **triage**: [next-sources](plans/next-sources.md)

@@ -1,4 +1,4 @@
-"""State and handlers behind the web API (phase 1: process monitor).
+"""State and handlers behind the process-monitor part of the web API (other areas: data.py, jobs.py).
 
 `ProcessMonitor` owns one analysis at a time (snapshot, inspector, views), matches it against the mirror in a
 temporary overlay (nothing is written unless `save()`), keeps a `procmon.Watcher` for `/api/processes/watch`, and
@@ -21,9 +21,11 @@ from ..errors import COLLECT_ERRORS
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, message: str, hint: str | None = None):
+    """An API failure with its HTTP status; `code` is a stable machine-readable reason (e.g. 'no-db') for the UI."""
+
+    def __init__(self, status: int, message: str, hint: str | None = None, *, code: str | None = None):
         super().__init__(message)
-        self.status, self.message, self.hint = status, message, hint
+        self.status, self.message, self.hint, self.code = status, message, hint, code
 
 
 class ProcessMonitor:

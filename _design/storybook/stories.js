@@ -12,6 +12,9 @@
     { vuln_id: "CVE-2024-7264", priority: "P4", kev: false, cvss_score: 6.5, fixed_version: "8.9.1", component: "curl" },
   ];
   const tableRows = M.snapshot.processes.slice(9, 15);
+  const finding = (vid) => M.findings.find((f) => f.vuln_id === vid);
+  const scanJob = M.jobs.find((j) => j.kind === "scan");
+  const syncJob = M.jobs.find((j) => j.kind === "sync");
 
   global.SECMONK_STORIES = [
     // ------------------------------------------------------------------ foundations
@@ -63,6 +66,18 @@
         { name: "Summary", template: `<sm-findings-summary :findings="findings"/>`, data: { findings: sampleFindings } },
         { name: "Empty", template: `<sm-findings-summary :findings="[]" empty="—"/>` },
       ] },
+    { id: "severity", group: "Status", title: "Severity (sm-severity)",
+      doc: "Severity label of a vulnerability record (CRITICAL / HIGH / MEDIUM / LOW) in the priority colors, with the CVSS score. '—' when unknown.",
+      variants: [{ name: "Levels", template: `<span class="sm-badges"><sm-severity severity="CRITICAL" :score="10"/><sm-severity severity="HIGH" :score="7.5"/>
+<sm-severity severity="MEDIUM" :score="5.3"/><sm-severity severity="LOW"/><sm-severity :score="6.1"/><sm-severity/></span>` }] },
+    { id: "priority-bar", group: "Status", title: "Priority bar (sm-priority-bar)",
+      doc: "Open findings of an asset per priority as a stacked bar; legend adds the numbers. Green when there is none.",
+      variants: [
+        { name: "Bars", template: `<div style="display:grid;gap:8px"><sm-priority-bar :counts="{ P1: 1, P2: 3, P3: 8, P4: 2 }" legend/>
+<sm-priority-bar :counts="{ P3: 2, P4: 1 }" legend/><sm-priority-bar :counts="{}" legend/></div>` },
+        { name: "From the mock assets", template: `<div style="display:grid;gap:8px"><div v-for="a in assets" :key="a.id" class="sm-toolbar">
+  <code style="width:220px">{{ a.id }}</code><sm-priority-bar :counts="a.findings_by_priority" legend/></div></div>`, data: { assets: M.assets } },
+      ] },
     { id: "launch", group: "Status", title: "Launch badge (sm-launch-badge)",
       doc: "How a process started. Props: kind (one of the launch kinds), detail. Tooltip explains the kind.",
       variants: [{ name: "All kinds", template: `<span class="sm-badges"><sm-launch-badge v-for="k in kinds" :key="k" :kind="k"/></span>`,
@@ -95,6 +110,19 @@
       variants: [{ name: "Interval", template: `<sm-select v-model="s" label="Interval" :options="[{ value: 5, label: 'every 5 s' }, { value: 10, label: 'every 10 s' }]"/> <span class="sm-muted">{{ s }}</span>`, data: { s: 10 } }] },
 
     // ------------------------------------------------------------------ content
+    { id: "tabs", group: "Inputs", title: "Tabs (sm-tabs)", doc: "Sections of a detail page. options [{value, label, count}], v-model.",
+      variants: [{ name: "Asset tabs", template: `<sm-tabs v-model="t" :options="[{ value: 'findings', label: 'Findings', count: 2 }, { value: 'components', label: 'Components', count: 18 },
+  { value: 'scans', label: 'Scans', count: 2 }, { value: 'details', label: 'Details' }]"/>
+<div class="sm-muted" style="margin-top:6px">tab: {{ t }}</div>`, data: { t: "findings" } }] },
+    { id: "field", group: "Inputs", title: "Form field (sm-field) and form layout",
+      doc: "Label + control + hint. Put fields in .sm-form (responsive grid); `wide` spans the row; .sm-form__actions for the buttons. Controls: .sm-input, .sm-select, textarea.sm-input, sm-switch, sm-chips.",
+      variants: [{ name: "Scan form", template: `<div class="sm-form">
+  <sm-field label="Collector" hint="Language dependencies in a folder"><select class="sm-select" v-model="c"><option>fs</option><option>rootfs</option></select></sm-field>
+  <sm-field label="Target" hint="required"><input class="sm-input" v-model="t" placeholder="/path/to/project"></sm-field>
+  <sm-field label="Save"><sm-switch v-model="s">store the inventory and findings</sm-switch></sm-field>
+  <sm-field label="Collector options" hint="one key=value per line" wide><textarea class="sm-input" rows="2"></textarea></sm-field>
+  <div class="sm-form__actions"><sm-button variant="primary" icon="play">Run scan</sm-button><span class="sm-muted">Same as</span><code>secmonk scan {{ c }} {{ t }}</code></div>
+</div>`, data: { c: "fs", t: "/srv/web-frontend", s: true } }] },
     { id: "page-header", group: "Content", title: "Page header (sm-page-header)", doc: "Title, subtitle, actions slot. Top of every view.",
       variants: [{ name: "With actions", template: `<sm-page-header title="Processes" subtitle="What is running, how it was started.">
   <sm-button icon="refresh">Refresh</sm-button><sm-button icon="save">Save</sm-button><sm-button variant="primary" icon="eye">Watch</sm-button>
@@ -138,6 +166,14 @@
     { id: "feed", group: "Data", title: "Feed item (sm-feed-item)", doc: "One watch event (procmon.event_dict shape); emits open.",
       variants: [{ name: "Events", template: `<sm-card flush><div class="sm-feed"><sm-feed-item v-for="e in events" :key="e.id" :event="e"/></div></sm-card>`,
         data: { events: M.events.map((e, i) => ({ ...e, id: i, time: "10:04:1" + i })) } }] },
+    { id: "job", group: "Data", title: "Job (sm-job)",
+      doc: "A background scan or sync (web/jobs.py): status badge, title, time, log; the result goes in the slot (job-result). Status: running | ok | partial | error.",
+      variants: [
+        { name: "Running", template: `<sm-job :job="{ id: 3, kind: 'sync', title: 'sync osv', status: 'running', started: '2026-11-07T10:00:00Z', log: ['syncing osv…', 'osv: PyPI 1,204 records'] }"/>` },
+        { name: "Done (scan)", template: `<sm-job :job="job"/>`, data: { job: scanJob } },
+        { name: "Failed", template: `<sm-job :job="{ id: 4, kind: 'scan', title: 'scan ssh admin@build-01', status: 'error', started: '2026-11-07T10:00:00Z', finished: '2026-11-07T10:00:12Z',
+  error: 'ConnectionError: timed out', log: ['collecting with ssh on admin@build-01…', 'error: ConnectionError: timed out'] }"/>` },
+      ] },
     { id: "drawer", group: "Data", title: "Drawer (sm-drawer)", doc: "Detail panel: title, subtitle, actions slot; Esc / close emits close. `inline` renders it in the flow (storybook, print).",
       variants: [{ name: "Inline", template: `<sm-drawer inline title="com.sync.agent" subtitle="launchd-agent · user:alice">
   <sm-kv :rows="[{ label: 'Program', value: '/Users/alice/Library/Application Support/Sync/syncd', copy: true }]"/></sm-drawer>` }] },
@@ -157,6 +193,24 @@
         { name: "curl from Terminal (brew keg, findings)", template: `<process-detail inline :row="row"/>`, data: { row: proc(403) } },
         { name: "Downloaded app (provenance)", template: `<process-detail inline :row="row"/>`, data: { row: proc(310) } },
         { name: "Agent in a user folder (flags)", template: `<process-detail inline :row="row"/>`, data: { row: proc(320) } },
+      ] },
+    { id: "findings-table", group: "Patterns", title: "Findings table (findings-table)",
+      doc: "The findings list of Findings, asset detail, dashboard, vulnerability page and scan results (reports.finding_dict rows). Props: show-asset, show-vuln, show-status, compact, selected; emits select.",
+      variants: [
+        { name: "All findings (with status)", template: `<findings-table :rows="rows" show-status :selected="sel" @select="r => sel = r.key"/>`, data: { rows: M.findings, sel: null } },
+        { name: "Compact, one asset", template: `<findings-table :rows="rows" compact :show-asset="false"/>`, data: { rows: M.findings.filter((f) => f.asset_id === "process:fixture-mac") } },
+      ] },
+    { id: "finding-detail", group: "Patterns", title: "Finding detail (finding-detail)",
+      doc: "The finding drawer (secmonk-views.js), inline here: priority and why, match method and confidence, triage, timeline, advisories, and the vulnerability as the mirror knows it (KEV, EPSS).",
+      variants: [
+        { name: "Log4Shell (P1, KEV)", template: `<finding-detail inline :finding="f"/>`, data: { f: finding("CVE-2021-44228") } },
+        { name: "Fixed finding", template: `<finding-detail inline :finding="f"/>`, data: { f: M.findings.find((f) => f.status === "fixed") } },
+      ] },
+    { id: "job-result", group: "Patterns", title: "Job result (job-result)",
+      doc: "What a finished job produced: a scan's asset, stats and findings; a sync's per-source status. Used inside sm-job.",
+      variants: [
+        { name: "Scan", template: `<sm-job :job="job"><job-result :job="job"/></sm-job>`, data: { job: scanJob } },
+        { name: "Sync", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: syncJob } },
       ] },
     { id: "toolbar", group: "Patterns", title: "Toolbar composition",
       doc: "Search + toggles left, view controls right; second row: filter chips + result count. Same in every list view.",

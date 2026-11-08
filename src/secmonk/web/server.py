@@ -9,8 +9,8 @@ Local and unauthenticated by design, hardened for that setting:
     POST on top of that;
   * strict Content-Security-Policy; static files resolved inside the static directory only.
 
-Routes: GET / (app), GET /static/*, GET /api/meta, GET /api/processes[?refresh=1], GET /api/processes/watch,
-POST /api/processes/save. See _docs/tech/web-ui.md.
+Routes: GET / (app), GET /static/*, the JSON API in `GET_ROUTES` / `POST_ROUTES` (table in _docs/tech/web-ui.md).
+Jobs (scan, sync) are refused when `actions` is off: the default when listening on a non-loopback address.
 """
 
 from __future__ import annotations
@@ -28,6 +28,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from .. import __version__
 from .api import ApiError, ProcessMonitor
+from .data import DataApi
+from .jobs import JobRunner
 
 STATIC = Path(__file__).parent / "static"
 CSP = ("default-src 'self'; "
@@ -35,6 +37,8 @@ CSP = ("default-src 'self'; "
        "style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; "
        "frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'")
 CSRF_HEADER = "X-SecMonk-Request"
+MAX_BODY = 64 * 1024
+FEATURES = ["processes", "overview", "assets", "findings", "vulns", "sources", "scan", "jobs"]
 
 
 LOOPBACK_NAMES = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -64,12 +68,16 @@ class UIServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
     def __init__(self, addr: tuple[str, int], monitor: ProcessMonitor, *, mode: str,
-                 allow_hosts: list[str] | None = None):
+                 allow_hosts: list[str] | None = None, actions: bool | None = None):
         if ":" in addr[0]:
             self.address_family = socket.AF_INET6        # instance attribute, read by TCPServer.__init__
         super().__init__(addr, Handler)
         self.monitor = monitor
         self.mode = mode
+        # scans and syncs from the browser: on by default only when nobody else can reach the server
+        self.actions = addr[0] in LOOPBACK_NAMES if actions is None else actions
+        self.data = DataApi(monitor.db_path, min_confidence=monitor.min_confidence)
+        self.jobs = JobRunner(monitor.db_path, min_confidence=monitor.min_confidence, enabled=self.actions)
         host, port = self.server_address[:2]
         self.port = port
         self.wildcard = host in ("0.0.0.0", "::")
@@ -118,8 +126,8 @@ class Handler(BaseHTTPRequestHandler):
         self._headers(status, "application/json; charset=utf-8", len(data))
         self.wfile.write(data)
 
-    def _error(self, status: int, message: str, hint: str | None = None) -> None:
-        self._json(status, {"error": message, **({"hint": hint} if hint else {})})
+    def _error(self, status: int, message: str, hint: str | None = None, code: str | None = None) -> None:
+        self._json(status, {"error": message, **({"hint": hint} if hint else {}), **({"code": code} if code else {})})
 
     def _host_ok(self) -> bool:
         if self.server.host_allowed(self.headers.get("Host") or ""):
@@ -154,28 +162,42 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, self.server.monitor.payload(refresh=query.get("refresh") == ["1"]))
             if path == "/api/processes/watch":
                 return self._json(200, self.server.monitor.watch())
+            if path in GET_ROUTES:
+                return self._json(200, GET_ROUTES[path](self.server, query))
+            if path.startswith("/api/jobs/"):
+                job = path[len("/api/jobs/"):]
+                if not job.isdigit():
+                    return self._error(404, f"no such endpoint {path}")
+                return self._json(200, self.server.jobs.get(int(job)))
             if path.startswith("/api/"):
                 return self._error(404, f"no such endpoint {path}")
             return self._error(404, "not found")
         except ApiError as e:
-            return self._error(e.status, e.message, e.hint)
+            return self._error(e.status, e.message, e.hint, e.code)
         except Exception as e:  # noqa: BLE001 - never leak a traceback page; report the type + message
             return self._error(500, f"{type(e).__name__}: {e}")
 
     def do_POST(self) -> None:
         if not self._host_ok():
             return
-        path = urlsplit(self.path).path
+        url = urlsplit(self.path)
+        path, query = url.path, parse_qs(url.query)
         if not path.startswith("/api/"):
             return self._error(404, "not found")
         if not self._api_ok(path):
             return
         try:
+            if path in ("/api/processes/save", "/api/assets/match"):
+                self.server.jobs.refuse_writes_while_busy()
             if path == "/api/processes/save":
                 return self._json(200, self.server.monitor.save())
+            if path == "/api/assets/match":
+                return self._json(200, self.server.data.match(query))
+            if path == "/api/jobs":
+                return self._json(202, self.server.jobs.start(self._body()))
             return self._error(404, f"no such endpoint {path}")
         except ApiError as e:
-            return self._error(e.status, e.message, e.hint)
+            return self._error(e.status, e.message, e.hint, e.code)
         except Exception as e:  # noqa: BLE001
             return self._error(500, f"{type(e).__name__}: {e}")
 
@@ -183,6 +205,25 @@ class Handler(BaseHTTPRequestHandler):
         self._error(405, "method not allowed")
 
     do_DELETE = do_PATCH = do_PUT
+
+    def _body(self) -> dict[str, Any]:
+        """JSON object body of a POST (application/json, at most MAX_BODY bytes)."""
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            raise ApiError(415, "expected Content-Type: application/json")
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            raise ApiError(400, "bad Content-Length") from None
+        if length > MAX_BODY:
+            raise ApiError(413, f"request body over {MAX_BODY} bytes")
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except (ValueError, UnicodeDecodeError):
+            raise ApiError(400, "request body is not valid JSON") from None
+        if not isinstance(body, dict):
+            raise ApiError(400, "request body must be a JSON object")
+        return body
 
     # ------------------------------------------------------------------ handlers
     def _static(self, rel: str) -> None:
@@ -206,12 +247,28 @@ class Handler(BaseHTTPRequestHandler):
 
         return {"version": __version__, "mode": self.server.mode, "platform": current_platform(),
                 "db": {"path": str(m.db_path), "exists": m.db_path.exists()}, "bind": self.server.bind,
-                "features": ["processes"]}
+                "features": FEATURES, "actions": self.server.actions}
+
+
+# read endpoints over the database: path -> handler(server, query)
+GET_ROUTES = {
+    "/api/overview": lambda s, q: s.data.overview(),
+    "/api/assets": lambda s, q: s.data.assets(),
+    "/api/assets/detail": lambda s, q: s.data.asset(q),
+    "/api/unmatched": lambda s, q: s.data.unmatched(),
+    "/api/findings": lambda s, q: s.data.findings(q),
+    "/api/vulns/show": lambda s, q: s.data.vuln(q),
+    "/api/vulns/search": lambda s, q: s.data.vuln_search(q),
+    "/api/sources": lambda s, q: s.data.sources(),
+    "/api/collectors": lambda s, q: s.data.collectors(),
+    "/api/jobs": lambda s, q: s.jobs.list(),
+}
 
 
 def make_server(monitor: ProcessMonitor, host: str = "127.0.0.1", port: int = 8765, *, mode: str = "live",
-                verbose: bool = False, allow_hosts: list[str] | None = None) -> UIServer:
-    srv = UIServer((host, port), monitor, mode=mode, allow_hosts=allow_hosts)
+                verbose: bool = False, allow_hosts: list[str] | None = None,
+                actions: bool | None = None) -> UIServer:
+    srv = UIServer((host, port), monitor, mode=mode, allow_hosts=allow_hosts, actions=actions)
     srv.verbose = verbose  # type: ignore[attr-defined]
     return srv
 
