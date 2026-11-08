@@ -344,3 +344,24 @@ def test_engine_errors(engine, monkeypatch, tmp_path):
         de.find_endpoint({})
     monkeypatch.setenv("DOCKER_HOST", "tcp://10.0.0.1:2376")
     assert str(de.find_endpoint({})) == "tcp://10.0.0.1:2376"
+
+
+def test_stale_socket_is_skipped_in_auto_discovery(engine, monkeypatch):
+    # macOS 2026-11-08: Docker Desktop not running but ~/.docker/run/docker.sock left behind (ECONNREFUSED)
+    import socket as so
+
+    live, _ = engine
+    stale = str(Path(live).with_name("stale.sock"))        # same short temp dir (AF_UNIX path limit on macOS)
+    s = so.socket(so.AF_UNIX, so.SOCK_STREAM)
+    s.bind(stale)                                          # bound, never listening -> connect is refused
+    try:
+        monkeypatch.delenv("DOCKER_HOST", raising=False)
+        monkeypatch.setattr(de, "candidate_sockets", lambda opts=None: [stale, live])
+        assert de.find_endpoint({}).unix == live
+        monkeypatch.setattr(de, "candidate_sockets", lambda opts=None: [stale])
+        with pytest.raises(RuntimeError, match="refusing connections .*stale.sock"):
+            de.find_endpoint({})
+        assert de.find_endpoint({"socket": stale}).unix == stale   # explicit: never second-guessed
+    finally:
+        s.close()
+        Path(stale).unlink(missing_ok=True)

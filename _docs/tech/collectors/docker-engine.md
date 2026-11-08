@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, docker, containers, engine-api, podman]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-08
+verified: 2026-11-08
 sample: synthetic
 fixtures: tests/fixtures/collectors/docker/engine/
 code: src/secmonk/collectors/docker_engine.py
@@ -31,13 +31,17 @@ Verify on a real host before marking `implemented`.
 
 ## Where the data lives
 
-Socket discovery order (first that exists and answers `GET /_ping`):
+Socket discovery order (`find_endpoint`: an explicit `--socket` / `DOCKER_HOST` is used as given; otherwise the first
+well-known socket file that exists **and does not refuse a connection**. A refused one is skipped and named in the final
+error: Docker Desktop leaves `~/.docker/run/docker.sock` behind when it quits, seen on macOS 26.5 on 2026-11-08 while
+OrbStack was the active context):
 
 1. `DOCKER_HOST` env: `unix:///path/to.sock` (also `tcp://host:2375`, `ssh://` - out of scope; refuse plain tcp unless `--allow-tcp`).
 2. `/var/run/docker.sock` (Linux; also on macOS via symlink from Docker Desktop/OrbStack).
 3. `~/.docker/run/docker.sock` (Docker Desktop macOS, newer versions).
 4. `~/.colima/default/docker.sock` (Colima); `~/.rd/docker.sock` (Rancher Desktop); `~/.orbstack/run/docker.sock` (OrbStack).
-5. Docker contexts: `~/.docker/contexts/meta/*/meta.json` -> `Endpoints.docker.Host` (honour `docker context use`; current context in `~/.docker/config.json` `currentContext`).
+5. Docker contexts: **not implemented**. The format is `~/.docker/contexts/meta/*/meta.json` -> `Endpoints.docker.Host`, current
+   context in `~/.docker/config.json` `currentContext`; the active context's socket is found only if it is one of the paths above.
 6. Podman: `$XDG_RUNTIME_DIR/podman/podman.sock` (rootless; `/run/user/<uid>/podman/podman.sock`), `/run/podman/podman.sock` (rootful). Podman exposes a Docker-compatible API at `/v1.40/...` plus its own `/libpod/...`.
 
 Permissions: the socket is `root:docker` mode 660 - the user must be in the `docker` group (equivalent to root!). Report `PermissionError`

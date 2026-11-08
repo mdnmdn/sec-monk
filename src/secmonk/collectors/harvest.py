@@ -29,7 +29,7 @@ import tarfile
 from dataclasses import dataclass, field
 from typing import Any, BinaryIO
 
-from .macos import _FRAMEWORKS, MAX_APP_DEPTH
+from .macos import _FRAMEWORKS, MAX_APP_DEPTH, RECEIPT_DIRS
 from .rootfs import DPKG_STATUS_D, FIXED_PATHS, MAX_FILE_BYTES, parse_os_release
 
 MB = 1024 * 1024
@@ -44,7 +44,9 @@ LINUX_FIXED_DIRS: tuple[str, ...] = (DPKG_STATUS_D,)
 
 MACOS_SYSTEM_VERSION = "System/Library/CoreServices/SystemVersion.plist"
 MACOS_APP_BASES: tuple[str, ...] = ("Applications", "System/Applications", "Users/*/Applications")
-MACOS_RECEIPTS_DIR = "var/db/receipts"
+MACOS_RECEIPTS_DIRS: tuple[str, ...] = RECEIPT_DIRS    # third-party + Apple (/Library/Apple/System/Library/Receipts)
+# Safari ships in the App cryptex; /Applications/Safari.app is a symlink into it (macOS 13+)
+MACOS_CRYPTEX_SAFARI = "System/Cryptexes/App/System/Applications/Safari.app/Contents/Info.plist"
 BREW_PREFIXES: tuple[str, ...] = ("opt/homebrew", "usr/local", "home/linuxbrew/.linuxbrew")
 
 #: Language dependency files matched by basename (`find -name`).
@@ -177,10 +179,15 @@ def linux_fixed_commands(spec: HarvestSpec) -> list[str]:
 def macos_fixed_commands(spec: HarvestSpec) -> list[str]:
     cmds = [
         _find([MACOS_SYSTEM_VERSION], "-type", "f", "-print0", opts=("-maxdepth", "0")),
-        _find([MACOS_RECEIPTS_DIR], "-type", "f", "-name", quote("*.plist"), "-print0", opts=("-maxdepth", "1")),
+        _find(list(MACOS_RECEIPTS_DIRS), "-type", "f", "-name", quote("*.plist"), "-print0", opts=("-maxdepth", "1")),
+        _find([MACOS_CRYPTEX_SAFARI], "-type", "f", "-print0", opts=("-maxdepth", "0")),
+        # top-level symlinked bundles (Safari -> cryptex, renamed apps): the link itself, extracted re-rooted
+        _find(list(MACOS_APP_BASES), "-type", "l", "-name", quote("*.app"), "-print0",
+              opts=("-mindepth", "1", "-maxdepth", "1"), glob=True),
     ]
-    # .app bundles: Info.plist, MAS receipt marker, bundled Electron/CEF/Sparkle framework Info.plists
-    paths = ["*.app/Contents/Info.plist", "*.app/Contents/_MASReceipt/receipt"]
+    # .app bundles: Info.plist (also iOS apps' Wrapper/<App>.app/Info.plist), MAS receipt marker, bundled
+    # Electron/CEF/Sparkle framework Info.plists
+    paths = ["*.app/Contents/Info.plist", "*.app/Wrapper/*.app/Info.plist", "*.app/Contents/_MASReceipt/receipt"]
     for fw in _FRAMEWORKS:
         paths.append(f"*.app/Contents/Frameworks/{fw}/Versions/*/Resources/Info.plist")
         paths.append(f"*.app/Contents/Frameworks/{fw}/Resources/Info.plist")
@@ -211,8 +218,11 @@ def _brew_commands(prefix: str, spec: HarvestSpec) -> list[str]:
         _find([caskroom], "-type", "d", "-print0", opts=("-mindepth", "2", "-maxdepth", "2")),
         _find([caskroom], "\\(", "-type", "d", "-o", "-type", "f", "-o", "-type", "l", "\\)",
               "-name", quote("*.app"), "-print0", opts=("-mindepth", "3", "-maxdepth", "3")),
-        _find([f"{caskroom}/*/.metadata"], "-type", "f", "\\(", "-name", quote("*.json"), "-o", "-name",
-              quote("*.rb"), "\\)", *meta_size, "-print0", glob=True),
+        # find, not a `Caskroom/*/.metadata` glob: the shell would follow a renamed cask's symlink
+        # (aws-vault -> aws-vault-binary) and harvest the same cask twice; the link itself is kept instead
+        _find([caskroom], "-type", "f", "-path", quote("*/.metadata/*"), "\\(", "-name", quote("*.json"), "-o",
+              "-name", quote("*.rb"), "\\)", *meta_size, "-print0", opts=("-mindepth", "3", "-maxdepth", "6")),
+        _find([caskroom], "-type", "l", "-print0", opts=("-mindepth", "1", "-maxdepth", "1")),
         _find([opt], "-type", "l", "-print0", opts=("-mindepth", "1", "-maxdepth", "1")),
     ]
 
@@ -248,7 +258,8 @@ def build_script(spec: HarvestSpec) -> str:
     return "\n".join([
         f"cd {quote(spec.root)} || exit 3",
         f"printf '{STREAM_MARKER}\\n'",
-        f"{group} | tar --null --no-recursion -T - -czf -",
+        # COPYFILE_DISABLE: macOS bsdtar would otherwise add `._<name>` AppleDouble entries for files with xattrs
+        f"{group} | COPYFILE_DISABLE=1 tar --null --no-recursion -T - -czf -",
         "",
     ])
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import io
 import os
+import platform
+import plistlib
 import shlex
 import shutil
 import socket
@@ -158,7 +160,40 @@ def test_macos_script_content():
     for pfx in harvest.BREW_PREFIXES:
         assert f"{pfx}/Cellar" in s and f"{pfx}/Caskroom" in s and f"{pfx}/opt" in s
     assert "INSTALL_RECEIPT.json" in s and "sbom.spdx.json" in s and "var/db/receipts" in s
+    assert "Library/Apple/System/Library/Receipts" in s and "Wrapper/*.app/Info.plist" in s
+    assert "/*/.metadata" not in s                                   # a glob would follow renamed-cask links
     assert "./Volumes" in s
+
+
+def test_macos_harvest_matches_collector_on_real_shapes(tmp_path):
+    """Shapes seen on a real Mac (2026-11-08) that the first harvest script missed or double counted."""
+    root = tmp_path / "mac"
+    shutil.copytree(MACOS, root, symlinks=True)
+    caskroom = root / "opt/homebrew/Caskroom"
+    (caskroom / "aws-vault-binary/6.6.2").mkdir(parents=True)
+    (caskroom / "aws-vault-binary/.metadata").mkdir()
+    (caskroom / "aws-vault-binary/.metadata/config.json").write_text("{}")
+    (caskroom / "aws-vault").symlink_to("aws-vault-binary")             # renamed cask
+    wrapped = root / "Applications/FortiToken.app/Wrapper/FortiToken.app"
+    wrapped.mkdir(parents=True)                                       # iOS app on Apple silicon
+    (wrapped / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": "com.example.token",
+                                                         "CFBundleShortVersionString": "6.6.0"}))
+    safari = root / "System/Cryptexes/App/System/Applications/Safari.app/Contents"
+    safari.mkdir(parents=True)
+    (safari / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": "com.apple.Safari",
+                                                        "CFBundleShortVersionString": "26.5"}))
+    if (root / "Applications/Safari.app").exists():
+        shutil.rmtree(root / "Applications/Safari.app")
+    (root / "Applications/Safari.app").symlink_to("../System/Cryptexes/App/System/Applications/Safari.app")
+    apple = root / "Library/Apple/System/Library/Receipts"
+    apple.mkdir(parents=True)
+    shutil.copy(FIX / "macos/real/receipts/com.apple.pkg.MobileAssets.plist", apple)
+    inv, _ = collect(root, os="macos")
+    direct = MacOSCollector().collect(str(root), home=[])
+    assert keys(inv) == {c.key for c in direct.components}
+    names = [c.name for c in inv.components]
+    assert names.count("aws-vault-binary") == 1 and "aws-vault" not in names
+    assert {"FortiToken", "Safari", "com.apple.pkg.MobileAssets"} <= set(names)
 
 
 @pytest.mark.parametrize("path,expected", [
@@ -237,7 +272,7 @@ def test_parse_detect_linux_and_macos():
 
 def test_detect_script_runs_locally():
     out = subprocess.run(["sh"], check=False, input=harvest.detect_script().encode(), capture_output=True).stdout.decode()
-    assert harvest.parse_detect(out).family == "linux"
+    assert harvest.parse_detect(out).family == {"Darwin": "macos", "Linux": "linux"}.get(platform.system())
     out = subprocess.run(["sh"], check=False, input=harvest.detect_script(str(DEBIAN)).encode(), capture_output=True).stdout.decode()
     assert harvest.parse_detect(out).os_release["ID"] == "debian"
 
@@ -337,7 +372,10 @@ def test_extract_limits(tmp_path):
 # --------------------------------------------------------------------------- LocalTransport end to end
 
 def collect(root: Path, **opts):
+    """Collect `root` over LocalTransport. Linux fixtures pin `os=linux`: autodetection runs `uname` on the
+    test host, which is Darwin on a Mac."""
     t = LocalTransport()
+    opts.setdefault("os", "linux")
     inv = SSHCollector().collect("admin@10.0.0.5:2222", transport=t, root=str(root), **opts)
     return inv, t
 
@@ -511,7 +549,7 @@ def test_openssh_transport_with_fake_ssh_binary(tmp_path):
     stub.write_text('#!/bin/sh\nwhile [ "$1" != "--" ]; do shift; done\nshift 2\nexec sh -c "$1"\n')
     stub.chmod(0o755)
     tr = ssh.OpenSSHTransport(parse_target("u@h"), ssh_bin=str(stub))
-    inv = SSHCollector().collect("u@h", transport=tr, root=str(DEBIAN))
+    inv = SSHCollector().collect("u@h", transport=tr, root=str(DEBIAN), os="linux")
     assert any(c.name == "bash" or c.category == "os-package" for c in inv.components)
     rc, out, _ = tr.run("echo hi; exit 3")
     assert (rc, out) == (3, b"hi\n")
@@ -620,7 +658,7 @@ def sshd(tmp_path_factory):
 def _popts(sshd, **extra):
     return {"transport": "paramiko", "identity": str(sshd.dir / "id_rsa"), "known_hosts": str(sshd.dir / "known_hosts"),
             "allow_agent": False, "look_for_keys": False, "ssh_config": str(sshd.dir / "nonexistent"),
-            "connect_timeout": 10, "root": str(DEBIAN), **extra}
+            "connect_timeout": 10, "root": str(DEBIAN), "os": "linux", **extra}
 
 
 def test_paramiko_end_to_end(sshd, monkeypatch):

@@ -88,13 +88,37 @@ def find_endpoint(opts: dict[str, Any] | None = None) -> Endpoint:
             src = "--socket" if opts.get("socket") else "DOCKER_HOST"
             raise RuntimeError(f"Docker socket {ep.unix} (from {src}) does not exist")
         return ep
+    stale: list[str] = []
     for path in candidate_sockets(opts):
         if path in tried:
             continue
         tried.append(path)
         if os.path.exists(path):
+            if _refuses(path):
+                stale.append(path)
+                continue
             return Endpoint(unix=path)
-    raise RuntimeError("Docker engine socket not found: tried " + ", ".join(tried))
+    msg = "Docker engine socket not found: tried " + ", ".join(tried)
+    if stale:
+        msg += "; refusing connections (engine not running, stale socket file): " + ", ".join(stale)
+    raise RuntimeError(msg)
+
+
+def _refuses(path: str) -> bool:
+    """True only when nothing listens on the socket file (ECONNREFUSED): Docker Desktop leaves
+    ~/.docker/run/docker.sock behind when it quits, while another runtime may be the one running.
+    Any other outcome (accepted, permission denied, path too long) leaves the decision to the real request."""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(2)
+    try:
+        s.connect(path)
+    except ConnectionRefusedError:
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+    return False
 
 
 class EngineClient:

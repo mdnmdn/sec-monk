@@ -6,9 +6,9 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, ssh, agentless, linux, macos, windows]
-updated: 2026-11-07
-verified: 2026-11-07
-sample: synthetic
+updated: 2026-11-08
+verified: 2026-11-08
+sample: mixed
 fixtures: [tests/fixtures/collectors/docker/, tests/fixtures/collectors/macos/root]
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py
 related: [tech/collectors/rootfs.md, tech/collectors/macos.md, tech/collectors/docker-image.md, features/inventory-ssh.md]
@@ -65,9 +65,9 @@ Every remote command is logged with `-o verbose=true`. The script generator quot
 
 | Group | Linux | macOS |
 |---|---|---|
-| OS + package DBs (explicit paths, always, even across mount points) | `rootfs.FIXED_PATHS` (os-release, alpine-release, debian_version, redhat-release, dpkg `status`, apk `installed`, `rpmdb.sqlite`(+`-wal`) and legacy `Packages*` for detection) + `var/lib/dpkg/status.d/*` | `System/Library/CoreServices/SystemVersion.plist`, `var/db/receipts/*.plist` |
-| Apps | - | `*.app/Contents/Info.plist`, `_MASReceipt/receipt` under `Applications`, `System/Applications`, `Users/*/Applications` (depth `macos.MAX_APP_DEPTH`; `Contents/{MacOS,Resources,PlugIns,XPCServices,Library,SharedSupport}` pruned), Info.plists of Electron / Chromium Embedded / Sparkle frameworks |
-| Homebrew (`opt/homebrew`, `usr/local`, `home/linuxbrew/.linuxbrew`) | - | `Cellar/*/*/INSTALL_RECEIPT.json`, `.brew/*.rb`, `sbom.spdx.json`; `opt/*` symlinks; `Caskroom/*/*` dirs (empty markers), `Caskroom/*/*/*.app` markers, `Caskroom/*/.metadata/**/*.json|rb` |
+| OS + package DBs (explicit paths, always, even across mount points) | `rootfs.FIXED_PATHS` (os-release, alpine-release, debian_version, redhat-release, dpkg `status`, apk `installed`, `rpmdb.sqlite`(+`-wal`) and legacy `Packages*` for detection) + `var/lib/dpkg/status.d/*` | `System/Library/CoreServices/SystemVersion.plist`, `*.plist` in `var/db/receipts` and `Library/Apple/System/Library/Receipts` (Apple's own), Safari's `Info.plist` in the App cryptex (`System/Cryptexes/App/...`) |
+| Apps | - | `*.app/Contents/Info.plist`, `*.app/Wrapper/*.app/Info.plist` (iOS apps), `_MASReceipt/receipt`, top-level `*.app` symlinks (extracted re-rooted, e.g. `Safari.app` -> cryptex) under `Applications`, `System/Applications`, `Users/*/Applications` (depth `macos.MAX_APP_DEPTH`; `Contents/{MacOS,Resources,PlugIns,XPCServices,Library,SharedSupport}` pruned), Info.plists of Electron / Chromium Embedded / Sparkle frameworks |
+| Homebrew (`opt/homebrew`, `usr/local`, `home/linuxbrew/.linuxbrew`) | - | `Cellar/*/*/INSTALL_RECEIPT.json`, `.brew/*.rb`, `sbom.spdx.json`; `opt/*` symlinks; `Caskroom/*/*` dirs (empty markers), `Caskroom/*/*/*.app` markers, `.metadata/**/*.json|rb` (via `find`, which does not follow a renamed cask's `Caskroom/<old> -> <new>` link; a shell glob did and harvested the cask twice), `Caskroom/*` symlinks |
 | Language dependency files (walk of the whole root) | by **name**: `PKG-INFO`, `pyvenv.cfg`, `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `poetry.lock`, `Pipfile.lock`, `uv.lock`, `pdm.lock`, `requirements*.txt`, `composer.lock`, `go.mod`, `go.sum`, `Cargo.lock`, `*.deps.json`, `packages.lock.json`, `project.assets.json`, `packages.config`, `*.csproj/.fsproj/.vbproj`, `Directory.Packages.props`, `pom.xml`, `gradle.lockfile`, `verification-metadata.xml`; by **path**: `*.dist-info/METADATA`, `*/conda-meta/*.json`, `*/node_modules/*/package.json` (+ `@scope`), `*/vendor/composer/installed.json`; plus a project `package.json` **only when a lockfile sits next to it** (second `find` with `-exec sh -c`) | same |
 | Optional (`binaries=true`) | `*.jar/*.war/*.ear` anywhere, executables (`-perm -100`) in `*/bin/*`, `*/sbin/*`, each < `max_binary_mb` (for Go buildinfo / cargo-auditable / jar parsers) | same |
 
@@ -138,8 +138,13 @@ meta={transport, user, port, remote_os, remote_hostname, harvested_files, harves
 * Without root some home directories / root-only trees are invisible; package DBs on Linux and `/Applications` on macOS are world-readable, so usually nothing is lost.
 * Homebrew on Linux (`linuxbrew`) is harvested only on macOS profiles and `MacOSCollector` ignores that prefix. Other Unixes (BSD, AIX, Solaris) refused.
 * No `ControlMaster` reuse: detect and harvest are two connections (OpenSSH). Paramiko has no `ProxyJump`.
-* BSD `find`/`bsdtar` (macOS), busybox `find`/`tar` (Alpine without GNU) are untested; the script avoids GNU-only flags on purpose
-  (`-size -Nc`, `-perm -100`, `-mindepth/-maxdepth`, `--null --no-recursion -T -`), but busybox tar may lack `--null`.
+* BSD `find`/`bsdtar` (macOS) run on a real Mac (macOS 26.5, 2026-11-08) through a local transport (no sshd: Remote Login
+  was off): the macOS profile with `lang=false` gives exactly the direct `MacOSCollector` components (1122, 3139 files,
+  25 s) except bundles whose `Contents` is itself a symlink (Multipass -> `/Library/Application Support/...`), not
+  followed. `bsdtar` adds `._<name>` AppleDouble entries for files with extended attributes: the script sets
+  `COPYFILE_DISABLE=1` (ignored by other tars). The `lang` walk of a whole developer Mac ran over 10 minutes (every
+  `node_modules` under the home) and was stopped; use `-o lang=false` or `-o exclude=` there. Busybox `find`/`tar` (Alpine
+  without GNU) are untested; busybox tar may lack `--null`.
 * The inventory is a point-in-time view of files, not of running processes; remote clock/hostname are not verified.
 
 ## Windows targets (OpenSSH server)
