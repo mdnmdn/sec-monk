@@ -1,10 +1,13 @@
 ---
 title: Package formats
+summary: Index of the per-ecosystem package format references read by the language parsers, with PURL type and the files each one covers.
+read_when: you look for the document that covers a language ecosystem's lockfiles, manifests or binaries
 type: reference
 context: references
 status: reference
 tags: [package-format, dependencies]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/collectors/dependencies.md]
 ---
 

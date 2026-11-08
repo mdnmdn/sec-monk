@@ -1,10 +1,14 @@
 ---
 title: Proposal — port sec-monk to a compiled stack (Rust), multi-database, desktop app
+summary: Effort and risks of rewriting sec-monk in Rust (crate split, SQLite/PostgreSQL/MySQL, Tauri desktop app), compared with Go, .NET and JVM, with a phased recommendation.
+read_when: you decide whether or how to port sec-monk to a compiled language, add database backends or build a desktop app
 type: proposal
 context: inbox
 status: proposed
 tags: [architecture, language, data-model, web-ui, desktop, effort]
 updated: 2026-11-08
+verified: 2026-11-08
+verified: 2026-11-08
 related: [decisions/0001-language-python-uv-mise.md, decisions/0004-sqlite-schema-v2.md, decisions/0005-prototype-scope-nov-2026.md, decisions/0009-web-ui-vendored-libraries.md, tech/architecture.md, tech/data-model.md, tech/web-ui.md, plans/README.md]
 ---
 

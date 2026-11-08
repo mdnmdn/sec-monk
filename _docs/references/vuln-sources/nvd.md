@@ -1,10 +1,13 @@
 ---
 title: NVD API 2.0
+summary: NVD API 2.0 record format (CVSS, CWE, CPE configurations), access and rate limits, the 2026 enrichment change, mapping to tables, quirks and implementation notes.
+read_when: you change the NVD importer, debug CVSS, CWE or CPE match data or need the NVD API fields and limits
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, nvd, cve, cvss, cpe, cwe]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 reachable: no
 fixtures: tests/fixtures/sources/nvd/

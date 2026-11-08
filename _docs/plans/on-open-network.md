@@ -1,11 +1,14 @@
 ---
 title: Plan - on an open network (source validation)
+summary: Checklist to validate every blocked vulnerability source from an unrestricted network, with a first-hour sync script, importer fixes and real fixture swaps.
+read_when: you are on an open network and want to validate sync of Debian tracker, EPSS, NVD, EUVD, MSRC, KEV or OSV against real data
 type: plan
 context: plans
 status: open
 platform: open-network
 tags: [plan, vuln-source, sync, network]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [references/vuln-sources/README.md, features/vuln-sync.md, references/vuln-sources/distros.md, references/vuln-sources/debian-tracker.md]
 ---
 

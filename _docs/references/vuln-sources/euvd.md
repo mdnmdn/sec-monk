@@ -1,10 +1,13 @@
 ---
 title: ENISA EUVD
+summary: ENISA EUVD API endpoints and record fields (EUVD ids, aliases, exploited, epss), mapping as alias bridge and cross-check, quirks and implementation notes.
+read_when: you change the EUVD importer, debug EUVD alias or exploited data or need the endpoint shapes and their unverified parts
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, euvd, enisa, exploited, alias]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 reachable: no
 fixtures: tests/fixtures/sources/euvd/

@@ -1,10 +1,13 @@
 ---
 title: ADR-0002 — SQLite local mirror
+summary: Superseded sketch of the single SQLite mirror (raw plus normalized tables, default ./secmonk.db). Read ADR-0004 for the current schema and ADR-0006 for the DB location.
+read_when: you want the history of the SQLite mirror choice, otherwise you read ADR-0004 and ADR-0006 instead
 type: decision
 context: decisions
 status: superseded
 tags: [data-model, storage]
 updated: 2026-11-07
+verified: 2026-11-07
 ---
 
 # ADR-0002 — SQLite as the local vulnerability mirror and inventory store

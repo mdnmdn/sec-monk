@@ -1,10 +1,13 @@
 ---
 title: Homebrew / Linuxbrew collector
+summary: Offline Homebrew and Linuxbrew prefix inventory covering active kegs, casks, formula upstream identity, vendored language packages, data layout and limits.
+read_when: you change how Homebrew kegs or casks are read, their upstream identity or CPE mapping, or the macOS collector's Homebrew part
 type: tech
 context: tech
 status: implemented
 tags: [collector, homebrew, linuxbrew, macos, identity]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/collectors/homebrew/
 code: src/secmonk/collectors/homebrew.py

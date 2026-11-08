@@ -1,10 +1,13 @@
 ---
 title: Classification — recognizing and categorizing software
+summary: Component categories and the classify() rules that derive PURL, ecosystem, vendor/product and CPE identity from collector output.
+read_when: you change how components are categorized or identified before matching, or add an identity rule
 type: tech
 context: tech
 status: implemented
 tags: [engine, classification, purl, cpe]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/engine/classify.py
 related: [tech/engine/matching.md, tech/collectors/README.md]
 ---

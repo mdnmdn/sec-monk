@@ -1,10 +1,13 @@
 ---
 title: How the sec-monk docs are organized
+summary: The folders of _docs/ and what goes in each, the conventions every page follows, the rule documents of _meta/ and a reading order for newcomers.
+read_when: you decide where a new document goes or look for the documentation rules
 type: meta
 context: meta
 status: reference
 tags: [docs, conventions]
 updated: 2026-11-08
+verified: 2026-11-08
 ---
 
 # How the documentation is organized
@@ -40,8 +43,19 @@ homogeneous doc families such as vuln sources or collectors).
 ## Frontmatter
 
 Every doc starts with YAML frontmatter — see [frontmatter.md](frontmatter.md) for the schema.
-It makes docs filterable by tooling (e.g. `uv run python scripts/docs_index.py` regenerates
-[`../INDEX.md`](../INDEX.md) grouped by context, status and tag).
+`uv run python scripts/docs.py index` regenerates [`../INDEX.md`](../INDEX.md) from it: one row per document with
+its `summary` and `read_when`, grouped by context, plus a tag index.
+
+## The rule documents
+
+| Document | Read it when |
+|---|---|
+| [authoring.md](authoring.md) | You change code or a claim: what you owe the docs, in the same commit. **Start here.** |
+| [frontmatter.md](frontmatter.md) | You fill or check frontmatter fields |
+| [librarian.md](librarian.md) | You run a maintenance pass, reshape documents, or need the meaning of a check L1–L12 |
+| [tools.md](tools.md) | You need the `scripts/docs.py` command for a job |
+| [guidelines.md](guidelines.md) | You question a rule or want to add one |
+| [review-log.md](review-log.md), [feedback.md](feedback.md) | Ledgers: maintenance passes, and structural proposals waiting for a human |
 
 ## Conventions
 
@@ -49,7 +63,8 @@ It makes docs filterable by tooling (e.g. `uv run python scripts/docs_index.py` 
 - **Evidence over memory:** `references/` docs are written from real samples; samples are saved
   (trimmed) in `tests/fixtures/` and referenced via the `fixtures:` key, so docs and tests share
   the same truth. If a sample is hand-made, say `sample: synthetic`.
-- Absolute dates (`2026-11-07`), never "last week". Bump `updated:` when editing.
+- Absolute dates (`2026-11-07`), never "last week". Bump `updated:` when editing; bump `verified:` when you
+  compared the page with its code ([authoring.md](authoring.md#6-verification)).
 - Relative links between docs; `related:` paths are relative to `_docs/`.
 - Templates: [templates/](templates/).
 

@@ -14,17 +14,59 @@ description = "Run the test suite"
 run = "uv run pytest -q"
 
 [tasks.lint]
-description = "Lint (ruff + docs index check)"
-run = ["uv run ruff check src tests scripts", "uv run python scripts/docs_index.py --check"]
+description = "Lint (ruff + docs checks)"
+run = ["uv run ruff check src tests scripts", "uv run python scripts/docs.py lint"]
 
 [tasks.cov]
 description = "Tests with coverage"
 run = "uv run pytest -q --cov=secmonk --cov-report=term-missing"
 
-[tasks.docs-check]
-description = "Verify _docs/INDEX.md is up to date"
-run = "uv run python scripts/docs_index.py --check"
+# ── Documentation (scripts/docs.py, reference: _docs/_meta/tools.md) ──
+
+[tasks.docs]
+description = "Regenerate _docs/INDEX.md, then run the docs checks"
+run = ["uv run python scripts/docs.py index", "uv run python scripts/docs.py lint"]
+
+[tasks.docs-lint]
+description = "Run the docs checks L1 L2 L4 L5 L7-L12 (errors fail, warnings print)"
+run = "uv run python scripts/docs.py lint"
 
 [tasks.docs-index]
 description = "Regenerate _docs/INDEX.md from frontmatter"
-run = "uv run python scripts/docs_index.py"
+run = "uv run python scripts/docs.py index"
+
+[tasks.docs-touched]
+description = "List the docs whose code/fixtures cover the changed files"
+run = "uv run python scripts/docs.py touched"
+
+[tasks.docs-new]
+description = "Scaffold a doc from a template: mise run docs-new <kind> <slug>"
+run = "uv run python scripts/docs.py new"
+
+[tasks.docs-drift]
+description = "List docs whose code/fixtures changed after verified (L3)"
+run = "uv run python scripts/docs.py drift"
+
+[tasks.docs-changed]
+description = "List docs whose file changed after their updated date (L11). Arg: days, default 2"
+run = "uv run python scripts/docs.py changed"
+
+[tasks.docs-review]
+description = "List docs past their review_cycle"
+run = "uv run python scripts/docs.py review"
+
+[tasks.docs-stamp]
+description = "Repair the updated date of docs L11 flags"
+run = "uv run python scripts/docs.py stamp"
+
+[tasks.docs-verify]
+description = "Record that you checked docs against their code: mise run docs-verify <paths>"
+run = "uv run python scripts/docs.py verify"
+
+[tasks.docs-stats]
+description = "Library counts and health"
+run = "uv run python scripts/docs.py stats"
+
+[tasks.docs-inbox]
+description = "Proposals waiting for a decision"
+run = "uv run python scripts/docs.py inbox"

@@ -1,11 +1,14 @@
 ---
 title: Plan - on a Linux host with Docker/Podman and an SSH-reachable server
+summary: Checklist for a Linux host with Docker or Podman and an SSH server to verify the docker-engine, docker-image, rootfs and SSH collectors and the Linux process backend.
+read_when: you are on Linux with Docker, Podman or an SSH server and want to verify those collectors against real systems
 type: plan
 context: plans
 status: open
 platform: linux
 tags: [plan, linux, docker, podman, ssh, rootfs]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/collectors/docker-engine.md, tech/collectors/docker-image.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, features/inventory-docker.md, features/inventory-ssh.md]
 ---
 
@@ -194,4 +197,4 @@ Test targets: Debian/Ubuntu (GNU), Alpine (busybox `find`/`tar`), RHEL-like. Two
 
 ## E. Wrap-up
 
-- [ ] Commit real fixtures + tests; set `sample:` in `tech/collectors/docker-engine.md`, `docker-image.md`, `ssh.md`, `rootfs.md`; update [inventory-docker.md](../features/inventory-docker.md) / [inventory-ssh.md](../features/inventory-ssh.md) caveats; regenerate INDEX (`uv run python scripts/docs_index.py`).
+- [ ] Commit real fixtures + tests; set `sample:` in `tech/collectors/docker-engine.md`, `docker-image.md`, `ssh.md`, `rootfs.md`; update [inventory-docker.md](../features/inventory-docker.md) / [inventory-ssh.md](../features/inventory-ssh.md) caveats; regenerate INDEX (`uv run python scripts/docs.py index`).

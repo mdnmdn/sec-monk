@@ -1,10 +1,13 @@
 ---
 title: Vulnerability data sources — index
+summary: Index of vulnerability feed docs with role, integration status, sample type, reachability and validation per source, plus inventory-side reference links.
+read_when: you look for the document that covers a vulnerability source or want the integration and validation status of each feed
 type: reference
 context: references
 status: reference
 tags: [vuln-source, index, validation, network]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [references/probes.md, features/vuln-sync.md, tech/architecture.md, references/package-formats/README.md, references/homebrew.md, references/windows-inventory.md]
 ---
 

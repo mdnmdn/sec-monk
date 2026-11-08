@@ -1,10 +1,13 @@
 ---
 title: JavaScript packages (npm, yarn, pnpm, bun)
+summary: npm, yarn (v1 and berry), pnpm and bun lockfiles plus node_modules package.json, with PURL form, parsed fields, skipped entries, pitfalls and fixtures.
+read_when: you change the JavaScript dependency parsers, debug a missing or wrong npm package version or need lockfile format details
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, npm]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/javascript/
 code: src/secmonk/collectors/lang/javascript.py

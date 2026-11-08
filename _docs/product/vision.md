@@ -1,10 +1,13 @@
 ---
 title: Holistic CVE Scanner — Project Notes
+summary: Project notes from 2026-11 covering goals, identifiers, vulnerability and context sources, collector options, architecture, matching, prioritization, roadmap, risks and endpoints.
+read_when: you need the original scope, design rationale, glossary or source landscape behind sec-monk
 type: product
 context: product
 status: reference
 tags: [vision, scope, roadmap, glossary]
 updated: 2026-11-07
+verified: 2026-11-07
 ---
 
 # Holistic CVE Scanner — Project Notes

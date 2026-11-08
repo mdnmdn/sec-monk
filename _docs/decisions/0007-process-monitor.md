@@ -1,10 +1,13 @@
 ---
 title: ADR-0007 — Process / executable monitor
+summary: Decision to build the process monitor as a collector with its own process:<host> asset, platform-neutral core plus per-OS backends, a snapshot file format and polling-based watch.
+read_when: you are about to change the process monitor design, add an OS backend or question why it polls and uses a separate asset
 type: decision
 context: decisions
 status: accepted
 tags: [process, collector, architecture, macos]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/collectors/process.md, features/process-monitor.md, tech/architecture.md, decisions/0005-prototype-scope-nov-2026.md]
 code: src/secmonk/collectors/process/, src/secmonk/procmon.py
 ---

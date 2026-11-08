@@ -1,10 +1,13 @@
 ---
 title: CISA KEV
+summary: CISA KEV catalogue with JSON feed and GitHub mirror, observed fields, mapping to the kev table, quirks, refresh cadence and implementation notes.
+read_when: you change the KEV importer, debug a KEV sync or P1 exploited flag or need the feed's fields and quirks
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, kev, exploited, prioritization]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 reachable: partial
 fixtures: tests/fixtures/sources/kev/

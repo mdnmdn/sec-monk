@@ -1,11 +1,14 @@
 ---
 title: Plan - engine gaps, calibration and test-suite quality
+summary: Open work on the engine in five parts, covering detection gaps, distro CVE policy, calibration with real data, test-suite gaps and performance, each with commands.
+read_when: you improve matching coverage, confidence and priority calibration, test quality or scan performance
 type: plan
 context: plans
 status: open
 platform: any
 tags: [plan, engine, matching, versions, prioritization, tests, performance]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/engine/matching.md, tech/engine/classification.md, references/package-formats/README.md, tech/collectors/dependencies.md]
 ---
 

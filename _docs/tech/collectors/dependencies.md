@@ -1,10 +1,13 @@
 ---
 title: Language dependency scanning
+summary: Language dependency parsers in collectors/lang covering parser contract, directory walkers, options, matching and verified results for seven ecosystems.
+read_when: you add or change a lockfile, manifest or binary parser, or change how fs, rootfs or image scans find language packages
 type: tech
 context: tech
 status: implemented
 tags: [collector, dependencies, npm, python, go, rust, java, dotnet, php]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/lang/
 fixtures: tests/fixtures/lang/
 related: [features/inventory-dependencies.md, references/package-formats/README.md, tech/collectors/rootfs.md, tech/collectors/ssh.md]

@@ -1,10 +1,13 @@
 ---
 title: Docker engine collector
+summary: Docker Engine API collector over a unix socket covering socket discovery, image and container export scans, hand-off to the image collector, limits and review fixes.
+read_when: you change how sec-monk talks to a Docker daemon or scans running containers and local images
 type: tech
 context: tech
 status: implemented
 tags: [collector, docker, containers, engine-api, podman]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/docker/engine/
 code: src/secmonk/collectors/docker_engine.py

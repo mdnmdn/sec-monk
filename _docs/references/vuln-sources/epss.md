@@ -1,10 +1,13 @@
 ---
 title: FIRST EPSS
+summary: FIRST EPSS daily CSV and API, score and percentile fields, mapping to the epss table, quirks, refresh cadence and implementation notes.
+read_when: you change the EPSS importer, debug epss scores in findings or need the EPSS file and API formats
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, epss, exploitation-probability, prioritization]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 reachable: no
 fixtures: tests/fixtures/sources/epss/

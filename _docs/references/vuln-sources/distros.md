@@ -1,10 +1,13 @@
 ---
 title: Linux distribution security data sources
+summary: Distro security data (Ubuntu CVE and USN JSON, OSV distro records, Debian, Alpine secdb, Red Hat CSAF VEX), formats, backport traps, mapping and a recommendation.
+read_when: you work on backport-aware OS package matching or need to know which distro data sources exist and how they differ
 type: reference
 context: references
 status: reference
 tags: [vuln-source, linux, distro, backports]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 reachable: partial
 fixtures: tests/fixtures/sources/distros/

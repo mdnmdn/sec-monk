@@ -1,10 +1,13 @@
 ---
 title: Windows inventory
+summary: Windows inventory of the OS build, programs, Store apps, Chocolatey/Scoop and .NET via a read-only PowerShell script, live winreg or osquery input, matched against CNA and MSRC fixed builds.
+read_when: you collect or scan a Windows host, run the inventory script, or check how a Windows build is matched to a fixed version
 type: feature
 context: features
 status: implemented
 tags: [windows, inventory, registry, msrc, cli]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/windows.py
 related: [tech/collectors/windows.md, references/windows-inventory.md, features/inventory-ssh.md, features/vuln-sync.md, references/vuln-sources/msrc.md, references/probes.md, features/README.md]
 ---

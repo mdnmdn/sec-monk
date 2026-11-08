@@ -1,11 +1,14 @@
 ---
 title: Plan - next vulnerability sources to integrate
+summary: Prioritized backlog of vulnerability sources to add (Ubuntu, Red Hat, Alpine, SUSE, exploit feeds, VEX), with reachability probes, per-item checklists and distro triage vocabulary.
+read_when: you add a new vulnerability source or choose which source to integrate next
 type: plan
 context: plans
 status: open
 platform: any
 tags: [plan, vuln-source, distro, backlog, triage, exploit]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [references/vuln-sources/distros.md, references/vuln-sources/README.md, references/homebrew.md, tech/engine/matching.md, tech/data-model.md]
 ---
 

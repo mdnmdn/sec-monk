@@ -1,10 +1,13 @@
 ---
 title: Vulnerability data sync
+summary: The eight vulnerability sources (osv, cvelist, kev, epss, nvd, euvd, msrc, debian-tracker) with sync commands, delta cursors, offline --path import and sync behaviour.
+read_when: you refresh the local vulnerability mirror, pick a source or sync option, import data offline, or check what sync all includes
 type: feature
 context: features
 status: implemented
 tags: [cli, vuln-source, sync, osv, cve, kev, epss, nvd, euvd, msrc]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/sources/
 related: [references/vuln-sources/README.md, tech/data-model.md, tech/architecture.md, features/README.md, references/probes.md]
 ---

@@ -1,10 +1,13 @@
 ---
 title: Python packages (PyPI, conda)
+summary: Python parsers (dist-info, egg-info, conda-meta, poetry, Pipfile, uv, pdm, requirements.txt), PEP 503 naming, parsed fields, pitfalls and fixtures.
+read_when: you change the Python dependency parsers, debug a PyPI component name or version or need to know which Python files are read
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, pypi]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/python/
 code: src/secmonk/collectors/lang/python.py

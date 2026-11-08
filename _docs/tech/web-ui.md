@@ -1,10 +1,13 @@
 ---
 title: Web interface — architecture
+summary: Web UI internals covering stdlib server layout, JSON API, jobs, security rules, Vue frontend structure, how to add a feature, development and limits.
+read_when: you change the web server, an API endpoint, a background job or the Vue frontend, or add a UI feature
 type: tech
 context: tech
 status: implemented
 tags: [web-ui, architecture, security, cli]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/web/, src/secmonk/reports.py, src/secmonk/ops.py, scripts/design_mock.py, scripts/design_screenshots.js, scripts/vendor_web.py
 related: [features/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, decisions/0008-web-ui-stack.md, tech/collectors/process.md, features/process-monitor.md, tech/architecture.md]
 ---

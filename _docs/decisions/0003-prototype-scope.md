@@ -1,10 +1,13 @@
 ---
 title: ADR-0003 — Prototype scope and ordering
+summary: Superseded first-prototype scope and ordering (sources, recognition, system exploration, native matching). Read ADR-0005 for the current scope.
+read_when: you want the history of the first prototype goals, otherwise you read ADR-0005 instead
 type: decision
 context: decisions
 status: superseded
 tags: [scope, roadmap]
 updated: 2026-11-07
+verified: 2026-11-07
 ---
 
 # ADR-0003 — Prototype scope and ordering

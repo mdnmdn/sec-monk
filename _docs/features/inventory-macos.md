@@ -1,10 +1,13 @@
 ---
 title: macOS inventory
+summary: macOS inventory of apps, Homebrew, pkg receipts and Electron runtimes from a live Mac or a copied directory tree - usage, behaviour rules and acceptance criteria.
+read_when: you change how macOS apps, receipts or bundled Electron runtimes are collected, or run the macOS collector on a copied tree
 type: feature
 context: features
 status: implemented
 tags: [macos, inventory, homebrew, collector, cli]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/macos.py
 related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-homebrew.md, features/inventory-ssh.md, tech/engine/classification.md, features/README.md]
 ---

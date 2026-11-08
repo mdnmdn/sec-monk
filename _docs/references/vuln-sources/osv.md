@@ -1,10 +1,13 @@
 ---
 title: OSV.dev (bulk)
+summary: OSV.dev bulk data reference covering bucket layout and sizes, ecosystem names, record format, mapping to the affected table, matching notes, quirks and sync strategy.
+read_when: you change the OSV source (download, normalization, ecosystem mapping) or debug why an OSV advisory does or does not match
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, osv, purl, distro, ghsa]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 reachable: partial
 code: src/secmonk/sources/osv.py

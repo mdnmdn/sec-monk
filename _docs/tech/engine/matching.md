@@ -1,10 +1,13 @@
 ---
 title: Matching, enrichment and prioritization
+summary: Matching engine covering osv-package and cve-product strategies, version comparison, dedupe, enrichment, P1..P4 prioritization, finding lifecycle, Debian triage.
+read_when: you change how findings are matched, deduplicated, scored or prioritized, or debug a false positive or missed match
 type: tech
 context: tech
 status: implemented
 tags: [engine, matching, versions, prioritization]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/engine/match.py
 related: [tech/engine/classification.md, tech/data-model.md]
 ---

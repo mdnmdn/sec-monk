@@ -1,10 +1,13 @@
 ---
 title: Dependency inventory (folders, repos, images, containers, SSH hosts)
+summary: Language dependency inventory for npm, Python, Go, Rust, Java, .NET and PHP across folders, repos, images, containers and SSH hosts - usage, evidence precedence, acceptance criteria.
+read_when: you change how project dependencies are collected or matched, or need the precedence rules between installed metadata, binaries, lockfiles and manifests
 type: feature
 context: features
 status: implemented
 tags: [cli, dependencies, collector, npm, python, go, rust, java, dotnet, php]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/fs.py
 related: [tech/collectors/dependencies.md, features/inventory-docker.md, features/inventory-ssh.md, features/inventory-homebrew.md, references/package-formats/README.md, features/README.md]
 ---

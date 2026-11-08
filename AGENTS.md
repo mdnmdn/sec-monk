@@ -23,7 +23,7 @@ web/         local web UI (`secmonk ui`): stdlib server + JSON API, background j
 cli.py       Typer CLI (`secmonk ...`)
 _design/     interface design: sample pages, storybook, screenshots (loads web/static files, never copies)
 data/        product_aliases.yaml, brew_cpe_seed.csv, windows/secmonk-inventory.ps1
-_docs/       all documentation, organized by context with YAML frontmatter
+_docs/       all documentation, organized by context with YAML frontmatter (rules: _docs/_meta/authoring.md)
 tests/       offline tests on fixtures (tests/fixtures/)
 ```
 
@@ -33,11 +33,12 @@ tests/       offline tests on fixtures (tests/fixtures/)
 mise install && uv sync            # Python 3.13 + uv (any Python >= 3.12 + uv works)
 uv run pytest -q                   # must stay green; runs fully offline
 uv run ruff check src tests scripts
-uv run python scripts/docs_index.py          # regenerate _docs/INDEX.md after any doc change
-uv run python scripts/docs_index.py --check  # frontmatter, paths, links, anchors, INDEX up to date
+uv run python scripts/docs.py touched        # docs whose code/fixtures cover your changed files
+uv run python scripts/docs.py index          # regenerate _docs/INDEX.md after any doc change
+uv run python scripts/docs.py lint           # checks L1-L12: frontmatter, links, freshness, INDEX up to date
 ```
 
-`mise run lint` runs ruff + the docs check. Run all three before committing.
+`mise run lint` runs ruff + the docs lint; `mise run docs` regenerates the index and lints. Run them before committing.
 
 ## Rules of the codebase
 
@@ -103,11 +104,15 @@ design system and storybook: [`_design/`](_design/README.md); stack: [ADR-0009](
 
 All docs live in `_docs/` ([how they are organized](_docs/_meta/README.md), [frontmatter schema](_docs/_meta/frontmatter.md)):
 `features/` what the user gets, `tech/` how it is built, `references/` external systems (from real probes),
-`decisions/` ADRs (immutable; supersede with a new one), `plans/` open work per platform.
+`decisions/` ADRs (immutable; supersede with a new one), `plans/` open work per platform, `inbox/` proposals awaiting a
+decision. [`_docs/INDEX.md`](_docs/INDEX.md) lists every doc with its `summary` and `read_when`: start there.
 
-When you change behaviour: update the feature and tech docs, the CLI-at-a-glance block in
-[`_docs/features/README.md`](_docs/features/README.md#cli-at-a-glance) for CLI changes, bump `updated:`, regenerate
-`INDEX.md`. Use absolute dates. Evidence over memory: say `sample: synthetic` when it is.
+**Documentation is part of the change.** Before you commit, follow [`_docs/_meta/authoring.md`](_docs/_meta/authoring.md):
+find the docs you touched (`docs.py touched`), amend them in the same commit, bump `updated:`, re-check them against
+the code and bump `verified:` (`docs.py verify <path>`), update the CLI-at-a-glance block in
+[`_docs/features/README.md`](_docs/features/README.md#cli-at-a-glance) for CLI changes, regenerate `INDEX.md`. Edit in
+place; moves and splits are for a maintenance pass ([librarian](_docs/_meta/librarian.md)). Use absolute dates.
+Evidence over memory: say `sample: synthetic` when it is.
 
 ## Git
 

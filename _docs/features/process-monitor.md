@@ -1,10 +1,13 @@
 ---
 title: Process / executable monitor
+summary: The `secmonk procs` view shows running processes with launch origin, executable identity, open findings, provenance and trust flags, plus a --watch differ and snapshot files.
+read_when: you want to see what is running on a machine, use procs options or --watch, or change what the process monitor reports
 type: feature
 context: features
 status: implemented
 tags: [process, macos, cli, collector, provenance]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/procmon.py, src/secmonk/collectors/process/, src/secmonk/cli.py
 related: [tech/collectors/process.md, decisions/0007-process-monitor.md, features/scan-and-findings.md, features/inventory-macos.md, plans/on-macos.md]
 ---

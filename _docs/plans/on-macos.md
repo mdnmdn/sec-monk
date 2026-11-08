@@ -1,11 +1,14 @@
 ---
 title: Plan - on a Mac
+summary: Checklist to verify the macOS, Homebrew, SSH-to-Mac, Docker-on-macOS and process monitor code on a real Mac, producing real fixtures from synthetic ones.
+read_when: you are on a Mac and want to verify the macOS, Homebrew or process collectors or capture real fixtures
 type: plan
 context: plans
 status: open
 platform: macos
 tags: [plan, macos, homebrew, collector, ssh]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-macos.md, features/inventory-homebrew.md, references/homebrew.md, tech/collectors/ssh.md, tech/collectors/process.md]
 ---
 
@@ -242,4 +245,4 @@ The engine collector is validated against a **fake socket only**; the generic te
 ## E. Wrap-up
 
 - [ ] Commit real fixtures + tests; flip `sample:` in `tech/collectors/macos.md`, `tech/collectors/homebrew.md` (stay `real`), `features/inventory-macos.md`.
-- [ ] Run `uv run python scripts/docs_index.py` and set this file's `status: done` only when every box above is ticked.
+- [ ] Run `uv run python scripts/docs.py index` and set this file's `status: done` only when every box above is ticked.

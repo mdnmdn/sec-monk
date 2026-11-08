@@ -1,10 +1,13 @@
 ---
 title: Docker image collector
+summary: Daemonless container image inventory covering registry v2 pull, docker save and OCI layouts, layer whiteouts, dpkg/apk/rpm parsing, classification and limits.
+read_when: you change image pulling, layer application or OS package database parsing for container images
 type: tech
 context: tech
 status: implemented
 tags: [collector, docker, oci, registry, dpkg, apk, rpm, sbom]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/collectors/docker/
 code: [src/secmonk/collectors/docker_image.py, src/secmonk/collectors/rootfs.py]
