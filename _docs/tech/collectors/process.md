@@ -6,9 +6,9 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, process, macos, launchd, provenance]
-updated: 2026-11-07
-verified: 2026-11-07
-sample: synthetic
+updated: 2026-11-08
+verified: 2026-11-08
+sample: mixed
 fixtures: tests/fixtures/collectors/process/
 code: src/secmonk/collectors/process/, src/secmonk/procmon.py
 related: [features/process-monitor.md, decisions/0007-process-monitor.md, tech/collectors/macos.md, tech/collectors/homebrew.md, tech/collectors/dependencies.md, tech/engine/classification.md, plans/on-macos.md]
@@ -72,8 +72,8 @@ analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-m
 |---|---|---|
 | processes | `ps -axww -o pid=,ppid=,uid=,user=,lstart=,comm=` (`LC_ALL=C`), then `proc_pidpath()` (libproc via ctypes) for the exact image path | non-root sees every pid but `proc_pidpath` fails for other users' processes: falls back to `comm` |
 | command lines | `ps -axww -o pid=,args=`, split on spaces, redacted (`redact_command`); only the interpreter script/jar is kept in the inventory (`-o args=false` skips them) | argv with spaces cannot be recovered from `ps` |
-| pid -> launchd job | `launchctl list` (PID, status, label) | as a user: the user's GUI domain; as root: the system domain. GUI apps appear as `application.<bundle-id>.<n>.<n>` |
-| launch items | `*.plist` in `/Library/LaunchDaemons`, `/Library/LaunchAgents`, `/System/Library/Launch{Daemons,Agents}` (`-o include_system=false` skips), `~/Library/LaunchAgents` of every `/Users/*` | `Program` or `ProgramArguments[0]`, `RunAtLoad`, `KeepAlive`, `Disabled`, `MachServices`, intervals |
+| pid -> launchd job | `launchctl list` (PID, status, label); as root also `launchctl asuser <uid> launchctl list` for each user (uid >= 501, at most 32) owning unlabelled processes | as a user: the user's GUI domain only; as root: the system domain, plus each user's domain for that user's pids (without it GUI apps and login-item helpers lost their labels, macOS 26.5). GUI apps appear as `application.<bundle-id>.<n>.<n>` |
+| launch items | `*.plist` in `/Library/LaunchDaemons`, `/Library/LaunchAgents`, `/System/Library/Launch{Daemons,Agents}` (`-o include_system=false` skips), `~/Library/LaunchAgents` of every `/Users/*` (when `/Users` cannot be listed on the live Mac: the current user's home); inside every app the macOS collector walks (`/Applications`, each `~/Applications`, same depth): `Contents/Library/LaunchAgents|LaunchDaemons/*.plist` (SMAppService; mechanisms `launchd-app-agent` / `launchd-app-daemon`, `BundleProgram` and relative programs resolved against the bundle, `..` out of it rejected) and `Contents/Library/LoginItems/*.app` (SMLoginItemSetEnabled helpers: mechanism `login-item`, label = `CFBundleIdentifier`, program = `CFBundleExecutable`) | `Program` or `ProgramArguments[0]`, `RunAtLoad`, `KeepAlive`, `Disabled`, `MachServices`, intervals. Parsed with `macos.loads_plist`, which accepts Apple's unquoted XML prolog (`com.apple.familycircled.plist` on macOS 26.5) |
 | OS | `/System/Library/CoreServices/SystemVersion.plist` | |
 | identity | see next section | |
 | quarantine | xattr `com.apple.quarantine` = `flags;hex-time;agent;event-uuid` on the bundle (apps) or the file | read with `getxattr(2)` via ctypes, no `xattr` subprocess |
@@ -83,13 +83,14 @@ analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-m
 | signature validity | `codesign --verify --strict <executable>` -> `verified` true / false (broken seal, modified, revoked); nothing when the check cannot run | opt-in `-o verify=true` (hashes the whole bundle: seconds per large app) |
 | Gatekeeper | `spctl --assess --type execute -vv` (opt-in `-o gatekeeper=true`, slow) | |
 | install time | Homebrew `INSTALL_RECEIPT.json` `time`, pkgutil `install-time`, file `st_birthtime` | |
+| login item / background helper state | opt-in `-o btm=true` (root: `sfltool dumpbtm`) or `-o btm=<file>` (saved dump) -> `parse_btm` | see "Background Task Management" below |
 
 ### Identity resolution order (first hit wins)
 
 | # | Method | Rule | Components |
 |---|---|---|---|
 | 1 | `brew-keg` / `brew-cask` | real path (symlinks followed inside the tree) under `<prefix>/Cellar/<f>/<v>/` or `Caskroom/<t>/<v>/` | formula via `homebrew._keg_component` (receipt, SBOM, upstream identity, patched CVEs) |
-| 2 | `app-bundle` | outermost `*.app` in the path; helpers (`Slack Helper.app`, `.xpc`, `.appex`, frameworks) resolve to their host app (`notes.helper`) | `MacOSCollector._read_bundle` (app + Electron/CEF/Sparkle runtimes); `system-app` under `/System/` |
+| 2 | `app-bundle` | outermost `*.app` in the path; helpers (`Slack Helper.app`, `.xpc`, `.appex`, frameworks) resolve to their host app (`notes.helper`) | `MacOSCollector._read_bundle` (app + Electron/CEF/Sparkle runtimes); `system-app` under `/System/`. No `.app` in the path: the outermost `.bundle` / `.systemextension` / `.xpc` / `.appex` / `.plugin` with an `Info.plist`, outside system paths (Little Snitch's daemon `.bundle`, a camera `.systemextension` under `/Library/SystemExtensions`). A bundle without `Info.plist` falls through: to `os` on the system volume (`liquiddetectiond.app` holds only its binary), else `path-only` (`.app`) or the next rule (other bundles) |
 | 3 | `os` | `/System/`, `/usr/{bin,sbin,libexec,lib}/`, `/bin/`, `/sbin/`, `/Library/Apple/` (not `/usr/local/`) | the `macOS` OS component |
 | 4 | `pkgutil` | live only: `pkgutil --file-info <path>` | one `package` per owning receipt (`pkg_id`, version, install time) |
 | 5 | `go-binary` / `rust-binary` / `info-plist` | file read (`-o max_binary_mb=128`): Go build info (main module first, then stdlib + deps), `cargo auditable`, or an embedded `__info_plist` (privileged helpers, CLI tools) | as `fs` binaries / an `application` with `bundle_id` |
@@ -104,16 +105,42 @@ Windows script hands over identities it computed on the target.
 | Evidence | Rule | Kind |
 |---|---|---|
 | `pid` | pid 0 / init pid | `kernel` |
-| `pid-label` | service-manager label of the pid is a known launch item | from mechanism (`launchd-daemon` -> `service`, `launchd-agent` -> `agent`, `run-key` -> `login-item` ...) |
-| `pid-label` | label matches `PlatformHints.gui_label` (`application.<id>.<n>.<n>`) | `gui-app` |
+| `pid-label` | service-manager label of the pid is a known launch item (one label can be both a system daemon and a per-user agent, e.g. `com.apple.lsd`: chosen like `exe-match` below; a per-instance `.<UUID>` suffix, `PlatformHints.instance_suffix`, is stripped first) | from mechanism (`launchd-daemon` -> `service`, `launchd-agent` -> `agent`, `run-key` -> `login-item` ...) |
+| `pid-label` | label matches `PlatformHints.gui_label` (`application.<id>.<n>.<n>`, optionally `.<UUID>`: apps relaunched by the system, real on macOS 26.5) | `gui-app` |
+| `exe-match` | label names no plist but the executable is a launch item's program (login-item helpers run as `<TeamID>.<bundle id>`) | from mechanism |
 | `pid-label` | label unknown (job submitted at runtime / unreadable plist) | `service` (uid 0) / `agent` |
-| `exe-match` | executable is a launch item's program (several: the one in the process user's scope). Never for shells, interpreters and wrappers (`sh`, `bash`, `python3`, `env`, `nohup` ...): a plist running `/bin/bash` must not claim every bash; those are attributed by `pid-label` only | from mechanism |
-| `parent` | parent is init: `.xpc` bundle -> `xpc-service`, `.app` bundle -> `gui-app`, else `service`/`agent` by uid | |
+| `exe-match` | executable is a launch item's program (several: the one in the process user's scope, then a plist whose `UserName` is the process user, then a service for root and an agent for anyone else: `cfprefsd` has both a daemon and a per-user agent, the agent also runs as `_locationd`). Never for shells, interpreters and wrappers (`sh`, `bash`, `python3`, `env`, `nohup` ...): a plist running `/bin/bash` must not claim every bash; those are attributed by `pid-label` only | from mechanism |
+| `parent` | parent is init: `.xpc` or `.appex` bundle (app extensions are XPC services: widgets started without a label) -> `xpc-service`, `.app` bundle -> `gui-app`, else `service`/`agent` by uid | |
 | `parent` | parent is a scheduler (`cron`, `periodic`, `atrun`) / a GUI launcher (Finder, Dock) | `scheduled` / `gui-app` |
 | `ancestry` | parent is a shell: first ancestor that is `sshd` -> `remote-session`, a scheduler -> `scheduled`, a terminal (Terminal.app, iTerm2, tmux, VS Code helper ...) -> `interactive (terminal)`; else a console `login` / `getty` above it -> `interactive (login)`; else (an `sh -c` run by a daemon, an app, an updater) it falls through to `child` | |
 | `parent` | anything else | `child`; `via` = top ancestor below init (the app/service that owns the tree) |
 
 The tree walk is cycle-safe and capped (64 levels).
+
+### Background Task Management (`-o btm`)
+
+`sfltool dumpbtm` (root only; undocumented text, layout taken from macOS 26.5 on 2026-11-08, synthetic fixture
+`process/sfltool-dumpbtm.txt`): blocks `Records for UID <n>` (`-2`, `0`, each user), records ` #<n>:` with `Type`
+(`legacy daemon|legacy agent|agent|daemon|login item|app|developer|quicklook|spotlight|dock tile|...` plus a hex code),
+`Disposition` (`[enabled|disabled, allowed|disallowed, notified|not notified]`), `Identifier` (`<type code>.<id>`),
+`URL`, `Executable Path`, `Bundle Identifier`, `Parent Identifier`. Items embedded in an app give `URL` / `Executable
+Path` relative to the app; `parse_btm` resolves them through the parent `app` record of the same UID block and rejects
+`..` out of it. Unknown fields are ignored, unknown types kept, lines outside a record skipped.
+
+`apply_btm` attaches `meta.btm = {type, enabled, allowed}` to the indexed item with the same plist / bundle path, then
+program, then label. `enabled` and `allowed` must both hold for macOS to run it. `allowed` is the user's switch:
+turning an app off under System Settings > Login Items > *Allow in the Background* changed its embedded agent from
+`[enabled, allowed]` to `[enabled, disallowed]` (macOS 26, 2026-11-08); the app record itself stayed `allowed`.
+`enabled` is the app's own registration (SMAppService register / unregister): items the app never registered are
+`disabled, allowed`. Removing an app from *Open at Login* deletes its `app` record rather than flipping a flag, so
+`app` records (not launch items, never indexed) are not tagged;
+otherwise the item gets `disabled = true`, which also removes it from the missing-program report. Records of launch
+types that match nothing indexed are added (`meta.from_btm`) only when their plist / bundle exists and the index could
+not judge it (an unreadable root-only plist, an app outside the walked folders): BTM keeps records of deleted plists
+and of plists without a `Label` (Google Keystone's emptied plists), which launchd ignores. Real run, user with the dump
+of the same Mac: 98 items tagged (legacy daemon 47, legacy agent 41, login item 6, agent 4), 46 marked off, one item
+added (the root-only Teams updater plist), missing programs 4 -> 0 (all four were turned off). Captured in the
+snapshot (`launch_items[].meta`), so `secmonk procs <snapshot.json>` keeps it.
 
 ## Data format
 
@@ -215,18 +242,54 @@ The Windows side can ship as an extension of `secmonk-inventory.ps1` that emits 
 
 ## Limitations
 
-- Fixtures are **synthetic**; never run on a real Mac (see [plans/on-macos.md](../../plans/on-macos.md) section F).
+- Fixtures are synthetic plus real ones: an Apple launchd plist (`../macos/real/launchd/`) and a trimmed non-root live
+  snapshot (`process/real/snapshot-user.json`). Live run as a user with Full Disk Access (macOS 26.5 arm64, 2026-11-08):
+  989 processes = `ps -ax`, 8 s with `--no-match`; `exe` missing for 2 (a zombie, the `ps` that exited); `started` parsed
+  for all; 312 pids labelled. Launch kinds: agent 340, service 257, xpc-service 245 (before `.appex` was added; 49
+  widgets were `agent`), child 121, gui-app 20, interactive 2. Identity: `os` 744, `app-bundle` 199, `brew-keg` 13,
+  `pkgutil` 5, `none` 23 (before the non-`.app` bundle rule). Root run the same day: 979 processes, 2 without `exe`,
+  167/198 root processes labelled, the root-only Teams plist read, no warnings; it showed the user-domain label gap and
+  the shared-label pick, both fixed afterwards; a second root run: 544 pids labelled (228 before), the user's 311 equal
+  the user run, and root vs user differ only on 4 system processes that root labels better. Real fixtures:
+  `process/real/snapshot-user.json`, `snapshot-root.json`.
+- `sudo secmonk procs` on macOS keeps `HOME`, so the default database folder is the invoking user's and root refuses
+  it (ownership check, ADR-0006). `procs` then lists processes without findings and says so; `--save` and other
+  commands exit 1 with the hint (`sudo -H`, `--db`, or `--no-match --snapshot-out` as root + `secmonk procs <file>` as
+  the user). Before 2026-11-08 this was a `PermissionError` traceback.
+- Shells and their tools: the shell under a terminal is `child (<terminal>)` and the commands typed into it are
+  `interactive (terminal)` (by design); Warp is matched by its bundle name (`Warp.app/Contents/MacOS/stable`).
+- Toolchain-managed runtimes carry their version only in the path and stay `none`: `~/.local/share/uv/python/cpython-3.13.5-*`,
+  `~/.nvm/versions/node/v24.11.0`, `/nix/store/*-nix-2.13.3`, self-updating CLIs under `~/.local/share/<tool>/versions/`.
+- Launch items whose program is missing are reported (stale persistence) except those the backend marks `meta.os_owned`
+  (macOS: `/System/Library/Launch*`, sealed system volume): 5 Apple items point at programs absent on this hardware
+  (`com.apple.cvmsCompAgent_arm64` -> `OpenGLES.framework/CVMCompiler`), dormant rather than left behind. Snapshots taken
+  before 2026-11-08 have no `os_owned` and still list them.
+- **Restricted host (no Full Disk Access, sandboxed or managed session).** Every failure is named, never a traceback
+  and never a silently empty result:
+  - `ps` cannot run (`PermissionError` on exec, timeout, non-zero exit): the live snapshot fails as a collector error
+    (`process: RuntimeError: ps failed: <reason>; ... analyse a snapshot file taken elsewhere`), exit 1, nothing on
+    stdout. There is no process list without `ps` (a `proc_listallpids` fallback via libproc is not implemented).
+  - `ps -o args=` fails: warning, command lines empty. `launchctl list` fails (exit 1 was observed): warning
+    `launchctl list failed (<reason>)`, no labels; launch kinds come from the tree and the plists.
+  - A launchd or `/Users` folder that cannot be listed (`EPERM`; `stat` may fail too, so it looks absent): one warning
+    `cannot list <path>: permission denied (macOS privacy protection: grant Full Disk Access ...)`; the readable folders
+    are still indexed. Observed denied on macOS 26.5: `/Users`, `/Library/LaunchDaemons`, `/Library/LaunchAgents`,
+    `~/Library/LaunchAgents`; `/System/Library/Launch{Daemons,Agents}` were readable (886 items).
+  - An executable that cannot be `stat`ed gets no facts (not `exists: false`, so no `exe-missing` flag); an app bundle
+    whose `Info.plist` is denied is identified `path-only` (name, no version). `codesign`, `pkgutil` or `spctl` that
+    cannot run: one warning per command, the facts it would give are absent. Each of these warns once per run.
 - Command lines come from `ps`, which joins argv with spaces: arguments containing spaces cannot be recovered, so after
   a redacted value every following non-option token is redacted too (over-redaction). `-o args=false` skips them.
 - Point-in-time: short-lived processes between two `--watch` ticks are missed (no Endpoint Security / `kqueue`
   `NOTE_EXEC` / eBPF / ETW subscription; that would need a privileged agent).
 - Without root, `proc_pidpath` and `launchctl list` cover only the current user; other users' processes keep the `ps`
   `comm` path and get launch kinds from the tree.
-- Login items of the Background Task Management database (`sfltool dumpbtm`, root-only, opaque format) and legacy
-  `backgrounditems.btm` are not read: login items appear as `agent`/`gui-app` by evidence.
+- Background Task Management is read only on request (`-o btm`): without it, whether macOS lets a login item or a
+  background helper run (System Settings > General > Login Items) is unknown, so a helper turned off there still
+  counts as configured (and a missing program there is reported). Legacy `backgrounditems.btm` is not read.
 - Interpreted code: only the interpreter is identified; the script/jar path is recorded (`script`) but its own
   dependencies are not parsed (run `scan fs` on it).
 - Apps run from a cryptex (`/System/Volumes/Preboot/Cryptexes/App/...Safari.app`) resolve through the bundle rule;
-  not checked on real data.
+  not checked on real data (Safari was not running during the capture).
 - Two unidentified binaries with the same file name in different directories are kept apart in the collector
   (`exe:<path>` key) but share one `component` row in the database (paths merged).

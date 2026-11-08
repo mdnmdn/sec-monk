@@ -6,7 +6,7 @@ type: feature
 context: features
 status: implemented
 tags: [cli, index, features]
-updated: 2026-11-07
+updated: 2026-11-08
 verified: 2026-11-07
 code: src/secmonk/cli.py
 related: [tech/architecture.md, references/vuln-sources/README.md, references/probes.md, _meta/README.md]
@@ -26,7 +26,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Containers and Linux filesystems | [inventory-docker.md](inventory-docker.md) | implemented | any OS for images (registry, tarball, OCI dir, no daemon); Linux/macOS host with a Docker/Podman socket for live containers; any rootfs directory | `secmonk collect\|scan docker-image`, `docker-engine`, `rootfs`; `secmonk containers` | real images alpine, debian-slim, python-slim, registry:2 scanned; engine only against a fake socket |
 | Language dependencies | [inventory-dependencies.md](inventory-dependencies.md) | implemented | any (folders, repos; also inside images, containers, SSH hosts, Homebrew) | `secmonk scan fs <dir>` (+ the collectors above) | tool-generated real fixtures; verified end to end on real OSV data |
 | Agentless SSH inventory | [inventory-ssh.md](inventory-ssh.md) | implemented | target Linux, macOS, Windows (OpenSSH); analyst machine any | `secmonk collect\|scan ssh user@host[:port]` | fixture trees + in-process sshd only; no real sshd, no real macOS/Windows host |
-| Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | synthetic fixtures; never run on a real Mac |
+| Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | run on a real Mac (macOS 26.5, user + root, 2026-11-08); real trimmed snapshots + synthetic fixtures |
 | Web interface (local) | [web-ui.md](web-ui.md) | implemented | any OS (browser, works offline); live process data on macOS, snapshot files anywhere | `secmonk ui [--snapshot F]` | every CLI area: dashboard, assets, scan, findings, vulnerabilities, sources & sync, jobs, process monitor; design + storybook in [`_design/`](../../_design/README.md); synthetic fixtures |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 

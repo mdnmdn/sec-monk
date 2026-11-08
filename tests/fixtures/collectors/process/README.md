@@ -1,4 +1,4 @@
-# Process collector fixtures (synthetic)
+# Process collector fixtures (synthetic; real ones in `real/`)
 
 Hand-made from documented formats; **not** captured on a real Mac yet (see `_docs/plans/on-macos.md` section F).
 Used by `tests/collectors/test_process.py`.
@@ -11,6 +11,7 @@ Used by `tests/collectors/test_process.py`.
 | `launchctl-list.txt` | `launchctl list` (PID, Status, Label; `-` = not running) | launchctl(1) |
 | `codesign-*.txt` | stderr of `codesign -dv --verbose=2` for a Developer ID app, an ad-hoc (linker-signed) binary, an unsigned file | codesign(1) |
 | `pkgutil-file-info.txt` | `pkgutil --file-info /usr/local/bin/aws` | pkgutil(1) |
+| `sfltool-dumpbtm.txt` | `sudo sfltool dumpbtm` (Background Task Management): UID blocks `-2` and `501`, a developer record with embedded identifiers, a disallowed legacy daemon, a legacy daemon whose plist is gone, an app record and its login item / agent with paths relative to the app (`Parent Identifier`), a Quick Look plugin, an unknown type with a `..` URL and an unknown field. Synthetic; layout copied from a real macOS 26.5 dump (2026-11-08), names and ids invented | sfltool(1) output (undocumented) |
 
 Placeholder executables contain text, not Mach-O: identity comes from the bundle / keg / embedded plist. User name
 `alice`, host `fixture-mac`, team id and URLs are illustrative.

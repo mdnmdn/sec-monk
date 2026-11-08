@@ -189,13 +189,15 @@ def process_tree(views: list[ProcessView]) -> list[dict[str, Any]]:
 
 
 def missing_launch_programs(snap: Snapshot, inspector: Inspector) -> list[dict[str, Any]]:
-    """Configured launch items whose program does not exist (stale persistence, or a removed payload)."""
+    """Configured launch items whose program does not exist (stale persistence, or a removed payload).
+    Items the backend marks `meta.os_owned` (shipped with the OS, e.g. macOS `/System/Library/Launch*`) are skipped:
+    a missing program there is a dormant entry of the OS release, not something left behind or planted."""
     out = []
     local = getattr(inspector, "local", None)
     if not getattr(inspector, "fs", False) or local is None:
         return out
     for it in snap.launch_items:
-        if it.program and it.program.startswith("/") and it.disabled is not True:
+        if it.program and it.program.startswith("/") and it.disabled is not True and not it.meta.get("os_owned"):
             try:
                 exists = os.path.lexists(local(it.program))     # never follow a link out of a copied tree
             except (OSError, ValueError):

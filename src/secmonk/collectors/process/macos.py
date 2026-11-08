@@ -19,12 +19,14 @@ import ctypes.util
 import hashlib
 import os
 import plistlib
+import posixpath
 import re
 import socket
 import sqlite3
 import stat
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,7 @@ from typing import Any
 from ...engine import purl as purls
 from ...models import CAT_APPLICATION, CAT_PACKAGE, CAT_SYSTEM_APP, Component
 from ..base import REDACTED, read_within, redact_command, resolve_within, strip_url_secrets
+from ..macos import loads_plist
 from .backend import Inspector, Resolution
 from .model import LaunchItem, ProcessRecord, Snapshot
 
@@ -47,11 +50,39 @@ LAUNCHD_DIRS = (
     ("System/Library/LaunchDaemons", "launchd-system-daemon"),
     ("System/Library/LaunchAgents", "launchd-system-agent"),
 )
+BUNDLE_WRAPPERS = (".bundle", ".systemextension", ".xpc", ".appex", ".plugin")
+# launch definitions shipped inside app bundles (SMAppService, macOS 13+) and legacy login-item helpers
+# (SMLoginItemSetEnabled); BundleProgram / relative ProgramArguments[0] are relative to the bundle
+APP_LAUNCHD_DIRS = (
+    ("Contents/Library/LaunchAgents", "launchd-app-agent"),
+    ("Contents/Library/LaunchDaemons", "launchd-app-daemon"),
+)
+APP_LOGIN_ITEMS_DIR = "Contents/Library/LoginItems"
+MAX_BTM_BYTES = 16 * 1024 * 1024
 SYSTEM_PREFIXES = ("/System/", "/usr/bin/", "/usr/sbin/", "/usr/libexec/", "/usr/lib/", "/bin/", "/sbin/",
                    "/Library/Apple/", "/private/var/db/com.apple.")
 # writable by an ordinary user: binaries running from here deserve a second look
 USER_WRITABLE = ("/Users/", "/tmp/", "/private/tmp/", "/private/var/folders/", "/var/folders/", "/Volumes/",
                  "/Users/Shared/")
+# macOS privacy protection (TCC) denies reads with EPERM even to the owner; say so instead of "missing"
+DENIED_HINT = ("permission denied (macOS privacy protection: grant Full Disk Access to the app running "
+               "secmonk, or run it where this path is readable)")
+
+
+def _why(e: OSError) -> str:
+    return DENIED_HINT if isinstance(e, PermissionError) else f"{type(e).__name__}: {e}"
+
+
+def _list_dir(d: Path, label: str, warnings: list[str] | None) -> list[Path]:
+    """Sorted entries of `d`: [] when missing, [] plus a warning when unreadable (`is_dir()`/`glob()` hide that)."""
+    try:
+        return sorted(d.iterdir())
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+    except OSError as e:
+        if warnings is not None:
+            warnings.append(f"cannot list {label}: {_why(e)}")
+        return []
 
 
 # ============================================================================ parsers (pure, tested on fixtures)
@@ -116,13 +147,23 @@ def parse_launchctl_list(text: str) -> dict[int, str]:
     return out
 
 
-def parse_launchd_plist(d: dict, source: str, mechanism: str, scope: str) -> LaunchItem | None:
+def parse_launchd_plist(d: dict, source: str, mechanism: str, scope: str,
+                        bundle: str | None = None) -> LaunchItem | None:
+    """One launchd job. `bundle`: target path of the app that ships the plist (`Contents/Library/Launch*`): its
+    `BundleProgram` and a relative program are resolved against it."""
     label = d.get("Label")
     if not isinstance(label, str) or not label:
         return None
     args = d.get("ProgramArguments") if isinstance(d.get("ProgramArguments"), list) else []
     args = [a for a in args if isinstance(a, str)]
     program = d.get("Program") if isinstance(d.get("Program"), str) else (args[0] if args else None)
+    if bundle is not None:
+        bp = d.get("BundleProgram")
+        rel = bp if isinstance(bp, str) and bp else program
+        if rel and not rel.startswith("/"):
+            program = posixpath.normpath(posixpath.join(bundle, rel))
+            if not program.startswith(bundle.rstrip("/") + "/"):
+                program = None                     # `..` out of the bundle: not trusted
     keep_alive = d.get("KeepAlive")
     meta = {k: d[k] for k in ("StartInterval", "WatchPaths", "UserName", "BundleProgram", "AssociatedBundleIdentifiers")
             if k in d and isinstance(d[k], (str, int, list))}
@@ -130,6 +171,12 @@ def parse_launchd_plist(d: dict, source: str, mechanism: str, scope: str) -> Lau
         meta["StartCalendarInterval"] = True
     if isinstance(d.get("MachServices"), dict):
         meta["MachServices"] = sorted(d["MachServices"])[:10]
+    if bundle is not None:
+        meta["host_app"] = bundle
+    if mechanism.startswith("launchd-system"):
+        # /System/Library/Launch*: on the sealed system volume, part of the OS release (some point at programs
+        # absent on this hardware: dormant, not stale persistence)
+        meta["os_owned"] = True
     return LaunchItem(mechanism=mechanism, label=label, program=program,
                       args=list(redact_command(args[1:32]) or []), source=source, scope=scope,
                       run_at_load=d.get("RunAtLoad") if isinstance(d.get("RunAtLoad"), bool) else None,
@@ -140,8 +187,25 @@ def parse_launchd_plist(d: dict, source: str, mechanism: str, scope: str) -> Lau
 _PLIST_CACHE: dict[tuple, LaunchItem | None] = {}
 
 
+def _parse_plist_cached(p: Path, bound: Path, root: Path, mech: str, scope: str,
+                        bundle: str | None = None) -> LaunchItem | None:
+    st = p.stat()
+    key = (str(p), str(bound), mech, scope, bundle, st.st_ino, st.st_size, st.st_mtime_ns)
+    if key in _PLIST_CACHE:          # --watch re-indexes every tick: parse only changed plists
+        return _PLIST_CACHE[key]
+    data = loads_plist(read_within(p, bound, MAX_PLIST_BYTES))
+    if not isinstance(data, dict):
+        raise TypeError("not a dictionary")
+    it = parse_launchd_plist(data, _target_path(p, root), mech, scope, bundle)
+    if len(_PLIST_CACHE) > 20_000:
+        _PLIST_CACHE.clear()
+    _PLIST_CACHE[key] = it
+    return it
+
+
 def index_launch_items(root: Path, homes: list[Path], include_system: bool = True) -> tuple[list[LaunchItem], list[str]]:
-    """Every launchd plist under root (system dirs) and under each home (`~/Library/LaunchAgents`)."""
+    """Every launchd plist under root (system dirs) and under each home (`~/Library/LaunchAgents`), plus the launch
+    definitions and login-item helpers inside the apps of `/Applications` and each `~/Applications`."""
     boundary = root.resolve()
     items: list[LaunchItem] = []
     warnings: list[str] = []
@@ -153,27 +217,209 @@ def index_launch_items(root: Path, homes: list[Path], include_system: bool = Tru
     for h in homes:
         dirs.append((h / "Library/LaunchAgents", "launchd-agent", f"user:{h.name}", h.resolve()))
     for d, mech, scope, bound in dirs:
-        if not d.is_dir():
-            continue
-        for p in sorted(d.glob("*.plist")):
+        for p in (e for e in _list_dir(d, _target_path(d, root), warnings) if e.suffix == ".plist"):
             try:
-                st = p.stat()
-                key = (str(p), str(bound), mech, scope, st.st_ino, st.st_size, st.st_mtime_ns)
-                if key in _PLIST_CACHE:          # --watch re-indexes every tick: parse only changed plists
-                    it = _PLIST_CACHE[key]
-                else:
-                    data = plistlib.loads(read_within(p, bound, MAX_PLIST_BYTES))
-                    if not isinstance(data, dict):
-                        raise ValueError("not a dictionary")
-                    it = parse_launchd_plist(data, _target_path(p, root), mech, scope)
-                    if len(_PLIST_CACHE) > 20_000:
-                        _PLIST_CACHE.clear()
-                    _PLIST_CACHE[key] = it
+                it = _parse_plist_cached(p, bound, root, mech, scope)
                 if it:
                     items.append(it)
             except Exception as e:  # noqa: BLE001 - one bad plist must not hide the others
                 warnings.append(f"cannot read launchd plist {_target_path(p, root)}: {e}")
+    items += index_app_launch_items(root, homes, warnings)
     return items, warnings
+
+
+def index_app_launch_items(root: Path, homes: list[Path], warnings: list[str]) -> list[LaunchItem]:
+    """Launch plists in `<App>.app/Contents/Library/Launch{Agents,Daemons}` (SMAppService) and helper apps in
+    `Contents/Library/LoginItems` (SMLoginItemSetEnabled), for every app the macOS collector would list. Whether
+    macOS lets them run is recorded only in the Background Task Management database (`-o btm`)."""
+    from ..macos import MAX_APP_DEPTH, MacOSCollector, _load_plist
+
+    out: list[LaunchItem] = []
+    bases = [(root / "Applications", "system", root.resolve())]
+    bases += [(h / "Applications", f"user:{h.name}", h.resolve()) for h in homes]
+    seen: set[str] = set()
+    for base, scope, bound in bases:
+        for bundle in MacOSCollector._find_bundles(base, MAX_APP_DEPTH, None, root):
+            if bundle.is_symlink():
+                continue                       # its target is walked itself (or lies outside the app folders)
+            bundle_t = _target_path(bundle, root)
+            if bundle_t in seen:
+                continue
+            seen.add(bundle_t)
+            for rel, mech in APP_LAUNCHD_DIRS:
+                d = bundle / rel
+                if not d.is_dir():
+                    continue
+                for p in (e for e in _list_dir(d, _target_path(d, root), warnings) if e.suffix == ".plist"):
+                    try:
+                        it = _parse_plist_cached(p, bound, root, mech, scope, bundle_t)
+                        if it:
+                            out.append(it)
+                    except Exception as e:  # noqa: BLE001
+                        warnings.append(f"cannot read launchd plist {_target_path(p, root)}: {e}")
+            d = bundle / APP_LOGIN_ITEMS_DIR
+            if not d.is_dir():
+                continue
+            for li in (e for e in _list_dir(d, _target_path(d, root), warnings) if e.suffix == ".app"):
+                try:
+                    info = _load_plist(li / "Contents/Info.plist", bound) or {}
+                except Exception as e:  # noqa: BLE001
+                    warnings.append(f"cannot read login item {_target_path(li, root)}: {e}")
+                    continue
+                exe = info.get("CFBundleExecutable")
+                li_t = _target_path(li, root)
+                label = info.get("CFBundleIdentifier") if isinstance(info.get("CFBundleIdentifier"), str) else li.stem
+                program = f"{li_t}/Contents/MacOS/{exe}" if isinstance(exe, str) and exe and "/" not in exe else None
+                out.append(LaunchItem(mechanism="login-item", label=label, program=program, source=li_t, scope=scope,
+                                      meta={"host_app": bundle_t, "bundle_id": label}))
+    return out
+
+
+# ------------------------------------------------------------------ Background Task Management (sfltool dumpbtm)
+
+_BTM_UID = re.compile(r"^\s*Records for UID (-?\d+)\b")
+_BTM_ITEM = re.compile(r"^\s*#\d+:\s*$")
+_BTM_FIELD = re.compile(r"^\s+([A-Za-z][A-Za-z ]*?):\s?(.*)$")
+_BTM_FIELDS = {"name", "developer name", "team identifier", "type", "flags", "disposition", "identifier", "url",
+               "executable path", "bundle identifier", "parent identifier"}
+
+
+def parse_btm(text: str) -> list[dict[str, Any]]:
+    """`sfltool dumpbtm` (root; undocumented text, observed on macOS 26.5): per-UID blocks of records with `Type`,
+    `Disposition`, `Identifier` (`<type code>.<id>`), `URL`, `Executable Path`, `Parent Identifier`. Tolerant: unknown
+    fields and types are kept or ignored, lines it does not understand are skipped. Paths of items embedded in an
+    app (`Contents/...`) are resolved against the parent `app` record of the same UID block."""
+    records: list[dict[str, Any]] = []
+    uid: int | None = None
+    cur: dict[str, Any] | None = None
+    for line in text.splitlines():
+        m = _BTM_UID.match(line)
+        if m:
+            uid, cur = int(m.group(1)), None
+            continue
+        if _BTM_ITEM.match(line):
+            cur = {"uid": uid}
+            records.append(cur)
+            continue
+        m = _BTM_FIELD.match(line)
+        if cur is None or not m:
+            continue
+        key, value = m.group(1).strip().lower(), m.group(2).strip()
+        if key in _BTM_FIELDS and key not in cur and value not in ("", "(null)"):
+            cur[key] = value
+    by_id = {(r["uid"], r.get("identifier")): r for r in records if r.get("identifier")}
+    for r in records:
+        t = re.match(r"^\s*(.*?)\s*(?:\((0x[0-9a-fA-F]+)\))?$", r.get("type", ""))
+        r["type"] = t.group(1) if t else r.get("type", "")
+        words = re.match(r"^\[([^\]]*)\]", r.get("disposition", ""))
+        flags = {w.strip() for w in words.group(1).split(",")} if words else set()
+        r["enabled"] = True if "enabled" in flags else False if "disabled" in flags else None
+        r["allowed"] = True if "allowed" in flags else False if "disallowed" in flags else None
+        ident = r.get("identifier", "")
+        r["id"] = re.sub(r"^\d+\.", "", ident)
+        base = None
+        parent = by_id.get((r["uid"], r.get("parent identifier")))
+        if parent is not None:
+            base = _btm_path(parent.get("url"), None)
+        r["path"] = _btm_path(r.get("url"), base)
+        r["program"] = _btm_path(r.get("executable path"), base)
+    return records
+
+
+def _btm_path(value: str | None, base: str | None) -> str | None:
+    if not value:
+        return None
+    from urllib.parse import unquote
+
+    if value.startswith("file://"):
+        value = unquote(value[len("file://"):])
+    elif "://" in value:
+        return None
+    else:
+        value = unquote(value)
+    if not value.startswith("/"):
+        if base is None:
+            return None
+        value = posixpath.normpath(posixpath.join(base, value))
+        return value if value.startswith(posixpath.normpath(base) + "/") else None   # stays inside the parent app
+    value = posixpath.normpath(value)
+    return value if value.startswith("/") else None
+
+
+BTM_LAUNCH_TYPES = {"login item": "login-item", "agent": "launchd-app-agent", "daemon": "launchd-app-daemon",
+                    "legacy agent": "launchd-agent", "legacy daemon": "launchd-daemon"}
+
+
+def apply_btm(items: list[LaunchItem], records: list[dict[str, Any]],
+              addable: Callable[[str], bool] | None = None) -> tuple[int, int]:
+    """Attach each record's state to the launch item it describes (by plist / bundle path, then program, then
+    label) as `meta.btm = {type, enabled, allowed}`; an item macOS will not run (`disabled` or `disallowed`: turned
+    off in System Settings > General > Login Items) gets `disabled = True`. Launch-type records that match nothing
+    indexed are added only when `addable(path)` (plist / bundle still there, and not a plist the index could read: BTM
+    keeps records of deleted plists and of plists without a `Label`, which launchd ignores). Returns (matched, added)."""
+    by_source = {it.source.rstrip("/"): it for it in items if it.source}
+    by_program: dict[str, LaunchItem] = {}
+    by_label: dict[str, LaunchItem] = {}
+    for it in items:
+        if it.program:
+            by_program.setdefault(it.program, it)
+        by_label.setdefault(it.label, it)
+    matched = added = 0
+    for r in records:
+        mech = BTM_LAUNCH_TYPES.get(r.get("type", ""))
+        if mech is None:
+            continue                            # apps, developers, Quick Look / Spotlight / dock tile plugins ...
+        it = (by_source.get((r.get("path") or "").rstrip("/")) or by_program.get(r.get("program") or "")
+              or by_label.get(r.get("bundle identifier") or "") or by_label.get(r.get("id") or ""))
+        if it is None:
+            program = r.get("program")          # login items: only the bundle path is recorded
+            anchor = r.get("path") or program
+            if not anchor or (addable is not None and not addable(anchor)):
+                continue
+            uid = r.get("uid")
+            it = LaunchItem(mechanism=mech, label=r.get("bundle identifier") or r.get("id") or r.get("name") or "?",
+                            program=program, source=r.get("path"),
+                            scope="system" if uid is None or uid <= 0 else f"uid:{uid}", meta={"from_btm": True})
+            items.append(it)
+            added += 1
+        else:
+            matched += 1
+        it.meta["btm"] = {"type": r.get("type"), "enabled": r.get("enabled"), "allowed": r.get("allowed")}
+        if r.get("enabled") is False or r.get("allowed") is False:
+            it.disabled = True
+    return matched, added
+
+
+def _btm_addable(p: Path) -> bool:
+    """A BTM-only item is real when its plist / bundle exists and the index could not judge it itself: an unreadable
+    plist (root-only, as a normal user) or something outside the walked folders."""
+    if not os.path.lexists(p):
+        return False
+    return not (p.suffix == ".plist" and os.access(p, os.R_OK))
+
+
+def btm_records(opt: Any, warnings: list[str]) -> list[dict[str, Any]] | None:
+    """`-o btm=true`: run `sfltool dumpbtm` (root only); `-o btm=<file>`: read a dump taken earlier."""
+    if opt is True or str(opt).lower() in ("true", "1", "yes"):
+        if os.geteuid() != 0:
+            warnings.append("btm=true needs root (`sfltool dumpbtm`): login-item state unavailable")
+            return None
+        r, err = _attempt(["sfltool", "dumpbtm"], timeout=120)
+        if r is None or r.returncode != 0:
+            warnings.append(f"sfltool dumpbtm failed ({_failure(r, err)}): login-item state unavailable")
+            return None
+        text = r.stdout
+    else:
+        try:
+            with open(str(opt), "rb") as fh:
+                text = fh.read(MAX_BTM_BYTES + 1)[:MAX_BTM_BYTES].decode("utf-8", "replace")
+        except OSError as e:
+            warnings.append(f"cannot read BTM dump {opt}: {_why(e)}")
+            return None
+    records = parse_btm(text)
+    if not records:
+        warnings.append("BTM dump has no records (not `sfltool dumpbtm` output?)")
+    return records
 
 
 def parse_quarantine(value: str | bytes | None) -> dict[str, Any] | None:
@@ -345,12 +591,28 @@ def _run(cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProc
                           timeout=timeout, check=False, env={**os.environ, "LC_ALL": "C"})
 
 
-def _try(cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess | None:
-    """`_run`, but a timeout / missing binary yields None instead of an exception outside COLLECT_ERRORS."""
+def _attempt(cmd: list[str], timeout: int = CMD_TIMEOUT) -> tuple[subprocess.CompletedProcess | None, str | None]:
+    """`_run`, but a timeout / missing or forbidden binary yields (None, reason) instead of an exception."""
     try:
-        return _run(cmd, timeout)
-    except (OSError, subprocess.SubprocessError):
-        return None
+        return _run(cmd, timeout), None
+    except subprocess.TimeoutExpired:
+        return None, f"timed out after {timeout}s"
+    except PermissionError as e:
+        return None, (f"{type(e).__name__}: {e} (executing it is denied on this host, e.g. a sandboxed or "
+                      "restricted session)")
+    except (OSError, subprocess.SubprocessError) as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+def _try(cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess | None:
+    """`_attempt` without the reason."""
+    return _attempt(cmd, timeout)[0]
+
+
+def _failure(r: subprocess.CompletedProcess | None, err: str | None) -> str:
+    if r is None:
+        return err or "not runnable"
+    return f"exit {r.returncode}" + (f": {r.stderr.strip()[:200]}" if r.stderr.strip() else "")
 
 
 _LIBPROC = None
@@ -373,13 +635,21 @@ def pid_path(pid: int) -> str | None:
     return buf.value[:n].decode("utf-8", "replace") if n > 0 else None
 
 
-def home_dirs(root: Path, homes: Any = None) -> list[Path]:
+def home_dirs(root: Path, homes: Any = None, warnings: list[str] | None = None) -> list[Path]:
+    """Home directories under `root`/Users. When /Users cannot be listed on the live Mac, the current
+    user's home is still used (a warning says the others were skipped)."""
     if homes:
         return [Path(h) for h in (homes if isinstance(homes, list) else [homes])]
     users = root / "Users"
-    if not users.is_dir():
-        return []
-    return [p for p in sorted(users.iterdir()) if p.is_dir() and not p.is_symlink() and p.name != "Shared"]
+    denied: list[str] = []
+    out = [p for p in _list_dir(users, _target_path(users, root), denied)
+           if p.is_dir() and not p.is_symlink() and p.name != "Shared"]
+    if denied:
+        if warnings is not None:
+            warnings.extend(denied)
+        if str(root) == "/" and Path.home().is_dir():
+            out.append(Path.home())
+    return out
 
 
 def os_info(root: Path) -> dict[str, Any]:
@@ -391,32 +661,61 @@ def os_info(root: Path) -> dict[str, Any]:
         return {"name": "macOS"}
 
 
+MAX_LABEL_USERS = 32
+
+
+def _add_user_domain_labels(procs: list[ProcessRecord], warnings: list[str]) -> None:
+    """As root, `launchctl list` shows the system domain only: GUI apps and login-item helpers of logged-in users
+    lose their labels (macOS 26.5). Read each user's domain with `launchctl asuser <uid> launchctl list` (read-only)
+    and label that user's still unlabelled pids."""
+    uids = sorted({p.uid for p in procs if p.uid is not None and p.uid >= 501 and p.label is None})
+    for uid in uids[:MAX_LABEL_USERS]:
+        r, err = _attempt(["launchctl", "asuser", str(uid), "launchctl", "list"])
+        if r is None or r.returncode != 0:
+            warnings.append(f"launchctl list for uid {uid} failed ({_failure(r, err)}): its GUI labels unavailable")
+            continue
+        labels = parse_launchctl_list(r.stdout)
+        for p in procs:
+            if p.uid == uid and p.label is None:
+                p.label = labels.get(p.pid)
+
+
 def take_snapshot(root: Path, opts: dict[str, Any]) -> Snapshot:
     """Live process snapshot of this Mac."""
     warnings: list[str] = []
-    r = _try(["ps", "-axww", "-o", "pid=,ppid=,uid=,user=,lstart=,comm="])
+    r, err = _attempt(["ps", "-axww", "-o", "pid=,ppid=,uid=,user=,lstart=,comm="])
     if r is None or r.returncode != 0:
-        raise RuntimeError(f"ps failed: {(r.stderr.strip()[:200] if r else 'timeout or not runnable')}")
+        raise RuntimeError(f"ps failed: {_failure(r, err)}; no process list without it (run from a normal "
+                           "terminal, or analyse a snapshot file taken elsewhere: `secmonk procs <snapshot.json>`)")
     procs = parse_ps(r.stdout)
     if opts.get("args", True):
-        a = _try(["ps", "-axww", "-o", "pid=,args="])
+        a, err = _attempt(["ps", "-axww", "-o", "pid=,args="])
         args = parse_ps_args(a.stdout) if a is not None and a.returncode == 0 else {}
+        if a is None or a.returncode != 0:
+            warnings.append(f"ps args failed ({_failure(a, err)}): command lines unavailable")
         for p in procs:
             p.args = args.get(p.pid, [])
     for p in procs:
         exact = pid_path(p.pid)
         if exact:
             p.exe = exact
-    lc = _try(["launchctl", "list"])
+    lc, err = _attempt(["launchctl", "list"])
     labels = parse_launchctl_list(lc.stdout) if lc is not None and lc.returncode == 0 else {}
     if lc is None or lc.returncode != 0:
-        warnings.append("launchctl list failed: launch labels unavailable")
+        warnings.append(f"launchctl list failed ({_failure(lc, err)}): launch labels unavailable")
     for p in procs:
         p.label = labels.get(p.pid)
+    if os.geteuid() == 0:
+        _add_user_domain_labels(procs, warnings)
     if os.geteuid() != 0:
         warnings.append("not running as root: other users' process paths and system launchd labels may be missing")
-    items, w = index_launch_items(root, home_dirs(root, opts.get("home")), opts.get("include_system", True))
+    items, w = index_launch_items(root, home_dirs(root, opts.get("home"), warnings),
+                                  opts.get("include_system", True))
     warnings.extend(w)
+    if opts.get("btm"):
+        records = btm_records(opts["btm"], warnings)
+        if records:
+            apply_btm(items, records, lambda t: _btm_addable(root / t.lstrip("/")))
     return Snapshot(platform="darwin", host=opts.get("hostname") or socket.gethostname(),
                     taken_at=datetime.now(UTC).replace(microsecond=0).isoformat(), processes=procs,
                     launch_items=items, os=os_info(root), warnings=warnings)
@@ -474,6 +773,20 @@ class MacOSInspector(Inspector):
         self.live = root is not None and str(root) == "/" and sys.platform == "darwin"
         self.max_binary = int(opts.get("max_binary_mb", DEFAULT_MAX_BINARY // (1024 * 1024))) * 1024 * 1024
         self._facts: dict[str, dict[str, Any]] = {}
+        self._reported: set[str] = set()       # one warning per failing command / kind of denial, not per binary
+
+    def _once(self, key: str, message: str) -> None:
+        if key not in self._reported:
+            self._reported.add(key)
+            self.warnings.append(message)
+
+    def _cmd(self, cmd: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess | None:
+        """A fixed read-only command; when it cannot run at all, warn once per command (facts would otherwise
+        silently disappear, e.g. no signature for any process)."""
+        r, err = _attempt(cmd, timeout)
+        if r is None and not (err or "").startswith("timed out"):
+            self._once(f"cmd:{cmd[0]}", f"cannot run {cmd[0]}: {err}; the facts it provides are unavailable")
+        return r
 
     # ------------------------------------------------------------------ paths
     def local(self, target: str) -> Path:
@@ -528,8 +841,15 @@ class MacOSInspector(Inspector):
 
         parts = path.split("/")
         idx = next((i for i, p in enumerate(parts) if p.endswith(".app")), None)
-        if idx is None:
-            return None
+        wrapper = idx is None
+        if wrapper:
+            # no .app: the outermost loadable bundle (Little Snitch daemon `.bundle`, a `.systemextension` under
+            # /Library/SystemExtensions); OS ones stay with the OS identity
+            if path.startswith(SYSTEM_PREFIXES):
+                return None
+            idx = next((i for i, p in enumerate(parts[:-1]) if p.endswith(BUNDLE_WRAPPERS)), None)
+            if idx is None:
+                return None
         bundle_t = "/".join(parts[:idx + 1])
         system = bundle_t.startswith("/System/")
         cat = CAT_SYSTEM_APP if system else CAT_APPLICATION
@@ -537,12 +857,24 @@ class MacOSInspector(Inspector):
         inner = [p for p in parts[idx + 1:] if p.endswith((".app", ".xpc", ".appex", ".framework"))]
         if inner:
             notes["helper"] = inner[-1]
-        if not self.fs:
-            name = parts[idx][:-4]
+        def path_only() -> Resolution:
             notes["identity"] = "path-only"
-            return Resolution("path-only", [Component(name=name, version=None, category=cat, source_path=bundle_t,
-                                                      meta={"identity": "path-only"})], anchor=bundle_t, notes=notes)
-        comps = MacOSCollector()._read_bundle(self.local(bundle_t), self.root, cat, self.boundary)
+            return Resolution("path-only", [Component(name=parts[idx].rsplit(".", 1)[0], version=None, category=cat,
+                                                      source_path=bundle_t, meta={"identity": "path-only"})],
+                              anchor=bundle_t, notes=notes)
+
+        if not self.fs:
+            return path_only()
+        try:
+            comps = MacOSCollector()._read_bundle(self.local(bundle_t), self.root, cat, self.boundary)
+        except PermissionError as e:
+            self._once("denied-bundle", f"cannot read {bundle_t} (and possibly other app bundles): {_why(e)}; "
+                                        "such apps are identified by path only, without a version")
+            return path_only()
+        except FileNotFoundError:
+            # bundle without Info.plist (macOS 26.5: /System/Library/CoreServices/liquiddetectiond.app holds only
+            # the binary): on the system volume it is part of the OS, elsewhere identify it by path
+            return None if system or wrapper else path_only()
         return Resolution("app-bundle", comps, anchor=bundle_t, notes=notes)
 
     def _system(self, path: str) -> Resolution | None:
@@ -554,11 +886,8 @@ class MacOSInspector(Inspector):
     def _pkgutil(self, path: str) -> Resolution | None:
         if not self.live or not self.opts.get("pkgutil", True) or self.user_writable(path):
             return None
-        try:
-            r = _run(["pkgutil", "--file-info", path])
-        except (OSError, subprocess.SubprocessError):
-            return None
-        pkgs = parse_pkgutil_file_info(r.stdout) if r.returncode == 0 else []
+        r = self._cmd(["pkgutil", "--file-info", path])
+        pkgs = parse_pkgutil_file_info(r.stdout) if r is not None and r.returncode == 0 else []
         if not pkgs:
             return None
         comps = []
@@ -632,15 +961,15 @@ class MacOSInspector(Inspector):
         lp = self.local(exe)
         try:
             lp.lstat()
-        except OSError:
-            return {"exists": False}
-        try:                                       # a copied tree: never follow a link onto the analyst's host
-            real = resolve_within(lp, self.boundary)
+            real = resolve_within(lp, self.boundary)   # a copied tree: never follow a link onto the analyst's host
             st = real.stat()
+        except PermissionError as e:               # denied is not deleted: no `exe-missing` flag
+            self._once("denied", f"cannot inspect {exe} (and possibly other executables): {_why(e)}")
+            return {}
         except ValueError:
             return {"outside_root": True}
         except OSError:
-            return {"exists": False}               # dangling link
+            return {"exists": False}               # deleted, or a dangling link
         f["exists"] = True
         f["size"] = st.st_size
         f["mtime"] = datetime.fromtimestamp(st.st_mtime, UTC).replace(microsecond=0).isoformat()
@@ -675,16 +1004,16 @@ class MacOSInspector(Inspector):
         sign = self.live and self.opts.get("codesign", True) and (
             self.opts.get("codesign_system", False) or not real_t.startswith(SYSTEM_PREFIXES))
         if sign:
-            r = _try(["codesign", "-dv", "--verbose=2", real_t])
+            r = self._cmd(["codesign", "-dv", "--verbose=2", real_t])
             if r is not None:
                 f["signature"] = parse_codesign(r.stderr, r.returncode)
             if self.opts.get("verify", False) and f.get("signature", {}).get("signed"):
-                v = _try(["codesign", "--verify", "--strict", real_t], timeout=120)
+                v = self._cmd(["codesign", "--verify", "--strict", real_t], timeout=120)
                 ver = parse_codesign_verify(v.stderr, v.returncode) if v is not None else None
                 if ver:
                     f["signature"].update(ver)
         if self.live and self.opts.get("gatekeeper", False):
-            r = _try(["spctl", "--assess", "--type", "execute", "-vv", res.anchor or real_t])
+            r = self._cmd(["spctl", "--assess", "--type", "execute", "-vv", res.anchor or real_t])
             if r is not None:
                 m = re.search(r"source=(.+)", r.stderr)
                 f["gatekeeper"] = {"accepted": r.returncode == 0, "source": m.group(1).strip() if m else None}

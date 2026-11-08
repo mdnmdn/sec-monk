@@ -46,6 +46,8 @@ MECHANISM_KIND = {
     "launchd-agent": LAUNCH_AGENT,
     "launchd-system-agent": LAUNCH_AGENT,
     "launchd-user-agent": LAUNCH_AGENT,
+    "launchd-app-agent": LAUNCH_AGENT,      # macOS: plist inside an app bundle (SMAppService)
+    "launchd-app-daemon": LAUNCH_SERVICE,
     "login-item": LAUNCH_LOGIN_ITEM,
     # planned backends (see _docs/tech/collectors/process.md)
     "systemd-system": LAUNCH_SERVICE,
@@ -77,13 +79,17 @@ class PlatformHints:
     # programs never attributed to a launch item by path alone (see LaunchClassifier._generic_program)
     generic_programs: frozenset[str] = frozenset({"env", "nohup", "caffeinate", "open", "xargs", "timeout"})
     consoles: frozenset[str] = frozenset({"login", "getty", "agetty"})   # a local console session above a shell
+    instance_suffix: re.Pattern[str] | None = None   # per-instance label suffix to strip before the plist lookup
 
 
 DARWIN = PlatformHints(
     app_bundle=re.compile(r"\.app/Contents/MacOS/[^/]+$"),
-    xpc_bundle=re.compile(r"\.xpc/Contents/MacOS/[^/]+$"),
-    gui_label=re.compile(r"^application\.[^/]+\.\d+\.\d+$"),
+    xpc_bundle=re.compile(r"\.(?:xpc|appex)/Contents/MacOS/[^/]+$"),   # app extensions are XPC services too
+    # application.<bundle id>.<n>.<n>, optionally .<UUID> (macOS 26.5: apps relaunched by the system, e.g. after an update)
+    gui_label=re.compile(r"^application\.[^/]+\.\d+\.\d+(?:\.[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})?$"),
     gui_launchers=frozenset({"finder", "dock", "launchservicesd", "loginwindow"}),
+    # launchd instance jobs: com.apple.loginwindow.<UUID>, com.apple.metadata.mds.index.<UUID> (macOS 26.5)
+    instance_suffix=re.compile(r"\.[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$"),
 )
 GENERIC = PlatformHints()
 
@@ -110,10 +116,10 @@ class LaunchClassifier:
         self.snap = snap
         self.h = hints or hints_for(snap.platform)
         self.by_pid = {p.pid: p for p in snap.processes}
-        self.items_by_label: dict[str, LaunchItem] = {}
+        self.items_by_label: dict[str, list[LaunchItem]] = {}
         self.items_by_program: dict[str, list[LaunchItem]] = {}
         for it in snap.launch_items:
-            self.items_by_label.setdefault(it.label, it)
+            self.items_by_label.setdefault(it.label, []).append(it)
             if it.program:
                 self.items_by_program.setdefault(it.program, []).append(it)
 
@@ -156,14 +162,23 @@ class LaunchClassifier:
 
     @staticmethod
     def _pick(items: list[LaunchItem], p: ProcessRecord) -> LaunchItem:
-        """Several plists may run the same program (one per user): prefer the scope of the process."""
+        """Several plists may run the same program (one per user, or a daemon and an agent): prefer the scope of
+        the process, then a plist that names its user, then a service for root and an agent for anyone else (a daemon
+        without `UserName` runs as root; macOS 26.5: cfprefsd has both, the agent runs per user, `_locationd` too)."""
         if len(items) > 1 and p.user:
             for it in items:
                 if it.scope == f"user:{p.user}":
                     return it
             if p.uid == 0:
                 for it in items:
-                    if it.scope == "system":
+                    if it.scope == "system" and MECHANISM_KIND.get(it.mechanism) != LAUNCH_AGENT:
+                        return it
+            else:
+                for it in items:
+                    if it.meta.get("UserName") == p.user:
+                        return it
+                for it in items:
+                    if MECHANISM_KIND.get(it.mechanism) == LAUNCH_AGENT:
                         return it
         return items[0]
 
@@ -174,9 +189,16 @@ class LaunchClassifier:
 
     def _from_label(self, p: ProcessRecord, parent_exe: str | None) -> LaunchInfo | None:
         label = p.label or ""
-        it = self.items_by_label.get(label)
-        if it:
-            return self._from_item(it, parent_exe, "pid-label")
+        items = self.items_by_label.get(label)
+        if not items and self.h.instance_suffix is not None:
+            items = self.items_by_label.get(self.h.instance_suffix.sub("", label))
+        if items:
+            # one label can be both a system daemon and a per-user agent (com.apple.lsd, cloudd, ctkd ...)
+            return self._from_item(self._pick(items, p), parent_exe, "pid-label")
+        # a label that names no plist (login-item helpers run as `<TeamID>.<bundle id>`) but an executable that is
+        # a launch item's program: that item
+        if p.exe and not self._generic_program(p.exe) and p.exe in self.items_by_program:
+            return self._from_item(self._pick(self.items_by_program[p.exe], p), parent_exe, "exe-match")
         if self.h.gui_label and self.h.gui_label.match(label):
             return LaunchInfo(LAUNCH_GUI_APP, mechanism="launchservices", label=label, parent_exe=parent_exe,
                               evidence="pid-label")

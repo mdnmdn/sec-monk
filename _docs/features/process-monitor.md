@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [process, macos, cli, collector, provenance]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-08
+verified: 2026-11-08
 code: src/secmonk/procmon.py, src/secmonk/collectors/process/, src/secmonk/cli.py
 related: [tech/collectors/process.md, decisions/0007-process-monitor.md, features/scan-and-findings.md, features/inventory-macos.md, plans/on-macos.md]
 ---
@@ -52,7 +52,9 @@ Options (`-o key=value`): `codesign=false`, `codesign_system=true` (also sealed 
 (`codesign --verify --strict`, needed for the `signature-invalid` flag; slow on big apps), `gatekeeper=true` (spctl, slow), `hash=false`, `binaries=false` (no Go/Rust/
 embedded-plist parsing), `max_binary_mb=128`, `pkgutil=false`, `quarantine_db=false`, `args=false` (do not read
 command lines), `include_system=false` (skip `/System/Library/Launch*`), `home=/Users/x` (homes to index),
-`hostname=...`, `root=<dir>`, `snapshot_out=<file>`.
+`hostname=...`, `root=<dir>`, `snapshot_out=<file>`, `btm=true` (root: read macOS Background Task Management with
+`sfltool dumpbtm` to know which login items / background helpers are turned off) or `btm=<file>` (a saved
+`sudo sfltool dumpbtm > file`, usable without root).
 
 ## Behaviour & rules
 

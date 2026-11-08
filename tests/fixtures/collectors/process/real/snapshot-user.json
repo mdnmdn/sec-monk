@@ -1,0 +1,437 @@
+{
+  "schema": "secmonk-process-snapshot/1",
+  "platform": "darwin",
+  "host": "mac",
+  "taken_at": "2026-11-08T15:38:41+00:00",
+  "processes": [
+    {
+      "pid": 1,
+      "ppid": 0,
+      "exe": "/sbin/launchd",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:40:48",
+      "args": [
+        "/sbin/launchd"
+      ],
+      "name": "launchd",
+      "label": null
+    },
+    {
+      "pid": 456,
+      "ppid": 1,
+      "exe": "/usr/libexec/logd",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:50:45",
+      "args": [
+        "/usr/libexec/logd"
+      ],
+      "name": "logd",
+      "label": null
+    },
+    {
+      "pid": 468,
+      "ppid": 1,
+      "exe": "/usr/libexec/configd",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:50:45",
+      "args": [
+        "/usr/libexec/configd"
+      ],
+      "name": "configd",
+      "label": null
+    },
+    {
+      "pid": 492,
+      "ppid": 1,
+      "exe": "/usr/sbin/syslogd",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:50:45",
+      "args": [
+        "/usr/sbin/syslogd"
+      ],
+      "name": "syslogd",
+      "label": null
+    },
+    {
+      "pid": 531,
+      "ppid": 1,
+      "exe": "/usr/sbin/cfprefsd",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:50:45",
+      "args": [
+        "/usr/sbin/cfprefsd"
+      ],
+      "name": "cfprefsd",
+      "label": null
+    },
+    {
+      "pid": 547,
+      "ppid": 1,
+      "exe": "/System/Library/CoreServices/liquiddetectiond.app/liquiddetectiond",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:50:46",
+      "args": [
+        "/System/Library/CoreServices/liquiddetectiond.app/liquiddetectiond"
+      ],
+      "name": "liquiddetectiond",
+      "label": null
+    },
+    {
+      "pid": 712,
+      "ppid": 1,
+      "exe": "/usr/sbin/cfprefsd",
+      "uid": 205,
+      "user": "_locationd",
+      "started": "2026-11-06T22:50:48",
+      "args": [
+        "/usr/sbin/cfprefsd"
+      ],
+      "name": "cfprefsd",
+      "label": null
+    },
+    {
+      "pid": 770,
+      "ppid": 1,
+      "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-06T22:50:49",
+      "args": [
+        "/Applications/Google"
+      ],
+      "name": "Google Chrome",
+      "label": "application.com.google.Chrome.4090165.345628630"
+    },
+    {
+      "pid": 905,
+      "ppid": 1,
+      "exe": "/System/Applications/Weather.app/Contents/PlugIns/WeatherWidget.appex/Contents/MacOS/WeatherWidget",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-06T22:50:54",
+      "args": [
+        "/System/Applications/Weather.app/Contents/PlugIns/WeatherWidget.appex/Contents/MacOS/WeatherWidget"
+      ],
+      "name": "WeatherWidget",
+      "label": null
+    },
+    {
+      "pid": 1751,
+      "ppid": 1,
+      "exe": "/System/Library/PrivateFrameworks/TrialServer.framework/Versions/A/XPCServices/TrialArchivingService.xpc/Contents/MacOS/TrialArchivingService",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-06T22:51:38",
+      "args": [
+        "/System/Library/PrivateFrameworks/TrialServer.framework/Versions/A/XPCServices/TrialArchivingService.xpc/Contents/MacOS/TrialArchivingService"
+      ],
+      "name": "TrialArchivingService",
+      "label": null
+    },
+    {
+      "pid": 1896,
+      "ppid": 1,
+      "exe": "/Library/Application Support/Objective Development/Little Snitch/Components/at.obdev.littlesnitch.daemon.bundle/Contents/MacOS/at.obdev.littlesnitch.daemon",
+      "uid": 0,
+      "user": "root",
+      "started": "2026-11-06T22:51:42",
+      "args": [
+        "/Library/Application"
+      ],
+      "name": "at.obdev.littlesnitch.daemon",
+      "label": null
+    },
+    {
+      "pid": 2529,
+      "ppid": 1,
+      "exe": "/Applications/Ollama.app/Contents/MacOS/Ollama",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-06T22:52:02",
+      "args": [
+        "/Applications/Ollama.app/Contents/MacOS/Ollama"
+      ],
+      "name": "Ollama",
+      "label": "application.com.electron.ollama.345754396.345754402.BBF5BE8F-F0F8-40E3-B2CF-4EA205C511CC"
+    },
+    {
+      "pid": 16134,
+      "ppid": 1,
+      "exe": "/Applications/Claude.app/Contents/MacOS/Claude",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T00:10:07",
+      "args": [
+        "/Applications/Claude.app/Contents/MacOS/Claude"
+      ],
+      "name": "Claude",
+      "label": "application.com.anthropic.claudefordesktop.345365221.345365228"
+    },
+    {
+      "pid": 41203,
+      "ppid": 1,
+      "exe": "/Applications/Claude.app/Contents/MacOS/Claude",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T13:55:01",
+      "args": [
+        "/Applications/Claude.app/Contents/MacOS/Claude"
+      ],
+      "name": "Claude",
+      "label": "application.com.anthropic.claudefordesktop.345365221.345365228.AD00238B-D6BC-4DFF-8D48-EE49E25FDCA8"
+    },
+    {
+      "pid": 44169,
+      "ppid": 1,
+      "exe": "/Applications/Warp.app/Contents/MacOS/stable",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T14:12:54",
+      "args": [
+        "/Applications/Warp.app/Contents/MacOS/stable"
+      ],
+      "name": "stable",
+      "label": "application.dev.warp.Warp-Stable.345636743.345636748"
+    },
+    {
+      "pid": 44191,
+      "ppid": 44169,
+      "exe": "/Applications/Warp.app/Contents/MacOS/stable",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T14:12:59",
+      "args": [
+        "/Applications/Warp.app/Contents/MacOS/stable"
+      ],
+      "name": "stable",
+      "label": null
+    },
+    {
+      "pid": 44286,
+      "ppid": 44191,
+      "exe": "/opt/homebrew/Cellar/zsh/5.9/bin/zsh",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T14:13:00",
+      "args": [
+        "-zsh"
+      ],
+      "name": "-zsh",
+      "label": null
+    },
+    {
+      "pid": 45376,
+      "ppid": 44286,
+      "exe": "/opt/homebrew/Cellar/uv/0.6.14/bin/uv",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T14:13:06",
+      "args": [
+        "uv"
+      ],
+      "name": "uv",
+      "label": null
+    },
+    {
+      "pid": 45378,
+      "ppid": 45376,
+      "exe": "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python",
+      "uid": 501,
+      "user": "alice",
+      "started": "2026-11-07T14:13:06",
+      "args": [
+        "/opt/homebrew/Cellar/python@3.12/3.12.10/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python"
+      ],
+      "name": "Python",
+      "label": null
+    }
+  ],
+  "launch_items": [
+    {
+      "mechanism": "launchd-daemon",
+      "label": "at.obdev.littlesnitch.daemon",
+      "program": "/Library/Application Support/Objective Development/Little Snitch/Components/at.obdev.littlesnitch.daemon.bundle/Contents/MacOS/at.obdev.littlesnitch.daemon",
+      "args": [],
+      "source": "/Library/LaunchDaemons/at.obdev.littlesnitch.daemon.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": null,
+      "disabled": null,
+      "meta": {
+        "AssociatedBundleIdentifiers": "at.obdev.littlesnitch",
+        "MachServices": [
+          "at.obdev.littlesnitch.daemon"
+        ]
+      }
+    },
+    {
+      "mechanism": "launchd-daemon",
+      "label": "com.docker.socket",
+      "program": "/Library/PrivilegedHelperTools/com.docker.socket",
+      "args": [
+        "/Users/alice/.docker/run/docker.sock",
+        "/var/run/docker.sock"
+      ],
+      "source": "/Library/LaunchDaemons/com.docker.socket.plist",
+      "scope": "system",
+      "run_at_load": true,
+      "keep_alive": false,
+      "disabled": null,
+      "meta": {}
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.cfprefsd.xpc.daemon",
+      "program": "/usr/sbin/cfprefsd",
+      "args": [
+        "daemon"
+      ],
+      "source": "/System/Library/LaunchDaemons/com.apple.cfprefsd.xpc.daemon.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": null,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.cfprefsd.daemon"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.configd",
+      "program": "/usr/libexec/configd",
+      "args": [],
+      "source": "/System/Library/LaunchDaemons/com.apple.configd.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": true,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.SystemConfiguration.DNSConfiguration",
+          "com.apple.SystemConfiguration.IPMonitorControl",
+          "com.apple.SystemConfiguration.NetworkCategoryManager",
+          "com.apple.SystemConfiguration.NetworkInformation",
+          "com.apple.SystemConfiguration.PPPController",
+          "com.apple.SystemConfiguration.PPPController-priv",
+          "com.apple.SystemConfiguration.configd",
+          "com.apple.SystemConfiguration.configd.watchdog",
+          "com.apple.network.EAPOLController",
+          "com.apple.network.IPConfiguration"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.liquiddetectiond",
+      "program": "/System/Library/CoreServices/liquiddetectiond.app/liquiddetectiond",
+      "args": [],
+      "source": "/System/Library/LaunchDaemons/com.apple.liquiddetectiond.plist",
+      "scope": "system",
+      "run_at_load": false,
+      "keep_alive": false,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.ldcm.ldcm-server"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.logd",
+      "program": "/usr/libexec/logd",
+      "args": [],
+      "source": "/System/Library/LaunchDaemons/com.apple.logd.plist",
+      "scope": "system",
+      "run_at_load": true,
+      "keep_alive": true,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.logd",
+          "com.apple.logd.admin",
+          "com.apple.logd.cachedelete",
+          "com.apple.logd.events",
+          "com.apple.logd.realtime",
+          "com.apple.logd.watchdog"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-daemon",
+      "label": "com.apple.syslogd",
+      "program": "/usr/sbin/syslogd",
+      "args": [],
+      "source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": true,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.system.logger"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-agent",
+      "label": "com.apple.cfprefsd.xpc.agent",
+      "program": "/usr/sbin/cfprefsd",
+      "args": [
+        "agent"
+      ],
+      "source": "/System/Library/LaunchAgents/com.apple.cfprefsd.xpc.agent.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": null,
+      "disabled": null,
+      "meta": {
+        "MachServices": [
+          "com.apple.cfprefsd.agent"
+        ],
+        "os_owned": true
+      }
+    },
+    {
+      "mechanism": "launchd-system-agent",
+      "label": "com.apple.cvmsCompAgent_arm64",
+      "program": "/System/Library/Frameworks/OpenGLES.framework/CVMCompiler",
+      "args": [],
+      "source": "/System/Library/LaunchAgents/com.apple.cvmsCompAgent_arm64.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": null,
+      "disabled": null,
+      "meta": {
+        "UserName": "mobile",
+        "MachServices": [
+          "com.apple.cvmsCompAgent_arm64"
+        ],
+        "os_owned": true
+      }
+    }
+  ],
+  "os": {
+    "name": "macOS",
+    "version": "26.5",
+    "build": "25F71"
+  },
+  "executables": {},
+  "warnings": [
+    "not running as root: other users' process paths and system launchd labels may be missing",
+    "cannot read launchd plist /Library/LaunchDaemons/com.microsoft.teams.TeamsUpdaterDaemon.plist: [Errno 13] Permission denied: '/Library/LaunchDaemons/com.microsoft.teams.TeamsUpdaterDaemon.plist'"
+  ]
+}

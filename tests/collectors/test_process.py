@@ -6,8 +6,11 @@ time from the macOS fixture root, the process overlay and the Go fixture binary.
 
 from __future__ import annotations
 
+import errno
 import json
+import os
 import plistlib
+import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -407,6 +410,25 @@ def test_cli_procs_json_with_findings(root, mirror):
         assert c.execute("SELECT COUNT(*) FROM asset").fetchone()[0] == 0
 
 
+def test_cli_procs_under_sudo_with_foreign_default_db(root, monkeypatch):
+    """`sudo secmonk procs` on macOS keeps HOME: the default DB folder belongs to the invoking user (2026-11-08)."""
+    from secmonk import paths
+    from secmonk.db import connect as db_connect
+
+    db_connect(None).close()                                  # the user's default database exists
+    monkeypatch.setattr(paths.os, "getuid", lambda: 0)        # ... and we are now someone else (root)
+    monkeypatch.setattr("secmonk.cli.os.geteuid", lambda: 0, raising=False)
+    monkeypatch.setenv("SUDO_USER", "alice")
+    r = CliRunner().invoke(app, ["procs", str(SNAP), "-o", f"root={root}", "-f", "json"])
+    assert r.exit_code == 0, r.output                         # processes still listed, without findings
+    err = " ".join(r.stderr.split())                          # rich wraps long lines
+    assert "showing processes without findings" in err and "sudo -H" in err
+    assert json.loads(r.stdout)["processes"]
+    r = CliRunner().invoke(app, ["procs", str(SNAP), "-o", f"root={root}", "--save"])
+    assert r.exit_code == 1 and "not owned by the current user" in " ".join(r.stderr.split())
+    assert isinstance(r.exception, SystemExit)                # a clean exit, not a PermissionError traceback
+
+
 def test_cli_procs_save_suspicious_and_table(root, mirror):
     r = CliRunner().invoke(app, ["procs", str(SNAP), "-o", f"root={root}", "--db", str(mirror), "--save",
                                  "--suspicious", "--flat", "-f", "json"])
@@ -470,6 +492,216 @@ def test_generic_program_plist_does_not_claim_every_shell():
     assert shell.kind == "child" and shell.label is None                      # not "service (com.mdm.helper)"
     assert lc.classify(snap.processes[3]).kind == "interactive"
     assert lc.classify(snap.processes[4]).label == "com.mdm.helper"          # the pid label still attributes it
+
+
+REAL_SNAP = PFIX / "real" / "snapshot-user.json"
+
+
+def test_real_user_snapshot_launch_classification(tmp_path):
+    """Trimmed live snapshot (macOS 26.5, arm64, non-root): see tests/fixtures/collectors/process/real/README.md."""
+    from secmonk.collectors.process.collector import missing_launch_programs
+
+    snap = snapfile.load(REAL_SNAP)
+    assert snap.os == {"name": "macOS", "version": "26.5", "build": "25F71"}
+    lc = LaunchClassifier(snap)
+    got = {p.pid: lc.classify(p) for p in snap.processes}
+    by_exe = {p.pid: p.exe for p in snap.processes}
+    assert got[1].kind == "kernel"
+    assert (got[456].kind, got[456].label) == ("service", "com.apple.logd")
+    assert (got[1896].kind, got[1896].label) == ("service", "at.obdev.littlesnitch.daemon")
+    assert got[531].mechanism == "launchd-system-daemon"                     # cfprefsd as root: the daemon
+    assert got[712].mechanism == "launchd-system-agent"                      # cfprefsd as _locationd: the agent
+    for pid in (770, 2529, 16134, 41203, 44169):                             # incl. the .<UUID> label form
+        assert got[pid].kind == "gui-app", by_exe[pid]
+    assert got[905].kind == got[1751].kind == "xpc-service"                  # .appex widget, .xpc service
+    uv = got[45376]
+    assert (uv.kind, uv.mechanism, uv.via) == ("interactive", "terminal", "/Applications/Warp.app/Contents/MacOS/stable")
+    os_owned = {i.label for i in snap.launch_items if i.meta.get("os_owned")}
+    assert "com.apple.cvmsCompAgent_arm64" in os_owned and "com.docker.socket" not in os_owned
+    insp = pm.MacOSInspector(snap, tmp_path, {}, [])                         # empty root: every program missing
+    assert {m["label"] for m in missing_launch_programs(snap, insp)} == {"at.obdev.littlesnitch.daemon",
+                                                                         "com.docker.socket"}
+
+
+def test_real_root_snapshot_launch_classification():
+    """Trimmed live root snapshot (same Mac, same day): system labels plus each user's domain (`launchctl asuser`)."""
+    snap = snapfile.load(PFIX / "real" / "snapshot-root.json")
+    assert not snap.warnings
+    lc = LaunchClassifier(snap)
+    got = {p.pid: lc.classify(p) for p in snap.processes}
+    assert (got[529].kind, got[529].label) == ("service", "com.apple.WindowServer")      # only labelled as root
+    assert (got[895].kind, got[895].label) == ("service", "com.apple.adid")
+    assert (got[539].kind, got[539].mechanism) == ("service", "launchd-system-daemon")   # lsd as root
+    assert (got[743].kind, got[743].mechanism) == ("agent", "launchd-system-agent")      # lsd as the user
+    assert got[26682].kind == "service" and got[26683].kind == "agent"                   # XProtect daemon / agent
+    assert got[3225].evidence == "pid-label" and got[3225].kind == "agent"               # user-domain label
+    for pid in (770, 2529, 16134, 41203, 44169):
+        assert got[pid].kind == "gui-app"
+    assert got[45376].kind == "interactive"
+
+
+def _app_tree(base: Path) -> Path:
+    """Apps shipping launch definitions the way SMAppService / SMLoginItemSetEnabled apps do (layout as on macOS 26.5)."""
+    def plist(path: Path, data: dict) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(plistlib.dumps(data))
+
+    app = base / "Applications/Example App.app/Contents"
+    plist(app / "Info.plist", {"CFBundleIdentifier": "com.example.app", "CFBundleShortVersionString": "1.0"})
+    plist(app / "Library/LaunchAgents/com.example.app.agent.plist",
+          {"Label": "com.example.app.agent", "BundleProgram": "Contents/Library/LaunchAgents/agent", "RunAtLoad": True})
+    plist(app / "Library/LaunchDaemons/com.example.app.helper.plist",       # relative ProgramArguments[0]
+          {"Label": "com.example.app.helper", "ProgramArguments": ["Contents/MacOS/helper", "--daemon"]})
+    plist(app / "Library/LaunchAgents/com.example.app.evil.plist",
+          {"Label": "com.example.app.evil", "BundleProgram": "../../../../../usr/bin/evil"})
+    plist(app / "Library/LoginItems/Example Helper.app/Contents/Info.plist",
+          {"CFBundleIdentifier": "ABCDE12345.com.example.helper", "CFBundleExecutable": "Example Helper"})
+    nested = base / "Applications/Vendor/Other.app/Contents"                 # one folder level down
+    plist(nested / "Info.plist", {"CFBundleIdentifier": "com.vendor.other"})
+    plist(nested / "Library/LoginItems/OtherLauncher.app/Contents/Info.plist",
+          {"CFBundleIdentifier": "com.vendor.other.launcher", "CFBundleExecutable": "OtherLauncher"})
+    home_app = base / "Users/alice/Applications/Mine.app/Contents"
+    plist(home_app / "Library/LaunchAgents/com.mine.agent.plist", {"Label": "com.mine.agent", "Program": "/opt/mine"})
+    (base / "Applications/Link.app").symlink_to("Example App.app")           # walked once, via the target
+    return base
+
+
+def test_app_bundle_launch_items(tmp_path):
+    root = _app_tree(tmp_path)
+    warnings: list[str] = []
+    items = pm.index_app_launch_items(root, [root / "Users/alice"], warnings)
+    by = {i.label: i for i in items}
+    assert not warnings and len(items) == len(by) == 6
+    agent = by["com.example.app.agent"]
+    assert (agent.mechanism, agent.scope, agent.program) == (
+        "launchd-app-agent", "system", "/Applications/Example App.app/Contents/Library/LaunchAgents/agent")
+    assert agent.meta["host_app"] == "/Applications/Example App.app"
+    assert by["com.example.app.helper"].mechanism == "launchd-app-daemon"
+    assert by["com.example.app.helper"].program == "/Applications/Example App.app/Contents/MacOS/helper"
+    assert by["com.example.app.evil"].program is None                        # `..` out of the bundle
+    li = by["ABCDE12345.com.example.helper"]
+    li_bundle = "/Applications/Example App.app/Contents/Library/LoginItems/Example Helper.app"
+    assert (li.mechanism, li.program, li.source) == ("login-item", f"{li_bundle}/Contents/MacOS/Example Helper", li_bundle)
+    assert by["com.vendor.other.launcher"].meta["host_app"] == "/Applications/Vendor/Other.app"
+    assert by["com.mine.agent"].scope == "user:alice"
+    # the login-item helper runs under a `<TeamID>.<id>` label that is no plist: attributed by its executable
+    snap = Snapshot("darwin", "h", "", [ProcessRecord(1, 0, "/sbin/launchd", uid=0),
+                                        ProcessRecord(40, 1, li.program, uid=501, user="alice", label="XYZ.other")],
+                    launch_items=items)
+    info = LaunchClassifier(snap).classify(snap.processes[1])
+    assert (info.kind, info.evidence, info.label) == ("login-item", "exe-match", "ABCDE12345.com.example.helper")
+
+
+def test_parse_btm_is_tolerant():
+    recs = pm.parse_btm((PFIX / "sfltool-dumpbtm.txt").read_text())
+    assert len(recs) == 8 and {r["uid"] for r in recs} == {-2, 501}
+    by = {r["id"]: r for r in recs}
+    up = by["com.example.updater"]
+    assert (up["type"], up["enabled"], up["allowed"]) == ("legacy daemon", True, False)
+    assert up["path"] == "/Library/LaunchDaemons/com.example.updater.plist"
+    helper = by["ABCDE12345.com.example.helper"]                              # relative to its parent app record
+    assert helper["path"] == "/Applications/Example App.app/Contents/Library/LoginItems/Example Helper.app"
+    assert helper["program"] is None and (helper["enabled"], helper["allowed"]) == (True, True)
+    assert by["com.example.app.agent"]["program"] == "/Applications/Example App.app/Contents/Library/LaunchAgents/agent"
+    assert "some future field" not in by["com.example.app.agent"]
+    new = by["com.example.new"]
+    assert new["type"] == "curious new type" and new["path"] is None          # `..` out of the parent app
+    assert by["Unknown Developer"]["type"] == "developer"
+    assert pm.parse_btm("garbage\n  Type: agent\n") == []                      # fields outside a record: ignored
+    assert pm.parse_btm(" #1:\n   Type: agent (0x8)\n")[0]["uid"] is None    # no UID header
+
+
+def test_apply_btm(tmp_path):
+    root = _app_tree(tmp_path)
+    (root / "Library/LaunchDaemons").mkdir(parents=True)
+    (root / "Library/LaunchDaemons/com.example.updater.plist").write_bytes(plistlib.dumps(
+        {"Label": "com.example.updater", "Program": "/Library/Example/Updater.app/Contents/MacOS/Updater"}))
+    items, _ = pm.index_launch_items(root, [root / "Users/alice"], include_system=False)
+    n_before = len(items)
+    recs = pm.parse_btm((PFIX / "sfltool-dumpbtm.txt").read_text())
+    matched, added = pm.apply_btm(items, recs, lambda t: pm._btm_addable(root / t.lstrip("/")))
+    by = {i.label: i for i in items}
+    assert by["com.example.updater"].disabled is True                        # disallowed in Login Items
+    assert by["com.example.updater"].meta["btm"] == {"type": "legacy daemon", "enabled": True, "allowed": False}
+    assert by["ABCDE12345.com.example.helper"].meta["btm"]["allowed"] is True
+    assert by["ABCDE12345.com.example.helper"].disabled is None              # running is allowed: unchanged
+    assert by["com.example.app.agent"].disabled is True
+    assert "com.example.gone" not in by and added == 0 and len(items) == n_before   # stale record not added
+    assert matched == 3                                                      # quicklook / app / developer ignored
+    # without an existence check (e.g. a dump analysed on its own) BTM-only records are added
+    items2: list[LaunchItem] = []
+    _, added2 = pm.apply_btm(items2, recs)
+    assert added2 == 4 and all(i.meta["from_btm"] for i in items2)
+    assert {i.scope for i in items2} == {"system", "uid:501"}
+
+
+def test_btm_option_failures(tmp_path, monkeypatch):
+    w: list[str] = []
+    monkeypatch.setattr(pm.os, "geteuid", lambda: 501)
+    assert pm.btm_records(True, w) is None and "needs root" in w[-1]
+    assert pm.btm_records(str(tmp_path / "nope.txt"), w) is None and "cannot read BTM dump" in w[-1]
+    (tmp_path / "x.txt").write_text("not a dump\n")
+    assert pm.btm_records(str(tmp_path / "x.txt"), w) == [] and "no records" in w[-1]
+    monkeypatch.setattr(pm.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(pm, "_run", lambda cmd, timeout=30: subprocess.CompletedProcess(
+        cmd, 0, (PFIX / "sfltool-dumpbtm.txt").read_text(), ""))
+    assert len(pm.btm_records(True, w)) == 8
+
+
+def test_gui_label_with_uuid_suffix():
+    # real labels from macOS 26.5 launchctl list (the UUID form for apps relaunched by the system)
+    snap = Snapshot("darwin", "h", "", [
+        ProcessRecord(1, 0, "/sbin/launchd", uid=0),
+        ProcessRecord(10, 1, "/Applications/Claude.app/Contents/MacOS/Claude", uid=501,
+                      label="application.com.anthropic.claudefordesktop.345365221.345365228"),
+        ProcessRecord(11, 1, "/Applications/Ollama.app/Contents/MacOS/Ollama", uid=501,
+                      label="application.com.electron.ollama.345754396.345754402.BBF5BE8F-F0F8-40E3-B2CF-4EA205C511CC"),
+        ProcessRecord(12, 1, "/usr/local/bin/tool", uid=501, label="application.com.example.1.2.not-a-uuid"),
+        # widget extension started by launchd without a label (live macOS 26.5: 49 such processes)
+        ProcessRecord(13, 1, "/System/Applications/Weather.app/Contents/PlugIns/WeatherWidget.appex/Contents/MacOS/"
+                             "WeatherWidget", uid=501),
+    ])
+    lc = LaunchClassifier(snap)
+    assert [lc.classify(p).kind for p in snap.processes[1:]] == ["gui-app", "gui-app", "agent", "xpc-service"]
+
+
+def test_label_shared_by_daemon_and_agent_and_instance_labels():
+    # macOS 26.5: com.apple.lsd is both /System/Library/LaunchDaemons and LaunchAgents; instance jobs carry .<UUID>
+    items = [LaunchItem("launchd-system-daemon", "com.apple.lsd", "/usr/libexec/lsd", scope="system"),
+             LaunchItem("launchd-system-agent", "com.apple.lsd", "/usr/libexec/lsd", scope="system"),
+             LaunchItem("launchd-system-agent", "com.apple.loginwindow", "/x/loginwindow", scope="system")]
+    snap = Snapshot("darwin", "h", "", [
+        ProcessRecord(1, 0, "/sbin/launchd", uid=0),
+        ProcessRecord(10, 1, "/usr/libexec/lsd", uid=0, user="root", label="com.apple.lsd"),
+        ProcessRecord(11, 1, "/usr/libexec/lsd", uid=501, user="alice", label="com.apple.lsd"),
+        ProcessRecord(12, 1, "/x/loginwindow", uid=501, user="alice",
+                      label="com.apple.loginwindow.15693B03-4006-43BB-9907-29AEEBE114CB"),
+    ], launch_items=items)
+    lc = LaunchClassifier(snap)
+    got = [lc.classify(p) for p in snap.processes[1:]]
+    assert [(i.kind, i.mechanism) for i in got[:2]] == [("service", "launchd-system-daemon"),
+                                                        ("agent", "launchd-system-agent")]
+    assert (got[2].label, got[2].evidence) == ("com.apple.loginwindow", "pid-label")
+
+
+def test_root_snapshot_reads_user_domain_labels(monkeypatch):
+    calls = []
+
+    def fake_run(cmd, timeout=30):
+        calls.append(cmd)
+        out = "PID\tStatus\tLabel\n300\t0\tapplication.com.example.App.1.2\n" if "asuser" in cmd else ""
+        return subprocess.CompletedProcess(cmd, 0, out, "")
+
+    monkeypatch.setattr(pm, "_run", fake_run)
+    procs = [ProcessRecord(1, 0, "/sbin/launchd", uid=0, label=None),
+             ProcessRecord(95, 1, "/usr/sbin/syslogd", uid=0, label="com.apple.syslogd"),
+             ProcessRecord(300, 1, "/Applications/App.app/Contents/MacOS/App", uid=501, label=None),
+             ProcessRecord(310, 1, "/usr/libexec/locationd", uid=205, label=None)]   # service account: skipped
+    warnings: list[str] = []
+    pm._add_user_domain_labels(procs, warnings)
+    assert calls == [["launchctl", "asuser", "501", "launchctl", "list"]]
+    assert procs[2].label == "application.com.example.App.1.2" and procs[1].label == "com.apple.syslogd"
+    assert not warnings
 
 
 def test_shell_spawned_by_daemon_is_a_child_not_interactive():
@@ -573,3 +805,187 @@ def test_cli_watch_save_keeps_the_asset(root, mirror, monkeypatch):
     assert {"Slack", "curl", "golang.org/x/text"} <= names
     assert c.execute("SELECT COUNT(*) FROM finding WHERE status='open'").fetchone()[0] == 1
     c.close()
+
+
+# ----------------------------------------------------------------------------- restricted host (EPERM)
+# Observed on macOS 26.5 under a host restriction (2026-11-08): exec of `ps` -> PermissionError,
+# `launchctl list` -> exit 1, listing /Users, /Library/LaunchDaemons, ~/Library/LaunchAgents -> EPERM.
+
+def _eperm(path) -> PermissionError:
+    return PermissionError(errno.EPERM, "Operation not permitted", str(path))
+
+
+def test_ps_not_executable_is_a_clear_collector_error(root, monkeypatch):
+    def denied(cmd, timeout=30):
+        raise _eperm(cmd[0])
+
+    monkeypatch.setattr(pm, "_run", denied)
+    with pytest.raises(RuntimeError, match=r"ps failed: PermissionError.*denied on this host.*snapshot"):
+        pm.take_snapshot(root, {})
+
+
+def test_cli_procs_ps_denied_exits_1_without_traceback(monkeypatch):
+    monkeypatch.setattr("secmonk.collectors.process.collector.current_platform", lambda: "darwin")
+    monkeypatch.setattr(pm, "_run", lambda cmd, timeout=30: (_ for _ in ()).throw(_eperm(cmd[0])))
+    res = CliRunner().invoke(app, ["procs", "--no-match", "-f", "json"])
+    assert res.exit_code == 1
+    assert "ps failed: PermissionError" in res.output and "Traceback" not in res.output
+
+
+def test_snapshot_degrades_when_launchctl_and_dirs_are_denied(root, monkeypatch):
+    outputs = {"comm=": (PFIX / "ps.txt").read_text(), "args=": (PFIX / "ps-args.txt").read_text()}
+
+    def fake_run(cmd, timeout=30):
+        if cmd[0] == "launchctl":
+            raise _eperm("launchctl")
+        return subprocess.CompletedProcess(cmd, 0, outputs[next(k for k in outputs if k in cmd[-1])], "")
+
+    denied = {str(root / "Users"), str(root / "Library/LaunchDaemons")}
+    real_iterdir = Path.iterdir
+
+    def iterdir(self):
+        if str(self) in denied:
+            raise _eperm(self)
+        return real_iterdir(self)
+
+    monkeypatch.setattr(pm, "_run", fake_run)
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+    snap = pm.take_snapshot(root, {"hostname": "mac1"})
+    assert len(snap.processes) == 5 and not any(p.label for p in snap.processes)
+    w = "\n".join(snap.warnings)
+    assert "launchctl list failed (PermissionError" in w
+    assert "cannot list /Users: permission denied" in w and "Full Disk Access" in w
+    assert "cannot list /Library/LaunchDaemons: permission denied" in w
+    labels = {i.label for i in snap.launch_items}
+    assert "com.apple.syslogd" in labels and "com.example.updater" not in labels   # readable dirs still indexed
+
+
+def test_home_dirs_fall_back_to_own_home_on_live_root(monkeypatch):
+    real_iterdir = Path.iterdir
+
+    def iterdir(self):
+        if str(self) == "/Users":
+            raise _eperm(self)
+        return real_iterdir(self)
+
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+    warnings: list[str] = []
+    homes = pm.home_dirs(Path("/"), None, warnings)
+    assert warnings and warnings[0].startswith("cannot list /Users:")
+    assert homes == ([Path.home()] if Path.home().is_dir() else [])
+
+
+def test_inspector_denied_command_warns_once_and_keeps_going(root, monkeypatch):
+    monkeypatch.setattr(pm, "_run", lambda cmd, timeout=30: (_ for _ in ()).throw(_eperm(cmd[0])))
+    snap = snapfile.load(SNAP)
+    snap.executables = {}
+    warnings: list[str] = []
+    insp = pm.MacOSInspector(snap, root, {}, warnings)
+    insp.live = True                                   # as on a Mac: codesign / pkgutil would run
+    exes = ["/Applications/Slack.app/Contents/MacOS/Slack", "/Library/PrivilegedHelperTools/com.example.updater",
+            "/opt/homebrew/Cellar/curl/8.7.1/bin/curl"]
+    facts = [insp.facts(e) for e in exes]
+    assert all(f.get("exists") and "signature" not in f for f in facts)
+    assert [w for w in warnings if w.startswith("cannot run codesign: PermissionError")] != []
+    assert len([w for w in warnings if w.startswith("cannot run codesign")]) == 1
+
+
+def test_denied_executable_is_not_reported_missing(root, monkeypatch):
+    exe = "/Applications/Slack.app/Contents/MacOS/Slack"
+    real_lstat = Path.lstat
+
+    def lstat(self):
+        if str(self).endswith(exe):
+            raise _eperm(self)
+        return real_lstat(self)
+
+    monkeypatch.setattr(Path, "lstat", lstat)
+    snap = snapfile.load(SNAP)
+    snap.executables = {}
+    warnings: list[str] = []
+    insp = pm.MacOSInspector(snap, root, {}, warnings)
+    assert insp.facts(exe) == {}                       # unknown, not {"exists": False} -> no exe-missing flag
+    assert len(warnings) == 1 and "permission denied" in warnings[0]
+
+
+def test_denied_bundle_is_identified_by_path_only(root, monkeypatch):
+    real_open = os.open
+
+    def fake_open(path, *a, **k):
+        if ".app/Contents/Info.plist" in str(path):
+            raise _eperm(path)
+        return real_open(path, *a, **k)
+
+    monkeypatch.setattr(os, "open", fake_open)
+    snap = snapfile.load(SNAP)
+    warnings: list[str] = []
+    insp = pm.MacOSInspector(snap, root, {}, warnings)
+    for exe in ("/Applications/Slack.app/Contents/MacOS/Slack", "/Applications/Firefox.app/Contents/MacOS/firefox"):
+        res = insp.resolve(exe)
+        assert res.method == "path-only" and res.primary.version is None
+    assert insp.resolve("/Applications/Slack.app/Contents/MacOS/Slack").primary.name == "Slack"
+    assert len([w for w in warnings if "app bundles" in w]) == 1
+
+
+def test_non_app_bundle_wrappers_are_identified(root):
+    # live macOS 26.5: Little Snitch's daemon `.bundle`, an OBS `.systemextension` (synthetic plists, real layout)
+    def bundle(rel: str, bid: str, ver: str) -> str:
+        c = root / rel / "Contents"
+        (c / "MacOS").mkdir(parents=True)
+        (c / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": bid, "CFBundleShortVersionString": ver}))
+        exe = c / "MacOS" / bid
+        exe.write_bytes(b"\xcf\xfa\xed\xfe")
+        return "/" + str(exe.relative_to(root))
+
+    ls = bundle("Library/Application Support/Little Snitch/at.obdev.littlesnitch.daemon.bundle",
+                "at.obdev.littlesnitch.daemon", "5.8")
+    ext = bundle("Library/SystemExtensions/0000/com.example.camera.systemextension", "com.example.camera", "30.1.2")
+    bare = root / "Library/Thing.bundle/Contents/MacOS"
+    bare.mkdir(parents=True)
+    (bare / "thing").write_bytes(b"\xcf\xfa\xed\xfe")
+    insp = pm.MacOSInspector(snapfile.load(SNAP), root, {}, [])
+    for exe, ver in ((ls, "5.8"), (ext, "30.1.2")):
+        res = insp.resolve(exe)
+        assert (res.method, res.primary.version) == ("app-bundle", ver)
+    assert insp.resolve("/Library/Thing.bundle/Contents/MacOS/thing").method != "app-bundle"   # no Info.plist
+
+
+def test_os_owned_launch_item_with_missing_program_is_not_reported(tmp_path):
+    # macOS 26.5: e.g. com.apple.cvmsCompAgent_arm64 -> OpenGLES.framework/CVMCompiler, absent on this hardware
+    from secmonk.collectors.process.collector import missing_launch_programs
+
+    for rel, label in (("System/Library/LaunchAgents", "com.apple.dormant"), ("Library/LaunchDaemons", "com.example.gone")):
+        (tmp_path / rel).mkdir(parents=True)
+        (tmp_path / rel / f"{label}.plist").write_bytes(plistlib.dumps({"Label": label, "Program": f"/opt/{label}"}))
+    items, _ = pm.index_launch_items(tmp_path, [])
+    assert {i.label: i.meta.get("os_owned", False) for i in items} == {"com.apple.dormant": True, "com.example.gone": False}
+    snap = Snapshot(platform="darwin/arm64", host="h", taken_at="t", processes=[], launch_items=items)
+    insp = pm.MacOSInspector(snap, tmp_path, {}, [])
+    assert [m["label"] for m in missing_launch_programs(snap, insp)] == ["com.example.gone"]
+
+
+def test_bundle_without_info_plist(root):
+    # macOS 26.5: /System/Library/CoreServices/liquiddetectiond.app has the binary at the top, no Info.plist
+    sysapp = root / "System/Library/CoreServices/liquiddetectiond.app"
+    sysapp.mkdir(parents=True)
+    (sysapp / "liquiddetectiond").write_bytes(b"\xcf\xfa\xed\xfe")
+    other = root / "Applications/Empty.app/Contents/MacOS"
+    other.mkdir(parents=True)
+    (other / "Empty").write_bytes(b"\xcf\xfa\xed\xfe")
+    warnings: list[str] = []
+    insp = pm.MacOSInspector(snapfile.load(SNAP), root, {}, warnings)
+    assert insp.resolve("/System/Library/CoreServices/liquiddetectiond.app/liquiddetectiond").method == "os"
+    res = insp.resolve("/Applications/Empty.app/Contents/MacOS/Empty")
+    assert (res.method, res.primary.name) == ("path-only", "Empty")
+    assert not [w for w in warnings if "Info.plist" in w]
+
+
+def test_real_unquoted_launchd_plist_is_indexed(tmp_path):
+    """Apple ships com.apple.familycircled.plist with an unquoted XML prolog (macOS 26.5, real fixture)."""
+    d = tmp_path / "System/Library/LaunchAgents"
+    d.mkdir(parents=True)
+    shutil.copy(FIX / "collectors/macos/real/launchd/com.apple.familycircled.plist", d)
+    items, warnings = pm.index_launch_items(tmp_path, [])
+    assert warnings == []
+    assert [(i.label, i.mechanism) for i in items] == [("com.apple.familycircled", "launchd-system-agent")]
+    assert items[0].program.endswith("/FamilyCircle.framework/Versions/A/Resources/familycircled")

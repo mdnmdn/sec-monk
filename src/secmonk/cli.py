@@ -12,6 +12,7 @@ import csv
 import io
 import json
 import logging
+import os
 import re
 import sqlite3
 import time
@@ -149,16 +150,40 @@ def _open(db: Path | None, *, create: bool = False) -> Iterator[sqlite3.Connecti
     p = _db_path(db)
     if not create and not p.exists():
         raise _fail(f"no database at {p} — run `secmonk sync …` first")
-    if create:
-        if db is None:
-            paths.ensure_private_dir(p.parent)
-        else:
-            p.parent.mkdir(parents=True, exist_ok=True)
-    conn = dbm.connect(p)
+    try:
+        if create:
+            if db is None:
+                paths.ensure_private_dir(p.parent)
+            else:
+                p.parent.mkdir(parents=True, exist_ok=True)
+        conn = dbm.connect(p)
+    except PermissionError as e:
+        raise _fail(_denied_db_hint(e)) from None
     try:
         yield conn
     finally:
         conn.close()
+
+
+def _denied_db_hint(e: PermissionError) -> str:
+    msg = f"cannot use the database: {e}"
+    if hasattr(os, "geteuid") and os.geteuid() == 0 and os.environ.get("SUDO_USER"):
+        msg += (" — under sudo HOME still points to the invoking user's state; use `sudo -H` (root's own state), "
+                "`--db <path>`, or take a snapshot as root (`--no-match --snapshot-out snap.json`) and analyse it as "
+                "yourself (`secmonk procs snap.json`)")
+    return msg
+
+
+def _db_denied(db: Path | None) -> PermissionError | None:
+    """The default database folder exists but belongs to someone else (typically root running under `sudo`)."""
+    p = _db_path(db)
+    if db is not None or p != paths.default_db_path():
+        return None
+    try:
+        paths.ensure_private_dir(p.parent)
+    except PermissionError as e:
+        return e
+    return None
 
 
 def _require_asset(conn: sqlite3.Connection, asset: str) -> None:
@@ -689,6 +714,9 @@ def procs(
     if match_ and not have_db and not save:
         _info(f"[dim]no database at {_e(_db_path(db))}: showing processes without findings "
               "(run `secmonk sync …` first)[/]", fmt)
+    if match_ and have_db and not save and (denied := _db_denied(db)) is not None:
+        _info(f"[yellow]{_e(_denied_db_hint(denied))}: showing processes without findings[/]", fmt)
+        have_db = False
     use_db = save or (match_ and have_db)
     with contextlib.ExitStack() as stack:
         conn = stack.enter_context(_open(db, create=save)) if use_db else None
