@@ -1,0 +1,19 @@
+package-id: com.apple.pkg.CLTools_Executables
+version: 26.6.0.0.1781586589
+volume: /
+location: /
+install-time: 1789252861
+
+package-id: com.apple.pkg.MobileAssets
+version: 1.0.0.0.1645860813
+volume: /
+location: /
+install-time: 1680027268
+
+package-id: com.apple.pkg.XProtectPlistConfigData_10_15.16U4423
+version: 5338.1.1775522733
+volume: /
+location: /
+install-time: 1775942676
+groups: com.apple.FindSystemFiles.pkg-group 
+

@@ -6,9 +6,9 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, macos, desktop, homebrew]
-updated: 2026-11-07
-verified: 2026-11-07
-sample: synthetic
+updated: 2026-11-08
+verified: 2026-11-08
+sample: mixed
 fixtures: tests/fixtures/collectors/macos/
 related: [features/inventory-macos.md, tech/engine/classification.md]
 code: src/secmonk/collectors/macos.py
@@ -24,12 +24,13 @@ plists and JSON with the Python stdlib (`plistlib` reads XML *and* binary plists
 
 1. `.app` bundles (`Info.plist`) incl. Electron/Chromium bundled runtime detection.
 2. Homebrew formulae (Cellar receipts) and casks (Caskroom metadata).
-3. `pkgutil` receipts (`/var/db/receipts/*.plist`).
+3. `pkgutil` receipts (`/var/db/receipts/*.plist` and, for Apple's own, `/Library/Apple/System/Library/Receipts/*.plist`).
 4. The OS itself (`SystemVersion.plist`) as a component `cpe:2.3:o:apple:macos:<ver>`.
 
-**All fixtures in `tests/fixtures/collectors/macos/` are SYNTHETIC** (hand-built from known real
-formats; the sandbox is Linux). Binary plist fixture generated with `plistlib.FMT_BINARY`.
-Re-verify against a real Mac before marking `implemented`.
+Fixtures in `tests/fixtures/collectors/macos/` are **synthetic** (hand-built from known real formats; binary plist
+generated with `plistlib.FMT_BINARY`), except `real/`: real files captured on 2026-11-08 on macOS 26.5 (25F71, arm64)
+in a restricted session (`SystemVersion.plist`, three Apple receipts, `pkgutil --pkg-info` output, the empty
+`system_profiler` output, an Apple launchd plist with an unquoted XML prolog; provenance in `real/README.md`).
 
 ## Where the data lives
 
@@ -44,11 +45,12 @@ Re-verify against a real Mac before marking `implemented`.
 | Homebrew prefix | `opt/homebrew` (Apple Silicon), `usr/local` (Intel; also `usr/local/Homebrew`) | Probe both. Linuxbrew: `home/linuxbrew/.linuxbrew`. |
 | Formulae | `<prefix>/Cellar/<formula>/<version>/INSTALL_RECEIPT.json` | Several versions may coexist; `opt/<formula>` symlink points to the active one. |
 | Casks | `<prefix>/Caskroom/<cask>/<version>/` and `<prefix>/Caskroom/<cask>/.metadata/<version>/<timestamp>/Casks/<cask>.json` (new) or `.rb` (old, also still written) | |
-| pkg receipts | `var/db/receipts/<PackageIdentifier>.plist` (+ `.bom`) | Readable by all users. |
+| pkg receipts | `var/db/receipts/<PackageIdentifier>.plist` (+ `.bom`): third-party; `Library/Apple/System/Library/Receipts/<id>.plist` (+ `.bom`): Apple (CLT, XProtect, MobileAssets, GarageBand content...) since macOS 10.15 | Readable by all users. On macOS 26.5 all 87 receipts of `pkgutil --pkgs` were in the Apple directory (2026-11-08). A package id present in both is counted once (first directory wins). |
 | OS version | `System/Library/CoreServices/SystemVersion.plist` | |
 
 No elevated privileges are needed for any of these on a default install (receipts and /Applications
-are world-readable; TCC may block `~/Library` and Desktop/Documents but not `~/Applications`).
+are world-readable; TCC may block `~/Library` and Desktop/Documents but not `~/Applications`). A sandboxed or
+otherwise restricted session can still be denied any of them (see Limitations).
 
 ## Data format
 
@@ -118,13 +120,19 @@ Never run brew as root; never execute anything from a scanned tree.
 
 ### pkgutil receipts
 
-Fixtures `root/var/db/receipts/com.example.pkg.plist`, `com.apple.pkg.CLTools_Executables.plist` (XML plists; on real systems
-usually binary). Keys: `PackageIdentifier`, `PackageVersion`, `InstallDate` (plistlib -> `datetime`), `InstallPrefixPath`,
+Fixtures `root/var/db/receipts/com.example.pkg.plist`, `com.apple.pkg.CLTools_Executables.plist` (synthetic XML plists) and
+`real/receipts/*.plist` (real binary plists from `/Library/Apple/System/Library/Receipts/`, with the matching `pkgutil --pkg-info`
+output: version and install time agree for all 87 receipts of the capture Mac). `InstallDate` is a naive UTC datetime and equals
+`pkgutil`'s `install-time`. Keys: `PackageIdentifier`, `PackageVersion`, `InstallDate` (plistlib -> `datetime`), `InstallPrefixPath`,
 `InstallProcessName`, `PackageFileName` (sometimes absent). The `.bom` (bill of materials, binary) lists files; ignore for now.
 CLI equivalents: `pkgutil --pkgs`, `pkgutil --pkg-info-plist <id>`, `pkgutil --files <id>`. Receipts include many `com.apple.pkg.*`
 (Xcode CLT, Rosetta, XProtect) - mark `os-component` when the id starts with `com.apple.`; CLT/Xcode versions are CVE-relevant (git, clang bundled).
-Receipts are not removed when the app is deleted - **stale receipts** produce phantom components; cross-check `InstallPrefixPath` + `--files` (future), or
-tag `confidence=low` for non-Apple receipts without a matching `.app`.
+Receipts are not removed when the app is deleted - **stale receipts** produce phantom components: on the capture Mac
+(2026-11-08, Full Disk Access) 61 of 157 third-party receipts listed no file that still exists (old .NET SDK packs, Citrix,
+Skype for Business, 1Password 7). `InstallPrefixPath` cannot tell them apart (129/157 prefixes are plain `Applications`; the 9
+missing prefixes are updater staging folders whose apps are installed): detecting staleness needs the `.bom` file list
+(not parsed; open decision in the plan). `PackageIdentifier` is stripped (`org.swiftwasm.2024116 ` has a trailing space;
+`pkgutil` prints it stripped). Real run: 257 receipts = `pkgutil --pkgs`, all versions equal `pkgutil --pkg-info`.
 
 ### OS version
 
@@ -135,9 +143,16 @@ Emit component `macos` `14.5`, `cpe:2.3:o:apple:macos:14.5:*:*:*:*:*:*:*`, categ
 
 ### system_profiler (optional)
 
-`system_profiler SPApplicationsDataType -json` (fixture `system_profiler-applications.json`, synthetic): `{"SPApplicationsDataType":[{_name, path, version, arch_kind, lastModified, obtained_from, signed_by[], info}]}`.
+`system_profiler SPApplicationsDataType -json` (fixtures `system_profiler-applications.json`, synthetic, and
+`real/system_profiler-applications.json`, 13 of 707 real entries): `{"SPApplicationsDataType":[{_name, path, version, arch_kind, lastModified, obtained_from, signed_by[], info}]}`.
+Real shape verified 2026-11-08 (macOS 26.5): exactly these keys; `version` absent on 52/707, `signed_by` on 579, `info` on 133;
+`obtained_from` also `ios_app_store`; `arch_kind` values `arch_arm_i64`, `arch_arm`, `arch_i64`, `arch_ios`, `arch_other`, `arch_i32`.
+Of 707 apps, 431 are outside the collector's walk (`/System/Library` 229, the user's home 110, `/Library/...` vendor
+helpers, printer drivers, `/usr/local`): this is the opt-in path to them.
 Useful extras: `obtained_from` (apple / mac_app_store / identified_developer / unknown), `signed_by` (Team ID in parentheses = strong vendor identity).
-Slow (10-60 s) and includes only what Spotlight indexed; keep as optional enrichment. osquery `apps` table (`bundle_identifier`,
+Slow (10-60 s) and includes only what Spotlight indexed; keep as optional enrichment. In a restricted session
+(macOS 26.5, 2026-11-08) it printed an empty `SPApplicationsDataType` array (fixture `real/system_profiler-applications-restricted.json`):
+the collector then warns that the export lists no applications. The real field shape is still unverified. osquery `apps` table (`bundle_identifier`,
 `bundle_short_version`, `bundle_version`, `path`) gives the same as our direct walk, `homebrew_packages`/`package_receipts` tables are equivalent to the above.
 
 ## Classification
@@ -169,28 +184,50 @@ Note `homebrew/core` is also available as the public JSON API `https://formulae.
 
 *Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-macos.md](../../plans/on-macos.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
-- Fixtures synthetic; real-Mac behaviour (symlinked bundles, `Contents/Info.plist` missing for iOS-on-Mac `Wrapper/*.app`, Rosetta) untested.
-- Apps outside standard folders (Setapp, `~/Downloads`, external volumes, Xcode-bundled simulators) missed; Spotlight (`mdfind kMDItemKind=Application`) would find more.
+- Checked on a real Mac with Full Disk Access (macOS 26.5 arm64, 2026-11-08): every top-level `.app` on disk in
+  `/Applications`, `/System/Applications`, `~/Applications` (incl. one level of subfolders) is listed or warned about.
+  Symlinked bundles are listed once under their target (`Adobe Digital Editions.app -> ... 4.5.app`, OpenVPN Connect);
+  a symlink whose target is outside the walked folders is listed under the link (`Safari.app` -> the App cryptex); a
+  self-referencing link inside a bundle is harmless; the iOS app `FortiToken.app/Wrapper/` is read (`ios_app_on_mac`).
+  Empty leftover `.app` folders (Karabiner, 2021) give one `Contents/Info.plist missing` warning each. Electron (33),
+  CEF (3) and Sparkle (35) versions equal their framework `Info.plist` in all 70 cases; a vendor build suffix
+  (`33.4.0+wcus`, Discord) is kept and still range-matches as SemVer. Rosetta/universal architecture is not recorded.
+- **Restricted access (no Full Disk Access, sandboxed or managed session).** macOS privacy protection can deny listing a
+  folder or reading a plist with `EPERM` even to its owner; then `stat` may fail too, so the folder looks absent. The collector
+  never treats a denied path as missing: each unreadable folder (`/Users`, `/Applications`, `~/Applications`,
+  `/System/Applications`, a receipts folder, a subfolder of `/Applications`) or plist (`SystemVersion.plist`, a bundle's
+  `Info.plist`, a receipt) becomes one warning `cannot list|read <path>: permission denied (macOS privacy protection: grant
+  Full Disk Access ...)`, and everything still readable is collected (exit 0). Observed on macOS 26.5 (2026-11-08): with
+  `/Applications`, `/System/Applications`, `~/Applications`, `/Users` and `/var/db/receipts` denied, the run produced the OS,
+  87 Apple receipts and the Homebrew inventory, no apps, and five such warnings.
+- Python's `plistlib` rejects XML plists whose prolog has unquoted attributes (`<?xml version=1.0 ...?>`); Apple ships at
+  least one (`com.apple.familycircled.plist`, 1 of ~1000 system plists on macOS 26.5); likewise a UTF-8 plist (with BOM)
+  that declares `encoding="utf-16"` (Royal TSX). `loads_plist` replaces the prolog and retries (only for 8-bit content).
+- Apps outside standard folders are missed by design. On the capture Mac `mdfind` found them in vendor support folders
+  (Citrix, Pulse Secure, JetBrains, Steam, Battle.net), printer/scanner drivers and development build outputs; use
+  `-o system_profiler=<export.json>` to add them.
 - Nested helper apps (`Contents/Library/LoginItems/*.app`, `Contents/Frameworks/*Helper.app`) are not listed individually.
-- Bundle version != vendor release version for some apps (Safari, Office uses `16.89`); CPE versions may need mapping.
+- Bundle version != vendor release version for some apps (Office uses `16.89`); CPE versions may need mapping. Safari
+  and Xcode follow the macOS year numbering since 26: (macOS 26.5 25F71, Safari 26.5 / 21624.2.5.11.4, Xcode 26.6 17F113),
+  so `CFBundleShortVersionString` matches Apple's security notes directly. Xcode gets `cpe:...:apple:xcode` from the alias table.
 - No signature verification (`codesign`), so spoofed Info.plist is possible - the collector trusts the filesystem.
 - Future: MacPorts (`/opt/local/var/macports/registry/registry.db`, sqlite; `port installed`), pip `site-packages` (`/Library/Frameworks/Python.framework`, `~/Library/Python`, brew's `Cellar/python@*/lib/python3.*/site-packages`), npm global (`/opt/homebrew/lib/node_modules/*/package.json`), VS Code extensions (`~/.vscode/extensions`), browser extensions, Xcode/CLT version via receipts.
 
 ## Implementation notes
 
-Code: `src/secmonk/collectors/macos.py` (`MacOSCollector`, `parse_system_profiler_json`; `parse_brew_info_json` re-exported from `homebrew.py`); tests `tests/collectors/test_macos.py` (fixture tree only; still synthetic).
+Code: `src/secmonk/collectors/macos.py` (`MacOSCollector`, `parse_system_profiler_json`, `loads_plist` (also used by the process monitor); `parse_brew_info_json` re-exported from `homebrew.py`); tests `tests/collectors/test_macos.py` (synthetic fixture tree, real files from `real/`, simulated `EPERM` via patched `Path.iterdir` / `os.open` and a `chmod 000` folder).
 
 **Collected**
 - OS: `macOS` (`os`, vendor apple, meta.build) plus the asset (`macos:<hostname>`, `desktop`).
 - Apps: `/Applications` (depth <= 3), `<home>/Applications`, `/System/Applications` (`system-app`, skipped with `include_system=False`). Purl `pkg:generic/<vendor_hint>/<name>@<ver>?bundle_id=...`; `meta.vendor_hint` comes from the bundle id, `vendor` is set later by classify.
 - Bundled runtimes (`runtime`): Electron (`pkg:npm/electron@<v>`, so OSV npm applies), Chromium Embedded Framework and Sparkle (`pkg:generic/...`), each with `meta.embedded_in`.
-- Homebrew: see [homebrew.md](homebrew.md) (`collect_prefixes`; or `brew info --json=v2` with `use_brew_cli`). Formulae are `package` with `pkg:brew/[<tap>/]<name>@<pkg_version>` (`@` percent-encoded, `homebrew/core` namespace omitted), only the **active** keg, `version` = upstream version (`_N` stripped, raw in `meta.brew_version`); casks `application` with `pkg:brew/homebrew/cask/<token>@<ver>`; vendored PyPI/npm packages as `library` components.
-- pkgutil receipts: `package`, `pkg:generic/<id>@<ver>`, `meta.pkg_id`; `com.apple.*` only with `include_system`.
-- Optional `system_profiler` JSON export (`opts["system_profiler"]`), added only for apps not already found.
+- Homebrew: see [homebrew.md](homebrew.md). The filesystem walk (`collect_prefixes`) always runs; with `use_brew_cli` the output of `brew info --json=v2 --installed` (parsed with the collector's `all_kegs` option) is merged into it by `merge_brew`: matched by purl, else by kind + name + raw version where the name may also be one of the CLI's `meta.brew_oldnames` (`oldnames` / `old_tokens`: a renamed formula keeps its old rack, so the walk says `mprocs` and the CLI `dekit`; one component, walk name and purl kept, new name in `meta.brew_current_name`). A walked component keeps its values and gains the meta keys only the CLI knows (`license`, `homepage`, `source_url`...; marked `meta.brew_cli`). When the walk has the same formula/cask but the CLI picked another active keg (walk: `opt` link then `linked`; CLI: `linked_keg` else highest version), the CLI never adds a second keg: the walked active keg gains formula-level keys only (`homepage`, `license`, `keg_only`, `pinned`, `auto_updates`, `brew_oldnames`) and `meta.brew_cli_version`. Only formulae/casks the walk does not have under any name are added, with `meta.source=brew-cli`. The CLI never replaces the walk: on a real prefix (2026-11-08) it skipped 20 formulae (untapped taps, removed or renamed formulae) and cannot see a second prefix such as a leftover x86_64 `/usr/local`. A failing CLI is a warning with its first stderr line. The CLI describes the host, so it is asked only when the scanned root resolves to the live `/` (the same rule decides the hostname and `platform` of the asset); for any other root (copied or mounted tree) it is skipped with the warning `use_brew_cli ignored: root is not the live system (<root>)` (also a warning when `brew` is not on PATH). Formulae are `package` with `pkg:brew/[<tap>/]<name>@<pkg_version>` (`@` percent-encoded, `homebrew/core` namespace omitted), only the **active** keg, `version` = upstream version (`_N` stripped, raw in `meta.brew_version`); casks `application` with `pkg:brew/homebrew/cask/<token>@<ver>`; vendored PyPI/npm packages as `library` components.
+- pkgutil receipts from both receipt folders (`RECEIPT_DIRS`): `package`, `pkg:generic/<id>@<ver>`, `meta.pkg_id`, `meta.install_date` (naive UTC); `com.apple.*` only with `include_system`.
+- Optional `system_profiler` JSON export (`opts["system_profiler"]`), added only for apps not already found; an export with no application is a warning.
 
 **Dedupe rule**: a cask is not emitted when an app bundle matches its app name, token, display name (normalized, alphanumerics only) or `uninstall quit:` bundle id; the app gets `meta.also_cask=<token>`. Casks without an installed app stay as separate components.
 
-**Known gaps**: stale non-Apple receipts are not flagged low-confidence; Apple system apps keep their bundle version (not mapped to the macOS release); MacPorts and nested helper apps are not handled; a `latest` cask without an app bundle has no version; all plist errors become `Inventory.warnings`.
+**Known gaps**: stale non-Apple receipts are not flagged low-confidence; Apple system apps keep their bundle version (not mapped to the macOS release); MacPorts and nested helper apps are not handled; a `latest` cask without an app bundle has no version; all plist errors and every unreadable folder become `Inventory.warnings` (`_list_dir`: a missing folder is empty, a denied one is empty plus a warning).
 
 
 ## Review fixes (2026-11)

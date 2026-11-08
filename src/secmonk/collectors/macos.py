@@ -33,11 +33,16 @@ from .homebrew import (  # noqa: F401  (re-exported for backwards compatibility)
     _cask_component,
     _formula_component,
     collect_prefixes,
+    flag,
     parse_brew_info_json,
 )
 
 MAX_APP_DEPTH = 3
 MAX_PLIST_BYTES = 8 * 1024 * 1024
+# pkgutil receipts: third-party packages, and (macOS 10.15+) Apple's own on the system data volume
+RECEIPT_DIRS = ("var/db/receipts", "Library/Apple/System/Library/Receipts")
+DENIED_HINT = ("permission denied (macOS privacy protection: grant Full Disk Access to the app running "
+               "secmonk, or run it where this path is readable)")
 
 # bundled frameworks reported as runtimes: dir name -> (component name, bundle id, purl type)
 _FRAMEWORKS = {
@@ -47,14 +52,51 @@ _FRAMEWORKS = {
 }
 
 
+_PLIST_PROLOG = re.compile(rb"^(?:\xef\xbb\xbf)?\s*(?:<\?xml[^>]*\?>)?\s*(?:<!DOCTYPE[^>]*>)?\s*<plist\b[^>]*>")
+_CANONICAL_PROLOG = (b'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+                     b'"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">')
+
+
+def loads_plist(data: bytes) -> Any:
+    """`plistlib.loads`, tolerating an XML prolog with unquoted attributes (`<?xml version=1.0 ...?>`,
+    `<!DOCTYPE plist PUBLIC -//Apple//...>`, `<plist version=1.0>`): Apple ships such files (macOS 26.5:
+    /System/Library/LaunchAgents/com.apple.familycircled.plist) and `plutil` accepts them, expat does not.
+    Also a UTF-8 file (BOM optional) whose prolog declares another encoding (`encoding="utf-16"`: Royal TSX 6
+    Info.plist, 2026-11-08): the prolog is replaced only when the bytes really are 8-bit (start with `<`)."""
+    try:
+        return plistlib.loads(data)
+    except Exception:
+        fixed = _PLIST_PROLOG.sub(_CANONICAL_PROLOG, data, count=1)
+        if fixed == data or not data.removeprefix(b"\xef\xbb\xbf").lstrip().startswith(b"<"):
+            raise
+        return plistlib.loads(fixed)
+
+
 def _load_plist(path: Path, boundary: Path | None = None) -> dict | None:
     """Parse a plist (<= 8 MB). With `boundary`, the file must resolve below it (no symlink escapes)."""
     if boundary is None:
         with path.open("rb") as fh:
-            data = plistlib.loads(fh.read(MAX_PLIST_BYTES + 1)[:MAX_PLIST_BYTES])
+            data = loads_plist(fh.read(MAX_PLIST_BYTES + 1)[:MAX_PLIST_BYTES])
     else:
-        data = plistlib.loads(read_within(path, boundary, MAX_PLIST_BYTES))
+        data = loads_plist(read_within(path, boundary, MAX_PLIST_BYTES))
     return data if isinstance(data, dict) else None
+
+
+def _why(e: OSError) -> str:
+    return DENIED_HINT if isinstance(e, PermissionError) else f"{type(e).__name__}: {e}"
+
+
+def _list_dir(d: Path, label: str, warnings: list[str] | None) -> list[Path]:
+    """Sorted entries of `d`. A missing directory is empty; an unreadable one is empty *with a warning*
+    (`Path.is_dir()` / `glob()` would hide a denied directory as if it did not exist)."""
+    try:
+        return sorted(d.iterdir())
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+    except OSError as e:
+        if warnings is not None:
+            warnings.append(f"cannot list {label}: {_why(e)}")
+        return []
 
 
 def _as_list(v: Any) -> list:
@@ -102,6 +144,58 @@ def parse_system_profiler_json(data: dict) -> list[Component]:
     return comps
 
 
+def _brew_key(c: Component) -> tuple:
+    return (c.meta.get("brew_kind"), c.meta.get("brew_name"), c.meta.get("brew_version"))
+
+
+# `brew info` keys that describe the formula / cask, not one keg: safe to copy onto a walked keg of another version
+_BREW_FORMULA_KEYS = ("homepage", "license", "keg_only", "pinned", "auto_updates", "brew_oldnames")
+
+
+def merge_brew(walk: list[Component], cli: list[Component]) -> list[Component]:
+    """Union of the filesystem walk and `brew info --json=v2` components. Nothing found by the walk is ever
+    dropped and the walk's values win; the CLI only adds the meta keys the walk lacks (`brew_cli=True`).
+
+    A CLI component is matched by purl, else by (kind, name, raw version), where the name may also be one of its
+    `brew_oldnames` (a renamed formula keeps its old Cellar rack: the walk reports `mprocs`, the CLI `dekit`). When
+    the walk has the formula/cask under any of those names but another version (the two pick the active keg
+    differently: opt link vs linked_keg), the CLI enriches the walk's active keg with formula-level keys only and
+    records its own choice in `brew_cli_version`: it never adds a second keg. Only formulae/casks the walk does not
+    have at all are appended, with `meta.source=brew-cli`."""
+    by_purl = {c.purl: c for c in walk if c.purl}
+    by_key = {_brew_key(c): c for c in walk if c.meta.get("brew_kind")}
+    by_name: dict[tuple, list[Component]] = {}
+    for c in walk:
+        if c.meta.get("brew_kind"):
+            by_name.setdefault((c.meta["brew_kind"], c.meta.get("brew_name")), []).append(c)
+    out = list(walk)
+    for c in cli:
+        kind, ver = c.meta.get("brew_kind"), c.meta.get("brew_version")
+        names = [c.meta.get("brew_name"), *(c.meta.get("brew_oldnames") or [])]
+        hit = by_purl.get(c.purl) if c.purl else None
+        for n in names:
+            hit = hit or by_key.get((kind, n, ver))
+        if hit is not None:
+            keys = [k for k, v in c.meta.items() if v is not None]
+        else:
+            same = [w for n in names for w in by_name.get((kind, n), [])]
+            if not same:
+                c.meta["source"] = "brew-cli"
+                out.append(c)
+                continue
+            hit = next((w for w in same if w.meta.get("active")), same[0])
+            keys = [k for k in _BREW_FORMULA_KEYS if c.meta.get(k) is not None]
+            if c.meta.get("active") and ver != hit.meta.get("brew_version"):
+                hit.meta["brew_cli_version"] = ver
+        for k in keys:
+            if hit.meta.get(k) is None:
+                hit.meta[k] = c.meta[k]
+        if c.meta.get("brew_name") != hit.meta.get("brew_name"):
+            hit.meta["brew_current_name"] = c.meta.get("brew_name")     # renamed: the tap's current name
+        hit.meta["brew_cli"] = True
+    return out
+
+
 @register
 class MacOSCollector(Collector):
     name = "macos"
@@ -110,7 +204,7 @@ class MacOSCollector(Collector):
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         root = Path(target or "/")
         boundary = root.resolve()
-        live = str(root) == "/"
+        live = boundary == Path("/").resolve()        # the running system (also `/.`, `//`)
         include_system = opts.get("include_system", True)
         warnings: list[str] = []
         components: list[Component] = []
@@ -118,18 +212,19 @@ class MacOSCollector(Collector):
         # --- OS / asset
         os_comp = None
         sv = root / "System/Library/CoreServices/SystemVersion.plist"
-        if sv.is_file():
-            try:
-                d = _load_plist(sv, boundary) or {}
-                ver = d.get("ProductVersion")
-                os_comp = Component(name="macOS", version=ver, category=CAT_OS, vendor="apple",
-                                    source_path=_rel(sv, root),
-                                    meta={"build": d.get("ProductBuildVersion")})
-                components.append(os_comp)
-            except Exception as e:  # noqa: BLE001
-                warnings.append(f"cannot read {sv}: {e}")
-        else:
+        try:
+            d = _load_plist(sv, boundary) or {}
+            ver = d.get("ProductVersion")
+            os_comp = Component(name="macOS", version=ver, category=CAT_OS, vendor="apple",
+                                source_path=_rel(sv, root),
+                                meta={"build": d.get("ProductBuildVersion")})
+            components.append(os_comp)
+        except FileNotFoundError:
             warnings.append(f"SystemVersion.plist not found under {root}")
+        except PermissionError as e:
+            warnings.append(f"cannot read {sv}: {_why(e)}")
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"cannot read {sv}: {e}")
         hostname = opts.get("hostname") or (socket.gethostname() if live else (root.resolve().name or "macos"))
         asset = Asset(
             id=f"macos:{hostname}", type="desktop", name=hostname, os_name="macOS",
@@ -141,7 +236,7 @@ class MacOSCollector(Collector):
         apps: list[Component] = []
         explicit_homes = bool(_as_list(opts.get("home")))
         app_dirs = [(root / "Applications", CAT_APPLICATION, boundary)]
-        for h in self._home_dirs(root, live, opts.get("home")):
+        for h in self._home_dirs(root, live, opts.get("home"), warnings):
             # homes given explicitly may live outside `root`; their apps must stay inside the home
             app_dirs.append((h / "Applications", CAT_APPLICATION,
                              h.resolve() if explicit_homes else boundary))
@@ -149,7 +244,7 @@ class MacOSCollector(Collector):
             app_dirs.append((root / "System/Applications", CAT_SYSTEM_APP, boundary))
         seen_bundles: set[Path] = set()
         for base, cat, bound in app_dirs:
-            for bundle in self._find_bundles(base, MAX_APP_DEPTH):
+            for bundle in self._find_bundles(base, MAX_APP_DEPTH, warnings, root):
                 try:
                     real = resolve_within(bundle, bound)
                 except ValueError as e:
@@ -160,21 +255,13 @@ class MacOSCollector(Collector):
                 seen_bundles.add(real)
                 try:
                     apps.extend(self._read_bundle(bundle, root, cat, bound))
+                except PermissionError as e:
+                    warnings.append(f"cannot read bundle {_rel(bundle, root)}: {_why(e)}")
                 except Exception as e:  # noqa: BLE001
                     warnings.append(f"cannot read bundle {_rel(bundle, root)}: {e}")
 
         # --- homebrew
-        brew: list[Component] = []
-        if opts.get("use_brew_cli") and shutil.which("brew"):
-            try:
-                out = subprocess.run(["brew", "info", "--json=v2", "--installed"], capture_output=True,
-                                     text=True, check=True, timeout=120).stdout
-                brew = parse_brew_info_json(json.loads(out))
-            except Exception as e:  # noqa: BLE001
-                warnings.append(f"brew CLI failed, using filesystem walk: {e}")
-        if not brew:
-            brew, brew_warnings = collect_prefixes(root, opts)
-            warnings.extend(brew_warnings)
+        brew = self._brew(root, live, opts, warnings)
 
         # dedupe casks against app bundles
         app_comps = [a for a in apps if a.category in (CAT_APPLICATION, CAT_SYSTEM_APP)
@@ -197,7 +284,11 @@ class MacOSCollector(Collector):
         sp = opts.get("system_profiler")
         if sp:
             try:
-                sp_comps = parse_system_profiler_json(json.loads(Path(sp).read_text()))
+                sp_data = json.loads(Path(sp).read_text())
+                sp_comps = parse_system_profiler_json(sp_data)
+                if not sp_comps:
+                    warnings.append(f"system_profiler JSON {sp} lists no applications: system_profiler may "
+                                    "have run without access to the app folders (Full Disk Access)")
                 have = {(_norm(c.name), c.version) for c in components}
                 components.extend(c for c in sp_comps if (_norm(c.name), c.version) not in have)
             except Exception as e:  # noqa: BLE001
@@ -209,14 +300,37 @@ class MacOSCollector(Collector):
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
-    def _home_dirs(root: Path, live: bool, homes: Any) -> list[Path]:
+    def _brew(root: Path, live: bool, opts: dict[str, Any], warnings: list[str]) -> list[Component]:
+        """The filesystem walk always runs; `brew info` only enriches it (the CLI skips formulae of untapped
+        taps, renamed/removed formulae, and cannot see a second prefix such as /usr/local). The CLI describes
+        the host, so it is asked only when the scanned root is the live system."""
+        brew, brew_warnings = collect_prefixes(root, opts)
+        warnings.extend(brew_warnings)
+        if not opts.get("use_brew_cli"):
+            return brew
+        if not live:
+            warnings.append(f"use_brew_cli ignored: root is not the live system ({root})")
+            return brew
+        if not shutil.which("brew"):
+            warnings.append("use_brew_cli ignored: brew not found on PATH")
+            return brew
+        try:
+            out = subprocess.run(["brew", "info", "--json=v2", "--installed"], capture_output=True,
+                                 text=True, check=True, timeout=120).stdout
+            return merge_brew(brew, parse_brew_info_json(json.loads(out), all_kegs=flag(opts.get("all_kegs"))))
+        except Exception as e:  # noqa: BLE001
+            err = (getattr(e, "stderr", None) or "").strip().splitlines()
+            warnings.append(f"brew CLI failed, filesystem walk only: {e}" + (f" ({err[0][:200]})" if err else ""))
+            return brew
+
+    @staticmethod
+    def _home_dirs(root: Path, live: bool, homes: Any, warnings: list[str] | None = None) -> list[Path]:
         homes = _as_list(homes)       # `-o home=/Users/bob` arrives as a plain string
         if homes:
             return [Path(h) for h in homes]
         out: list[Path] = []
-        users = root / "Users"
-        if users.is_dir():
-            out.extend(p for p in sorted(users.iterdir()) if p.is_dir() and p.name not in ("Shared",))
+        users = _list_dir(root / "Users", _rel(root / "Users", root), warnings)
+        out.extend(p for p in users if p.is_dir() and p.name not in ("Shared",))
         if live:
             home = Path.home()
             if home not in out:
@@ -224,26 +338,28 @@ class MacOSCollector(Collector):
         return out
 
     @staticmethod
-    def _find_bundles(base: Path, max_depth: int):
+    def _find_bundles(base: Path, max_depth: int, warnings: list[str] | None = None,
+                      root: Path | None = None):
+        """`.app` bundles below `base`; unreadable directories are reported in `warnings`, not skipped silently."""
         def walk(d: Path, depth: int):
-            try:
-                entries = sorted(d.iterdir())
-            except OSError:
-                return
-            for p in entries:
+            for p in _list_dir(d, _rel(d, root) if root is not None else str(d), warnings):
                 if p.suffix == ".app" and p.is_dir():
                     yield p
                 elif p.is_dir() and not p.is_symlink() and depth < max_depth:
                     yield from walk(p, depth + 1)
 
-        if base.is_dir():
-            yield from walk(base, 1)
+        yield from walk(base, 1)
 
     def _read_bundle(self, bundle: Path, root: Path, cat: str, boundary: Path | None = None) -> list[Component]:
         boundary = boundary or root.resolve()
         info_path = bundle / "Contents/Info.plist"
         ios_wrapper = False
-        if not info_path.is_file():
+        try:
+            info_path.stat()                  # raises PermissionError: a denied plist is not a missing one
+            has_info = True
+        except (FileNotFoundError, NotADirectoryError):
+            has_info = False
+        if not has_info:
             # iOS/iPadOS apps on Apple silicon: <App>.app/Wrapper/<App>.app/Info.plist
             wrapped = sorted(bundle.glob("Wrapper/*.app/Info.plist"))
             if not wrapped:
@@ -329,15 +445,18 @@ class MacOSCollector(Collector):
     def _receipts(root: Path, include_system: bool, warnings: list[str],
                   boundary: Path | None = None) -> list[Component]:
         out: list[Component] = []
-        d = root / "var/db/receipts"
-        if not d.is_dir():
-            return out
-        for p in sorted(d.glob("*.plist")):
+        seen: set[str] = set()
+        plists = [p for rel in RECEIPT_DIRS for p in _list_dir(root / rel, "/" + rel, warnings)
+                  if p.suffix == ".plist"]
+        for p in plists:
             try:
                 r = _load_plist(p, boundary or root.resolve()) or {}
-                pid = r.get("PackageIdentifier")
+                pid = str(r.get("PackageIdentifier") or "").strip()   # `pkgutil` strips; ids with a trailing space exist
                 if not pid:
                     raise ValueError("no PackageIdentifier")
+                if pid in seen:
+                    continue
+                seen.add(pid)
                 apple = pid.startswith("com.apple.")
                 if apple and not include_system:
                     continue
@@ -352,6 +471,8 @@ class MacOSCollector(Collector):
                     purl=purls.build("generic", pid, ver), source_path=_rel(p, root),
                     meta={k: (v.isoformat() if hasattr(v, "isoformat") else v)
                           for k, v in meta.items() if v}))
+            except PermissionError as e:
+                warnings.append(f"cannot read receipt {_rel(p, root)}: {_why(e)}")
             except Exception as e:  # noqa: BLE001
                 warnings.append(f"cannot read receipt {p.name}: {e}")
         return out

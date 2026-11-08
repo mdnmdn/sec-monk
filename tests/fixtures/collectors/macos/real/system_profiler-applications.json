@@ -1,0 +1,158 @@
+{
+  "SPApplicationsDataType": [
+    {
+      "_name": "1Password",
+      "arch_kind": "arch_arm",
+      "lastModified": "2026-11-06T21:52:08Z",
+      "obtained_from": "identified_developer",
+      "path": "/Applications/1Password.app",
+      "signed_by": [
+        "Developer ID Application: AgileBits Inc. (2BUA8C4S2C)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "8.12.44"
+    },
+    {
+      "_name": "Brave Browser",
+      "arch_kind": "arch_arm",
+      "info": "Brave Browser 157.1.99.55, Copyright © 2026 The Brave Authors. All rights reserved.",
+      "lastModified": "2026-11-05T21:19:10Z",
+      "obtained_from": "identified_developer",
+      "path": "/Applications/Brave Browser.app",
+      "signed_by": [
+        "Developer ID Application: Brave Software, Inc. (KL8N8XSYF4)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "157.1.99.55"
+    },
+    {
+      "_name": "Google Docs",
+      "arch_kind": "arch_other",
+      "lastModified": "2025-03-26T13:54:24Z",
+      "obtained_from": "identified_developer",
+      "path": "/Applications/Google Docs.app",
+      "signed_by": [
+        "Developer ID Application: Google LLC (EQHXZ8M8AV)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "106.0"
+    },
+    {
+      "_name": "FortiToken",
+      "arch_kind": "arch_ios",
+      "lastModified": "2026-09-02T00:29:11Z",
+      "obtained_from": "ios_app_store",
+      "path": "/Applications/FortiToken.app",
+      "signed_by": [
+        "Apple iPhone OS Application Signing",
+        "Apple iPhone Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "6.6.0"
+    },
+    {
+      "_name": "Xcode",
+      "arch_kind": "arch_arm",
+      "lastModified": "2026-06-26T01:35:46Z",
+      "obtained_from": "mac_app_store",
+      "path": "/Applications/Xcode.app",
+      "signed_by": [
+        "Apple Mac OS Application Signing",
+        "Apple Worldwide Developer Relations Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "26.6"
+    },
+    {
+      "_name": "Accessibility Inspector",
+      "arch_kind": "arch_arm",
+      "lastModified": "2026-06-26T01:35:46Z",
+      "obtained_from": "apple",
+      "path": "/Applications/Xcode.app/Contents/Applications/Accessibility Inspector.app",
+      "signed_by": [
+        "Software Signing",
+        "Apple Code Signing Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "5.0"
+    },
+    {
+      "_name": "Kindle",
+      "arch_kind": "arch_arm_i64",
+      "lastModified": "2026-10-29T01:11:38Z",
+      "obtained_from": "mac_app_store",
+      "path": "/Applications/Amazon Kindle.app",
+      "signed_by": [
+        "Apple Mac OS Application Signing",
+        "Apple Worldwide Developer Relations Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "7.70.1"
+    },
+    {
+      "_name": "cool-retro-term",
+      "arch_kind": "arch_i64",
+      "info": "Created by Qt/QMake",
+      "lastModified": "2023-04-03T15:00:44Z",
+      "obtained_from": "unknown",
+      "path": "/Applications/cool-retro-term.app"
+    },
+    {
+      "_name": "Karabiner-Elements",
+      "arch_kind": "arch_other",
+      "lastModified": "2021-01-29T13:15:26Z",
+      "obtained_from": "unknown",
+      "path": "/Applications/Karabiner-Elements.app"
+    },
+    {
+      "_name": "DiffMerge",
+      "arch_kind": "arch_i64",
+      "lastModified": "2023-04-03T15:23:43Z",
+      "obtained_from": "unknown",
+      "path": "/Applications/DiffMerge.app",
+      "version": "4.2.1"
+    },
+    {
+      "_name": "Python",
+      "arch_kind": "arch_arm_i64",
+      "info": "3.9.6, (c) 2001-2020 Python Software Foundation.",
+      "lastModified": "2026-09-12T22:41:40Z",
+      "obtained_from": "apple",
+      "path": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app",
+      "signed_by": [
+        "Software Signing",
+        "Apple Code Signing Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "3.9.6"
+    },
+    {
+      "_name": "MRT",
+      "arch_kind": "arch_arm_i64",
+      "lastModified": "2026-03-16T01:39:29Z",
+      "obtained_from": "apple",
+      "path": "/Library/Apple/System/Library/CoreServices/MRT.app",
+      "signed_by": [
+        "Software Signing",
+        "Apple Code Signing Certification Authority",
+        "Apple Root CA"
+      ],
+      "version": "1.93"
+    },
+    {
+      "_name": "PassViewer",
+      "arch_kind": "arch_arm_i64",
+      "lastModified": "2026-04-30T19:33:17Z",
+      "obtained_from": "apple",
+      "path": "/System/Library/CoreServices/PassViewer.app",
+      "signed_by": [
+        "Software Signing",
+        "Apple Code Signing Certification Authority",
+        "Apple Root CA"
+      ]
+    }
+  ]
+}
