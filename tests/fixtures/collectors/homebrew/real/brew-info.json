@@ -1,0 +1,701 @@
+{
+  "formulae": [
+    {
+      "name": "libpng",
+      "full_name": "libpng",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [],
+      "versioned_formulae": [],
+      "desc": "Library for manipulating PNG images",
+      "license": "libpng-2.0",
+      "homepage": "https://www.libpng.org/pub/png/libpng.html",
+      "versions": {
+        "stable": "1.6.59",
+        "head": "HEAD",
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz",
+          "tag": null,
+          "revision": null,
+          "using": null,
+          "checksum": "d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389"
+        },
+        "head": {
+          "url": "https://github.com/pnggroup/libpng.git",
+          "branch": "libpng16",
+          "using": null
+        }
+      },
+      "patches": [],
+      "revision": 0,
+      "version_scheme": 0,
+      "compatibility_version": null,
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_tahoe": {
+              "cellar": ":any",
+              "url": "https://ghcr.io/v2/homebrew/core/libpng/blobs/sha256:de1c24778cb63a442682c1e6a391560662046a68c2f0c207ecb4abbc81e98cff",
+              "sha256": "de1c24778cb63a442682c1e6a391560662046a68c2f0c207ecb4abbc81e98cff"
+            }
+          }
+        }
+      },
+      "pour_bottle_only_if": null,
+      "keg_only": false,
+      "keg_only_reason": null,
+      "options": [],
+      "build_dependencies": [],
+      "dependencies": [],
+      "test_dependencies": [],
+      "recommended_dependencies": [],
+      "optional_dependencies": [],
+      "uses_from_macos": [],
+      "uses_from_macos_bounds": [],
+      "requirements": [],
+      "conflicts_with": [],
+      "conflicts_with_reasons": [],
+      "link_overwrite": [],
+      "caveats": null,
+      "installed": [
+        {
+          "version": "1.6.58",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1788112747,
+          "runtime_dependencies": [],
+          "installed_on_request": true
+        }
+      ],
+      "linked_keg": null,
+      "pinned": false,
+      "outdated": true,
+      "deprecated": false,
+      "deprecation_date": null,
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": null,
+      "disabled": false,
+      "disable_date": null,
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": null,
+      "post_install_steps": [],
+      "post_install_defined": false,
+      "service": null,
+      "tap_git_head": "759adb3ca39f9c4d260c4b93c0c765058d76d7b3",
+      "ruby_source_path": "Formula/lib/libpng.rb",
+      "ruby_source_checksum": {
+        "sha256": "b4c719b087e0ba9c8f724846b984b51e9edb2d71926bf65a654a0c54d339eac1"
+      },
+      "head_dependencies": {
+        "build_dependencies": [
+          "autoconf",
+          "automake",
+          "libtool"
+        ],
+        "dependencies": [],
+        "test_dependencies": [],
+        "recommended_dependencies": [],
+        "optional_dependencies": [],
+        "uses_from_macos": [],
+        "uses_from_macos_bounds": []
+      }
+    },
+    {
+      "name": "openssl@3",
+      "full_name": "openssl@3",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [
+        "openssl@3.5"
+      ],
+      "versioned_formulae": [
+        "openssl@4",
+        "openssl@3.6",
+        "openssl@3.0"
+      ],
+      "desc": "Cryptography and SSL/TLS Toolkit",
+      "license": "Apache-2.0",
+      "homepage": "https://openssl-library.org",
+      "versions": {
+        "stable": "3.5.9",
+        "head": null,
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+          "tag": null,
+          "revision": null,
+          "using": null,
+          "checksum": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a"
+        }
+      },
+      "patches": [],
+      "revision": 0,
+      "version_scheme": 1,
+      "compatibility_version": null,
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_tahoe": {
+              "cellar": "/opt/homebrew/Cellar",
+              "url": "https://ghcr.io/v2/homebrew/core/openssl/3/blobs/sha256:e8d7a91a0599aca7c82b63ff708bde97b6c1535f6b74c951ac89e4e55d571872",
+              "sha256": "e8d7a91a0599aca7c82b63ff708bde97b6c1535f6b74c951ac89e4e55d571872"
+            }
+          }
+        }
+      },
+      "pour_bottle_only_if": null,
+      "keg_only": true,
+      "keg_only_reason": {
+        "reason": ":versioned_formula",
+        "explanation": ""
+      },
+      "options": [],
+      "build_dependencies": [],
+      "dependencies": [
+        "ca-certificates"
+      ],
+      "test_dependencies": [],
+      "recommended_dependencies": [],
+      "optional_dependencies": [],
+      "uses_from_macos": [],
+      "uses_from_macos_bounds": [],
+      "requirements": [],
+      "conflicts_with": [],
+      "conflicts_with_reasons": [],
+      "link_overwrite": [],
+      "caveats": "To add additional certificates, place .pem files in\n  $HOMEBREW_PREFIX/etc/openssl@3/certs\n\nand run\n  $HOMEBREW_PREFIX/opt/openssl@3/bin/c_rehash\n",
+      "installed": [
+        {
+          "version": "3.6.2",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1777273867,
+          "runtime_dependencies": [
+            {
+              "full_name": "ca-certificates",
+              "version": "2026-03-19",
+              "revision": 0,
+              "bottle_rebuild": 0,
+              "pkg_version": "2026-03-19",
+              "declared_directly": true
+            }
+          ],
+          "installed_on_request": false
+        },
+        {
+          "version": "3.6.3",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1788084193,
+          "runtime_dependencies": [
+            {
+              "full_name": "ca-certificates",
+              "version": "2026-08-13",
+              "revision": 0,
+              "bottle_rebuild": 1,
+              "pkg_version": "2026-08-13",
+              "declared_directly": true
+            }
+          ],
+          "installed_on_request": false
+        }
+      ],
+      "linked_keg": "3.6.3",
+      "pinned": false,
+      "outdated": true,
+      "deprecated": false,
+      "deprecation_date": "2030-04-08",
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": {
+        "date": "2030-04-08",
+        "because": "unmaintained",
+        "replacement_formula": null,
+        "replacement_cask": null
+      },
+      "disabled": false,
+      "disable_date": "2031-04-08",
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": {
+        "date": "2031-04-08",
+        "because": "unmaintained",
+        "replacement_formula": null,
+        "replacement_cask": null
+      },
+      "post_install_steps": [
+        {
+          "source": {
+            "path": "{{etc}}/ca-certificates/cert.pem"
+          },
+          "target": {
+            "path": "{{pkgetc}}/cert.pem"
+          },
+          "force": true,
+          "type": "symlink"
+        }
+      ],
+      "post_install_defined": false,
+      "service": null,
+      "tap_git_head": "759adb3ca39f9c4d260c4b93c0c765058d76d7b3",
+      "ruby_source_path": "Formula/o/openssl@3.rb",
+      "ruby_source_checksum": {
+        "sha256": "ff38ac43aa86a0484a12bace87feca515c745b3caf38a5b0738288b56fb86c97"
+      }
+    },
+    {
+      "name": "xz",
+      "full_name": "xz",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [],
+      "versioned_formulae": [],
+      "desc": "General-purpose data compression with high compression ratio",
+      "license": "0BSD AND GPL-2.0-or-later",
+      "homepage": "https://tukaani.org/xz/",
+      "versions": {
+        "stable": "5.8.4",
+        "head": null,
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.gz",
+          "tag": null,
+          "revision": null,
+          "using": null,
+          "checksum": "0014c7886930454fe8bd4228665b51af55eeae560ea135c9c4cd33f55b2591d9"
+        }
+      },
+      "patches": [],
+      "revision": 0,
+      "version_scheme": 1,
+      "compatibility_version": null,
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_tahoe": {
+              "cellar": ":any",
+              "url": "https://ghcr.io/v2/homebrew/core/xz/blobs/sha256:d291ad2277682238329b0e4d249e5e2c948c4b10cd64dba1963d897330ad88dd",
+              "sha256": "d291ad2277682238329b0e4d249e5e2c948c4b10cd64dba1963d897330ad88dd"
+            }
+          }
+        }
+      },
+      "pour_bottle_only_if": null,
+      "keg_only": false,
+      "keg_only_reason": null,
+      "options": [],
+      "build_dependencies": [],
+      "dependencies": [],
+      "test_dependencies": [],
+      "recommended_dependencies": [],
+      "optional_dependencies": [],
+      "uses_from_macos": [],
+      "uses_from_macos_bounds": [],
+      "requirements": [],
+      "conflicts_with": [],
+      "conflicts_with_reasons": [],
+      "link_overwrite": [],
+      "caveats": null,
+      "installed": [
+        {
+          "version": "5.8.3",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1777273883,
+          "runtime_dependencies": [],
+          "installed_on_request": true
+        }
+      ],
+      "linked_keg": "5.8.3",
+      "pinned": false,
+      "outdated": true,
+      "deprecated": false,
+      "deprecation_date": null,
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": null,
+      "disabled": false,
+      "disable_date": null,
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": null,
+      "post_install_steps": [],
+      "post_install_defined": false,
+      "service": null,
+      "tap_git_head": "759adb3ca39f9c4d260c4b93c0c765058d76d7b3",
+      "ruby_source_path": "Formula/x/xz.rb",
+      "ruby_source_checksum": {
+        "sha256": "e5b8bbf09dccb4a1f2ee333ed65b13ee773350a26735ef594ca859d2cf85248e"
+      }
+    },
+    {
+      "name": "zlib",
+      "full_name": "zlib",
+      "tap": "homebrew/core",
+      "oldnames": [],
+      "aliases": [],
+      "versioned_formulae": [],
+      "desc": "General-purpose lossless data-compression library",
+      "license": "Zlib",
+      "homepage": "https://zlib.net/",
+      "versions": {
+        "stable": "1.4",
+        "head": "HEAD",
+        "bottle": true
+      },
+      "urls": {
+        "stable": {
+          "url": "https://zlib.net/zlib-1.4.tar.gz",
+          "tag": null,
+          "revision": null,
+          "using": null,
+          "checksum": "02dd159783677a749c04adbdd02b55b8a2bcc7e054f51b76b549199a916ad584"
+        },
+        "head": {
+          "url": "https://github.com/madler/zlib.git",
+          "branch": "develop",
+          "using": null
+        }
+      },
+      "patches": [],
+      "revision": 0,
+      "version_scheme": 0,
+      "compatibility_version": null,
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "bottle": {
+        "stable": {
+          "rebuild": 0,
+          "root_url": "https://ghcr.io/v2/homebrew/core",
+          "files": {
+            "arm64_tahoe": {
+              "cellar": ":any",
+              "url": "https://ghcr.io/v2/homebrew/core/zlib/blobs/sha256:af30c0eda23564e812e00202ef7ae256584016dcbb0b88afb1120e768224de87",
+              "sha256": "af30c0eda23564e812e00202ef7ae256584016dcbb0b88afb1120e768224de87"
+            }
+          }
+        }
+      },
+      "pour_bottle_only_if": null,
+      "keg_only": true,
+      "keg_only_reason": {
+        "reason": ":provided_by_macos",
+        "explanation": ""
+      },
+      "options": [],
+      "build_dependencies": [],
+      "dependencies": [],
+      "test_dependencies": [],
+      "recommended_dependencies": [],
+      "optional_dependencies": [],
+      "uses_from_macos": [],
+      "uses_from_macos_bounds": [],
+      "requirements": [],
+      "conflicts_with": [],
+      "conflicts_with_reasons": [],
+      "link_overwrite": [],
+      "caveats": null,
+      "installed": [
+        {
+          "version": "1.2.13",
+          "used_options": [],
+          "built_as_bottle": true,
+          "poured_from_bottle": true,
+          "time": 1673946196,
+          "runtime_dependencies": [],
+          "installed_on_request": true
+        }
+      ],
+      "linked_keg": null,
+      "pinned": false,
+      "outdated": true,
+      "deprecated": false,
+      "deprecation_date": null,
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": null,
+      "disabled": false,
+      "disable_date": null,
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": null,
+      "post_install_steps": [],
+      "post_install_defined": false,
+      "service": null,
+      "tap_git_head": "759adb3ca39f9c4d260c4b93c0c765058d76d7b3",
+      "ruby_source_path": "Formula/z/zlib.rb",
+      "ruby_source_checksum": {
+        "sha256": "6963a95454f22b5851f00f8a46a1fad8d9fa7714fcdf7113acc7a521df3b9f8e"
+      }
+    }
+  ],
+  "casks": [
+    {
+      "token": "kopiaui",
+      "full_token": "kopiaui",
+      "old_tokens": [],
+      "tap": "homebrew/cask",
+      "name": [
+        "KopiaUI"
+      ],
+      "desc": "Backup/restore tool",
+      "homepage": "https://kopia.io/",
+      "url": "https://github.com/kopia/kopia/releases/download/v0.23.1/KopiaUI-0.23.1-arm64.dmg",
+      "url_specs": {},
+      "version": "0.23.1",
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "installed": "0.14.0",
+      "installed_time": 1694944896,
+      "bundle_version": null,
+      "bundle_short_version": null,
+      "pinned": false,
+      "pinned_version": null,
+      "outdated": false,
+      "sha256": "f2adb1869c603c66aaeabd846affd21df426c614cc8285230f5465f9389a003c",
+      "artifacts": [
+        {
+          "app": [
+            "KopiaUI.app"
+          ],
+          "target": "/Applications/KopiaUI.app"
+        },
+        {
+          "zap": [
+            {
+              "trash": [
+                "~/Library/Application Support/kopia",
+                "~/Library/Caches/kopia",
+                "~/Library/Logs/kopia",
+                "~/Library/Logs/kopia-ui",
+                "~/Library/Preferences/io.kopia.ui.plist",
+                "~/Library/Saved Application State/io.kopia.ui.savedState"
+              ]
+            }
+          ]
+        }
+      ],
+      "caveats": null,
+      "caveats_rosetta": null,
+      "depends_on": {
+        "macos": {
+          ">=": [
+            "12"
+          ]
+        }
+      },
+      "conflicts_with": null,
+      "container": null,
+      "rename": [],
+      "auto_updates": true,
+      "deprecated": false,
+      "deprecation_date": null,
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": null,
+      "disabled": false,
+      "disable_date": null,
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": null,
+      "tap_git_head": "1aac7c6920d0d8e5026b2892d2bb99f587813241",
+      "languages": [],
+      "ruby_source_path": "Casks/k/kopiaui.rb",
+      "ruby_source_checksum": {
+        "sha256": "c462c212e3373a1dec136ac6daa4c1ec7cf2fd0f8727e873525b59e0390e53ac"
+      }
+    },
+    {
+      "token": "orbstack",
+      "full_token": "orbstack",
+      "old_tokens": [],
+      "tap": "homebrew/cask",
+      "name": [
+        "OrbStack"
+      ],
+      "desc": "Replacement for Docker Desktop",
+      "homepage": "https://orbstack.dev/",
+      "url": "https://cdn-updates.orbstack.dev/arm64/OrbStack_v2.2.5_21124_arm64.dmg",
+      "url_specs": {},
+      "version": "2.2.5,21124",
+      "autobump": true,
+      "no_autobump_message": null,
+      "skip_livecheck": false,
+      "installed": "1.11.3,19358",
+      "installed_time": 1749538270,
+      "bundle_version": null,
+      "bundle_short_version": null,
+      "pinned": false,
+      "pinned_version": null,
+      "outdated": false,
+      "sha256": "f2b887d26a21e0a12147eb005297782794b26f461f77c6b9cdfb57f576ad5e6d",
+      "artifacts": [
+        {
+          "uninstall": [
+            {
+              "quit": "dev.kdrag0n.MacVirt",
+              "script": {
+                "executable": "/Applications/OrbStack.app/Contents/MacOS/bin/orbctl",
+                "args": [
+                  "_internal",
+                  "brew-uninstall"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "app": [
+            "OrbStack.app"
+          ],
+          "target": "/Applications/OrbStack.app"
+        },
+        {
+          "binary": [
+            "/Applications/OrbStack.app/Contents/MacOS/bin/orbctl"
+          ],
+          "target": "/opt/homebrew/bin/orbctl"
+        },
+        {
+          "binary": [
+            "/Applications/OrbStack.app/Contents/MacOS/bin/orb"
+          ],
+          "target": "/opt/homebrew/bin/orb"
+        },
+        {
+          "bash_completion": [
+            "/Applications/OrbStack.app/Contents/Resources/completions/bash/orbctl.bash"
+          ],
+          "target": "/opt/homebrew/etc/bash_completion.d/orbctl"
+        },
+        {
+          "zsh_completion": [
+            "/Applications/OrbStack.app/Contents/Resources/completions/zsh/_orbctl"
+          ],
+          "target": "/opt/homebrew/share/zsh/site-functions/_orbctl"
+        },
+        {
+          "zsh_completion": [
+            "/Applications/OrbStack.app/Contents/Resources/completions/zsh/_orb"
+          ],
+          "target": "/opt/homebrew/share/zsh/site-functions/_orb"
+        },
+        {
+          "fish_completion": [
+            "/Applications/OrbStack.app/Contents/Resources/completions/fish/orbctl.fish"
+          ],
+          "target": "/opt/homebrew/share/fish/vendor_completions.d/orbctl.fish"
+        },
+        {
+          "postflight_steps": [
+            {
+              "steps": [
+                {
+                  "command": {
+                    "base": "appdir",
+                    "path": "OrbStack.app/Contents/MacOS/bin/orbctl"
+                  },
+                  "type": "run",
+                  "args": [
+                    "_internal",
+                    "brew-postflight"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "zap": [
+            {
+              "trash": [
+                "~/.orbstack",
+                "~/Library/Application Scripts/*.dev.orbstack",
+                "~/Library/Caches/dev.kdrag0n.MacVirt",
+                "~/Library/Caches/SentryCrash/OrbStack",
+                "~/Library/Group Containers/*.dev.orbstack",
+                "~/Library/HTTPStorages/dev.kdrag0n.MacVirt",
+                "~/Library/HTTPStorages/dev.kdrag0n.MacVirt.binarycookies",
+                "~/Library/Preferences/dev.kdrag0n.MacVirt.plist",
+                "~/Library/Saved Application State/dev.kdrag0n.MacVirt.savedState",
+                "~/Library/WebKit/dev.kdrag0n.MacVirt"
+              ],
+              "rmdir": "~/OrbStack"
+            }
+          ]
+        }
+      ],
+      "caveats": "Open the OrbStack app to finish setup.\n",
+      "caveats_rosetta": null,
+      "depends_on": {
+        "macos": {
+          ">=": [
+            "14"
+          ]
+        }
+      },
+      "conflicts_with": null,
+      "container": null,
+      "rename": [],
+      "auto_updates": true,
+      "deprecated": false,
+      "deprecation_date": null,
+      "deprecation_reason": null,
+      "deprecation_replacement_formula": null,
+      "deprecation_replacement_cask": null,
+      "deprecate_args": null,
+      "disabled": false,
+      "disable_date": null,
+      "disable_reason": null,
+      "disable_replacement_formula": null,
+      "disable_replacement_cask": null,
+      "disable_args": null,
+      "tap_git_head": "1aac7c6920d0d8e5026b2892d2bb99f587813241",
+      "languages": [],
+      "ruby_source_path": "Casks/o/orbstack.rb",
+      "ruby_source_checksum": {
+        "sha256": "a1308d6ca65d38f84e68ea76085bad18d1f6befff19c6e75fd56135920eeda98"
+      }
+    }
+  ]
+}

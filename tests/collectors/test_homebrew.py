@@ -8,12 +8,15 @@ import pytest
 from typer.testing import CliRunner
 
 from secmonk.cli import app
+from secmonk.collectors import homebrew as hb
 from secmonk.collectors.base import REGISTRY
 from secmonk.collectors.homebrew import (
     HomebrewCollector,
     collect_prefixes,
     find_prefixes,
+    parse_brew_info_json,
     parse_formula_rb,
+    parse_sbom,
     registry_purl_from_url,
     repo_from_url,
     tag_from_url,
@@ -28,6 +31,7 @@ from secmonk.sources.cvelist import CveListSource
 
 FIX = Path(__file__).parents[1] / "fixtures"
 PREFIX = FIX / "collectors" / "homebrew" / "prefix"
+REAL = FIX / "collectors" / "homebrew" / "real"
 CVES = FIX / "sources" / "cvelist" / "brew"
 
 
@@ -467,6 +471,132 @@ def test_scan_cli_homebrew_prefix(tmp_path):
     versions = {c["version"] for c in json.loads((tmp_path / "inv.json").read_text())["components"]
                 if c["name"] == "jq" and c["meta"].get("brew_kind") == "formula"}
     assert versions == {"1.8.1", "1.8.2"}
+
+
+# --------------------------------------------------------------------------- real prefix (macOS 26.5 arm64)
+
+def test_real_prefix_formulae_link_state():
+    inv = _inv(REAL / "prefix")
+    assert inv.warnings == []
+    f = _formulae(inv)
+    assert set(f) == {("xz", "5.8.3"), ("zlib", "1.2.13"), ("libpng", "1.6.58"), ("nomad", "1.6.3")}
+    xz, zlib, png = f[("xz", "5.8.3")], f[("zlib", "1.2.13")], f[("libpng", "1.6.58")]
+    assert xz.meta["linked"] is True and xz.meta["keg_only"] is False and xz.meta["tap"] == "homebrew/core"
+    assert xz.meta["poured_from_bottle"] is True and xz.meta["homebrew_version"] == "5.1.3-4-g8fbdcb7"
+    assert zlib.meta["keg_only"] is True and zlib.meta["linked"] is False       # `keg_only :provided_by_macos`
+    # unlinked but NOT keg-only (`brew unlink`): link state alone must not imply keg_only
+    assert png.meta["keg_only"] is False and png.meta["linked"] is False
+    assert all(c.meta["active"] is True and "active_guess" not in c.meta for c in f.values())
+    assert xz.meta["brew_prefix"] == str(REAL / "prefix")
+
+
+def test_real_source_built_tap_formula_without_sbom():
+    nomad = _formulae(_inv(REAL / "prefix"))[("nomad", "1.6.3")]
+    assert nomad.purl == "pkg:brew/hashicorp/tap/nomad@1.6.3" and nomad.meta["tap"] == "hashicorp/tap"
+    assert nomad.meta["poured_from_bottle"] is False and "upstream_version" not in nomad.meta
+    assert nomad.meta["homepage"] == "https://www.nomadproject.io/"
+    assert "source_url" not in nomad.meta        # `url` only inside `if OS.mac? && ...` blocks: not read
+
+
+def test_real_sbom_shape_archive_has_no_registry_purl():
+    """Real brew SBOMs: the `Archive-<f>-src` package has no purl (or only a pkg:brew one);
+    the `pkg:brew/homebrew/core/<f>@<v>` purl sits on the `Bottle-<f>` package."""
+    keg = REAL / "prefix/Cellar/xz/5.8.3"
+    d = json.loads((keg / "sbom.spdx.json").read_text())
+    bottle = next(p for p in d["packages"] if p["SPDXID"] == "SPDXRef-Bottle-xz")
+    assert bottle["externalRefs"][0]["referenceLocator"] == "pkg:brew/homebrew/core/xz@5.8.3"
+    s = parse_sbom(d)
+    assert s["purls"] == [] and s["version"] == "5.8.3"
+    assert s["download"].startswith("https://github.com/tukaani-project/xz/releases/download/v5.8.3/")
+    xz = _formulae(_inv(REAL / "prefix"))[("xz", "5.8.3")]
+    assert xz.meta["upstream_repo"] == "github.com/tukaani-project/xz" and xz.meta["upstream_tag"] == "v5.8.3"
+    assert "upstream_purls" not in xz.meta
+
+
+def test_real_casks_api_json_metadata_and_renamed_token(tmp_path):
+    prefix = tmp_path / "prefix"
+    shutil.copytree(REAL / "prefix", prefix, symlinks=True)
+    # brew links Caskroom/<t>/<v>/<App>.app -> /Applications/<App>.app (absolute; dangling here, never followed)
+    (prefix / "Caskroom/orbstack/1.11.3,19358/OrbStack.app").symlink_to(tmp_path / "Applications/OrbStack.app")
+    inv = _inv(prefix)
+    casks = {c.meta["brew_name"]: c for c in inv.components if c.meta.get("brew_kind") == "cask"}
+    assert set(casks) == {"kopiaui", "orbstack", "redis-stack", "aws-vault-binary"}   # aws-vault -> symlink
+    kopia, orb, redis = casks["kopiaui"], casks["orbstack"], casks["redis-stack"]
+    # API-installed casks store a minimal `<token>.json` (no name/version/auto_updates): token as name
+    assert kopia.name == "kopiaui" and kopia.version == "0.14.0" and kopia.meta["cask_apps"] == ["KopiaUI.app"]
+    assert orb.version == "1.11.3,19358" and orb.purl == "pkg:brew/homebrew/cask/orbstack@1.11.3%2C19358"
+    assert orb.meta["cask_apps"] == ["OrbStack.app"]        # `{}` JSON: from the Caskroom/<ver>/*.app symlink
+    assert orb.meta["tap"] == "homebrew/cask" and orb.meta["installed_on_request"] is True
+    assert redis.name == "Redis Stack" and redis.version == "7.2.0-6"            # third-party `.rb`
+    assert casks["aws-vault-binary"].version == "6.6.2"
+
+
+def test_real_brew_info_json_active_keg_and_parity_with_walk():
+    data = json.loads((REAL / "brew-info.json").read_text())
+    cli = {c.name: c for c in parse_brew_info_json(data)}
+    ssl = [c for c in parse_brew_info_json(data) if c.name == "openssl@3"]
+    assert [c.version for c in ssl] == ["3.6.3"]                 # linked_keg, not every installed[] keg
+    assert {c.version for c in parse_brew_info_json(data, all_kegs=True) if c.name == "openssl@3"} == \
+        {"3.6.2", "3.6.3"}
+    assert cli["zlib"].meta["keg_only"] is True and cli["zlib"].meta["linked"] is False
+    assert cli["xz"].meta["linked"] is True and cli["xz"].meta["active"] is True
+    assert cli["OrbStack"].meta["auto_updates"] is True
+    walk = {c.meta["brew_name"]: c.purl for c in _inv(REAL / "prefix").components if c.meta.get("brew_kind")}
+    for token in ("xz", "zlib", "libpng", "kopiaui", "orbstack"):
+        cli_purl = next(c.purl for c in cli.values() if c.meta["brew_name"] == token)
+        assert cli_purl == walk[token], token
+
+
+def test_opt_link_into_renamed_rack_is_ignored(tmp_path):
+    """Real case: `opt/sdl2 -> ../Cellar/sdl2-compat/2.32.70` while `Cellar/sdl2` keeps old kegs."""
+    _keg(tmp_path, "foo", "1.0", link=False)
+    _keg(tmp_path, "foo", "2.0", link=False)
+    _keg(tmp_path, "foo-compat", "1.0")
+    (tmp_path / "opt/foo").symlink_to("../Cellar/foo-compat/1.0")     # same basename as foo's old keg
+    foo = next(c for c in _inv(tmp_path).components if c.name == "foo")
+    assert foo.version == "2.0" and foo.meta["active_guess"] is True
+
+
+def test_same_formula_in_two_prefixes_keeps_both_locations(tmp_path):
+    """Apple Silicon Mac with a leftover Intel /usr/local prefix: same purl in both."""
+    _keg(tmp_path / "opt/homebrew", "pcre", "8.45")
+    _keg(tmp_path / "usr/local", "pcre", "8.45")
+    _keg(tmp_path / "usr/local", "lame", "3.100")
+    comps, _ = collect_prefixes(tmp_path, {})
+    (pcre,) = [c for c in comps if c.name == "pcre"]
+    assert pcre.meta["paths"] == ["/opt/homebrew/Cellar/pcre/8.45", "/usr/local/Cellar/pcre/8.45"]
+    assert next(c for c in comps if c.name == "lame").meta["brew_prefix"] == "/usr/local"
+    # the first prefix's meta is kept; every prefix holding the same keg is listed
+    assert pcre.meta["brew_prefix"] == "/opt/homebrew"
+    assert pcre.meta["brew_prefixes"] == ["/opt/homebrew", "/usr/local"]
+    assert "brew_prefixes" not in next(c for c in comps if c.name == "lame").meta
+
+
+def test_live_known_prefix_uses_hostname_and_prefix(tmp_path, monkeypatch):
+    _keg(tmp_path, "xz", "5.8.3")
+    monkeypatch.setattr(hb, "KNOWN_PREFIXES", (str(tmp_path.resolve()).lstrip("/"),))
+    monkeypatch.setattr(hb.socket, "gethostname", lambda: "testhost")
+    assert _inv(tmp_path).asset.id == f"homebrew:testhost:{tmp_path.resolve()}"
+
+
+def test_each_prefix_target_is_its_own_asset(conn, tmp_path, monkeypatch):
+    """Scanning /opt/homebrew then /usr/local of the same host must not mark the first prefix's components
+    removed: save_inventory diffs an asset against its latest complete scan."""
+    from secmonk.engine.inventory import current_components
+
+    arm, intel = tmp_path / "opt/homebrew", tmp_path / "usr/local"
+    _keg(arm, "xz", "5.8.3")
+    _keg(intel, "lame", "3.100")
+    monkeypatch.setattr(hb, "KNOWN_PREFIXES", tuple(str(p.resolve()).lstrip("/") for p in (arm, intel)))
+    monkeypatch.setattr(hb.socket, "gethostname", lambda: "testhost")
+    inv_arm, inv_intel = _inv(arm), _inv(intel)
+    assert inv_arm.asset.id != inv_intel.asset.id
+    save_inventory(conn, inv_arm)
+    save_inventory(conn, inv_intel)
+    assert [r["name"] for r in current_components(conn, inv_arm.asset.id)] == ["xz"]
+    assert [r["name"] for r in current_components(conn, inv_intel.asset.id)] == ["lame"]
+    # the root (every prefix below it) keeps the bare host id
+    assert _inv(tmp_path, hostname="testhost").asset.id == "homebrew:testhost"
 
 
 def test_name_vendor_hint_lowers_confidence(conn, tmp_path):

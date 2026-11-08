@@ -33,6 +33,11 @@ MAX_LINE = 2000                          # longer lines are cut: keeps every reg
 
 # --------------------------------------------------------------------------- components
 
+def flag(v: Any) -> bool:
+    """A boolean collector option: already a bool via `ops.parse_opts`; strings for direct callers."""
+    return v if isinstance(v, bool) else str(v or "").lower() in ("1", "true", "yes")
+
+
 def _brew_purl(kind: str, name: str, version: str | None, tap: str | None) -> str:
     if kind == "cask":
         return purls.build("brew", name, version, namespace="homebrew/cask")
@@ -70,29 +75,47 @@ def _cask_apps(artifacts: list) -> list[str]:
     return out
 
 
-def parse_brew_info_json(data: dict) -> list[Component]:
-    """Components from `brew info --json=v2 --installed` output."""
+def parse_brew_info_json(data: dict, all_kegs: bool = False) -> list[Component]:
+    """Components from `brew info --json=v2 --installed` output.
+
+    `installed[]` lists every keg in the rack; like the filesystem walk only the active one is kept
+    (`linked_keg`, else the highest version) unless `all_kegs`. `oldnames` / `old_tokens` (renamed
+    formulae / casks, whose Cellar rack or Caskroom dir may keep the old name) go to `meta.brew_oldnames`."""
     comps: list[Component] = []
     for f in data.get("formulae", []) or []:
         name = f.get("name")
-        for inst in f.get("installed") or []:
-            ver = inst.get("version")
-            if not name or not ver:
+        insts = [i for i in f.get("installed") or [] if isinstance(i, dict) and i.get("version")]
+        if not name or not insts:
+            continue
+        versions = [i["version"] for i in insts]
+        active = f.get("linked_keg") if f.get("linked_keg") in versions else \
+            max(versions, key=cmp_to_key(_vkey))
+        for inst in insts:
+            ver = inst["version"]
+            if ver != active and not all_kegs:
                 continue
             comps.append(_formula_component(
-                name, ver, f.get("tap"),
+                name, ver, f.get("tap"), active=ver == active,
+                keg_only=f.get("keg_only"), linked=f.get("linked_keg") == ver, pinned=f.get("pinned") or None,
                 installed_on_request=inst.get("installed_on_request"),
                 runtime_dependencies=len(inst.get("runtime_dependencies") or []),
                 homepage=f.get("homepage"), license=f.get("license"),
                 source_url=((f.get("urls") or {}).get("stable") or {}).get("url"),
+                brew_oldnames=_str_list(f.get("oldnames")) or None,
             ))
     for c in data.get("casks", []) or []:
         token = c.get("token")
         if not token or not c.get("installed"):
             continue
         comps.append(_cask_component(token, c.get("installed") or c.get("version"), c.get("name"),
-                                     c.get("homepage"), _cask_apps(c.get("artifacts")), c.get("tap")))
+                                     c.get("homepage"), _cask_apps(c.get("artifacts")), c.get("tap"),
+                                     auto_updates=c.get("auto_updates") or None,
+                                     brew_oldnames=_str_list(c.get("old_tokens")) or None))
     return comps
+
+
+def _str_list(v: Any) -> list[str]:
+    return [x for x in v if isinstance(x, str) and x] if isinstance(v, list) else []
 
 
 # --------------------------------------------------------------------------- upstream identity
@@ -271,6 +294,8 @@ def parse_formula_rb(text: str) -> dict[str, Any]:
                 head_url = head_url or sm.group(1)
             elif key == "license":
                 license_lines = [rest]
+            elif key == "keg_only":
+                out["keg_only"] = True
             elif key == "deprecate!":
                 out["deprecated"] = True
             elif key == "disable!":
@@ -352,12 +377,17 @@ def _vkey(a: str, b: str) -> int:
     return compare(_REVISION.sub("", a), _REVISION.sub("", b), "generic") or (a > b) - (a < b)
 
 
-def _link_target(p: Path) -> str | None:
-    """Basename of a symlink target (never followed: works on extracted trees with dangling links)."""
+def _link_target(p: Path, rack: str | None = None) -> str | None:
+    """Basename of a symlink target (never followed: works on extracted trees with dangling links).
+    With `rack`, a link into another rack (`opt/sdl2 -> ../Cellar/sdl2-compat/2.32.70`, a renamed
+    formula) is ignored."""
     try:
-        return Path(os.readlink(p)).name
+        t = Path(os.readlink(p))
     except OSError:
         return None
+    if rack is not None and t.parent.name and t.parent.name != rack:
+        return None
+    return t.name
 
 
 def _read_json(path: Path, root: Path | None, warnings: list[str], boundary: Path | None = None) -> dict | None:
@@ -402,7 +432,7 @@ def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: l
     cellar = prefix / "Cellar"
     if not cellar.is_dir():
         return []
-    all_kegs = str(opts.get("all_kegs", "")).lower() in ("1", "true", "yes")
+    all_kegs = flag(opts.get("all_kegs"))
     linked_dir = prefix / "var/homebrew/linked"
     pinned_dir = prefix / "var/homebrew/pinned"
     out: list[Component] = []
@@ -415,9 +445,9 @@ def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: l
         if not kegs:
             continue
         names = {k.name for k in kegs}
-        active, guess = _link_target(prefix / "opt" / name), False
+        active, guess = _link_target(prefix / "opt" / name, name), False
         if active not in names:
-            active = _link_target(linked_dir / name)
+            active = _link_target(linked_dir / name, name)
         if active not in names:
             active, guess = kegs[-1].name, True
         linked = (linked_dir / name).is_symlink() if linked_dir.is_dir() else None
@@ -428,11 +458,9 @@ def _formula_components(prefix: Path, root: Path | None, opts: dict, warnings: l
                 continue
             c = _keg_component(prefix, root, name, keg, is_active, guess and is_active, warnings, boundary)
             if is_active:
-                c.meta["keg_only"] = (not linked) if linked is not None else None
                 c.meta["linked"] = linked
-            else:
-                c.meta["keg_only"] = None
             c.meta["pinned"] = pinned or None
+            c.meta["brew_prefix"] = _rel(prefix, root)
             c.meta = {k: v for k, v in c.meta.items() if v is not None}
             out.append(c)
             out.extend(_keg_libraries(keg, root, name, c, warnings, boundary))
@@ -462,6 +490,8 @@ def _keg_component(prefix: Path, root: Path | None, name: str, keg: Path, active
         "desc": f.get("desc"), "homepage": f.get("homepage"), "source_url": strip_url_secrets(f.get("url")),
         "license": f.get("license"), "patched_cves": f.get("patched_cves"),
         "deprecated": f.get("deprecated"), "disabled": f.get("disabled"),
+        # `keg_only` stanza of the installed formula text; unlinked != keg-only (`brew unlink`, conflicts)
+        "keg_only": bool(f.get("keg_only")) if rb else None,
     }
     # SBOM + upstream identity
     sbom: dict = {}
@@ -569,8 +599,8 @@ def _cask_components(prefix: Path, root: Path | None, warnings: list[str],
     pinned_dir = prefix / "var/homebrew/pinned_casks"
     out: list[Component] = []
     for cask in sorted(caskroom.iterdir()):
-        if not cask.is_dir() or cask.name.startswith("."):
-            continue
+        if cask.is_symlink() or not cask.is_dir() or cask.name.startswith("."):
+            continue          # symlinked token dirs alias renamed casks (aws-vault -> aws-vault-binary)
         token = cask.name
         vdirs = sorted((v for v in cask.iterdir() if v.is_dir() and not v.name.startswith(".")),
                        key=cmp_to_key(lambda a, b: _vkey(a.name, b.name)))
@@ -624,6 +654,7 @@ def _cask_components(prefix: Path, root: Path | None, warnings: list[str],
             installed_on_request=receipt.get("installed_on_request"),
             pinned=(pinned_dir / token).exists() or (pinned_dir / token).is_symlink() or None)
         c.meta["brew_version"] = version
+        c.meta["brew_prefix"] = _rel(prefix, root)
         c.source_path = _rel(cask / version, root) if (cask / version).exists() else _rel(cask, root)
         out.append(c)
     return out
@@ -648,7 +679,9 @@ def collect_prefixes(root: Path, opts: dict | None = None) -> tuple[list[Compone
 
 
 def _dedupe(comps: list[Component]) -> list[Component]:
-    """Same purl from several kegs (shared vendored library): keep one, list every `via_brew`."""
+    """Same purl from several kegs (shared vendored library) or prefixes: keep one, list every
+    `via_brew` / location. A formula or cask found in several prefixes keeps the first prefix's meta
+    (`brew_prefix`, receipt fields, link state); `paths` and `brew_prefixes` list every copy."""
     seen: dict[str, Component] = {}
     out: list[Component] = []
     for c in comps:
@@ -658,6 +691,15 @@ def _dedupe(comps: list[Component]) -> list[Component]:
             seen[key] = c
             out.append(c)
             continue
+        if c.meta.get("brew_kind") and c.source_path and c.source_path != prev.source_path:
+            locs = prev.meta.setdefault("paths", [prev.source_path] if prev.source_path else [])
+            if c.source_path not in locs:      # same formula version in two prefixes
+                locs.append(c.source_path)
+            bp = c.meta.get("brew_prefix")
+            if bp and bp != prev.meta.get("brew_prefix"):
+                pfx = prev.meta.setdefault("brew_prefixes", [prev.meta.get("brew_prefix")])
+                if bp not in pfx:
+                    pfx.append(bp)
         vb = c.meta.get("via_brew")
         if vb and vb != prev.meta.get("via_brew"):
             allv = prev.meta.setdefault("via_brew_all", [prev.meta.get("via_brew")])
@@ -677,10 +719,15 @@ class HomebrewCollector(Collector):
 
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         root = Path(target or "/")
-        live = str(root) == "/"
+        live = str(root) == "/" or str(root.resolve()) in {f"/{p}" for p in KNOWN_PREFIXES}
         comps, warnings = collect_prefixes(root, opts)
         if not find_prefixes(root):
             warnings.append(f"no Homebrew prefix found under {root}")
         hostname = opts.get("hostname") or (socket.gethostname() if live else (root.resolve().name or "homebrew"))
-        asset = Asset(id=f"homebrew:{hostname}", type="server", name=hostname)
+        # one asset per target: a root (every prefix below it) is `homebrew:<host>`; a single prefix is
+        # `homebrew:<host>:<prefix>`, so scanning /opt/homebrew then /usr/local never marks the first one's
+        # components removed (save_inventory diffs against the asset's previous complete scan)
+        is_prefix = (root / "Cellar").is_dir() or (root / "Caskroom").is_dir()
+        asset_id = f"homebrew:{hostname}:{root.resolve()}" if is_prefix else f"homebrew:{hostname}"
+        asset = Asset(id=asset_id, type="server", name=hostname)
         return Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)

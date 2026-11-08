@@ -1,0 +1,9 @@
+{
+  "artifacts": [
+    {
+      "binary": [
+        "aws-vault"
+      ]
+    }
+  ]
+}
