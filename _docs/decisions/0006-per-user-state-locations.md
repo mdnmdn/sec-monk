@@ -1,10 +1,13 @@
 ---
 title: ADR-0006 — Per-user state locations (security)
+summary: Decision to keep the database and caches in per-user directories (never CWD-relative), with env overrides, 0700/0600 modes, and the git and digest hardening that goes with it.
+read_when: you are about to change where the DB or caches live, how paths are resolved or how git and registry digests are handled safely
 type: decision
 context: decisions
 status: accepted
 tags: [security, storage, cli]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [decisions/0004-sqlite-schema-v2.md, tech/architecture.md]
 code: src/secmonk/paths.py, src/secmonk/db.py
 ---

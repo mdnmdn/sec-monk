@@ -1,10 +1,13 @@
 ---
 title: ADR-0009 — Web interface stack with vendored libraries
+summary: Decision for the local web UI stack - stdlib server, Vue 3 and Vue Router vendored with checksums, one shared component library, loopback bind, strict CSP. Supersedes ADR-0008.
+read_when: you are about to change the web UI stack, upgrade or add a vendored library, or relax the CSP or request protections
 type: decision
 context: decisions
 status: accepted
 tags: [web-ui, architecture, security]
 updated: 2026-11-07
+verified: 2026-11-07
 supersedes: decisions/0008-web-ui-stack.md
 related: [features/web-ui.md, tech/web-ui.md, decisions/0001-language-python-uv-mise.md, decisions/0007-process-monitor.md]
 code: src/secmonk/web/, scripts/vendor_web.py

@@ -1,10 +1,13 @@
 ---
 title: Rootfs collector
+summary: Rootfs engine for any Linux filesystem view covering OS detection, dpkg, apk and rpm parsers, FsView implementations (DirView, LayeredTarView), classification and limits.
+read_when: you change OS package parsing or how a directory, image layers or a host root are read as a filesystem view
 type: tech
 context: tech
 status: implemented
 tags: [collector, rootfs, dpkg, apk, rpm, python, npm]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 fixtures: tests/fixtures/collectors/docker/
 code: src/secmonk/collectors/rootfs.py

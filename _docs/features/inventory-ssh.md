@@ -1,10 +1,13 @@
 ---
 title: Agentless inventory over SSH
+summary: Agentless SSH inventory of Linux, macOS and Windows hosts - fixed read-only harvest script, transports, host key checks, size caps, safe extraction, asset ids, acceptance criteria.
+read_when: you change how the SSH collector connects, what it runs on the host or how it extracts the harvest
 type: feature
 context: features
 status: implemented
 tags: [ssh, agentless, linux, macos, windows, inventory, dependencies]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py
 related: [tech/collectors/ssh.md, tech/collectors/rootfs.md, tech/collectors/macos.md, features/inventory-docker.md, features/inventory-macos.md, features/inventory-homebrew.md, features/inventory-windows.md, features/inventory-dependencies.md, features/README.md]
 ---

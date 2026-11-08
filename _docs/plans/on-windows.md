@@ -1,11 +1,14 @@
 ---
 title: Plan - on Windows
+summary: Checklist to run the PowerShell inventory script, live winreg mode, osquery input, Windows OpenSSH and MSRC matching on real Windows machines.
+read_when: you are on Windows and want to verify the inventory script, live mode, OpenSSH or Windows CVE matching
 type: plan
 context: plans
 status: open
 platform: windows
 tags: [plan, windows, powershell, registry, msrc, ssh]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [tech/collectors/windows.md, features/inventory-windows.md, references/windows-inventory.md, references/vuln-sources/msrc.md, tech/collectors/ssh.md]
 ---
 

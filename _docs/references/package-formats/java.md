@@ -1,10 +1,13 @@
 ---
 title: Java packages (Maven, Gradle, JARs)
+summary: Maven, Gradle and JAR parsers with archive identification rules (pom.properties, MANIFEST, filename), nested archive safety limits, confidence levels and gaps.
+read_when: you change the Java parsers or need to know how jars, wars and shaded dependencies are identified and matched
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, java]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/java/
 code: src/secmonk/collectors/lang/java.py

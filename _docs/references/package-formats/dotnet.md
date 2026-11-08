@@ -1,10 +1,13 @@
 ---
 title: .NET packages (NuGet)
+summary: NuGet parsers for deps.json, packages.lock.json, project.assets.json, csproj and Directory.Packages.props, PURL casing, runtime pack mapping to OSV and gaps.
+read_when: you change the .NET dependency parsers or need to know how NuGet packages and runtimes map to OSV
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, dotnet]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/dotnet/
 code: src/secmonk/collectors/lang/dotnet.py

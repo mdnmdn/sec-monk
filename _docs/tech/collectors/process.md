@@ -1,10 +1,13 @@
 ---
 title: Process collector (process / executable monitor)
+summary: Process collector and monitor covering platform-neutral core with per-OS backends, launch classification, identity resolution, snapshot format, risk flags, watch mode, porting.
+read_when: you change the process monitor, add an OS backend, extend the secmonk-process-snapshot format or the risk flags
 type: tech
 context: tech
 status: implemented
 tags: [collector, process, macos, launchd, provenance]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/process/
 code: src/secmonk/collectors/process/, src/secmonk/procmon.py

@@ -1,10 +1,13 @@
 ---
 title: GitHub Advisory Database
+summary: GitHub Advisory Database repo published in OSV format, why it is not ingested directly (OSV bulk covers reviewed advisories), quirks and TODO.
+read_when: you wonder why there is no GHSA importer or need to know how GitHub advisories reach the mirror
 type: reference
 context: references
 status: reference
 tags: [vuln-source, ghsa, osv, github]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 reachable: partial
 fixtures: tests/fixtures/sources/ghsa/

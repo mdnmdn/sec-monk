@@ -1,10 +1,13 @@
 ---
 title: ADR-0004 — SQLite schema v2
+summary: Decision record for SQLite schema v2 - tables, alias kinds, per-asset facts, additive migrations via user_version, file location and 0600 permissions. Supersedes ADR-0002.
+read_when: you are about to change the database schema, add a migration or question why the store is one SQLite file
 type: decision
 context: decisions
 status: accepted
 tags: [data-model, storage]
 updated: 2026-11-07
+verified: 2026-11-07
 supersedes: decisions/0002-sqlite-local-mirror.md
 related: [tech/data-model.md, decisions/0006-per-user-state-locations.md]
 code: src/secmonk/db.py

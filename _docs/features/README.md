@@ -1,10 +1,13 @@
 ---
 title: Feature catalogue
+summary: Catalogue of feature docs with platforms and validation caveats, the CLI-at-a-glance block of every command and option, and the table of collector -o options.
+read_when: you look for the document that covers a feature, a CLI command or flag, or the -o options a collector reads
 type: feature
 context: features
 status: implemented
 tags: [cli, index, features]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/cli.py
 related: [tech/architecture.md, references/vuln-sources/README.md, references/probes.md, _meta/README.md]
 ---

@@ -1,11 +1,14 @@
 ---
 title: Plans - what remains to test and which sources to add
+summary: Index of the plans that list unverified collectors and sources by platform (macOS, Linux/Docker, Windows, open network) plus engine quality, with open-item counts.
+read_when: you look for the plan that matches the machine or network you are on, or want to see what is still unverified
 type: plan
 context: plans
 status: open
 platform: any
 tags: [plan, index]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [_meta/README.md, product/vision.md, decisions/0005-prototype-scope-nov-2026.md]
 ---
 
@@ -32,7 +35,7 @@ Counts are the number of `- [ ]` checkboxes at `updated: 2026-11-07`; the backlo
 2. Work through the checklist top to bottom; every item gives the exact commands, what to verify, and which doc/test to update. **Tick the box** (`- [x]`) when done and add the date and result in a short sub-bullet.
 3. **Update the linked doc's frontmatter** (`sample: synthetic` -> `mixed`/`real`, `reachable:`, `status:`) and its Limitations/TODO text; **add real fixtures** (trimmed and anonymized: no hostnames, user names, serials, tokens) under the doc's `fixtures:` path with a README stating provenance, and a test that reads them.
 4. Fix importers/collectors when a documented assumption turns out wrong (the assumptions are named in each item); keep the old synthetic fixture only if it still documents a case the real data does not.
-5. When every box of a plan is ticked set its `status: done`, bump `updated:`, regenerate [../INDEX.md](../INDEX.md) with `uv run python scripts/docs_index.py`.
+5. When every box of a plan is ticked set its `status: done`, bump `updated:`, regenerate [../INDEX.md](../INDEX.md) with `uv run python scripts/docs.py index`.
 6. New findings that belong to another platform go into **that** plan (one place per gap), not here.
 
 Suggested order if you only have a day: `on-open-network.md` first hour -> Debian tracker + MSRC + NVD checks -> `engine-and-quality.md` section D (tests/CI) -> the platform you have at hand.

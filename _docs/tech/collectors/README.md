@@ -1,10 +1,13 @@
 ---
 title: Inventory collectors — index
+summary: Index table of the nine inventory collectors with target, document and status, plus the template every collector document follows.
+read_when: you look for the document that covers a specific collector or you add a new collector document
 type: tech
 context: tech
 status: implemented
 tags: [collector, index, architecture]
 updated: 2026-11-07
+verified: 2026-11-07
 ---
 
 # Inventory collectors

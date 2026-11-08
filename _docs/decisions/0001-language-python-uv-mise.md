@@ -1,10 +1,13 @@
 ---
 title: ADR-0001 — Python 3.13 with mise + uv
+summary: Decision to write the engine in Python 3.13 with mise pinning tools and uv managing the venv, using univers for version comparison; scanners stay optional.
+read_when: you are about to change the implementation language, the tool pinning (mise, uv) or the version comparison library, or question why they were chosen
 type: decision
 context: decisions
 status: accepted
 tags: [language, tooling]
 updated: 2026-11-07
+verified: 2026-11-07
 ---
 
 # ADR-0001 — Python 3.13, managed with mise + uv

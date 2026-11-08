@@ -1,10 +1,13 @@
 ---
 title: Prototype architecture
+summary: Prototype layout covering sources, collectors, shared lang parsers, engine stages, SQLite state, data flow per target, findings lifecycle and design principles.
+read_when: you need the overall map of modules and data flow before changing the CLI, a collector, a source or the matching engine
 type: tech
 context: tech
 status: implemented
 tags: [architecture, cli, engine, collector, vuln-source]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/
 related: [tech/web-ui.md, product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
 ---

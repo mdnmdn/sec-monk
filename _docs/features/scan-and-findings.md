@@ -1,10 +1,13 @@
 ---
 title: Scan, match and findings
+summary: CLI contract of scan, match, findings and inventory commands with filters, --format table|json|csv, --min-confidence, --fail-on, exit codes, warnings and finding lifecycle.
+read_when: you use or change scan, match or findings options, output formats, exit codes or CI gating with --fail-on
 type: feature
 context: features
 status: implemented
 tags: [cli, matching, prioritization, findings]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/cli.py, src/secmonk/engine/match.py, src/secmonk/engine/queries.py, src/secmonk/engine/scoring.py
 related: [features/README.md, tech/engine/matching.md, tech/data-model.md, features/vuln-sync.md]
 ---

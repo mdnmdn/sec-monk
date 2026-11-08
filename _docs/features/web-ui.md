@@ -1,10 +1,13 @@
 ---
 title: Web interface (local)
+summary: Requirements for the local web UI `secmonk ui` with functional tables mapped to CLI commands, views and routes, navigation, actions, security stance and acceptance criteria.
+read_when: you add or change a web UI view, action or route, or need to know what the UI covers and how it is secured
 type: feature
 context: features
 status: implemented
 tags: [web-ui, cli, process, findings, sync, design]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/web/, src/secmonk/cli.py
 related: [tech/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, features/process-monitor.md, features/scan-and-findings.md, features/vuln-sync.md, features/README.md]
 ---

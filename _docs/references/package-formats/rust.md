@@ -1,10 +1,13 @@
 ---
 title: Rust Cargo.lock and cargo-auditable binaries
+summary: Cargo.lock v1-v4 handling and cargo-auditable binaries (.dep-v0 section in ELF, Mach-O, PE), skipped sources, pitfalls and fixture provenance.
+read_when: you change the Rust parser, debug missing crates in a scan or need the cargo-auditable section layout
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, rust, binary]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/rust/
 code: src/secmonk/collectors/lang/rust.py

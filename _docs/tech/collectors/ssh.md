@@ -1,10 +1,13 @@
 ---
 title: SSH collector (agentless)
+summary: Agentless SSH inventory of Linux, macOS and Windows hosts covering fixed read-only harvest script, transports, safe extraction, asset ids.
+read_when: you change how the SSH collector connects, what it runs on the host or how it extracts the harvest
 type: tech
 context: tech
 status: implemented
 tags: [collector, ssh, agentless, linux, macos, windows]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 fixtures: [tests/fixtures/collectors/docker/, tests/fixtures/collectors/macos/root]
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py

@@ -1,10 +1,13 @@
 ---
 title: Go modules and binaries
+summary: Go module and binary parsing for go.mod, go.sum and embedded build info, with PURL and OSV mapping, version normalization, stdlib handling and pitfalls.
+read_when: you change the Go parsers or need to know how Go modules, the stdlib and binaries map to OSV
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, go, binary]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 fixtures: tests/fixtures/lang/go/
 code: src/secmonk/collectors/lang/golang.py

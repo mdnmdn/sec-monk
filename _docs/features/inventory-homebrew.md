@@ -1,10 +1,13 @@
 ---
 title: Homebrew inventory
+summary: Homebrew and Linuxbrew inventory without running brew - active kegs, casks, vendored Python and npm packages, identity confidence levels, patched-CVE suppression.
+read_when: you change how Homebrew packages are inventoried or matched, or need the confidence values given to formula identities
 type: feature
 context: features
 status: implemented
 tags: [cli, homebrew, linuxbrew, macos, linux, collector]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/homebrew.py
 related: [tech/collectors/homebrew.md, references/homebrew.md, features/inventory-macos.md, features/inventory-ssh.md, tech/engine/classification.md, features/README.md]
 ---

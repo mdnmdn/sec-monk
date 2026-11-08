@@ -1,10 +1,13 @@
 ---
 title: Inventory of containers and Linux filesystems
+summary: Inventory of container images (registry, tarball, OCI), live containers and rootfs trees - usage, asset ids, layer cache, source-package matching, warnings and acceptance criteria.
+read_when: you change how container images, running containers or Linux directory trees are inventoried, or debug their asset ids, layers or cache
 type: feature
 context: features
 status: implemented
 tags: [docker, container, rootfs, inventory, dependencies, linux]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/collectors/
 related: [tech/collectors/docker-image.md, tech/collectors/docker-engine.md, tech/collectors/rootfs.md, tech/collectors/dependencies.md, features/inventory-dependencies.md, features/README.md]
 ---

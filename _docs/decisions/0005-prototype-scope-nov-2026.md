@@ -1,10 +1,13 @@
 ---
 title: ADR-0005 — Prototype scope (November 2026)
+summary: Current prototype scope as of November 2026 - the eight sources, collectors, native engine, Inventory dataclass as exchange format, and what is deferred (SBOM export, VEX, UI). Supersedes ADR-0003.
+read_when: you need to know what is in or out of scope for the prototype or question why there is no SBOM export or Grype integration
 type: decision
 context: decisions
 status: accepted
 tags: [scope, roadmap]
 updated: 2026-11-07
+verified: 2026-11-07
 supersedes: decisions/0003-prototype-scope.md
 related: [product/vision.md, tech/architecture.md, plans/README.md]
 ---

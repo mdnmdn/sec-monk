@@ -1,10 +1,13 @@
 ---
 title: Probe log (external endpoints and real-data runs)
+summary: Log of every external endpoint probed (feeds, registries, vendor sites) with HTTP results, real-data validation runs with measured numbers, and how to re-probe.
+read_when: you need to know whether a host is reachable from the sandbox, look up a measured sync or scan number or re-run the probe script
 type: reference
 context: references
 status: reference
 tags: [probes, network, validation]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 reachable: partial
 related: [references/vuln-sources/README.md, references/homebrew.md, references/windows-inventory.md, references/package-formats/README.md, tech/collectors/docker-image.md, tech/collectors/ssh.md, tech/engine/matching.md, features/vuln-sync.md]

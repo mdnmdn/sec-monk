@@ -1,10 +1,13 @@
 ---
 title: Windows inventory and Microsoft vulnerability data
+summary: Where Windows keeps installed software (Uninstall keys, Appx, OS build, patches, osquery) and how Microsoft CVE List records name Windows and Office products.
+read_when: you change the Windows collector or its product matching, or need to know what Windows exposes and how Microsoft CNA records are shaped
 type: reference
 context: references
 status: reference
 tags: [windows, inventory, registry, msrc, cve, cpe]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 reachable: partial
 fixtures: tests/fixtures/sources/cvelist/microsoft/

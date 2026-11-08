@@ -1,10 +1,13 @@
 ---
 title: Microsoft MSRC CVRF
+summary: Microsoft MSRC CVRF monthly documents for Windows KB and fixed-build data, the assumed (unverified) response shape, mapping, quirks and review fixes.
+read_when: you change the MSRC importer, debug Windows KB or fixed-build matching or need the CVRF structure and what is unverified
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, msrc, windows, cve]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 reachable: no
 fixtures: tests/fixtures/sources/msrc/

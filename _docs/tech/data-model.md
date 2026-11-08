@@ -1,10 +1,13 @@
 ---
 title: Data model (SQLite schema)
+summary: SQLite schema v2 covering migrations, vulnerability mirror tables, affected and distro_triage, inventory and partial scans, findings, database location.
+read_when: you change db.py, add a table or column, or need to know what the database stores and where it lives
 type: tech
 context: tech
 status: implemented
 tags: [data-model, sqlite, matching]
 updated: 2026-11-07
+verified: 2026-11-07
 code: src/secmonk/db.py
 related: [decisions/0007-process-monitor.md, decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
 ---

@@ -1,11 +1,14 @@
 ---
 title: CVE List v5 (+ CISA Vulnrichment)
+summary: CVE List v5 git mirror and CISA Vulnrichment ADP, covering access paths, record format, mapping to tables, quirks, sync strategy and the sparse-clone implementation.
+read_when: you change the CVE List importer, debug a cvelist sync or need the CVE 5.x record fields and quirks
 type: reference
 context: references
 code: src/secmonk/sources/cvelist.py
 status: implemented
 tags: [vuln-source, cve, adp, ssvc]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: real
 reachable: partial
 fixtures: tests/fixtures/sources/cvelist/

@@ -1,10 +1,13 @@
 ---
 title: Homebrew (inventory and vulnerability identity)
+summary: Probe-based reference for Homebrew inventory from Cellar receipts and SBOMs, plus formula-to-CVE identity (no CPE), casks, taps, API shape, ghcr registry and match precision.
+read_when: you change the Homebrew collector, its formula-to-CPE seed or how brew packages are matched to vulnerabilities
 type: reference
 context: references
 status: reference
 tags: [homebrew, macos, linuxbrew, collector, identity]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 reachable: partial
 fixtures: tests/fixtures/collectors/homebrew/

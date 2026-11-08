@@ -69,7 +69,7 @@ Every command and option: [`_docs/features/README.md`](_docs/features/README.md#
 ```bash
 uv run pytest -q                         # tests run offline on fixtures in tests/fixtures/
 uv run ruff check src tests scripts
-uv run python scripts/docs_index.py      # regenerate _docs/INDEX.md from frontmatter (--check: also validates frontmatter values, referenced paths and markdown links/anchors)
+uv run python scripts/docs.py lint       # docs checks (frontmatter, links, freshness, INDEX); `docs.py index` regenerates _docs/INDEX.md, see _docs/_meta/tools.md
 scripts/probe_sources.sh                 # read-only reachability probe of every external endpoint
 ```
 

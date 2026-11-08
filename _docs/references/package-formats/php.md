@@ -1,10 +1,13 @@
 ---
 title: PHP packages (Composer / Packagist)
+summary: Composer composer.lock and vendor/composer/installed.json fields, PURL form, the v version prefix versus OSV ranges, dev branches, pitfalls and fixtures.
+read_when: you change the PHP Composer parser, debug a Packagist version match or need the lockfile format and its quirks
 type: reference
 context: references
 status: implemented
 tags: [package-format, dependencies, packagist, php]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/lang/php/
 code: src/secmonk/collectors/lang/php.py

@@ -1,10 +1,13 @@
 ---
 title: ADR-0008 — Local web interface stack
+summary: Superseded record of the local web UI stack (stdlib server, Vue 3 and Vue Router from a CDN, shared component library). Read ADR-0009 for the current stack.
+read_when: you want the history of the web UI stack, otherwise you read ADR-0009 instead
 type: decision
 context: decisions
 status: superseded
 tags: [web-ui, architecture, security]
 updated: 2026-11-07
+verified: 2026-11-07
 related: [features/web-ui.md, tech/web-ui.md, decisions/0001-language-python-uv-mise.md, decisions/0007-process-monitor.md]
 code: src/secmonk/web/
 ---

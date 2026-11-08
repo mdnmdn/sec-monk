@@ -1,10 +1,13 @@
 ---
 title: Windows collector
+summary: Windows collector inputs (PowerShell script JSON, osquery rows, live registry), OS identity, display-name normalization, filtering, SSH contract and limits.
+read_when: you change the Windows inventory script or parser, or how Windows OS builds and programs are identified
 type: tech
 context: tech
 status: implemented
 tags: [collector, windows, desktop, server, registry, msrc]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/windows/
 code: [src/secmonk/collectors/windows.py, src/secmonk/data/windows/secmonk-inventory.ps1]

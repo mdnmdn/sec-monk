@@ -1,10 +1,13 @@
 ---
 title: Debian Security Tracker
+summary: Debian Security Tracker JSON and repo text files, the mapping to distro_triage (not-affected, no-dsa, urgency), quirks, TODO and review fixes. Synthetic samples.
+read_when: you change the Debian tracker importer, debug distro triage or urgency downgrades or need the tracker formats
 type: reference
 context: references
 status: implemented
 tags: [vuln-source, linux, distro, backports, matching]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 reachable: no
 fixtures: tests/fixtures/sources/debian-tracker/

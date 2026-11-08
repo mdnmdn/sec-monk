@@ -1,10 +1,13 @@
 ---
 title: macOS collector
+summary: macOS collector reading a filesystem root covering app bundle Info.plist, Electron runtimes, Homebrew, pkgutil receipts, OS version, classification and limits.
+read_when: you change how macOS apps, bundled runtimes or receipts are discovered and identified
 type: tech
 context: tech
 status: implemented
 tags: [collector, macos, desktop, homebrew]
 updated: 2026-11-07
+verified: 2026-11-07
 sample: synthetic
 fixtures: tests/fixtures/collectors/macos/
 related: [features/inventory-macos.md, tech/engine/classification.md]
