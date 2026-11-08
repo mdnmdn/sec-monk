@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, engine, matching, versions, prioritization, tests, performance]
-updated: 2026-11-07
+updated: 2026-11-08
 verified: 2026-11-07
 related: [tech/engine/matching.md, tech/engine/classification.md, references/package-formats/README.md, tech/collectors/dependencies.md]
 ---
@@ -44,6 +44,15 @@ Baseline: `uv run pytest -q` (717 tests offline at commit 97e72b9); `uv run ruff
 - [ ] **Language-file ownership by OS packages**: `rootfs` does not drop python/npm files owned by dpkg/rpm (listed "Not done" in [rootfs.md](../tech/collectors/rootfs.md)) -> duplicate findings (OS package + PyPI). Implement ownership via dpkg `.list` / rpm file lists / apk `R:`/`F:` entries; measure duplicates first on `python:3.12-slim` and `ubuntu:24.04` + `apt install python3-requests`. Also egg-info/PKG-INFO, jar/gem inventory ("Not done" list).
 - [ ] **Cross-cutting out-of-scope items to keep visible**: reachability analysis (govulncheck-style symbol reachability, JS call graphs) - write an ADR deciding *not now*; Office/M365 build tables live in [next-sources.md](next-sources.md).
 
+- [ ] **Range correctness found on a real Mac (2026-11-08, [on-macos.md](on-macos.md) B)**: 28 of 1,060 Homebrew findings are false positives
+  from two engine classes. (1) *Inverted ranges* (13): the generic comparator reads `3.13.0a1` as a post-release letter (the OpenSSL `1.1.1w`
+  rule), so `introduced > fixed` and `in_osv_range` leaves every later version affected (11 FPs on `python@3.13`/`@3.14`: CVE-2024-3219,
+  -6232, -6923, -7592, -8088...; also `traefik` CVE-2024-28869, `azure-cli` CVE-2026-69877). Fix in `engine/versions.py`: treat
+  `introduced > fixed` as empty; honour the stored cvelist `versionType: python` (PEP 440, `a`/`b`/`rc` glued to a digit = pre-release).
+  (2) *Unbounded CPE rows* (15) next to bounded rows of the same CVE and vendor:product (`ffmpeg` CVE-2026-64835, `imagemagick` CVE-2017-5506
+  from NVD's bare `imagemagick:*`): ignore the unbounded row in `engine/match.py`. Tests first. (Alias `brew:` keys are already
+  scoped to Homebrew components since 2026-11-08: [classification.md](../tech/engine/classification.md).)
+
 ## B. Cross-source policy (distro CVE semantics)
 
 - [ ] **Unfixed distro CVEs**: OSV open ranges for `unimportant`/`no-dsa` CVEs flood findings (193 for `python:3.12-slim`). After the tracker import is validated ([on-open-network.md](on-open-network.md) section 1), decide the reporting policy: separate "unfixed" section, default `--fixable`, a stable `triage` vocabulary shared by all distros (see the mapping table in [next-sources.md](next-sources.md) "Distro triage vocabulary"). Document in [matching.md](../tech/engine/matching.md).
@@ -58,6 +67,10 @@ Baseline: `uv run pytest -q` (717 tests offline at commit 97e72b9); `uv run ruff
   python scripts/calibrate.py --labels tests/fixtures/calibration/labels.csv   # new script: precision/recall per matched_by and confidence bucket
   ```
   Verify: precision >= 0.9 at the default `--min-confidence 0.5`; reliability diagram per `matched_by`; adjust base values; document in matching.md.
+  - 2026-11-08 real-prefix sample ([on-macos.md](on-macos.md) B, details in [references/homebrew.md](../references/homebrew.md)): brew-seed 29 TP / 6 FP,
+    alias-table 95 / 1, brew-name-vendor 12 / 0 (consider ~0.75), normalized-name 0 shown (0.4 is right). The FPs are range bugs (item below), not
+    identity; a vendor-hint mismatch (GitHub org / homepage vs CVE vendor, e.g. `nomadproject` vs `hashicorp`) gives 0.3 and drops rows silently: a
+    recall problem, not a precision one.
 - [ ] **Priority thresholds (P1-P4)** are "deliberately simple" ([scoring.py](../../src/secmonk/engine/scoring.py): KEV -> P1, EPSS >= 0.1 & exposed -> P1, CVSS >= 9 & exposed or EPSS >= 0.1 -> P2, CVSS >= 7 -> P3, modifiers for prod/exposed). On real scans measure the distribution (target: P1 < 1-2 %, P1+P2 < 10 %), the share of findings with no CVSS (NVD April-2026 change) and no EPSS, and the effect of the `EPSS_HIGH=0.1` choice (try 0.05/0.2/percentile).
   ```bash
   sqlite3 /tmp/e.db "select priority,count(*) from finding where status='open' group by 1"
