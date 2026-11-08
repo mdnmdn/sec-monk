@@ -224,6 +224,17 @@ def test_chocolatey_and_scoop(win11):
     assert _get(win11, "7zip", CAT_PACKAGE).version == "24.07"      # different version: separate install
 
 
+def test_scoop_ripgrep_alias_identity_and_dedup(win11):
+    # `ripgrep` is a `names` alias (not only a brew key): Scoop/Chocolatey items resolve to it
+    sc = classify(_get(win11, "ripgrep", CAT_PACKAGE))
+    assert (sc.vendor, sc.meta["product"], sc.meta["product_source"]) == \
+        ("ripgrep project", "ripgrep", "alias-table")
+    assert w._alias_identity("ripgrep") == ("ripgrep project", "ripgrep")
+    prog = classify(w.Component("ripgrep", "14.1.0", CAT_APPLICATION, meta={"product_hint": "ripgrep"}))
+    assert w._same_as_program("ripgrep", "14.1.0", [prog]) is prog
+    assert w._same_as_program("ripgrep", "13.0.0", [prog]) is None
+
+
 def test_dotnet(win11):
     rts = [c for c in win11.components if c.category == CAT_RUNTIME]
     assert {(c.name, c.version, c.meta["arch"]) for c in rts} == {

@@ -6,8 +6,12 @@ aide,aide,aide,cve-affected
 angular-cli,angular,angular-cli,cve-affected
 anubis,techarohq,anubis,cve-affected
 anyquery,julien040,anyquery,cve-affected
+aom,libaom,libaom,cve-affected
+aom,aomedia,libaom,nvd-cpe
 apko,chainguard-dev,apko,cve-affected
 apptainer,apptainer,apptainer,cve-affected
+aria2,tatsuhiro tsujikawa,aria2,nvd-cpe
+aria2,aria2 project,aria2,nvd-cpe
 atlantis,runatlantis,atlantis,cve-affected
 atop,atop project,atop,cve-affected
 augeas,hercules,augeas,cve-affected
@@ -158,6 +162,9 @@ jenkins,jenkins project,jenkins,cve-affected
 jetty,eclipse foundation,jetty,cve-affected
 jhipster,jhipster,jhipster,cve-affected
 jpeg-turbo,libjpeg-turbo,libjpeg-turbo,manual
+jpeg-xl,libjxl project,libjxl,cve-affected
+jpeg-xl,libjxl,libjxl,cve-affected
+jpeg-xl,google,libjxl,cve-affected
 jq,jqlang,jq,cve-affected
 json-c,json-c,json-c,manual
 jsonschema2pojo,joelittlejohn,jsonschema2pojo,cve-affected
@@ -202,11 +209,15 @@ libuv,libuv,libuv,manual
 libvorbis,xiph,libvorbis,manual
 libvpx,webmproject,libvpx,manual
 libwebsockets,warmcat,libwebsockets,cve-affected
+libx11,x.org,libx11,cve-affected
+libx11,the x11 project,libx11,cve-affected
 libxml2,xmlsoft,libxml2,cve-affected
 libxmp,libxmp,libxmp,cve-affected
 libxslt,xmlsoft,libxslt,cve-affected
 lief,lief-project,lief,cve-affected
 lighttpd,lighttpd,lighttpd,cve-affected
+little-cms2,littlecms,little cms color engine,cve-affected
+little-cms2,littlecms,little cms,nvd-cpe
 llama.cpp,ggml-org,llama.cpp,cve-affected
 logstash,elastic,logstash,cve-affected
 lrzip,ckolivas,lrzip,cve-affected
@@ -241,6 +252,8 @@ modsecurity,owasp-modsecurity,modsecurity,cve-affected
 monero,getmonero,monero,cve-affected
 mongo-c-driver,mongodb,mongo-c-driver,cve-affected
 mongo-c-driver@1,mongodb,mongo-c-driver,cve-affected
+mongodb-database-tools,mongodb,database tools,cve-affected
+mongodb-database-tools,mongodb inc.,mongodb database tools,cve-affected
 mongosh,mongodb inc,mongosh,cve-affected
 mpv,mpv,mpv,manual
 mtr,mtr,mtr,cve-affected
@@ -420,6 +433,8 @@ wabt,webassembly,wabt,cve-affected
 wasm-micro-runtime,bytecodealliance,wasm-micro-runtime,cve-affected
 wasmedge,wasmedge,wasmedge,cve-affected
 wasmtime,bytecodealliance,wasmtime,cve-affected
+webp,google,libwebp,cve-affected
+webp,webmproject,libwebp,nvd-cpe
 webpack,webpack,webpack,cve-affected
 wget,gnu,wget,manual
 whisper.cpp,ggml-org,whisper.cpp,cve-affected
@@ -435,6 +450,8 @@ xz,tukaani-project,xz,cve-affected
 yarn,yarnpkg,yarn,cve-affected
 yt-dlp,yt-dlp,yt-dlp,cve-affected
 zabbix,zabbix,zabbix,cve-affected
+zeromq,zeromq,libzmq,cve-affected
+zeromq,zeromq,zeromq,nvd-cpe
 zlib,zlib,zlib,manual
 zsh,zsh,zsh,manual
 zstd,facebook,zstandard,manual

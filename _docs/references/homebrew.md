@@ -6,8 +6,8 @@ type: reference
 context: references
 status: reference
 tags: [homebrew, macos, linuxbrew, collector, identity]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-08
+verified: 2026-11-08
 sample: mixed
 reachable: partial
 fixtures: tests/fixtures/collectors/homebrew/
@@ -29,7 +29,7 @@ related: [tech/collectors/macos.md, tech/engine/classification.md]
 - **Name matching alone is weak, name + vendor corroboration is good.** On 8,707 formulae x 43,686 real 2025 CVE records:
   name == CVE `affected.product` hits 427 formulae (4.9%); 298 of them are also vendor-consistent with the formula's homepage/url
   (~97% correct by manual spot check); the 129 without vendor support are ~55-60% false (`portal`, `cobalt`, `dex`, `sd`, `hub`, `gh`, `protobuf` ...).
-  A curated seed (`src/secmonk/data/brew_cpe_seed.csv`, 440 rows / 407 formulae) is the pragmatic backbone.
+  A curated seed (`src/secmonk/data/brew_cpe_seed.csv`, 457 rows / 415 formulae) is the pragmatic backbone; measured on a real prefix (2026-11-08) it carries three quarters of the findings with high precision, see *Measured on a real prefix*.
 - **Bottle layer blobs are not reachable here** (`pkg-containers.githubusercontent.com` blocked), but the **ghcr.io manifest annotations
   carry the full receipt (`sh.brew.tab`) and the SBOM supplement**, which is what the fixtures are built from (see Fixtures).
 
@@ -127,14 +127,14 @@ Caveat: `url` points at the **source tarball**, and the receipt/dir version is t
 ## Keg SBOM (`sbom.spdx.json`): findings
 
 Source of truth: `Library/Homebrew/sbom.rb`, `formula_installer.rb` (`update_pour_metadata`), `vulns/scanner.rb`, plus the real registry annotation `sh.brew.sbom.supplement`
-(see below). **Bottles ship `sbom.spdx.json` inside the keg** (SPDX 2.3, `dataLicense: CC0-1.0`); source installs write one only with `HOMEBREW_SBOM`. The bottle's SBOM is created at
+(see below). **Bottles ship `sbom.spdx.json` inside the keg** (SPDX 2.3, `dataLicense: CC0-1.0`); source installs also write one since brew ~4.3.17 (real prefix, 2026-11-08: 9 of 18 source builds have an SBOM with only the `Archive` + compiler packages), kegs installed by brew <= 4.2 have none (305 of 359 active kegs have one). The bottle's SBOM is created at
 bottling time with `bottling: true` (source archive + patches only), and at pour time brew rewrites `creationInfo` (`created` = install time, `creators: ["Tool: https://github.com/Homebrew/brew@<installer version>"]`)
 and **appends the supplement** (runtime dependencies, compiler, the bottle itself) taken from the manifest annotation. Evidence from 7 real manifests (jq x2, openssl@3, curl, xz, httpie):
 
 | Observation | Detail |
 |---|---|
-| purls: **yes**, type `brew` | Runtime deps: `pkg:brew/oniguruma@6.9.10`, `pkg:brew/openssl%404@4.0.3` (`@` percent-encoded); Bottle package: `pkg:brew/jq@1.8.2`, `pkg:brew/openssl%403@3.6.4_1` (**includes `_revision`**). Source `Archive-<name>-src` package: purl built as `pkg:brew/<tap>/<name>@<upstream version>` from code (`pkg:brew/homebrew/core/jq@1.8.2`; derived, not observed since layers are blocked). |
-| purl for the **registry** when the source URL is a registry artifact | `Identify.registry_package(url)` adds a second `externalRefs` purl to the Archive package for PyPI (`files.pythonhosted.org`), npm (`registry.npmjs.org/.../-/`), crates.io, RubyGems, Hackage, Hex, CPAN, Maven, CRAN, NuGet. This is an **OSV-ready identity** for ~920 formulae (pypi 582 + npm 271 + crates 27 + ...). |
+| purls: **yes**, type `brew` | Runtime deps: `pkg:brew/oniguruma@6.9.10`, `pkg:brew/openssl%404@4.0.3` (`@` percent-encoded); Bottle package: `pkg:brew/jq@1.8.2`, `pkg:brew/openssl%403@3.6.4_1` (**includes `_revision`**). Source `Archive-<name>-src` package: purl built as `pkg:brew/<tap>/<name>@<upstream version>` from code (`pkg:brew/homebrew/core/jq@1.8.2`). **Observed on a real prefix (2026-11-08, brew 6.0.21, 398 SBOMs)**: 354 Archive packages carry **no purl**, 44 (installed by brew >= 5.1.14 or dev) carry only `pkg:brew/homebrew/core/<f>@<v>`; the plain `pkg:brew/<f>@<pkg_version>` purl is on `Bottle-<f>`. |
+| purl for the **registry** when the source URL is a registry artifact | `Identify.registry_package(url)` adds a second `externalRefs` purl to the Archive package for PyPI (`files.pythonhosted.org`), npm (`registry.npmjs.org/.../-/`), crates.io, RubyGems, Hackage, Hex, CPAN, Maven, CRAN, NuGet. This is an **OSV-ready identity** for ~920 formulae (pypi 582 + npm 271 + crates 27 + ...). **Never observed** on the real prefix (2026-11-08): no Archive package had a registry purl, not even for PyPI-sourced formulae; read it from code only, derive it from `downloadLocation` instead. |
 | CPEs: **none** | no CPE anywhere in the document, the DSL or the API shape |
 | Source identity | `SPDXRef-Archive-<name>-src`: `name`, `versionInfo` (upstream version, no revision), `downloadLocation` (the formula `url`), `checksums[SHA256]`, `licenseConcluded` (SPDX), `builtDate`; `files[]` with the tarball file name. `brew vulns` derives `(repo url, tag)` from exactly this package. |
 | Patches | external `patch do url ... end` blocks become `SPDXRef-Patch-<name>-<n>` packages (`downloadLocation`, sha256) + `PATCH_APPLIED` relationship. Inline/DATA patches and `resolves` ids are **not** in the SBOM; read `.brew/<name>.rb`. |
@@ -163,7 +163,9 @@ Caskroom/<token>/
 - Newer brew writes a **minimal JSON** (`to_installed_json_hash`: only `url_specs`, uninstall/zap `artifacts`, and `version` when it differs from the directory) when the cask has no uninstall
   flight blocks, and the original `.rb` otherwise. Consequence for the existing collector: **`token`/`name`/`homepage`/`artifacts[].app` may be missing from new installs' JSON** (the macOS doc's fixture is the
   old, richer shape). Robust order: token from `Caskroom/<token>`; app names from `Caskroom/<token>/<version>/*.app` symlinks (target = `/Applications/X.app`); `.rb` (regex) when present; the API cask JSON only as optional enrichment.
-  (Unverified on a real Mac; verify.)
+  **Real prefix (2026-11-08, brew 6.0.21, 9 casks)**: API-installed casks store a minimal `<token>.json` (`{}`, or only `url_specs`/`artifacts`: no `name`,
+  `version` or `auto_updates`) - 6 of 9; `.rb` only for untapped casks - 3 of 9. `.metadata/INSTALL_RECEIPT.json` exists on 3 of 9 (installed by brew >= 4.5),
+  `.metadata/config.json` on 9 of 9.
 - **Version truth is the `.app`**: 2,074 of 7,818 casks (26.5%) declare `auto_updates true` (Chrome, VS Code, Slack, Zoom...): the app updates itself behind Homebrew's back and the cask
   `version` goes stale (and `brew upgrade` skips them). Another 2,157 (27.6%) are `version :latest`. So for ~54% of casks the Info.plist `CFBundleShortVersionString` of the app bundle must be the component version; the cask only gives identity (token, homepage, bundle ids via `uninstall quit:`/`zap`, e.g. `org.videolan.vlc`).
   Existing dedupe rule (app bundle wins, cask token as alias) is right; make it explicit that cask `version` is **never** used for matching when `auto_updates` or `latest`.
@@ -261,12 +263,70 @@ Generic formula names (`git`, `bind`, `make`, `screen`, `less`, `go`, `rust`, `n
 Best combination (precision first): **seed/alias (curated, vendor:product) -> (a+) name==product with vendor corroboration -> (b)/(d) as vendor-checked extras -> (a-) name-only as `low` confidence, never auto-alert**.
 Vendors are soft: CNAs spell vendors differently from NVD (`curl`/`haxx`, `oracle corporation`/`oracle`, `python software foundation`/`python`), so key on **product (+ alias set)** and use the vendor to rank/disambiguate.
 
+### Measured on a real prefix (2026-11-08)
+
+Setup: Apple Silicon, macOS 26.5, `/opt/homebrew` (brew 6.0.21), **361 racks / 465 kegs / 359 active formulae + 9 casks**, plus 2,032 vendored language packages (not part of this
+measurement). Mirror `/tmp/mac-seed.db` (never the per-user DB): `sync kev epss` 2 s (1,769 KEV, 401,956 EPSS); `sync cvelist --since 2020` **414 s**, 275,415 records, sparse cache
+3.0 GB (`SECMONK_CACHE` pointed at `/tmp`; the per-user `~/.cache` was not writable from the session); `sync nvd` full pull **without API key 1,786 s, 421,174 records**; database **5.4 GB**.
+OSV was not synced (brew formulae have no OSV ecosystem). `scan homebrew` takes ~9 s. `sample: real` for this section; asset id, host and user names are omitted.
+
+Identity of the 359 active formulae (`meta.product_source`) and whether any product candidate has a CVE/CPE row in the mirror:
+
+| Source | Before (seed + aliases at 2026-11-07) | After (rows added 2026-11-08) |
+|---|---|---|
+| `brew-seed` | 84 (78 with rows) | 92 (86 with rows) |
+| `alias-table` | 2 (2) | 43 (43) |
+| `brew-name-vendor` | 270 (116 with rows) | 221 (81 with rows) |
+| `normalized-name` (no identity) | 3 (`cffi`, `gobject-introspection`, `pluto`) | 3 |
+| **formulae with no CVE/CPE row** | **162 (45%)** | **148 (41%)** |
+
+The 6 seed formulae without rows (`abseil`, `libassuan`, `libgpg-error`, `libogg`, `libsodium`, `x264`) have correct seed rows: their CVEs carry only `GIT` ranges (`CVE-2025-0838`,
+`CVE-2025-69277`) or none since 2020. Most of the 140 remaining misses are libraries and tools with no CVE since 2020 (`qt*` modules, `utf8proc`, `pugixml`...): "no row" is not "wrong identity".
+`secmonk inventory unmatched` (normalized-name only: casks and the 3 formulae) went from **12 to 10** (`copilot-cli`, `kopiaui` resolved; `1password-cli`, `Redis Stack`, `RedisInsight`,
+`redis-stack-server`, `aws-vault-binary`, `dropstone`, `orbstack` have no CVE spelling in the mirror). The bigger, invisible miss class is `brew-name-vendor` **with a guessed vendor that disagrees
+with the CVE vendor**: the matcher lowers those rows to 0.3 and the scan's 0.5 cut drops them (`libx11`/`libxi` hint `x` vs `x.org`, `nomad` hint `nomadproject` vs `hashicorp`, `dbus` hint `dbus` vs
+`freedesktop`, `graphite2` hint `silnrsi` vs `sil`); the alias/seed rows above fix 49 formulae of this kind and of the "formula name is not the product" kind (`libnghttp2`->`nghttp2`, `webp`->`libwebp`,
+`jpeg-xl`->`libjxl`, `msodbcsql18`->`odbc driver for sql server`, `sdl2`->`simple directmedia layer`).
+
+Findings (open, min confidence 0.5): **979 before -> 1,060 after** (+81: `msodbcsql17` 22, `msodbcsql18` 18, `nomad` 16, `libxi` 9, `mongodb-database-tools` 5, `libx11` 4, `libxtst` 2,
+`kopiaui` 2, `libxrender` 1, `copilot-cli` 1, `azure-cli` 1); none removed. Checked: 78 true positives by range, 2 `kopiaui` true by version (KopiaUI bundles the kopia engine), 1 false positive
+(`azure-cli` `CVE-2026-69877`: the CNA range itself is inverted, `introduced 2.0.0 / fixed 1.0.7`).
+
+Precision by `product_source` (manual check of version vs the advisory's ranges, `affected` rows of the mirror):
+
+| `product_source` | Findings (after) | Checked | TP | FP | Notes |
+|---|---|---|---|---|---|
+| `brew-seed` (0.85) | 799 | top-20 share 5 + ranks 21-30 + 20 sampled (`imagemagick`, `unbound`, `traefik`, `postgresql@16`, `ffmpeg@4`, 4 each) | 4 + 5 + 20 | 1 + 5 + 0 | FPs are engine/data classes below, not wrong identities; `zlib 1.2.13` `CVE-2023-45853` is in range but in `contrib/minizip`, which the keg does not ship (scope FP) |
+| `alias-table` (0.8) | 124 | top-20 share 15 + the 81 new (`msodbcsql17` via the same NVD rows as `msodbcsql18`) | 15 + 80 | 0 + 1 | `openssl@1.0 1.0.2u` (tap `sidneys/homebrew`) and `node@18 18.20.5` are EOL kegs: every hit real |
+| `brew-name-vendor` (0.7) | 137 | 12 sampled (one per formula) | 12 | 0 | identities all vendor-consistent; `cjson` `CVE-2026-16554` is 32-bit only (scope) |
+| `normalized-name` (0.4 for formulae) | 0 shown | `pluto` | - | (1) | only candidates are Apache Pluto / plutolang: right to stay under the 0.5 cut |
+
+Systematic false-positive classes (whole run, 1,060 findings; all in `brew-seed` plus the one alias case): **13 inverted ranges** - the generic comparator reads a letter glued to a digit as a
+post-release letter (OpenSSL `1.1.1w` rule), so CPython's `introduced 3.13.0a1 / fixed 3.13.0rc2` sorts as "fixed before introduced" and `in_osv_range` leaves every later version affected
+(11 findings on `python@3.13 3.13.12` / `python@3.14 3.14.7`: `CVE-2024-3219`, `-6232`, `-6923`, `-7592`, `-8088`...), a release-line floor `3.0` above `last_affected 3.0.0-rc3`
+(`traefik` `CVE-2024-28869`), and a CNA typo (`azure-cli` above); **15 unbounded rows** - a CPE row with `introduced 0` and no end next to bounded rows of the same CVE (`ffmpeg 9.0.1`
+`CVE-2026-64835`: CNA range 4.4-8.1.2 plus a version-less `cpeApplicability`; `imagemagick 7.1.2-30` `CVE-2017-5506`: NVD `imagemagick:*`). The CNA `versionType: python` is stored but not used for comparison.
+Data-driven but correct: NVD lists products that bundle a library (`node 26.8.1` for brotli `CVE-2026-111497`, KEV) and CPEs that differ from the CNA text (`ruby 4.0.1` for GitLab `CVE-2026-97229`: NVD marks `ruby-lang:ruby` vulnerable).
+
+Top 20 findings (ordered as `secmonk findings`): `brotli 1.2.0` `CVE-2026-111497` (KEV) TP; `node 26.8.1` / `node@18 18.20.5` same CVE (NVD CPE) TP; `ruby 4.0.1` `CVE-2026-97229` TP per NVD;
+`libssh2 1.11.0` `CVE-2023-48795` TP; 13 x `openssl@1.0 1.0.2u` (`CVE-2022-2068`, `-1292`, `-0778`, `-4304`, `CVE-2023-2650`, `-0286`, `-0215`, `-0464`, `CVE-2021-23840`, `-3712`, `CVE-2024-9143`, `-5535`, `CVE-2026-45447`) TP;
+`node@18` `CVE-2026-21710` TP (NVD `<= 20.20.1`); `zlib 1.2.13` `CVE-2023-45853` scope FP. **19/20 TP**. Ranks 21-30: `deno 2.3.3` x2, `traefik 3.6.9` `CVE-2026-85595`, `python@3.11` x2 TP; `python@3.13`/`@3.14` x4 and `imagemagick` `CVE-2017-5506` FP.
+
+Dependency propagation and statically linked binaries (measured only):
+- `curl` is not installed on this prefix. Across all 465 receipts, `runtime_dependencies` has 3,458 edges; the most depended-on kegs are `xz` 124, `lz4` 111, `zstd` 109, `ca-certificates` 104,
+  `gettext` 101, `openssl@3` 91. `openssl@3` is a runtime dependency of **86 formulae**, but the receipts pin the version **at install time**: 49 record `3.6.3` (the active keg), 37 record 15
+  older versions (`3.1.0` .. `3.6.2`). For propagation use the active keg of the dependency (`opt/openssl@3` -> `3.6.3`, also `3.6.2` still in the Cellar), not the receipt's version.
+- Mach-O files under `bin`, `sbin`, `libexec` of the 357 active kegs: 1,736. **Go: 27 formulae, 39 binaries, all with readable buildinfo/modules** (`gh`, `hugo`, `traefik`, `prometheus`, `nomad`, `lima`,
+  `cloudflared`, `mkcert`, `step`, `kopia`, ...): their embedded modules are invisible to the formula-version match today. **Rust: 13 formulae, 31 binaries, 0 with a `cargo auditable` section**
+  (`ripgrep`, `deno`, `rav1e`, `librsvg`, `tree-sitter`, `sqld`; the heuristic also counts Python extension modules in `aws-sam-cli`, `azure-cli`, `cfn-lint` and gccrs strings in `gcc`), so crate versions
+  are not recoverable from Rust bottles.
+
 ### Seed file: `src/secmonk/data/brew_cpe_seed.csv`
 
-Columns `formula,vendor,product,evidence` (lowercase). 440 rows, 407 distinct formulae (incl. `@N` families: `python@3.10..3.14`, `postgresql@12..18`, `php@8.x`, `node@N`, `openssl@3.x`, `mariadb@N`...).
-`evidence`: `cve-affected` 308 (vendor/product spelled exactly as in 2025 CVE `affected`, vendor chosen as the one consistent with the formula's homepage; plus verified spelling variants `bind 9`, `mysql server`, `apache http server`, `libexpat`, `cpython` for `bind`, `mysql*`, `httpd`, `expat`, `python@*`),
-`repo-url` 12 (GitHub repo of the formula == CVE `repo`/`collectionURL`), `manual` 120 (NVD CPE spelling from maintainer knowledge, not yet verified against data: **a second row per formula is intentional** when the NVD spelling differs, e.g. `curl,curl,curl,cve-affected` + `curl,haxx,curl,manual`).
-Match on `formula` (full brew name incl. `@N`) -> candidate products (all rows) -> test any vendor/product. Rows are derived from 2025 records only; refresh with other years.
+Columns `formula,vendor,product,evidence` (lowercase). 457 rows, 415 distinct formulae (incl. `@N` families: `python@3.10..3.14`, `postgresql@12..18`, `php@8.x`, `node@N`, `openssl@3.x`, `mariadb@N`...).
+`evidence`: `cve-affected` 319 (vendor/product spelled exactly as in 2025 CVE `affected`, vendor chosen as the one consistent with the formula's homepage; plus verified spelling variants `bind 9`, `mysql server`, `apache http server`, `libexpat`, `cpython` for `bind`, `mysql*`, `httpd`, `expat`, `python@*`),
+`repo-url` 12 (GitHub repo of the formula == CVE `repo`/`collectionURL`), `nvd-cpe` 6 (spelling seen only in NVD CPE data of a cvelist+NVD mirror, added 2026-11-08; ranked after `manual` by the classifier, so a formula's first row is never `nvd-cpe` when it has a CNA spelling), `manual` 120 (NVD CPE spelling from maintainer knowledge, not yet verified against data: **a second row per formula is intentional** when the NVD spelling differs, e.g. `curl,curl,curl,cve-affected` + `curl,haxx,curl,manual`).
+Match on `formula` (full brew name incl. `@N`) -> candidate products (all rows) -> test any vendor/product. Rows were derived from 2025 records; 18 rows added 2026-11-08 from a real prefix for formulae whose CVE identity spans several vendor/product spellings (`aria2`, `libx11`, `jpeg-xl`, `webp`, `zeromq`, `little-cms2`, `aom`, `mongodb-database-tools`); single-vendor fixes for brew formulae and casks went to `product_aliases.yaml` (41 entries, each with its evidence CVE id in a comment). Do not add `aomedia:aomedia`: its NVD CPE ranges use dates (`fixed 2021-04-07`) that the generic comparator orders after every `3.x` release (3 false positives on `aom 3.14.1`).
 
 ## Recommendations
 
@@ -307,5 +367,5 @@ Rules around it:
 
 `tests/fixtures/collectors/homebrew/` (488 KB): 6 kegs (jq 1.8.1 + 1.8.2 with `opt`/`linked` -> 1.8.2; keg-only openssl@3 `3.6.4_1`, curl 8.23.0; xz 5.8.4 pinned; httpie 3.2.4_13 with 14 real `dist-info/METADATA`),
 3 real casks. Because bottle blobs are blocked, receipts/SBOMs are **reconstructed from real manifest annotations + brew source** (details and which fields are synthetic: fixture `README.md`).
-Real-Mac validation still needed for: cask `.metadata` JSON shape on current brew, `Cellar/<old>` symlinked racks, SBOM Archive purl, `INSTALL_RECEIPT.json` of source builds, Intel/Linuxbrew paths.
-Experiment limits: 2025 CVE records only; "truth" table is maintainer knowledge (NVD spellings) not NVD data (NVD not probed); popular-formula set (197) is hand-picked, not install-weighted (analytics blocked).
+Validated on a real Apple Silicon prefix (2026-11-08): cask `.metadata` shape, SBOM Archive purl, source-build SBOMs, symlinked racks (`python-certifi` -> `certifi`). Still needed: Intel (`/usr/local`) and Linuxbrew paths.
+Experiment limits (the 2026-11-07 corpus experiment; the real-prefix run above used cvelist 2020+ and the full NVD): 2025 CVE records only; "truth" table is maintainer knowledge (NVD spellings) not NVD data (NVD not probed); popular-formula set (197) is hand-picked, not install-weighted (analytics blocked).

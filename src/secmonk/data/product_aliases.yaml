@@ -39,6 +39,10 @@ products:
     bundle_ids: [com.brave.Browser]
     brew: [brave-browser]
   # ---- dev tools
+  - vendor: apple
+    product: xcode
+    names: [xcode]
+    bundle_ids: [com.apple.dt.Xcode]
   - vendor: microsoft
     product: visual studio code
     names: [visual studio code, code]
@@ -133,6 +137,58 @@ products:
     product: ffmpeg
     names: [ffmpeg]
     brew: [ffmpeg]
+  # ---- brew formulae / casks from a real /opt/homebrew `inventory unmatched` + brew-name-vendor misses (2026-11-08).
+  # Each spelling is evidenced by the CVE id in the comment, found in the cvelist (2020+) + NVD mirror
+  # ([cna] = CVE List `affected`, [nvd] = NVD CPE only). Reason: the formula name is not the CVE product, or the
+  # guessed vendor (forge org / homepage) disagrees with the CVE vendor, so the brew-name-vendor rule lost the rows.
+  # Multi-vendor identities (aria2, libx11, jpeg-xl, webp, zeromq, little-cms2, aom, mongodb-database-tools) are
+  # in brew_cpe_seed.csv instead (an alias entry carries one vendor only).
+  - {vendor: nghttp2, product: nghttp2, brew: [libnghttp2]}                       # [cna] CVE-2026-58055, CVE-2015-8659
+  - {vendor: ngtcp2, product: ngtcp2, brew: [libngtcp2]}                          # [cna] CVE-2024-52811, CVE-2026-40170
+  - {vendor: x.org, product: libxi, brew: [libxi]}                                # [cna] CVE-2026-94282 (hint 'x' != x.org)
+  - {vendor: x.org, product: libxrender, brew: [libxrender]}                      # [cna] CVE-2026-88807
+  - {vendor: x.org, product: libxtst, brew: [libxtst]}                            # [cna] CVE-2026-94286
+  - {vendor: x.org, product: libxdmcp, brew: [libxdmcp]}                          # [nvd] CVE-2017-2625
+  - {vendor: x.org, product: libxfixes, brew: [libxfixes]}                        # [nvd] CVE-2016-7944
+  - {vendor: freedesktop, product: dbus, brew: [dbus]}                            # [nvd] CVE-2023-34969
+  - {vendor: gnome, product: gdk-pixbuf, brew: [gdk-pixbuf]}                      # [nvd] CVE-2026-5201
+  - {vendor: gnome, product: gtk, brew: [gtk+3]}                                  # [nvd] CVE-2014-1949
+  - {vendor: hashicorp, product: nomad, brew: [nomad]}                            # [cna] CVE-2026-7474 (hint nomadproject)
+  - {vendor: oracle, product: openjdk, brew: [openjdk]}                           # [cna] CVE-2024-20952
+  - {vendor: jasper project, product: jasper, brew: [jasper]}                     # [cna] CVE-2025-8837
+  - {vendor: graphviz, product: graphviz, brew: [graphviz]}                       # [nvd] CVE-2023-46045
+  - {vendor: microsoft, product: odbc driver for sql server, cpe_product: odbc_driver_for_sql_server,
+     brew: [msodbcsql17, msodbcsql18]}                                            # [cna] CVE-2024-29043
+  - {vendor: microsoft, product: azure cli, cpe_product: azure_cli, brew: [azure-cli]}  # [cna] CVE-2026-83948, CVE-2024-43591
+  - {vendor: libsdl, product: simple directmedia layer, cpe_product: simple_directmedia_layer,
+     brew: [sdl2, sdl3]}                                                          # [nvd] CVE-2022-4743 (not sdl2-compat: own versions)
+  - {vendor: mozilla, product: netscape portable runtime, cpe_product: netscape_portable_runtime,
+     brew: [nspr]}                                                                # [nvd] CVE-2016-1951
+  - {vendor: pyyaml, product: libyaml, brew: [libyaml]}                           # [nvd] CVE-2014-9130
+  - {vendor: bdwgc project, product: bdwgc, brew: [bdw-gc]}                       # [nvd] CVE-2016-9427
+  - {vendor: oberhumer, product: lzo2, brew: [lzo]}                               # [nvd] CVE-2014-4607
+  - {vendor: srtalliance, product: secure reliable transport, cpe_product: secure_reliable_transport,
+     brew: [srt]}                                                                 # [nvd] CVE-2019-15784
+  - {vendor: oniguruma project, product: oniguruma, brew: [oniguruma]}            # [nvd] CVE-2019-19246
+  - {vendor: libsamplerate project, product: libsamplerate, brew: [libsamplerate]}  # [nvd] CVE-2017-7697
+  - {vendor: leptonica, product: leptonica, brew: [leptonica]}                    # [nvd] CVE-2022-38266
+  - {vendor: md4c project, product: md4c, brew: [md4c]}                           # [nvd] CVE-2021-30027
+  - {vendor: llhttp, product: llhttp, brew: [llhttp]}                             # [nvd] CVE-2022-35256
+  - {vendor: gnu, product: fribidi, brew: [fribidi]}                              # [nvd] CVE-2022-25310
+  - {vendor: openblas project, product: openblas, brew: [openblas]}               # [nvd] CVE-2021-4048
+  - {vendor: pixman, product: pixman, brew: [pixman]}                             # [nvd] CVE-2022-44638
+  - {vendor: sil, product: graphite2, brew: [graphite2]}                          # [nvd] CVE-2018-7999 (not ashlar 'graphite')
+  - {vendor: openfortivpn project, product: openfortivpn, brew: [openfortivpn]}   # [nvd] CVE-2020-7043
+  - {vendor: intel, product: openvino, brew: [openvino]}                          # [nvd] CVE-2023-28405
+  - {vendor: intel, product: oneapi threading building blocks, cpe_product: oneapi_threading_building_blocks,
+     brew: [tbb]}                                                                 # [nvd] CVE-2023-28823
+  - {vendor: xiph, product: theora, brew: [theora]}                               # [nvd] CVE-2024-56431
+  - {vendor: microsoft, product: z3, brew: [z3]}                                  # [nvd] CVE-2020-19725
+  - {vendor: fmt, product: fmt, brew: [fmt]}                                      # [nvd] CVE-2018-1000052
+  - {vendor: ripgrep project, product: ripgrep, names: [ripgrep], brew: [ripgrep]}  # [nvd] CVE-2021-3013
+  - {vendor: libgd, product: libgd, brew: [gd]}                                   # [nvd] CVE-2021-40812
+  - {vendor: github, product: copilot-cli, brew: [copilot-cli]}                   # [cna] CVE-2026-29783 (cask, GitHub Copilot CLI)
+  - {vendor: kopia, product: kopia, names: [kopiaui], brew: [kopiaui]}                            # [cna] CVE-2026-124029 (cask: KopiaUI bundles kopia, same version)
   # ---- operating systems
   - vendor: apple
     product: macos

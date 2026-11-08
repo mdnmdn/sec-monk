@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [engine, classification, purl, cpe]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-08
+verified: 2026-11-08
 code: src/secmonk/engine/classify.py
 related: [tech/engine/matching.md, tech/collectors/README.md]
 ---
@@ -40,9 +40,17 @@ matcher can use. It is idempotent and runs before components are stored.
    (`Ubuntu:Pro:18.04:LTS → Ubuntu:18.04`, `Red Hat:enterprise_linux:9::appstream → Red Hat:9`).
 2. **Name normalization** (`normalize_ecosystem`-aware): PyPI PEP 503 (`[-_.]+ → -`, lowercase),
    most others lowercase; Go/Maven kept as-is.
-3. **Product identity** for everything without an ecosystem: look up `bundle_id`, `brew_name`,
-   then the name, then the normalized name (`normalize_product_name`: strip `.app`, `@3`,
+3. **Product identity** for everything without an ecosystem: look up `bundle_id`, the Homebrew token,
+   then `product_hint` and the name, then the normalized name (`normalize_product_name`: strip `.app`, `@3`,
    arch/edition noise, years) in the curated **alias table** `src/secmonk/data/product_aliases.yaml`.
+   The table is loaded as two indexes (`_alias_tables()`): `names` + `bundle_ids` (`product_aliases()`, used for
+   every component and by the Windows collector's Chocolatey/Scoop dedup) and `brew` keys (`brew_aliases()`).
+   **Brew keys are consulted only for Homebrew components**: the token is `meta.brew_name` (homebrew/macos
+   collectors, process-monitor keg/cask identities) or the name of a `pkg:brew/...` purl, tried as-is and without
+   `@N`. An app bundle the macOS collector folded into its cask (`meta.also_cask`) tries the cask token last, after
+   its own names (`KopiaUI.app` -> `kopiaui`). Short brew tokens (`nomad`, `gd`, `fmt`, `z3`, `graphviz`) therefore
+   never give a macOS app, Windows program or path-only process identity a brew identity: `NoMAD.app` stays
+   `normalized-name` instead of becoming `hashicorp:nomad`. A non-brew name that should match needs a `names` entry.
    Hit → `vendor`, `meta.product`, `meta.product_source=alias-table`, and a CPE 2.3 string.
    Miss → `meta.product = normalized name`, `product_source=normalized-name` (lower confidence).
    **Homebrew formulae** (`meta.brew_kind=formula`) get a precedence of their own, evaluated before the generic lookup
@@ -50,7 +58,7 @@ matcher can use. It is idempotent and runs before components are stored.
 
    | `product_source` | Rule | Confidence |
    |---|---|---|
-   | `brew-seed` | formula name (full, incl. `@N`) is in `src/secmonk/data/brew_cpe_seed.csv` (evidence `cve-affected` > `repo-url` > `manual`); first row = `vendor` + `meta.product` + CPE, other rows -> `meta.vendor_alts` / `meta.product_alts`. Seed vendor/product are normalized at load exactly like `affected.vendor/product` (`sources.base.norm_vendor_product`: lowercase, `_` → space, collapsed spaces), so `mit,kerberos_5` → `mit` / `kerberos 5`; the CPE string turns spaces back into `_` | 0.85 |
+   | `brew-seed` | formula name (full, incl. `@N`) is in `src/secmonk/data/brew_cpe_seed.csv` (evidence `cve-affected` > `repo-url` > `manual` > `nvd-cpe`, unknown values last; `nvd-cpe` = spelling seen only in NVD CPE data, so a CNA spelling always wins the first row); first row = `vendor` + `meta.product` + CPE, other rows -> `meta.vendor_alts` / `meta.product_alts`. Seed vendor/product are normalized at load exactly like `affected.vendor/product` (`sources.base.norm_vendor_product`: lowercase, `_` → space, collapsed spaces), so `mit,kerberos_5` → `mit` / `kerberos 5`; the CPE string turns spaces back into `_` | 0.85 |
    | `alias-table` | alias table hit (as above) | 0.8 |
    | `brew-name-vendor` | not in seed/alias and a vendor guess exists (`upstream_repo` org, else homepage domain): `product` = formula name minus `@N`, `meta.vendor_hint` = guess, `vendor` stays empty (the matcher checks it) | 0.7 |
    | `normalized-name` | fallback; for brew formulae generic names collide (`portal`, `cobalt`, `dex`, `gh`, `hub`) | 0.4 (0.5 otherwise) |

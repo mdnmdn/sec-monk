@@ -29,18 +29,81 @@ _NOISE = re.compile(
 
 
 @lru_cache(maxsize=1)
-def product_aliases() -> dict:
-    """Load the curated alias table: names/bundle ids/brew names -> (vendor, product)."""
+def _alias_tables() -> tuple[dict[str, dict], dict[str, dict]]:
+    """(names + bundle ids index, brew formula/cask token index), keys lowercased.
+
+    Brew keys live in their own index: tokens like `nomad`, `gd`, `fmt` are only unambiguous inside
+    Homebrew, so they must never be looked up for a macOS app or a Windows program of the same name."""
     text = resources.files("secmonk.data").joinpath("product_aliases.yaml").read_text()
     raw = yaml.safe_load(text) or {}
-    index: dict[str, dict] = {}
+    names: dict[str, dict] = {}
+    brew: dict[str, dict] = {}
     for entry in raw.get("products", []):
         target = {"vendor": entry["vendor"], "product": entry["product"]}
         if entry.get("cpe_product"):
             target["cpe_product"] = entry["cpe_product"]
-        for key in entry.get("names", []) + entry.get("bundle_ids", []) + entry.get("brew", []):
-            index[key.lower()] = target
-    return index
+        for key in entry.get("names", []) + entry.get("bundle_ids", []):
+            names[key.lower()] = target
+        for key in entry.get("brew", []):
+            brew[key.lower()] = target
+    return names, brew
+
+
+def product_aliases() -> dict:
+    """Curated alias table for any component: app/display names and bundle ids -> (vendor, product)."""
+    return _alias_tables()[0]
+
+
+def brew_aliases() -> dict:
+    """Curated alias table for Homebrew components only: formula/cask tokens -> (vendor, product)."""
+    return _alias_tables()[1]
+
+
+def _brew_tokens(*tokens: object) -> list[str]:
+    """Lookup keys for Homebrew tokens: the token, then without `@N` (openssl@3 -> openssl)."""
+    out: list[str] = []
+    for t in tokens:
+        if not t:
+            continue
+        t = str(t).lower()
+        for k in (t, re.sub(r"@[\d.]+$", "", t)):
+            if k not in out:
+                out.append(k)
+    return out
+
+
+def _brew_token(c: Component) -> str | None:
+    """Homebrew formula/cask token of a Homebrew component: `meta.brew_name` (homebrew/macos collectors and
+    process-monitor keg/cask identities), else the name of a `pkg:brew` purl. None for everything else."""
+    if c.meta.get("brew_name"):
+        return str(c.meta["brew_name"])
+    if c.purl and c.purl.startswith("pkg:brew/"):
+        p = purls.parse(c.purl)
+        if p is not None and p.name:
+            return p.name
+    return None
+
+
+def _alias_hit(c: Component) -> dict | None:
+    """Alias-table identity: bundle id, brew token (Homebrew only), product hint, name, normalized name."""
+    aliases, brew = product_aliases(), brew_aliases()
+    bundle_id = c.meta.get("bundle_id")
+    if bundle_id and bundle_id.lower() in aliases:
+        return aliases[bundle_id.lower()]
+    for t in _brew_tokens(_brew_token(c)):
+        if t in brew:
+            return brew[t]
+    # product_hint: collector-cleaned name (e.g. Windows DisplayName without version/arch tags)
+    for key in (c.meta.get("brew_name"), c.meta.get("product_hint"), c.name):
+        if key and key.lower() in aliases:
+            return aliases[key.lower()]
+    hit = aliases.get(normalize_product_name(c.name)) \
+        or aliases.get(normalize_product_name(c.meta.get("product_hint") or ""))
+    if hit is None:
+        # an app bundle deduplicated against its cask (macOS collector: meta.also_cask) is a Homebrew
+        # install too; its cask token is the last resort, after the app's own names (KopiaUI.app -> kopiaui)
+        hit = next((brew[t] for t in _brew_tokens(c.meta.get("also_cask")) if t in brew), None)
+    return hit
 
 
 def normalize_product_name(name: str) -> str:
@@ -72,16 +135,7 @@ def classify(c: Component) -> Component:
     if c.category not in (CAT_LIBRARY, CAT_OS_PACKAGE) or not c.ecosystem:
         if c.meta.get("brew_kind") == "formula" and _classify_brew_formula(c):
             return c
-        aliases = product_aliases()
-        hit = None
-        # product_hint: collector-cleaned name (e.g. Windows DisplayName without version/arch tags)
-        for key in (c.meta.get("bundle_id"), c.meta.get("brew_name"), c.meta.get("product_hint"), c.name):
-            if key and key.lower() in aliases:
-                hit = aliases[key.lower()]
-                break
-        if hit is None:
-            norm = normalize_product_name(c.name)
-            hit = aliases.get(norm) or aliases.get(normalize_product_name(c.meta.get("product_hint") or ""))
+        hit = _alias_hit(c)
         if hit:
             c.vendor = c.vendor or hit["vendor"]
             c.meta["product"] = hit["product"]
@@ -102,7 +156,8 @@ def classify(c: Component) -> Component:
 # alias-table and normalized-name are produced by the generic code in classify(); this block handles
 # the two brew-specific sources and returns False when the generic code should decide.
 
-_SEED_EVIDENCE_RANK = {"cve-affected": 0, "repo-url": 1, "manual": 2}
+# nvd-cpe (spelling seen only in NVD CPE data) ranks after manual: a CNA spelling always wins the first row.
+_SEED_EVIDENCE_RANK = {"cve-affected": 0, "repo-url": 1, "manual": 2, "nvd-cpe": 3}
 _GENERIC_HOST_LABELS = frozenset({"github", "gitlab", "sourceforge", "pypi", "npmjs", "readthedocs",
                                   "wordpress", "bitbucket", "codeberg", "sf"})
 
@@ -169,9 +224,7 @@ def _classify_brew_formula(c: Component) -> bool:
             c.cpe = (f"cpe:2.3:a:{c.vendor.replace(' ', '_')}:{first['product'].replace(' ', '_')}:"
                      f"{c.version}:*:*:*:*:*:*:*")
         return True
-    aliases = product_aliases()
-    if any(k and k.lower() in aliases for k in (c.meta.get("brew_name"), c.name)) \
-            or normalize_product_name(c.name) in aliases:
+    if _alias_hit(c) is not None:
         return False                                   # alias-table (generic code)
     hint = brew_vendor_guess(c.meta)
     if hint:
