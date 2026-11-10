@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [ssh, agentless, linux, macos, windows, inventory, dependencies]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py
 related: [tech/collectors/ssh.md, tech/collectors/rootfs.md, tech/collectors/macos.md, features/inventory-docker.md, features/inventory-macos.md, features/inventory-homebrew.md, features/inventory-windows.md, features/inventory-dependencies.md, features/README.md]
 ---

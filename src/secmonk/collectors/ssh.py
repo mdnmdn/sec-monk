@@ -77,6 +77,8 @@ def parse_target(target: str) -> SSHTarget:
     if "@" in s:
         user, _, s = s.rpartition("@")
         if not _USER_RE.match(user):
+            if ":" in user:              # user:password - never echo it
+                raise ValueError("invalid ssh user (contains ':'; passwords are not accepted in ssh targets)")
             raise ValueError(f"invalid ssh user {user!r}")
     port = None
     if s.startswith("["):

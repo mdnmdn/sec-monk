@@ -7,8 +7,8 @@ context: plans
 status: open
 platform: macos
 tags: [plan, macos, homebrew, collector, ssh]
-updated: 2026-11-08
-verified: 2026-11-08
+updated: 2026-11-10
+verified: 2026-11-10
 related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-macos.md, features/inventory-homebrew.md, references/homebrew.md, tech/collectors/ssh.md, tech/collectors/process.md]
 ---
 
@@ -300,10 +300,31 @@ The engine collector is validated against a **fake socket only**; the generic te
   uv run secmonk containers                       # auto-discovery
   uv run secmonk containers --socket ~/.colima/default/docker.sock
   ```
-  Verify: each installed runtime is found (paths listed in [docker-engine.md](../tech/collectors/docker-engine.md) implementation notes); Docker
-  contexts / `ssh://` DOCKER_HOST are not implemented - confirm the error is explicit. Then repeat `secmonk scan docker-engine <container>` and
+  Verify: each installed runtime is found (paths listed in [docker-engine.md](../tech/collectors/docker-engine.md) implementation notes). Then repeat `secmonk scan docker-engine <container>` and
   `image:<ref>` once per runtime (VM-backed engines hide the FS; the API must still work).
   - 2026-11-08 (full access: Full Disk Access, `ps`/`launchctl`, no `sudo` password): OrbStack and Docker Desktop installed, neither running; `~/.docker/run/docker.sock` left behind by Docker Desktop refused connections and discovery stopped there. Fixed: auto-discovery skips sockets that refuse connections and names them in the error. `docker context` (current: orbstack) is still not read. Still open: a run with an engine up.
+
+- [ ] **Docker CLI contexts of the Mac runtimes** (read from `~/.docker/contexts/meta/<sha256>/meta.json`; only tested on
+  generated context trees). The current context now wins over socket discovery: with `currentContext` = `orbstack` and
+  OrbStack stopped, the scan fails on OrbStack's socket instead of falling back to another runtime (by design).
+  ```bash
+  docker context ls; jq .currentContext ~/.docker/config.json
+  uv run secmonk containers                       # the current context
+  uv run secmonk containers -o context=desktop-linux; uv run secmonk containers -o context=colima; uv run secmonk containers -o context=orbstack
+  DOCKER_CONTEXT=default uv run secmonk containers   # back to socket discovery
+  ```
+  Verify: the hosts our context listing shows equal `docker context ls` (Docker Desktop `desktop-linux` ->
+  `unix:///Users/<user>/.docker/run/docker.sock`, Colima `colima` -> `~/.colima/default/docker.sock`, OrbStack `orbstack`); a stopped runtime's context gives
+  a clear "cannot talk to Docker engine at unix://..." error; local containers keep the asset id `container:<name>`.
+  Assumed, unverified: these runtimes write plain unix hosts in `meta.json` and no TLS directory; `config.json` may
+  be unreadable under a sandbox / privacy prompt, in which case it is ignored.
+  Discovered work (2026-11-10): a context on a local unix socket keeps the asset id `container:<name>`, so `web` on
+  Colima and `web` on OrbStack collapse into one asset. If both runtimes are used side by side here, decide whether
+  non-default local contexts get a label (e.g. `container:ctx=<context>/<name>`); that changes asset ids, so it needs a
+  data-model note and a migration thought.
+- [ ] **`ssh://` from the Mac** to a Linux engine (`-o host=ssh://<user>@<server>`), with the system OpenSSH and
+  1Password / Secretive ssh agents: BatchMode must still find agent keys. Same checks as
+  [on-linux-docker.md](on-linux-docker.md) section A, remote engine over ssh.
 
 ## F. Process monitor on a real Mac (`secmonk procs`, synthetic fixtures only)
 

@@ -7,7 +7,7 @@ context: tech
 status: implemented
 tags: [collector, ssh, agentless, linux, macos, windows]
 updated: 2026-11-08
-verified: 2026-11-08
+verified: 2026-11-10
 sample: mixed
 fixtures: [tests/fixtures/collectors/docker/, tests/fixtures/collectors/macos/root]
 code: src/secmonk/collectors/ssh.py, src/secmonk/collectors/harvest.py

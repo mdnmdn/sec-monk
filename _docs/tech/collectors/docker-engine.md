@@ -1,25 +1,27 @@
 ---
 title: Docker engine collector
-summary: Docker Engine API collector over a unix socket covering socket discovery, image and container export scans, hand-off to the image collector, limits and review fixes.
-read_when: you change how sec-monk talks to a Docker daemon or scans running containers and local images
+summary: Docker Engine API collector for local and remote engines (unix socket, tcp+TLS, ssh dial-stdio, Docker contexts) - endpoint resolution, container selectors, image and container export scans, limits.
+read_when: you change how sec-monk reaches a Docker daemon (socket, context, ssh, TLS), expands container selectors, or scans running containers and local images
 type: tech
 context: tech
 status: implemented
-tags: [collector, docker, containers, engine-api, podman]
-updated: 2026-11-08
-verified: 2026-11-08
+tags: [collector, docker, containers, engine-api, podman, ssh, tls, contexts]
+updated: 2026-11-10
+verified: 2026-11-10
 sample: synthetic
 fixtures: tests/fixtures/collectors/docker/engine/
-code: src/secmonk/collectors/docker_engine.py
-related: [tech/collectors/docker-image.md, features/inventory-docker.md, tech/engine/classification.md]
+code: [src/secmonk/collectors/docker_engine.py, src/secmonk/collectors/docker_transport.py]
+related: [tech/collectors/docker-image.md, features/inventory-docker.md, tech/engine/classification.md, tech/collectors/ssh.md]
 ---
 
 # Docker engine collector
 
 ## Summary
 
-Enumerates **running (and stopped) containers and local images** through the Docker Engine HTTP API over a
-unix socket, using only the Python stdlib (`http.client` + `socket`; no `docker` SDK). For each image/container
+Enumerates **running (and stopped) containers and local images** through the Docker Engine HTTP API of a local or
+remote engine: unix socket, `tcp://` (plain or TLS), or `ssh://` (the engine's own `docker system dial-stdio`, as the
+Docker CLI does), chosen explicitly, through a Docker CLI context, or discovered. Python stdlib only (`http.client`,
+`socket`, `ssl`, `subprocess` for `ssh`; no `docker` SDK). For each image/container
 it hands a rootfs tarball to the [image collector](docker-image.md) to read the package DBs. Two scan depths:
 
 - **Image scan** (`GET /images/{name}/get`): what the image *was built with*. Reusable by the image collector as a `docker save` tarball.
@@ -31,18 +33,61 @@ Verify on a real host before marking `implemented`.
 
 ## Where the data lives
 
-Socket discovery order (`find_endpoint`: an explicit `--socket` / `DOCKER_HOST` is used as given; otherwise the first
-well-known socket file that exists **and does not refuse a connection**. A refused one is skipped and named in the final
-error: Docker Desktop leaves `~/.docker/run/docker.sock` behind when it quits, seen on macOS 26.5 on 2026-11-08 while
-OrbStack was the active context):
+Endpoint resolution (`docker_engine.find_endpoint`), first match wins:
 
-1. `DOCKER_HOST` env: `unix:///path/to.sock` (also `tcp://host:2375`, `ssh://` - out of scope; refuse plain tcp unless `--allow-tcp`).
-2. `/var/run/docker.sock` (Linux; also on macOS via symlink from Docker Desktop/OrbStack).
-3. `~/.docker/run/docker.sock` (Docker Desktop macOS, newer versions).
-4. `~/.colima/default/docker.sock` (Colima); `~/.rd/docker.sock` (Rancher Desktop); `~/.orbstack/run/docker.sock` (OrbStack).
-5. Docker contexts: **not implemented**. The format is `~/.docker/contexts/meta/*/meta.json` -> `Endpoints.docker.Host`, current
-   context in `~/.docker/config.json` `currentContext`; the active context's socket is found only if it is one of the paths above.
-6. Podman: `$XDG_RUNTIME_DIR/podman/podman.sock` (rootless; `/run/user/<uid>/podman/podman.sock`), `/run/podman/podman.sock` (rootful). Podman exposes a Docker-compatible API at `/v1.40/...` plus its own `/libpod/...`.
+| # | Source | Notes |
+|---|---|---|
+| 1 | `opts["socket"]` (`--socket`, `-o socket=`) | any host form below |
+| 2 | `opts["host"]` (`-o host=`) | `$DOCKER_TLS_VERIFY`/`$DOCKER_CERT_PATH` apply |
+| 3 | `opts["context"]` (`-o context=`) | a Docker CLI context name |
+| 4 | `$DOCKER_HOST` | `$DOCKER_TLS_VERIFY`/`$DOCKER_CERT_PATH` apply |
+| 5 | `$DOCKER_CONTEXT` | |
+| 6 | `currentContext` in `$DOCKER_CONFIG/config.json` (default `~/.docker`) | ignored when `"default"`, unset, or the file cannot be opened |
+| 7 | well-known sockets | the first that exists **and does not refuse a connection** |
+
+Anything requested in 1-6 that cannot be resolved (missing context, context without a docker endpoint, missing socket
+file, unsupported scheme, malformed `config.json`) is a `RuntimeError`: it is never silently replaced by another
+engine. The context name `default` means step 7. Host forms (`docker_transport.parse_host`): `unix:///path`, `/path`,
+`tcp://host[:port]` (`http://` accepted; default port 2376 with TLS, 2375 without), `ssh://[user@]host[:port]`
+(`npipe://` is refused).
+
+Well-known sockets (step 7). A refused one is skipped and named in the final error: Docker Desktop leaves
+`~/.docker/run/docker.sock` behind when it quits, seen on macOS 26.5 on 2026-11-08 while OrbStack was the active context:
+
+1. `/var/run/docker.sock` (Linux; also on macOS via symlink from Docker Desktop/OrbStack).
+2. `~/.docker/run/docker.sock` (Docker Desktop macOS, newer versions).
+3. `~/.colima/default/docker.sock` (Colima); `~/.rd/docker.sock` (Rancher Desktop); `~/.orbstack/run/docker.sock` (OrbStack).
+4. `$XDG_RUNTIME_DIR/docker.sock` (rootless Docker).
+5. Podman: `$XDG_RUNTIME_DIR/podman/podman.sock` (rootless; `/run/user/<uid>/podman/podman.sock`), `/run/podman/podman.sock` (rootful). Podman exposes a Docker-compatible API at `/v1.40/...` plus its own `/libpod/...`.
+
+Docker CLI contexts (format of the Docker CLI, read by `docker_transport.load_context` / `iter_contexts`; JSON files
+capped at 1 MiB, every field type-checked):
+
+- `<config>/contexts/meta/<sha256(name)>/meta.json`: `Name`, `Metadata.Description`, `Endpoints.docker.Host`,
+  `Endpoints.docker.SkipTLSVerify`. A `Name` that differs from the requested one is an error.
+- `<config>/contexts/tls/<sha256(name)>/docker/{ca,cert,key}.pem`: TLS material (each file present is used).
+- `<config>/config.json` `currentContext`.
+
+TLS for `tcp://` (`docker_transport.TLSConfig`, `ssl` + `http.client.HTTPSConnection`): on when the context has TLS
+files or `SkipTLSVerify`, when `$DOCKER_TLS_VERIFY` is non-empty (with `--host`/`$DOCKER_HOST`; any non-empty value,
+as in the Docker CLI; files from `$DOCKER_CERT_PATH`, default the config dir), or when a `tls_ca`/`tls_cert`/`tls_key`/
+`tls_verify` option is given (options override the other sources). With verification the CA file, when given, is the
+only trust anchor (otherwise the system store); `tls_verify=false` / `SkipTLSVerify` disables certificate and name
+checks. `$DOCKER_CERT_PATH` alone does not enable TLS (Docker CLI behaviour).
+
+`ssh://` (`docker_transport.SSHHTTPConnection`): one system `ssh` process per HTTP connection, argv from the SSH
+collector's `OpenSSHTransport.argv` (`BatchMode=yes`, `ConnectTimeout` (option `connect_timeout`, default 15),
+keepalives, no forwarding, `-p`/`-l`/`-i` from the URL and the `identity` option, `ssh_bin` option, `--` before the
+host), remote command exactly `docker system dial-stdio`; HTTP/1.1 is spoken over its stdin/stdout. Every wait for
+data is bounded by the `timeout` option (default 30 s, as for sockets: `select()` on the stdout pipe, then
+`TimeoutError` -> a `RuntimeError` naming the engine). The process is killed when the connection closes, its pipes
+are closed, and its stderr is appended to connection errors (`(ssh: ...)`). Hosts and users starting with `-` are
+refused; nothing goes through a shell. Of the SSH collector's options, the system-ssh ones apply: `identity`,
+`ssh_bin`, `connect_timeout`, `ssh_option` (repeatable `-o`, placed first so it wins), `insecure_host_key`
+(`StrictHostKeyChecking=no`, throwaway known_hosts), `known_hosts` (`UserKnownHostsFile`). The paramiko-only ones
+(`transport=paramiko`, `allow_agent`, `look_for_keys`, `ssh_config`) are a `ValueError`; `$SECMONK_SSH_PASSWORD` is
+not used (BatchMode). Error messages pass hosts through `strip_url_secrets` and never echo a `user:password` part. `~/.ssh/config`, the agent and known_hosts are the
+user's (BatchMode: no prompts, so an unknown host key fails with ssh's message).
 
 Permissions: the socket is `root:docker` mode 660 - the user must be in the `docker` group (equivalent to root!). Report `PermissionError`
 clearly. The collector is **read-only**: only GET requests; never `POST /containers/*/start|exec`, `create`, etc. Note: that `/export` and `/images/*/get` read big data, so the scan can load the host.
@@ -85,7 +130,9 @@ Typical flow:
 ## Classification
 
 Components are emitted by the image collector (deb/apk/rpm/pypi/npm PURLs). This collector adds:
-asset type `container` (id = `<engine host>/<container id[:12]>`, name from `Names`), asset type `container-host` for the engine host, properties
+asset type `container` (id `container:<name>` on a local unix socket, `container:<label>/<name>` on a remote engine:
+label `host:port` for tcp, the ssh host (port only when not 22, never the user) for ssh; `Endpoint.label`), name from
+`Names`. Planned, not built: asset type `container-host` for the engine host, properties
 `image_ref`, `image_id`, `exposure` (`published-ports` if any `PublicPort`), `privileged`, `state`, `compose_project`, plus engine / containerd / runc components from `/version`.
 
 ## Limitations / gotchas
@@ -103,12 +150,38 @@ asset type `container` (id = `<engine host>/<container id[:12]>`, name from `Nam
 
 ## Implementation notes
 
-Implemented in `src/secmonk/collectors/docker_engine.py` (stdlib `http.client` + `UnixHTTPConnection`). **Verified only against a fake unix-socket server** (`tests/collectors/test_docker.py`) serving the synthetic fixtures; never run against a real engine in this sandbox.
+Implemented in `src/secmonk/collectors/docker_engine.py` (client, endpoint resolution, selectors, collector) and
+`src/secmonk/collectors/docker_transport.py` (`Endpoint`, contexts, TLS, `UnixHTTPConnection`, `SSHHTTPConnection`).
+**Verified only offline**: a fake unix-socket server (`tests/collectors/test_docker.py`) serving the synthetic fixtures,
+temp `$DOCKER_CONFIG` trees with generated contexts, a fake and a real-pipe stand-in for `ssh ... dial-stdio`, and a
+loopback HTTPS server with throwaway certificates requiring a client cert (`tests/collectors/test_docker_remote.py`).
+Never run against a real engine, a real remote over ssh, or a real TLS engine: see the plans.
 
-- Endpoint discovery (`find_endpoint`): `opts["socket"]` > `$DOCKER_HOST` (`unix://` or `tcp://` plain http) > `/var/run/docker.sock`, `~/.docker/run/docker.sock`, `~/.colima/default/docker.sock`, `~/.rd/docker.sock`, `~/.orbstack/run/docker.sock`, `$XDG_RUNTIME_DIR/podman/podman.sock`, `/run/podman/podman.sock`. None found -> `RuntimeError("Docker engine socket not found: tried ...")`. Docker contexts and ssh:// are not implemented.
+- Endpoint resolution: see [Where the data lives](#where-the-data-lives). None found -> `RuntimeError("Docker engine socket not found: tried ...")`.
+- `list_contexts(**opts) -> list[dict]`: `{name, host, description, current}`, the implicit `default` first (host = the
+  first existing well-known socket); `current` is the context resolution would use (none when `socket`/`host`/
+  `$DOCKER_HOST` override contexts). Hosts go through `strip_url_secrets` (no userinfo); unreadable entries are listed
+  with `host: None` and the error as description.
+- Container selectors: `DockerEngineCollector.expand_targets(target, **opts)` and the pure
+  `select_containers(selector, rows)` on `/containers/json` rows. Comma-separated items (stripped, empties and
+  duplicates dropped, order kept); `image:<ref>` and exact names/ids pass through unchanged; `re:<regex>` (`re.search`,
+  at most 256 characters) and globs (`*?[`, `fnmatch.fnmatchcase`) are tested on every container name (no leading `/`)
+  and the 12-char id and yield the first name. A pattern that matches nothing, a bad or too long regex -> `ValueError`
+  naming it and the available containers (each shortened to 64 characters). Names come from the engine, possibly a
+  remote untrusted one, so regex backtracking is bounded (`_check_regex`, on the `re` parser's tree): a quantified
+  group containing another quantifier or an alternation (`(a+)+`, `(a|aa)*`) and more than 3 repeating quantifiers
+  are refused with a `ValueError`; names and ids longer than 128 characters are never tested against a pattern (they
+  can still be given exactly). Only when a pattern is present is the engine listed (running containers,
+  all with `opts["all"]`). `collect()` refuses a selector it was handed unexpanded.
 - Only GET requests; unversioned API paths (engine latest) - `/version` is not enforced against MinAPIVersion.
-- `collect("<container id|name>")`: `GET /containers/{id}/json` (metadata) + `GET /containers/{id}/export` streamed straight into `LayeredTarView` as one layer (nothing touches disk). Asset `container:<name>`, type `container`, meta `container_id, image, image_id, labels, state, privileged, published_ports, user, engine`. `collect("image:<ref>")` streams `GET /images/{ref}/get` to a temp tar and reuses the docker-image archive path. `collect(None)` raises `ValueError` listing running containers.
-- Helpers for the CLI: `list_containers(all=False, **opts)`, `export_image(ref, dest)`, `EngineClient.ping()/version()`.
+- `collect("<container id|name>")`: `GET /containers/{id}/json` (metadata) + `GET /containers/{id}/export` streamed straight into `LayeredTarView` as one layer (nothing touches disk). Asset `container:<name>` (local) or `container:<label>/<name>` (remote), type `container`, meta `container_id, image, image_id, labels, state, privileged, published_ports, user, engine` (`strip_url_secrets` of the endpoint: no ssh user) and `engine_context` when it came from a context. `collect("image:<ref>")` streams `GET /images/{ref}/get` to a temp tar and reuses the docker-image archive path. `collect(None)` raises `ValueError` listing running containers.
+- Helpers for the CLI and the web API: `list_containers(all=False, **opts)` (engine options as for `collect`), `list_contexts(**opts)`, `select_containers(selector, rows)`, `export_image(ref, dest)`, `EngineClient.ping()/version()`.
+- Image assets read through a remote engine keep their content identity (`image:<repo>@<digest>`), without engine label.
+- Option values may be strings (CLI `-o`): `timeout` / `connect_timeout` are positive seconds, `tls_verify` /
+  `insecure_host_key` / `all` booleans; anything else is a `ValueError` naming the option.
+- A context (or `--host`) that points at a **local unix socket** keeps `container:<name>`, without label: two local
+  engines (say Colima and OrbStack contexts) with a same-named container share one asset id, and their scans replace
+  each other's inventory. Known limitation; tracked in [on-macos.md](../../plans/on-macos.md) section D.
 - Not done: `/archive` partial fetch, one-scan-per-ImageID dedupe, host asset + engine/containerd/runc components, `Privileged` as scoring input (stored in meta only).
 
 

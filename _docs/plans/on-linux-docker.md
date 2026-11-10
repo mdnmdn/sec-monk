@@ -7,8 +7,8 @@ context: plans
 status: open
 platform: linux
 tags: [plan, linux, docker, podman, ssh, rootfs]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 related: [tech/collectors/docker-engine.md, tech/collectors/docker-image.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, features/inventory-docker.md, features/inventory-ssh.md]
 ---
 
@@ -61,7 +61,29 @@ Fixtures go to `tests/fixtures/collectors/docker/real/` and `tests/fixtures/coll
   uv run secmonk containers --socket $XDG_RUNTIME_DIR/podman/podman.sock
   uv run secmonk scan docker-engine pweb --socket $XDG_RUNTIME_DIR/podman/podman.sock
   ```
-  Verify: container list and export work; `Image` resolves; report quirks in docker-engine.md. Also test `DOCKER_HOST=tcp://127.0.0.1:2375` (plain http) and confirm `ssh://` / contexts give a clear error.
+  Verify: container list and export work; `Image` resolves; report quirks in docker-engine.md. Also test `DOCKER_HOST=tcp://127.0.0.1:2375` (plain http).
+- [ ] **Remote engine over `ssh://` (`docker system dial-stdio`)**, from this host to the SSH-reachable server with Docker
+  installed and the ssh user in its `docker` group (only tested with a fake `ssh` and a Python stand-in on pipes).
+  ```bash
+  uv run secmonk containers --db /tmp/lx.db        # after: export DOCKER_HOST=ssh://<user>@<server>
+  uv run secmonk scan docker-engine 'web,re:^pg' -o host=ssh://<user>@<server> --db /tmp/lx.db
+  uv run secmonk scan docker-engine web -o host=ssh://<user>@<server>:2222 -o identity=~/.ssh/id_ed25519 --db /tmp/lx.db
+  docker context create remote --docker host=ssh://<user>@<server>; uv run secmonk scan docker-engine web -o context=remote --db /tmp/lx.db
+  ```
+  Verify: assets are `container:<server>/web` (`:<port>` only when not 22), meta `engine` has no user; a large `/export`
+  streams through ssh at a sane speed; the ssh process is gone after the scan (`pgrep -f dial-stdio` on both sides);
+  failures are readable: unknown host key (BatchMode), no `docker` on the remote PATH (`(ssh: ... command not found)`),
+  user not in the `docker` group (permission denied on the remote socket). Assumed, unverified: `docker system
+  dial-stdio` exists on the remote CLI (Docker >= 18.09) and Podman's `docker` shim does not provide it.
+- [ ] **tcp + TLS engine** (dockerd `--tlsverify --tlscacert --tlscert --tlskey -H tcp://0.0.0.0:2376`, certs per the
+  Docker "Protect the daemon socket" guide). Tested only against a loopback Python HTTPS server with throwaway certs.
+  ```bash
+  DOCKER_HOST=tcp://<server>:2376 DOCKER_TLS_VERIFY=1 DOCKER_CERT_PATH=~/certs uv run secmonk containers
+  uv run secmonk scan docker-engine web -o host=tcp://<server> -o tls_ca=ca.pem -o tls_cert=cert.pem -o tls_key=key.pem --db /tmp/lx.db
+  docker context create tls --docker "host=tcp://<server>:2376,ca=ca.pem,cert=cert.pem,key=key.pem"; uv run secmonk containers -o context=tls
+  ```
+  Verify: default port 2376 when TLS is on; a wrong CA fails with a certificate error, `tls_verify=false` connects;
+  the context's TLS files are found under `~/.docker/contexts/tls/<sha256>/docker/`; asset `container:<server>:2376/web`.
 - [ ] **Colima/Lima on Linux or `rootless docker`** socket discovery: `docker context ls; ls $XDG_RUNTIME_DIR/docker.sock`. Mac variants are in [on-macos.md](on-macos.md) section D.
 - [ ] **Running container export consistency and size** (`/export` of a busy container is not a snapshot; big FS).
   ```bash
