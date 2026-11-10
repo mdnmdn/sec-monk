@@ -10,7 +10,8 @@ Local and unauthenticated by design, hardened for that setting:
   * strict Content-Security-Policy; static files resolved inside the static directory only.
 
 Routes: GET / (app), GET /static/*, the JSON API in `GET_ROUTES` / `POST_ROUTES` (table in _docs/tech/web-ui.md).
-Jobs (scan, sync) are refused when `actions` is off: the default when listening on a non-loopback address.
+Jobs (scan, sync) and the docker endpoints (they contact engines, possibly on other hosts) are refused when `actions`
+is off: the default when listening on a non-loopback address.
 """
 
 from __future__ import annotations
@@ -28,8 +29,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from .. import __version__
 from .api import ApiError, ProcessMonitor
-from .data import DataApi
-from .jobs import JobRunner
+from .data import DataApi, Query, _flag, _int, _one
+from .jobs import LIST_MAX, JobRunner
 
 STATIC = Path(__file__).parent / "static"
 CSP = ("default-src 'self'; "
@@ -261,8 +262,15 @@ GET_ROUTES = {
     "/api/vulns/search": lambda s, q: s.data.vuln_search(q),
     "/api/sources": lambda s, q: s.data.sources(),
     "/api/collectors": lambda s, q: s.data.collectors(),
-    "/api/jobs": lambda s, q: s.jobs.list(),
+    "/api/jobs": lambda s, q: s.jobs.list(_one(q, "kind"), _int(q, "limit", 50, hi=LIST_MAX)),
+    "/api/docker/contexts": lambda s, q: s.jobs.docker_contexts(),
+    "/api/docker/containers": lambda s, q: _docker_containers(s, q),
 }
+
+
+def _docker_containers(s: UIServer, q: Query) -> dict[str, Any]:
+    return s.jobs.docker_containers(host=_one(q, "host"), context=_one(q, "context"), all=_flag(q, "all"),
+                                    match=_one(q, "match"), options=[o for o in q.get("opt", []) if o.strip()])
 
 
 def make_server(monitor: ProcessMonitor, host: str = "127.0.0.1", port: int = 8765, *, mode: str = "live",

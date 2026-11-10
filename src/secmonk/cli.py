@@ -37,8 +37,10 @@ app = typer.Typer(no_args_is_help=True, add_completion=False,
                   help="sec-monk — holistic vulnerability scanner prototype")
 vuln_app = typer.Typer(no_args_is_help=True, help="Query the local vulnerability mirror")
 inv_app = typer.Typer(no_args_is_help=True, help="Inspect collected inventories")
+history_app = typer.Typer(help="Past scan and sync runs (CLI and web UI) with their results")
 app.add_typer(vuln_app, name="vuln")
 app.add_typer(inv_app, name="inventory")
+app.add_typer(history_app, name="history")
 
 console = Console(emoji=False, highlight=False)
 err_console = Console(stderr=True, emoji=False, highlight=False)
@@ -269,8 +271,11 @@ def sync(
     unknown = [n for n in todo if n not in reg]
     if unknown:
         raise _fail(f"unknown source {', '.join(unknown)} (known: {', '.join(sorted(reg))})", 2)
-    failed, partial = [], []
-    with _open(db, create=True) as conn:
+    failed, partial, results = [], [], []
+    params = {"sources": todo, "ecosystems": ecosystem or [], "ids": ids or [], "since": since, "full": full,
+              "limit": limit, "path": str(path) if path else None}
+    with _open(db, create=True) as conn, \
+            ops.record_run(_db_path(db), "sync", "cli", ops.sync_title(todo), params) as run:
         for name in todo:
             opts = SyncOptions(path=path, ecosystems=ecosystem or [], ids=ids or [], since=since, full=full,
                                limit=limit, api_key=api_key,
@@ -281,10 +286,13 @@ def sync(
             colour = {"ok": "green", "partial": "yellow"}.get(res.status, "red")
             console.print(f"[{colour}]{_e(name)}: {_e(res.status)}[/] {res.records:,} records "
                           f"in {secs:.1f}s {_e(res.message)}")
+            run.say(f"{name}: {res.status} — {res.records:,} records in {secs:.1f}s {res.message or ''}".rstrip())
+            results.append(ops.sync_entry(name, res, secs))
             if res.status == "error":
                 failed.append(name)
             elif res.status == "partial":
                 partial.append(name)
+        run.finish(ops.sync_status(results), {"sources": results})
     if partial:
         err_console.print(f"[yellow]partial: {', '.join(partial)} (data kept; rerun to complete)[/]")
     if failed:
@@ -521,21 +529,29 @@ def windows_script(compact: Annotated[bool, typer.Option(
 @app.command()
 def containers(
     socket: Annotated[str | None, typer.Option(help="Docker/Podman socket path")] = None,
+    host: Annotated[str | None, typer.Option(
+        help="Engine address: unix:///path, tcp://host:2376, ssh://user@host[:port] (default: local socket)")] = None,
+    context: Annotated[str | None, typer.Option(help="Docker context name (see `docker context ls`)")] = None,
+    match: Annotated[str | None, typer.Option(
+        "--match", "-m", help="Only containers selected by this docker-engine target: names, globs, re:<regex>, "
+                              "comma separated")] = None,
     all_: Annotated[bool, typer.Option("--all", help="Include stopped containers")] = False,
     fmt: FmtOpt = Fmt.table,
+    opt: Annotated[list[str] | None, typer.Option(
+        "--opt", "-o", help="docker-engine option key=value (repeatable): tls_ca, tls_cert, tls_key, tls_verify, "
+                            "identity, ssh_bin, timeout…")] = None,
 ):
-    """List containers of the local Docker/Podman engine (targets for `scan docker-engine <name>`)."""
-    from .collectors import docker_engine
-
-    kwargs = {"socket": socket} if socket else {}
+    """List containers of a Docker/Podman engine (targets for `scan docker-engine <name|glob|re:regex,…>`)."""
+    opts = _parse_opts(opt)
     try:
-        raw = docker_engine.list_containers(all=all_, **kwargs)
+        payload = ops.docker_containers(host=host, context=context, socket=socket, all=all_, match=match, opts=opts)
+    except ValueError as e:
+        raise _fail(_e(e), 2) from None
     except Exception as e:  # noqa: BLE001
         _traceback()
-        raise _fail(f"{e}") from None
-    rows = [{"id": str(c.get("Id", ""))[:12], "name": ", ".join(n.lstrip("/") for n in c.get("Names") or []),
-             "image": c.get("Image"), "state": c.get("State"), "status": c.get("Status")} for c in raw]
-    _emit(rows, ["id", "name", "image", "state", "status"], fmt, title="Containers")
+        raise _fail(_e(e)) from None
+    rows = [r for r in payload["containers"] if r["matched"]]
+    _emit(rows, ["id", "name", "image", "state", "status"], fmt, title=f"Containers ({payload['engine']})")
 
 
 def _ephemeral(conn: sqlite3.Connection) -> None:
@@ -556,9 +572,7 @@ def _render_findings(conn: sqlite3.Connection, fmt: Fmt, *, asset: str | None = 
                      hide_minor: bool = False, hide_deferred: bool = False, limit: int = 200) -> list[dict]:
     rows = reports.findings(conn, asset=asset, priority=priority, include_closed=all_, fixable=fixable,
                             hide_minor=hide_minor, hide_deferred=hide_deferred, limit=limit)
-    if fmt is not Fmt.json:      # scan embeds the json rows in its own document
-        _emit(rows, FINDING_COLS if fmt is Fmt.table else FINDING_COLS + ["asset_id", "status"], fmt,
-              title="Findings", cell=_FINDING_CELLS)
+    _emit_findings(rows, fmt)
     return rows
 
 
@@ -572,7 +586,9 @@ def _stats_line(asset_id: str, stats: dict) -> str:
 @app.command()
 def scan(
     collector: Annotated[str, typer.Argument(help="Collector name (see `secmonk collectors`)")],
-    target: Annotated[str | None, typer.Argument(help="Collector target (root dir, image ref, tar…)")] = None,
+    target: Annotated[str | None, typer.Argument(
+        help="Collector target (root dir, image ref, tar…); docker-engine: names, globs, re:<regex>, comma "
+             "separated")] = None,
     min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
     fail_on: Annotated[str | None, typer.Option(
         "--fail-on", callback=_check_priority,
@@ -582,37 +598,93 @@ def scan(
     hide_minor: Annotated[bool, typer.Option(help="Hide distro-triaged minor issues")] = False,
     hide_deferred: Annotated[bool, typer.Option(help="Also hide no-dsa / postponed")] = False,
     limit: LimitOpt = 200,
-    save: Annotated[bool, typer.Option(help="Store the inventory and findings in the DB "
-                                            "(--no-save needs an existing mirror, writes nothing)")] = True,
+    save: Annotated[bool, typer.Option(help="Store the inventory and findings in the DB (--no-save needs an "
+                                            "existing mirror and stores no inventory or findings; the run is "
+                                            "listed in the history)")] = True,
     fmt: FmtOpt = Fmt.table,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Only the findings")] = False,
     opt: OptsOpt = None,
     db: DbOpt = None,
 ):
-    """collect + save + match, then print findings (json/csv: findings on stdout, notes on stderr)."""
+    """collect + save + match, then print findings (json/csv: findings on stdout, notes on stderr).
+
+    A target that expands to several (docker-engine selectors) is scanned one by one: a section per target, JSON
+    {"targets": [...]}; a failing target does not stop the others (exit 1 at the end).
+    """
     quiet = quiet or _state.quiet
-    inv = _collect(collector, target, _parse_opts(opt))
-    if fmt is not Fmt.json:
-        _report_inventory_notes(inv)
-    with _open(db, create=save) as conn:
-        if not save:
-            _ephemeral(conn)
-        _, stats = ops.save_and_match(conn, inv, min_confidence=min_confidence)
-        if fmt is Fmt.json:
-            rows = _render_findings(conn, fmt, asset=inv.asset.id, priority=priority, fixable=fixable,
-                                    hide_minor=hide_minor, hide_deferred=hide_deferred, limit=limit)
-            typer.echo(json.dumps({"asset": inv.asset.id, "stats": stats, "warnings": inv.warnings,
-                                   "partial": getattr(inv, "partial", False), "findings": rows},
-                                  indent=2, default=str))
+    if collector not in _collectors():
+        raise _fail(f"unknown collector {_e(collector)} (known: {', '.join(sorted(_collectors()))})", 2)
+    opts = _parse_opts(opt)
+    fkw = {"priority": priority, "fixable": fixable, "hide_minor": hide_minor, "hide_deferred": hide_deferred,
+           "limit": limit}
+    params = ops.scan_params(collector, target, opt, save=save, min_confidence=min_confidence)
+    hit = 0
+    csv_rows: list[dict] = []
+    if not save and not _db_path(db).exists():        # before the history row would create the database
+        raise _fail(f"no database at {_e(_db_path(db))} — run `secmonk sync …` first")
+    # the history row lives on its own connection and is finished after the scan connection is closed: recording
+    # a run never commits (or waits on) the scan's own transaction
+    with ops.record_run(_db_path(db), "scan", "cli", ops.scan_title(collector, target), params) as run:
+        with _open(db, create=save) as conn:
+            try:
+                targets = ops.expand_targets(collector, target, opts)
+            except Exception as e:  # noqa: BLE001  # no match, engine unreachable
+                _traceback()
+                run.finish("error", None, f"{type(e).__name__}: {e}")
+                raise _fail(f"{_e(collector)}: {_e(type(e).__name__)}: {_e(e)}") from None
+            single = len(targets) == 1 and not ops.is_selector(collector, target)
+            if not save:
+                _ephemeral(conn)
+            entries = []
+            for t in targets:
+                if not single and fmt is Fmt.table and not quiet:
+                    console.rule(_e(ops.redact_target(t) or collector))
+                entry, inv = ops.scan_target(conn, collector, t, opts, save=save, min_confidence=min_confidence,
+                                             findings=fkw, say=run.say, on_exception=lambda e: _traceback())
+                entries.append(entry)
+                if entry["error"]:
+                    if single:
+                        break
+                    err_console.print(f"[red]{_e(entry['target'] or collector)}: {_e(entry['error'])}[/]")
+                    continue
+                if fmt is not Fmt.json:
+                    _report_inventory_notes(inv)
+                    if not quiet:
+                        (console if fmt is Fmt.table else err_console).print(
+                            _stats_line(entry["asset"], entry["stats"]))
+                    if fmt is Fmt.csv:
+                        csv_rows += entry["findings"]     # one CSV document for every target
+                    else:
+                        _emit_findings(entry["findings"], fmt)
+                if fail_on:
+                    hit += queries.count_open_at_or_above(conn, entry["asset"], fail_on)
+        status, result, error = ops.scan_result(entries, saved=save)
+        run.finish(status, result, error)
+    if single and entries[0]["error"]:
+        raise _fail(f"{_e(collector)}: {_e(entries[0]['error'])}")
+    if fmt is Fmt.csv:
+        _emit_findings(csv_rows, fmt)
+    if fmt is Fmt.json:
+        if single:
+            e = entries[0]
+            doc: Any = {"asset": e["asset"], "stats": e["stats"], "warnings": e["warnings"], "partial": e["partial"],
+                        "findings": e["findings"]}
         else:
-            if not quiet:
-                (console if fmt is Fmt.table else err_console).print(_stats_line(inv.asset.id, stats))
-            _render_findings(conn, fmt, asset=inv.asset.id, priority=priority, fixable=fixable,
-                             hide_minor=hide_minor, hide_deferred=hide_deferred, limit=limit)
-        hit = queries.count_open_at_or_above(conn, inv.asset.id, fail_on) if fail_on else 0
+            doc = result                      # the stored scan result: {saved, targets, stats, counts}
+        typer.echo(json.dumps(doc, indent=2, default=str))
+    failed = [e for e in entries if e["error"]]
     if hit:
         err_console.print(f"[red]{hit} open finding(s) at or above {fail_on}[/]")
+    if failed:                                # a failed target (exit 1) wins over --fail-on (exit 3)
+        raise _fail(f"{len(failed)} of {len(entries)} target(s) failed")
+    if hit:
         raise typer.Exit(3)
+
+
+def _emit_findings(rows: list[dict], fmt: Fmt) -> None:
+    if fmt is not Fmt.json:
+        _emit(rows, FINDING_COLS if fmt is Fmt.table else FINDING_COLS + ["asset_id", "status"], fmt,
+              title="Findings", cell=_FINDING_CELLS)
 
 
 @app.command()
@@ -837,6 +909,91 @@ def inv_unmatched(db: DbOpt = None, fmt: FmtOpt = Fmt.table):
     with _open(db) as conn:
         rows = reports.unmatched_rows(conn)
     _emit(rows, ["category", "name", "version", "product", "bundle_id"], fmt)
+
+
+# --------------------------------------------------------------------------- run history
+
+class Kind(str, Enum):
+    scan = "scan"
+    sync = "sync"
+
+
+def _summary_text(kind: str, s: dict) -> str:
+    if not s:
+        return ""
+    if kind == "scan":
+        prio = " ".join(f"{k}:{s[k]}" for k in ("P1", "P2", "P3", "P4") if s.get(k))
+        return (f"{s['targets']} target(s)" + (f", {s['errors']} failed" if s["errors"] else "")
+                + f", {s['components']} components, {s['total']} findings" + (f" ({prio})" if prio else ""))
+    return (f"{s['sources']} source(s)" + (f", {s['errors']} failed" if s["errors"] else "")
+            + f", {s['records']:,} records")
+
+
+@history_app.callback(invoke_without_command=True)
+def history(
+    ctx: typer.Context,
+    kind: Annotated[Kind | None, typer.Option("--kind", help="Only scan or sync runs")] = None,
+    limit: Annotated[int, typer.Option("--limit", "-n", min=1, max=dbm.JOB_KEEP, help="Maximum rows")] = 20,
+    fmt: FmtOpt = Fmt.table,
+    db: DbOpt = None,
+):
+    """Recent scan and sync runs, newest first (`history show ID` for one run's result)."""
+    if ctx.invoked_subcommand is not None:
+        return
+    with _open(db) as conn:
+        rows = [reports.job_dict(r, include_log=False) for r in dbm.job_rows(conn, kind=kind.value if kind else None,
+                                                                              limit=limit)]
+    if fmt is Fmt.json:
+        typer.echo(json.dumps(rows, indent=2, default=str))
+        return
+    table = [{**r, "summary": _summary_text(r["kind"], r["summary"]), "error": r["error"] or ""} for r in rows]
+    _emit(table, ["id", "kind", "origin", "title", "status", "started", "summary"]
+          + (["finished", "error"] if fmt is Fmt.csv else []), fmt, title="History", right=("id",))
+
+
+@history_app.command("show")
+def history_show(
+    job_id: Annotated[int, typer.Argument(help="Run id (see `secmonk history`)")],
+    log: Annotated[bool, typer.Option("--log", help="Also print the run's log")] = False,
+    fmt: Annotated[Fmt, typer.Option("--format", "-f", help="Output format: table or json")] = Fmt.table,
+    db: DbOpt = None,
+):
+    """One run: parameters, status and the stored result (findings per target, or sources)."""
+    if fmt is Fmt.csv:
+        raise typer.BadParameter("history show supports --format table or json")
+    with _open(db) as conn:
+        row = dbm.job_row(conn, job_id)
+    if row is None:
+        raise _fail(f"no run {job_id} — see `secmonk history`")
+    d = reports.job_dict(row)
+    if fmt is Fmt.json:
+        typer.echo(json.dumps(d, indent=2, default=str))
+        return
+    colour = {"ok": "green", "partial": "yellow", "running": "cyan"}.get(d["status"], "red")
+    console.print(f"[bold]#{d['id']} {_e(d['title'])}[/] [{colour}]{_e(d['status'])}[/] ({_e(d['origin'])}) "
+                  f"{_e(d['started'])} → {_e(d['finished'] or '…')}")
+    if d["error"]:
+        console.print(f"[red]{_e(d['error'])}[/]")
+    console.print(_t(", ".join(f"{k}={v}" for k, v in d["params"].items()), style="dim"))
+    res = d["result"] or {}
+    if d["kind"] == "sync":
+        _emit(res.get("sources") or [], ["source", "status", "records", "seconds", "message"], fmt, title="Sources",
+              right=("records", "seconds"))
+    for t in res.get("targets") or []:
+        console.rule(_e(t["target"] or t["asset"] or ""))
+        if t["error"]:
+            console.print(f"[red]{_e(t['error'])}[/]")
+            continue
+        if not res.get("saved"):
+            console.print("[dim]not saved (matched in a temporary overlay)[/]")
+        console.print(_stats_line(t["asset"], t["stats"]))
+        for w in t["warnings"]:
+            console.print(f"[yellow]warning:[/] {_e(w)}")
+        _emit_findings(t["findings"], fmt)
+    if log:
+        console.rule("log")
+        for line in d["log"]:
+            console.print(_t(line))
 
 
 if __name__ == "__main__":

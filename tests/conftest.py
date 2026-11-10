@@ -43,3 +43,8 @@ def _isolated_env(tmp_path_factory, monkeypatch):
     monkeypatch.delenv("SECMONK_DB", raising=False)
     monkeypatch.setenv("SECMONK_HOME", str(root / "data"))
     monkeypatch.setenv("SECMONK_CACHE", str(root / "cache"))
+    # never the developer's Docker CLI configuration or environment (contexts, DOCKER_HOST, TLS material)
+    for var in ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"):
+        monkeypatch.delenv(var, raising=False)
+    (root / "docker-config").mkdir()
+    monkeypatch.setenv("DOCKER_CONFIG", str(root / "docker-config"))

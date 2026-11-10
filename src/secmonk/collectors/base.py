@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from typing import Any, ClassVar
-from urllib.parse import urlsplit, urlunsplit
 
 from ..models import Inventory
 
@@ -20,6 +19,12 @@ class Collector:
 
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:  # pragma: no cover
         raise NotImplementedError
+
+    def expand_targets(self, target: str | None, **opts: Any) -> list[str | None]:
+        """One target spec -> the targets to scan, each passed to `collect` (e.g. docker-engine: a comma list,
+        globs, `re:` regexes over container names). Default: the target itself. Raises ValueError when nothing
+        matches."""
+        return [target]
 
 
 REGISTRY: dict[str, type[Collector]] = {}
@@ -43,19 +48,20 @@ def looks_secret(key: str) -> bool:
     return bool(_SECRET_KEY.search(key))
 
 
-def strip_url_secrets(url: str | None) -> str | None:
-    """Drop userinfo, query and fragment from a URL (scp-like `git@host:path` is left alone)."""
+def strip_url_secrets(url: str | None, *, keep_user: bool = False) -> str | None:
+    """Drop the password (and, unless `keep_user`, the user name), query and fragment of a URL; scp-like
+    `git@host:path` is left alone. Lenient: never fails on an odd port or trailing punctuation, keeps
+    `unix:///path` as is."""
     if not url or "://" not in url:
         return url
-    try:
-        u = urlsplit(url)
-        host = u.hostname or ""
-        if ":" in host:
-            host = f"[{host}]"
-        netloc = host + (f":{u.port}" if u.port else "")
-        return urlunsplit((u.scheme, netloc, u.path, "", ""))
-    except ValueError:
-        return url.split("://", 1)[0] + "://<invalid-url>"
+    scheme, rest = url.split("://", 1)
+    m = re.match(r"([^/?#]*)([^?#]*)", rest)
+    authority, path = (m.group(1), m.group(2)) if m else ("", "")
+    if "@" in authority:
+        userinfo, _, hostport = authority.rpartition("@")
+        user = userinfo.split(":", 1)[0]
+        authority = (f"{user}@" if keep_user and user else "") + hostport
+    return f"{scheme}://{authority}{path}"
 
 
 def redact_command(args: list[str] | str | None) -> list[str] | str | None:
@@ -87,6 +93,43 @@ def redact_command(args: list[str] | str | None) -> list[str] | str | None:
         else:
             res.append(a)
     return res
+
+
+# Collector options as stored in the run history. Keys naming a file (exactly these, or `*_file` / `*_path`) keep
+# their value: a path says how a scan ran and is not the secret itself. Any other key that looks secret (`password`,
+# `pass`, `passphrase`, `token`, `*_secret`, `*key`, `tls_key_passphrase`…) is masked.
+_PATH_OPTS = frozenset({"identity", "tls_ca", "tls_cert", "tls_key", "known_hosts", "ssh_config"})
+_PATH_SUFFIX = re.compile(r"_(file|path)$", re.IGNORECASE)
+_SECRET_OPT = re.compile(r"pass|token|secret|key$", re.IGNORECASE)
+_HOST_OPT = re.compile(r"host|url|endpoint|socket", re.IGNORECASE)
+_SSHPASS = re.compile(r"(\bsshpass\b(?:\s+-\w+)*?\s+-p)\s*\S+")
+_URL = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s'\"<>]+", re.IGNORECASE)
+
+
+def redact_option(key: str, value: Any) -> Any:
+    """A collector option as stored in the run history: secrets -> '***', URL credentials stripped, `ssh_option`
+    commands (ProxyCommand=…) through redact_command."""
+    if isinstance(value, list):
+        return [redact_option(key, v) for v in value]
+    if key.lower() in _PATH_OPTS or _PATH_SUFFIX.search(key):
+        return scrub_text(value) if isinstance(value, str) else value
+    if _SECRET_OPT.search(key) or looks_secret(key):
+        return "***"
+    if not isinstance(value, str):
+        return value
+    if key == "ssh_option":
+        return _SSHPASS.sub(r"\1 ***", redact_command(value) or value)  # type: ignore[arg-type]
+    if "://" in value and _HOST_OPT.search(key):
+        return strip_url_secrets(value, keep_user=True)
+    return scrub_text(value)
+
+
+def scrub_text(text: str | None) -> str | None:
+    """Free text (an error message, a log line) with every URL's password, query and fragment removed (user names
+    kept): a backstop for whatever reaches the stored run history."""
+    if not text or "://" not in text:
+        return text
+    return _URL.sub(lambda m: strip_url_secrets(m.group(0), keep_user=True) or m.group(0), text)
 
 
 def redact_labels(labels: dict[str, Any] | None) -> dict[str, Any]:

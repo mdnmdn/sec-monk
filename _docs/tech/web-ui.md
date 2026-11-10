@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [web-ui, architecture, security, cli]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 code: src/secmonk/web/, src/secmonk/reports.py, src/secmonk/ops.py, scripts/design_mock.py, scripts/design_screenshots.js, scripts/vendor_web.py
 related: [features/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, decisions/0008-web-ui-stack.md, tech/collectors/process.md, features/process-monitor.md, tech/architecture.md]
 ---
@@ -27,14 +27,15 @@ secmonk ui ──> web/server.py  ThreadingHTTPServer (stdlib)          browser
                  │                          js/secmonk-ui.js              secmonk-views.js  store, sources, views, router
                  │                          js/secmonk-views.js           boot.js           mountApp(ApiSource())
                  │  GET /api/meta, /api/processes…, /api/overview, /api/assets…, /api/findings,
-                 │      /api/vulns/…, /api/sources, /api/collectors, /api/jobs[/<id>]
+                 │      /api/vulns/…, /api/sources, /api/collectors, /api/jobs[/<id>], /api/docker/…
                  │  POST /api/processes/save, /api/assets/match, /api/jobs              <── ApiSource (fetch)
                  v
                web/api.py   ProcessMonitor ──> collectors/process (analyse) ──> procmon.snapshot_payload / event_dict
                                           └──> engine (match in a temporary overlay; save() persists)
                web/data.py  DataApi (reads, re-match) ──> reports.* ──> engine/queries.py (SQL)
-               web/jobs.py  JobRunner (thread, one job) ──> ops.sync_source / ops.collect + save_and_match
-                            (the same functions `secmonk sync` / `secmonk scan` call)
+               web/jobs.py  JobRunner (thread, one job) ──> ops.sync_source / ops.expand_targets + scan_target
+                            (the same functions `secmonk sync` / `secmonk scan` call); every job = a row of the run
+                            history (table `job`, shared with the CLI) ──> reports.job_payload / job_dict
 
 _design/pages/*.html, _design/storybook ──> the same css/js by relative path + MockSource(mock/data.js)
 scripts/design_mock.py ──> runs ProcessMonitor on the fixtures ──> _design/mock/data.js
@@ -45,9 +46,9 @@ scripts/design_mock.py ──> runs ProcessMonitor on the fixtures ──> _desi
 | `src/secmonk/web/server.py` | HTTP server: routing, static files, security headers, Host / CSRF checks, JSON errors |
 | `src/secmonk/web/api.py` | `ApiError` (status, message, hint, `code`); `ProcessMonitor`: current analysis, overlay matching, watch state, save |
 | `src/secmonk/web/data.py` | `DataApi`: database reads (overview, assets, asset detail, unmatched, findings, vulnerability show / search, sources, collectors) with the CLI's parameter validation; `match()` |
-| `src/secmonk/web/jobs.py` | `JobRunner`: background `sync` / `scan` jobs (validation in the request, work in a thread, log + result), one at a time, last 20 kept |
-| `src/secmonk/reports.py` | JSON payloads shared with the CLI's `--format json` (`finding_dict`, `findings`, `asset_rows`, `asset_detail`, `component_rows`, `unmatched_rows`, `status_payload`, `vuln_detail`, `vuln_search`, `overview`) |
-| `src/secmonk/ops.py` | steps shared by the CLI and the jobs: `parse_opts`, `expand_sources`, `sync_source`, `collect`, `save_and_match` |
+| `src/secmonk/web/jobs.py` | `JobRunner`: background `sync` / `scan` jobs (validation in the request, work in a thread, log + result), one at a time; each job is a history row (id = row id, written at start and end); the last 20 stay in memory with their live log; lists merge them with the stored history; when it starts with actions enabled, marks runs whose owning process is gone as `interrupted` (never blocks startup); the docker listings (refused like jobs when actions are off) |
+| `src/secmonk/reports.py` | JSON payloads shared with the CLI's `--format json` (`finding_dict`, `findings`, `asset_rows`, `asset_detail`, `component_rows`, `unmatched_rows`, `status_payload`, `vuln_detail`, `vuln_search`, `overview`, `job_payload` / `job_dict` / `job_summary` (runs), `container_rows`) |
+| `src/secmonk/ops.py` | steps shared by the CLI and the jobs: `parse_opts`, `expand_sources`, `sync_source`, `sync_entry`, `expand_targets`, `collect`, `save_and_match`, `scan_target`, `scan_result`, history (`scan_params` / `scan_title` with redaction, `finish_run` (capped, scrubbed result + summary), `record_run` for the CLI), `is_selector`, `docker_contexts`, `docker_containers` |
 | `src/secmonk/procmon.py` | payload builders shared with the CLI: `snapshot_payload`, `tree_rows`, `software_rows`, `launch_item_rows`, `event_dict`, `match_inventory` |
 | `static/index.html`, `js/boot.js` | app entry (no inline script: the CSP forbids it) |
 | `static/css/secmonk.css` | design tokens (light / dark) + every component style |
@@ -79,7 +80,9 @@ request must send `X-SecMonk-Request: 1` (403 otherwise), reads included: `watch
 | GET | `/api/sources` | `{db{path, exists}, registry[{name, description, in_all}], sync_all_order[], status (= status -f json) or null}` | works without a database |
 | GET | `/api/collectors` | `[{name, description}]` | |
 | POST | `/api/jobs` | the new job (202) | JSON body: `{kind: "sync", sources[], ecosystems[], since, full, limit, path}` or `{kind: "scan", collector, target, options (key=value list or lines), save, min_confidence}`; 400 invalid, 403 actions off, 409 a job is running, 413 / 415 body |
-| GET | `/api/jobs`, `/api/jobs/<id>` | jobs newest first (no log) / one job `{id, kind, title, params, status (running, ok, partial, error), started, finished, error, result, log[]}` | scan result `{asset, saved, scan_id, stats, warnings, partial, findings[], counts}`; sync result `{sources[{source, status, records, seconds, message}]}` |
+| GET | `/api/jobs?kind=scan\|sync&limit=N`, `/api/jobs/<id>` | runs newest first (no `log`): this server's jobs merged with the stored history (CLI runs, earlier servers), no duplicates / one run with `log[]` (from memory while it runs, from the database after) | item = `reports.job_payload`: `{id, kind, origin (cli, ui), title, params (redacted), status (running, ok, partial, error), started, finished, error, result, summary, log_lines[, log]}`; `limit` 1..200 (default 50), 400 otherwise; 404 unknown id. Scan result `{saved, targets[{target, asset, scan_id, stats, warnings, partial, findings[] (≤ 500), counts, error}], stats (summed), counts (summed)}`: one target failing does not stop the others (status partial; error when all failed or the target spec matched nothing). `summary` = scan `{targets, errors, components, P1..P4, kev, total}`, sync `{sources, errors, records}`. Sync result `{sources[{source, status, records, seconds, message}]}`. A run whose process is gone (dead server, killed CLI) reads as `status: error`, `error: "interrupted"`; a CLI run still going in another terminal stays `running`. Errors and log lines are scrubbed of URL credentials |
+| GET | `/api/docker/contexts` | `[{name, host (no credentials), description, current}]` (`docker_engine.list_contexts`) | 403 when actions are off (it may contact other hosts); engine errors 502, bad input 400, each with a `hint` |
+| GET | `/api/docker/containers?host&context&all=0\|1&match=&opt=k=v…` | `{containers[{id (12 chars), name, image, state, status, matched}], engine}` (`ops.docker_containers` = `secmonk containers -f json` rows + `matched`) | `host` = `unix://`, `tcp://`, `ssh://user@host[:port]`; `match` = the docker-engine target syntax (names, globs, `re:<regex>`, comma separated); `opt` (repeatable) = docker-engine `key=value` options, only `tls_ca`, `tls_cert`, `tls_key`, `tls_verify`, `identity`, `timeout`, `connect_timeout` (others, e.g. `socket` or `ssh_bin`, are a 400): `matched` tells which rows a scan with that target would cover (all true without `match`; a pattern matching nothing just matches no row). 403 actions off, 400 bad selector / host / option, 502 engine unreachable (generic message: the engine's reply is never echoed) |
 
 Database reads never create the database: without one they answer 404 with `code: "no-db"`, which the client turns
 into a "create the mirror first" state (`/api/sources` still answers, so the first sync can start there).
@@ -103,8 +106,8 @@ anything unexpected -> 500 with the exception type and message (never a tracebac
 | XSS from collected data (process names, paths, plist values) | only `{{ }}` / attribute bindings; the single `v-html` renders static icon paths from `secmonk-ui.js`; CSP `script-src 'self' 'unsafe-eval'` (no inline, no external origin), `style-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'` |
 | Tampered or swapped third-party code | libraries vendored from the npm registry after sha512 integrity verification; sha256 per file in `static/vendor/MANIFEST.json`, checked by the tests |
 | Path traversal on static files | resolved under `static/` only, else 404 |
-| Leaking secrets | payloads come from the collector, which already redacts command lines and URLs (see [process collector](collectors/process.md)) |
-| Running collectors / syncs for someone else | jobs read local paths, connect to SSH hosts, pull images and download feeds as the user running `secmonk ui`: allowed by default only on a loopback bind; otherwise `--allow-actions` is required (403). Body: JSON object only, `Content-Type: application/json`, at most 64 KiB; every field validated like the CLI options |
+| Leaking secrets | payloads come from the collector, which already redacts command lines and URLs (see [process collector](collectors/process.md)); job parameters are redacted before they are shown or stored in the history (`password`, `token`, `secret`, `*key` option values -> `***`, URL credentials dropped) |
+| Running collectors / syncs for someone else | jobs read local paths, connect to SSH hosts and Docker engines, pull images and download feeds as the user running `secmonk ui`, and the docker listings contact engines (possibly remote): allowed by default only on a loopback bind; otherwise `--allow-actions` is required (403). Body: JSON object only, `Content-Type: application/json`, at most 64 KiB; every field validated like the CLI options |
 | Untrusted links (advisory references) | rendered as links only when `fmt.safeUrl` accepts them (`http:` / `https:`), with `rel="noopener noreferrer"`; anything else is text |
 
 `'unsafe-eval'` is required by Vue's in-browser template compiler (ADR-0009). Tested in `tests/test_web.py`.
@@ -165,7 +168,7 @@ storybook (`tests/test_web.py` fails on a mismatch), re-run the screenshots (the
 
 ## Limitations
 
-- Single-user state in the server process; a restart forgets the current snapshot, the watch baseline and the job list.
+- Single-user state in the server process; a restart forgets the current snapshot and the watch baseline (jobs survive: they are rows of the run history, and a job that was running when the server stopped reads as `interrupted`).
 - One job at a time and no cancel (Python threads cannot be interrupted): stop the server to abort a long sync.
 - The watch is client-driven polling (one tick per request); a closed tab stops it.
 - No pagination: processes and components are filtered client side (fine for a few thousand); findings use the CLI's

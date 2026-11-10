@@ -6,7 +6,7 @@ type: tech
 context: tech
 status: implemented
 tags: [architecture, cli, engine, collector, vuln-source]
-updated: 2026-11-07
+updated: 2026-11-10
 verified: 2026-11-07
 code: src/secmonk/
 related: [tech/web-ui.md, product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
@@ -70,14 +70,15 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/homebrew.py` | Active kegs from Cellar/`opt`, INSTALL_RECEIPT, casks, vendored PyPI/npm packages (via `walk_dir`), formula `patch ... resolves` CVEs. |
 | `collectors/rootfs.py` | OS + dpkg/apk/rpm parsers, `DirView` (directory) and `LayeredTarView` (layers + whiteouts), language packages via `collectors/lang`. |
 | `collectors/docker_image.py` | Registry v2 client (anonymous token, retries, digest-verified blob cache), `docker save` tarball, OCI layout. Feeds layers to `LayeredTarView`. |
-| `collectors/docker_engine.py` | Engine socket (Docker/Podman) read-only GETs: container `export` tar or image `save`. |
+| `collectors/docker_engine.py` | Engine (Docker/Podman) read-only GETs: container `export` tar or image `save`; endpoint resolution (socket, `host`, docker `context`, env), `list_contexts`, target selectors (`expand_targets`: names, globs, `re:<regex>`, comma lists). |
+| `collectors/docker_transport.py` | Engine transports and Docker CLI configuration: unix socket, TCP with TLS, `ssh://` (the engine socket reached over OpenSSH), context store reading. |
 | `collectors/fs.py` | Folder/repo: `walk_dir` over lockfiles, manifests, installed packages, binaries; git info in asset meta. |
 | `collectors/harvest.py`, `ssh.py` | Agentless SSH: fixed `find | tar` script, safe extraction into a temp dir, then rootfs/macOS/windows code on it. OpenSSH or paramiko transport. |
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
 | `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
 | `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
-| `reports.py` | JSON payloads shared by the CLI's `--format json` and the web API (findings, assets, asset detail, status, vuln show/search, overview). |
-| `ops.py` | Operations shared by the CLI and the web UI's jobs: collector options, `sync all` expansion, one-source sync with its bookkeeping, collect / save / match. |
+| `reports.py` | JSON payloads shared by the CLI's `--format json` and the web API (findings, assets, asset detail, status, vuln show/search, overview, run history, container rows). |
+| `ops.py` | Operations shared by the CLI and the web UI's jobs: collector options, `sync all` and target expansion, one-source sync with its bookkeeping, collect / save / match per target, the run history (table `job`, redacted parameters), docker-engine listings. |
 | `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`; `api.py` process monitor, `data.py` database reads, `jobs.py` background scan / sync), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
 | `collectors/lang/*.py` | `base.py` registry (`LangParser`, evidence ranks, `dedupe`), parsers: javascript, python, php, golang, rust, java, dotnet; `walk.py` (`walk_dir`, `LangAccumulator`, `WalkLimits`). |
 | `engine/purl.py` | PURL helpers, PURL to OSV ecosystem mapping, ecosystem and name normalization. |
@@ -126,7 +127,7 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
 | `scan homebrew [prefix]` | homebrew | Cellar kegs, `opt/` links, receipts, formula `.rb`, casks, vendored `dist-info` / `node_modules` | `homebrew:<host>` | cve-product (seed/alias/vendor-hint confidence) + osv-package for vendored libs |
 | `scan rootfs <dir>` | rootfs (`DirView`) | os-release, dpkg status / apk db / rpmdb.sqlite, lang files via `walk_dir` | `rootfs:<path>` | osv-package (distro ecosystems by source package, language ecosystems) + triage |
 | `scan docker-image <ref / tar / dir>` | docker-image (`LayeredTarView`) | whitelisted files of each layer in order with whiteouts; lang files parsed while streaming (`LangAccumulator`) | `image:<repo>@<digest>` | same as rootfs |
-| `scan docker-engine <name / image:ref>` | docker-engine (`LayeredTarView`) | container `export` stream (or image save) through the engine socket | `container:<name>` | same as rootfs |
+| `scan docker-engine <name / glob / re:regex / image:ref, …>` | docker-engine (`LayeredTarView`) | container `export` stream (or image save) through the local socket or a remote engine (`-o host=` tcp/ssh, `-o context=`); a selector expands to one scan per container | `container:<name>`; remote engine `container:<label>/<name>` (label = `host:port` for tcp, ssh host with `:port` unless 22, never the user) | same as rootfs |
 | `scan fs <dir>` | fs | lockfiles, manifests, installed metadata, Go/Rust/jar binaries via `walk_dir` | `repo:<path>` / `dir:<path>` | osv-package (7 ecosystems) |
 | `scan ssh user@host` | ssh + harvest | fixed read-only `find` + `tar` stream, extracted to a temp dir, then rootfs / macOS code; Windows hosts: PowerShell inventory script on stdin | `ssh:<host>[:<port>]` (also for Windows hosts) | as rootfs / macOS / windows |
 | `scan process [snapshot.json]` / `procs` | process (+ macos/homebrew/lang code) | live `ps` + `launchctl` + launchd plists, or a snapshot file; per executable: bundle, keg, pkgutil, Go/Rust build info, codesign, quarantine | `process:<host>` | as macos (cve/cpe-product, osv-package for Go/Electron) |

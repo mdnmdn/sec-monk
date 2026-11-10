@@ -1,13 +1,13 @@
 ---
 title: Data model (SQLite schema)
-summary: SQLite schema v2 covering migrations, vulnerability mirror tables, affected and distro_triage, inventory and partial scans, findings, database location.
-read_when: you change db.py, add a table or column, or need to know what the database stores and where it lives
+summary: SQLite schema v2 covering migrations, vulnerability mirror tables, affected and distro_triage, inventory and partial scans, findings, the run history (job), database location.
+read_when: you change db.py, add a table or column, or need to know what the database stores and where it lives (including the scan/sync run history)
 type: tech
 context: tech
 status: implemented
 tags: [data-model, sqlite, matching]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 code: src/secmonk/db.py
 related: [decisions/0007-process-monitor.md, decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
 ---
@@ -21,11 +21,12 @@ The authoritative DDL is in `src/secmonk/db.py` (`SCHEMA`, `SCHEMA_VERSION = 2`)
 | Item | Behaviour |
 |---|---|
 | `PRAGMA user_version` | Set to `SCHEMA_VERSION` (2) on every connect. |
-| Create | `init_schema()` runs the whole `SCHEMA` with `CREATE TABLE/INDEX IF NOT EXISTS`, so new tables (e.g. `distro_triage`) appear on existing DBs. |
+| Create | `init_schema()` runs the whole `SCHEMA` with `CREATE TABLE/INDEX IF NOT EXISTS`, so new tables (e.g. `distro_triage`, `job`) appear on existing DBs. |
 | Added columns | `_ADDED_COLUMNS` (`finding.triage`, `finding.triage_source`, `alias.kind`, `asset_component.paths`, `asset_component.meta`) are added with `ALTER TABLE ... ADD COLUMN` when missing (lightweight, additive only; no data rewrite). |
 | Connection | WAL, `synchronous=NORMAL`, foreign keys on. |
 
-Schema v2 = v1 + `distro_triage` + `finding.triage` / `finding.triage_source` + `alias.kind` + `asset_component.paths` / `.meta`. Rationale and history: [ADR-0004](../decisions/0004-sqlite-schema-v2.md) (supersedes ADR-0002); file location and permissions: [ADR-0006](../decisions/0006-per-user-state-locations.md).
+Schema v2 = v1 + `distro_triage` + `finding.triage` / `finding.triage_source` + `alias.kind` + `asset_component.paths` / `.meta`
+(+ the additive `job` table, 2026-11-10: no version bump, it appears on connect). Rationale and history: [ADR-0004](../decisions/0004-sqlite-schema-v2.md) (supersedes ADR-0002); file location and permissions: [ADR-0006](../decisions/0006-per-user-state-locations.md).
 
 **Location.** The database is `$SECMONK_DB` (a file) or `<data dir>/secmonk.db`, where the data dir is `$SECMONK_HOME`, else `$XDG_DATA_HOME/secmonk`, else `~/.local/share/secmonk` (`%LOCALAPPDATA%\secmonk` on Windows); `--db` overrides. Caches (cvelist git clone, image blobs) live in `$SECMONK_CACHE`, else `$XDG_CACHE_HOME/secmonk`, else `~/.cache/secmonk` (`%LOCALAPPDATA%\secmonk\cache`). Never relative to the current directory; directories are 0700, the DB file 0600 (`src/secmonk/paths.py`).
 
@@ -82,7 +83,7 @@ Filled by `sync debian-tracker` (full snapshot replace). Read by `engine/match.p
 
 | Table | Key | Purpose |
 |---|---|---|
-| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>`, `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`, `process:<host>` (running processes only, see [process collector](collectors/process.md))) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`, `host-processes`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
+| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>` (local engine) or `container:<label>/<name>` (remote engine reached with `-o host=` / `-o context=`; label = `host:port` for tcp, the ssh host with `:port` unless 22, never the user), `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`, `process:<host>` (running processes only, see [process collector](collectors/process.md))) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`, `host-processes`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
 | `scan` | autoinc | One collector run. |
 | `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets; `meta` = identity facts used for matching (vendor/product hints, source package...), shared by every asset with this key (the last writer wins). |
 | `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. Per-asset facts: `paths` (JSON list of **every** location of the component on this asset; `source_path` = the first) and `meta` (JSON: this asset's own users, install location, scope...). |
@@ -115,3 +116,27 @@ is sticky), `first_seen/last_seen/fixed_at`.
 
 Not stored as findings: tracker `not-affected` / fixed-in-tracker matches, Homebrew formula-patched CVEs and withdrawn records
 (counted in the match stats only).
+
+## Run history
+
+`job` — one row per `scan` or `sync` run, from the CLI or the web UI (`ops.record_run` on its own connection, so recording
+never commits the scan's own transaction; `web/jobs.py`; both store through `ops.finish_run`); read by
+`secmonk history` and `GET /api/jobs` through `reports.job_dict`. Written on the real table even for `scan --no-save`:
+`ephemeral_overlay` only shadows the inventory and finding tables, so a no-save run is listed while its inventory and
+findings are not stored.
+
+| Column | Meaning |
+|---|---|
+| `id` | autoincrement; also the web job id |
+| `kind`, `origin` | `scan` \| `sync`; `cli` \| `ui` |
+| `title` | `scan <collector> <target>` / `sync <sources>` (a URL target keeps its user name, never a password) |
+| `params` | JSON. Scan: `{collector, target, options[], save, min_confidence}`; sync: `{sources[], ecosystems[], since, full, limit, path}` (+ `ids` from the CLI). Redacted (`collectors/base.redact_option`): keys naming a file keep their value (exactly `identity`, `tls_ca`, `tls_cert`, `tls_key`, `known_hosts`, `ssh_config`, or `*_file` / `*_path`); any other key matching `pass` (password, passphrase, `tls_key_passphrase`…), `token`, `secret`, `…key` or `looks_secret` becomes `***`; `ssh_option` values go through `redact_command` (and `sshpass -p X` is masked); URL passwords, queries and fragments are dropped while user names are kept, so a run can be repeated (`strip_url_secrets(keep_user=True)`, `scrub_text`) |
+| `status` | `running` \| `ok` \| `partial` \| `error`. Scan: ok = every target ok; partial = a partial inventory or some targets failed; error = every target failed, or the run failed before any target (no match, engine unreachable) |
+| `started_at`, `finished_at` | ISO timestamps (UTC) |
+| `error` | error message (URL credentials scrubbed); `interrupted` for a run stopped with Ctrl-C or SIGTERM (CLI) or whose process is gone (see `owner`) |
+| `result` | JSON. Scan: `{saved, targets[{target, asset, scan_id, stats, warnings, partial, findings[] (finding rows, at most `ops.STORED_FINDINGS` = 500 per target; CLI runs: its display filters, then capped), counts, error}], stats (summed), counts (summed)}`; sync: `{sources[{source, status, records, seconds, message}]}` |
+| `log` | JSON list of log lines (the last `JOB_LOG_LINES` = 300; URL credentials scrubbed) |
+| `summary` | JSON `reports.job_summary` of the stored result, written at the end; lists (`db.job_rows`) read it and `json_array_length(log)` instead of the log |
+| `owner` | JSON `{pid, host}` of the process running it. A `running` row whose owner is gone (`db.owner_alive`: other host name, or `os.kill(pid, 0)` finds no process; on Windows only this process's rows count as alive) reads as `error` / `interrupted` (`reports.job_dict`, nothing written); a web server started with actions enabled also writes that (`db.job_mark_interrupted`, errors such as a locked database ignored). A run that does finish later overwrites it. No process-start token: a reused pid keeps a dead run `running` until that pid ends |
+
+Retention: inserting a run deletes rows with `id <= new_id - JOB_KEEP` (200).

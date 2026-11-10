@@ -230,3 +230,70 @@ def overview(conn: sqlite3.Connection, db_path: Path | str, *, top: int = 10) ->
                        "fixable": queries.count_open_fixable(conn), **totals},
             "assets": assets, "top_findings": findings(conn, limit=top),
             "sources": [dict(r) for r in queries.source_status(conn)], "tables": queries.table_counts(conn)}
+
+
+# --------------------------------------------------------------------------- run history (scan / sync jobs)
+
+def job_summary(kind: str, result: dict | None) -> dict:
+    """One-line facts about a run for lists: scan {targets, errors, components, P1..P4, kev, total};
+    sync {sources, errors, records}. Empty while running or when the run failed before a result."""
+    if not isinstance(result, dict):
+        return {}
+    if kind == "scan":
+        targets = result.get("targets") or []
+        counts = result.get("counts") or {}
+        return {"targets": len(targets), "errors": sum(bool(t.get("error")) for t in targets),
+                "components": (result.get("stats") or {}).get("components", 0),
+                **{k: counts.get(k, 0) for k in (*PRIORITY_KEYS, "kev", "total")}}
+    if kind == "sync":
+        sources = result.get("sources") or []
+        return {"sources": len(sources), "errors": sum(s.get("status") == "error" for s in sources),
+                "records": sum(s.get("records") or 0 for s in sources)}
+    return {}
+
+
+def job_payload(*, id: int, kind: str, origin: str, title: str | None, params: dict | None, started: str | None,
+                finished: str | None, status: str, error: str | None, result: dict | None,
+                log: list[str] | None, include_log: bool = True, summary: dict | None = None,
+                log_lines: int | None = None) -> dict:
+    """A scan / sync run (web job or stored history row): `GET /api/jobs[/<id>]`, `secmonk history [show] -f json`."""
+    d = {"id": id, "kind": kind, "origin": origin, "title": title, "params": params or {}, "started": started,
+         "finished": finished, "status": status, "error": error, "result": result,
+         "summary": summary if summary is not None else job_summary(kind, result),
+         "log_lines": log_lines if log_lines is not None else len(log or [])}
+    if include_log:
+        d["log"] = list(log or [])
+    return d
+
+
+def job_dict(row: sqlite3.Row, *, include_log: bool = True) -> dict:
+    """Stored `job` row (db.job_row, or db.job_rows without the log) -> job_payload. A 'running' row whose process
+    is gone (db.owner_alive) reads as status 'error', error 'interrupted' (nothing is written)."""
+    from .db import owner_alive
+
+    keys = set(row.keys())
+    status, error, finished = row["status"], row["error"], row["finished_at"]
+    if status == "running" and not owner_alive(loads(row["owner"]) if "owner" in keys else None):
+        status, error = "error", "interrupted"
+    log = loads(row["log"], []) if "log" in keys else None
+    return job_payload(id=row["id"], kind=row["kind"], origin=row["origin"], title=row["title"],
+                       params=loads(row["params"], {}), started=row["started_at"], finished=finished,
+                       status=status, error=error, result=loads(row["result"]), log=log,
+                       include_log=include_log and log is not None,
+                       summary=loads(row["summary"]) if "summary" in keys and row["summary"] else None,
+                       log_lines=row["log_lines"] if "log_lines" in keys else None)
+
+
+# --------------------------------------------------------------------------- docker engine
+
+def container_rows(raw: list[dict], matched: set[str] | None = None) -> list[dict]:
+    """Engine `/containers/json` entries -> `secmonk containers` / `GET /api/docker/containers` rows. `matched`: names
+    or ids selected by a `--match` selector (None = no selector: every row matches)."""
+    out = []
+    for c in raw:
+        names = [str(n).lstrip("/") for n in c.get("Names") or []]
+        cid = str(c.get("Id", ""))
+        hit = matched is None or bool(matched & {*names, cid, cid[:12]})
+        out.append({"id": cid[:12], "name": ", ".join(names), "image": c.get("Image"), "state": c.get("State"),
+                    "status": c.get("Status"), "matched": hit})
+    return out

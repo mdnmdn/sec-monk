@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [cli, index, features]
-updated: 2026-11-08
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 code: src/secmonk/cli.py
 related: [tech/architecture.md, references/vuln-sources/README.md, references/probes.md, _meta/README.md]
 ---
@@ -19,7 +19,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 
 | Feature | Doc | Status | Platforms | CLI entry point | Validation caveat |
 |---|---|---|---|---|---|
-| Scan, match and findings | [scan-and-findings.md](scan-and-findings.md) | implemented | any | `secmonk scan`, `match`, `findings`, `inventory *`, `vuln show/search` | engine and CLI covered by offline tests (`tests/engine/`, `tests/test_cli.py`); priorities are draft rules |
+| Scan, match and findings | [scan-and-findings.md](scan-and-findings.md) | implemented | any | `secmonk scan`, `match`, `findings`, `history`, `inventory *`, `vuln show/search` | engine and CLI covered by offline tests (`tests/engine/`, `tests/test_cli.py`); priorities are draft rules |
 | Vulnerability data sync (8 sources) | [vuln-sync.md](vuln-sync.md) | implemented | any (needs network per source, or `--path` import) | `secmonk sync <source>`, `sources`, `status`, `vuln show/search` | osv, cvelist, kev run on real data; epss, nvd, euvd, msrc, debian-tracker only on fixtures (hosts blocked in the dev sandbox) |
 | macOS inventory | [inventory-macos.md](inventory-macos.md) | implemented | macOS host or a copied Mac directory tree (analysed on any OS) | `secmonk collect\|scan macos [/]` | fixtures synthetic; not run on a real Mac |
 | Homebrew inventory | [inventory-homebrew.md](inventory-homebrew.md) | implemented | macOS and Linuxbrew prefixes (any OS can read a mounted prefix) | `secmonk collect\|scan homebrew [prefix]` | fixtures built from real registry manifests and formulae; real-prefix scan not done |
@@ -35,7 +35,7 @@ Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `v
 
 ## CLI at a glance
 
-Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every command that reads or writes the database (all but `sources`, `collectors`, `containers`, `windows-script`; `ui` and `procs` use it only if present) accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, inventory assets/show/unmatched, scan, procs and vuln search (`vuln show`: table|json); the JSON documents are the web API's payloads (`reports.py`) (json/csv go to stdout, notes to stderr; tables are not truncated when piped). `procs` uses the database only if it exists (findings in a temporary overlay; `--save` creates and writes it).
+Taken from `uv run secmonk --help` and each `<command> --help` (2026-11-07; scan, containers, history: 2026-11-10). Root options: `-v/--verbose` (debug logging + tracebacks), `-q/--quiet`. Every command that reads or writes the database (all but `sources`, `collectors`, `containers`, `windows-script`; `ui` and `procs` use it only if present) accepts `--db PATH` (env `SECMONK_DB`; default `<per-user data dir>/secmonk.db`, never the CWD). Read-only commands (status, findings, inventory *, vuln *, match, history) exit 1 with "no database at X — run `secmonk sync …` first" instead of creating one; sync/collect/scan create it. Exit codes: 0 ok, 1 runtime error (incl. any sync source with status error; partial exits 0 with a note), 2 usage error, 3 `scan --fail-on` hit. `--format table|json|csv` on status, findings, containers, history, inventory assets/show/unmatched, scan, procs and vuln search (`vuln show`, `history show`: table|json); the JSON documents are the web API's payloads (`reports.py`) (json/csv go to stdout, notes to stderr; tables are not truncated when piped). `procs` uses the database only if it exists (findings in a temporary overlay; `--save` creates and writes it).
 
 ```text
 secmonk status                          freshness + table sizes
@@ -56,17 +56,33 @@ secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     -O, --output PATH   write inventory JSON (a hidden `--json` still works but is deprecated)
     -q, --quiet         don't print the component table (warnings are always shown)
     -o, --opt KEY=VAL   collector option (repeatable), e.g. -o use_brew_cli=true -o platform=linux/arm64
-secmonk scan COLLECTOR [TARGET]         collect + save + match, then print findings
+secmonk scan COLLECTOR [TARGET]         collect + save + match, then print findings; a TARGET may expand to several
+                                        (docker-engine: names, globs, re:<regex>, comma separated): a section per target,
+                                        JSON {"targets": [...]}, exit 1 if any failed (the others still run)
     --min-confidence F  drop name-based matches below F (default 0.5)
-    --fail-on P1..P4    exit 3 if any open finding is at or above this priority
+    --fail-on P1..P4    exit 3 if any open finding (any target) is at or above this priority
     --priority/--fixable/--hide-minor/--hide-deferred/-n   same filters as `findings`
-    --save/--no-save    --no-save matches in a temporary overlay and writes nothing (needs an existing mirror)
+    --save/--no-save    --no-save matches in a temporary overlay and stores no inventory or findings; the run is
+                        listed in the history (needs an existing mirror)
+    e.g. secmonk scan docker-engine 'web-*,re:^api-[0-9]+$,db' -o host=ssh://deploy@prod.example
+         secmonk scan docker-engine image:nginx:1.27 -o context=staging
+         secmonk scan docker-engine 'web-*' -o all=yes          (stopped containers too)
     -f, --format table|json|csv   -q, --quiet
     -o, --opt KEY=VAL
 secmonk match ASSET                     (re)match a stored asset against the current mirror
     --min-confidence F  (default 0.5)
 secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
-secmonk containers [--socket PATH] [--all] [-f FMT]   list containers of the local Docker/Podman engine (table)
+secmonk containers                      list containers of a Docker/Podman engine (targets for scan docker-engine)
+    --host URL          unix:///path, tcp://host:2376, ssh://user@host[:port] (default: local socket)
+    --context NAME      a docker context   --socket PATH   --all (include stopped)
+    -m, --match SEL     only containers selected by SEL (names, globs, re:<regex>, comma separated)
+    -o, --opt KEY=VAL   docker-engine options: tls_ca, tls_cert, tls_key, tls_verify, identity, ssh_bin, timeout...
+    -f, --format table|json|csv
+    e.g. secmonk containers --host tcp://docker.example:2376 -o tls_verify=yes --match "re:^web-"
+secmonk history                         past scan / sync runs (CLI and web UI; last 200 kept), newest first
+    --kind scan|sync    -n, --limit N (default 20)   -f, --format table|json|csv
+secmonk history show ID                 one run: parameters (secrets redacted), status, stored result
+    --log               also print the run's log   -f, --format table|json
 secmonk ui                              local web interface on http://127.0.0.1:8765: dashboard, assets, scan, findings,
                                         vulnerabilities, sources & sync, jobs, process monitor
     --host H (IPv4/IPv6)  --port N  --allow-host NAME  --snapshot F (serve a snapshot file)  --open  -o KEY=VAL  --db PATH
@@ -99,7 +115,7 @@ secmonk inventory unmatched [-f FMT]    apps whose identity is only a normalized
 
 ### Collector options (`-o key=value`)
 
-Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`)
+Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`, `allow_agent`, `look_for_keys`, `all`, `tls_verify`)
 and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`). Keys marked *(API)* are read by the collector but are not
 boolean/list-parsed on the command line (use them from Python, or pass a value the collector treats as truthy); `0`/`false` strings are **not** falsy for them.
 A key a collector does not know is silently ignored.

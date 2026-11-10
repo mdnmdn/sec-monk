@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sqlite3
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -138,7 +139,8 @@ CREATE INDEX IF NOT EXISTS ix_triage_cve ON distro_triage(cve_id);
 -- ------------------------------------------------------------------ inventory
 CREATE TABLE IF NOT EXISTS asset (
     id            TEXT PRIMARY KEY,          -- stable id: 'macos:<host>', 'homebrew:<host>', 'windows:<host>', 'ssh:<host>[:<port>]',
-                                             -- 'image:<repo>@<digest>', 'container:<name>', 'rootfs:<path>', 'repo:<path>', 'dir:<path>',
+                                             -- 'image:<repo>@<digest>', 'container:<name>' ('container:<label>/<name>' on a remote engine),
+                                             -- 'rootfs:<path>', 'repo:<path>', 'dir:<path>',
                                              -- 'process:<host>' (running processes only)
     type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory | host-processes
     name          TEXT,
@@ -208,6 +210,26 @@ CREATE TABLE IF NOT EXISTS finding (
     triage_source TEXT,                      -- debian-tracker | osv
     PRIMARY KEY (asset_id, component_id, vuln_id)
 );
+
+-- ------------------------------------------------------------------ run history
+-- One row per `scan` / `sync` run, from the CLI or the web UI (never shadowed by ephemeral_overlay: a --no-save scan
+-- is listed too). Parameters are stored redacted (ops.scan_params / sync_params). The last JOB_KEEP rows are kept.
+CREATE TABLE IF NOT EXISTS job (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind          TEXT NOT NULL,             -- scan | sync
+    origin        TEXT NOT NULL,             -- cli | ui
+    title         TEXT,
+    params        TEXT,                      -- JSON (secrets redacted)
+    status        TEXT,                      -- running | ok | partial | error
+    started_at    TEXT,
+    finished_at   TEXT,
+    error         TEXT,
+    result        TEXT,                      -- JSON: scan {saved, targets[], stats, counts} | sync {sources[]}
+    log           TEXT,                      -- JSON list of lines (last JOB_LOG_LINES)
+    summary       TEXT,                      -- JSON: reports.job_summary of the result (lists read it, not result/log)
+    owner         TEXT                       -- JSON {pid, host} of the process running it (stale 'running' detection)
+);
+CREATE INDEX IF NOT EXISTS ix_job_kind ON job(kind, id);
 """
 
 
@@ -255,7 +277,8 @@ def connect(path: str | Path | None = None) -> sqlite3.Connection:
 # columns added after a table was first created: (table, column, type)
 _ADDED_COLUMNS = (("finding", "triage", "TEXT"), ("finding", "triage_source", "TEXT"),
                   ("alias", "kind", "TEXT DEFAULT 'alias'"),
-                  ("asset_component", "paths", "TEXT"), ("asset_component", "meta", "TEXT"))
+                  ("asset_component", "paths", "TEXT"), ("asset_component", "meta", "TEXT"),
+                  ("job", "summary", "TEXT"), ("job", "owner", "TEXT"))
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
@@ -329,6 +352,89 @@ def set_sync_state(
 def get_sync_cursor(conn: sqlite3.Connection, source: str) -> str | None:
     row = conn.execute("SELECT cursor FROM source_sync WHERE source=?", (source,)).fetchone()
     return row["cursor"] if row else None
+
+
+# --------------------------------------------------------------------------- run history (table `job`)
+
+JOB_KEEP = 200          # runs kept; older ones are pruned when a new one starts
+JOB_LOG_LINES = 300     # log lines kept per stored run
+
+
+def this_owner() -> dict:
+    """The process recording a run: {pid, host}."""
+    return {"pid": os.getpid(), "host": socket.gethostname()}
+
+
+def owner_alive(owner: dict | None) -> bool:
+    """Whether the process that owns a 'running' row still runs. Unknown owner (old row), another host name (the
+    database is per-user and local: most likely this host renamed) or a pid that is gone -> False. Windows cannot
+    probe a pid with signal 0, so there only this process's own rows count as alive."""
+    if not isinstance(owner, dict) or owner.get("host") != socket.gethostname():
+        return False
+    pid = owner.get("pid")
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    if pid == os.getpid():
+        return True
+    if os.name != "posix":
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:          # exists, belongs to someone else
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def job_insert(conn: sqlite3.Connection, *, kind: str, origin: str, title: str | None, params: dict | None,
+               started_at: str | None = None) -> int:
+    """Record a run that starts now (status 'running', owned by this process); prunes runs beyond JOB_KEEP."""
+    cur = conn.execute("INSERT INTO job(kind, origin, title, params, status, started_at, owner) VALUES (?,?,?,?,?,?,?)",
+                       (kind, origin, title, dumps(params), "running", started_at or now(), dumps(this_owner())))
+    job_id = int(cur.lastrowid)
+    conn.execute("DELETE FROM job WHERE id <= ?", (job_id - JOB_KEEP,))
+    conn.commit()
+    return job_id
+
+
+def job_finish(conn: sqlite3.Connection, job_id: int, *, status: str, result: Any = None, error: str | None = None,
+               log: list[str] | None = None, summary: dict | None = None) -> None:
+    conn.execute("UPDATE job SET status=?, finished_at=?, error=?, result=?, log=?, summary=? WHERE id=?",
+                 (status, now(), error, dumps(result), dumps(list(log or [])[-JOB_LOG_LINES:]), dumps(summary),
+                  job_id))
+    conn.commit()
+
+
+def job_mark_interrupted(conn: sqlite3.Connection) -> int:
+    """Runs left 'running' by a process that is gone (owner_alive) -> status 'error', error 'interrupted'.
+    A run that does finish later still overwrites this."""
+    dead = [r["id"] for r in conn.execute("SELECT id, owner FROM job WHERE status='running'")
+            if not owner_alive(loads(r["owner"]))]
+    if dead:
+        conn.executemany("UPDATE job SET status='error', error='interrupted', finished_at=COALESCE(finished_at, ?) "
+                         "WHERE id=? AND status='running'", [(now(), i) for i in dead])
+        conn.commit()
+    return len(dead)
+
+
+# list columns: no `log` (its length is computed in SQL)
+_JOB_LIST_COLS = ("id, kind, origin, title, params, status, started_at, finished_at, error, result, summary, owner, "
+                  "json_array_length(COALESCE(log, '[]')) AS log_lines")
+
+
+def job_rows(conn: sqlite3.Connection, *, kind: str | None = None, limit: int = 50) -> list[sqlite3.Row]:
+    """Stored runs, newest first, without their log (column `log_lines` instead)."""
+    sql = f"SELECT {_JOB_LIST_COLS} FROM job"
+    if kind:
+        return conn.execute(sql + " WHERE kind=? ORDER BY id DESC LIMIT ?", (kind, limit)).fetchall()
+    return conn.execute(sql + " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+
+
+def job_row(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM job WHERE id=?", (job_id,)).fetchone()
 
 
 def executemany(conn: sqlite3.Connection, sql: str, rows: Iterable[tuple]) -> None:

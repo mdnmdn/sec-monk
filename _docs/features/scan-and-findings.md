@@ -1,14 +1,14 @@
 ---
 title: Scan, match and findings
-summary: CLI contract of scan, match, findings and inventory commands with filters, --format table|json|csv, --min-confidence, --fail-on, exit codes, warnings and finding lifecycle.
-read_when: you use or change scan, match or findings options, output formats, exit codes or CI gating with --fail-on
+summary: CLI contract of scan (one or several targets), match, findings, inventory and history commands with filters, --format table|json|csv, --min-confidence, --fail-on, exit codes, warnings, run history and finding lifecycle.
+read_when: you use or change scan, match, findings or history options, output formats, exit codes, multi-target scans or CI gating with --fail-on
 type: feature
 context: features
 status: implemented
 tags: [cli, matching, prioritization, findings]
-updated: 2026-11-07
-verified: 2026-11-07
-code: src/secmonk/cli.py, src/secmonk/engine/match.py, src/secmonk/engine/queries.py, src/secmonk/engine/scoring.py
+updated: 2026-11-10
+verified: 2026-11-10
+code: src/secmonk/cli.py, src/secmonk/ops.py, src/secmonk/engine/match.py, src/secmonk/engine/queries.py, src/secmonk/engine/scoring.py
 related: [features/README.md, tech/engine/matching.md, tech/data-model.md, features/vuln-sync.md]
 ---
 
@@ -28,7 +28,10 @@ secmonk scan macos /                                 # (any collector) collect +
 secmonk scan rootfs ./rootfs --priority P1           # only P1
 secmonk scan rootfs ./rootfs --fail-on P2            # CI gate: exit 3 if an open P1/P2 finding exists
 secmonk scan docker-image alpine:3.20 -f json > r.json   # {"asset", "stats", "warnings", "partial", "findings"} on stdout
-secmonk scan fs . --no-save                          # match in a temporary overlay, write nothing (needs a synced mirror)
+secmonk scan fs . --no-save                          # match in a temporary overlay: no inventory or findings stored (needs a synced mirror)
+secmonk scan docker-engine 'web-*,re:^api-[0-9]+$,db' -f json   # several targets: {"targets": [...]} (one entry per target)
+secmonk history [--kind scan|sync] [-n 20]           # past scan / sync runs (CLI and web UI), newest first
+secmonk history show 12 [--log] [-f json]            # one run: parameters, status, stored result
 secmonk match <asset-id> --min-confidence 0.7        # re-match a stored asset after `secmonk sync`
 secmonk findings [<asset-id>] --fixable --hide-minor # list stored findings
 secmonk inventory assets | show <asset> | unmatched  # what was collected; unmatched = alias-table candidates
@@ -51,7 +54,28 @@ secmonk vuln show CVE-2024-3094 | vuln search --ecosystem PyPI --package django 
 - **Warnings** from collectors are always shown (`-q` does not hide them). A **partial** inventory (stream aborted, size caps hit) is stored but
   never makes components disappear: see "Partial scans" in [data-model](../tech/data-model.md#partial-scans).
 - **No database**: read-only commands exit 1 with "no database at X"; `sync`, `collect` and `scan` create it in the per-user data dir
-  ([ADR-0006](../decisions/0006-per-user-state-locations.md)). `scan --no-save` needs an existing mirror and leaves the DB untouched.
+  ([ADR-0006](../decisions/0006-per-user-state-locations.md)). `scan --no-save` needs an existing mirror and stores no inventory or findings; the run is listed in the history.
+- **Several targets**: a collector may expand one target spec into several (`Collector.expand_targets`; docker-engine:
+  comma-separated names, globs, `re:<regex>`, `image:<ref>`, see [inventory-docker](inventory-docker.md)). Each target is
+  collected, saved and matched in turn; a failing target is reported (stderr, red) and the others still run. `--fail-on`
+  counts open findings over every target. Exit code: 1 if any target failed (after all ran), else 3 on a `--fail-on` hit;
+  when both happen both messages are printed and 1 wins. Table output has a section per target; CSV is one document (one
+  header) with every target's rows; JSON is the stored scan result `{"saved", "targets": [{target, asset, scan_id, stats,
+  warnings, partial, findings[], counts, error}], "stats", "counts"}` (findings filtered by the display flags; `scan_id`
+  null with `--no-save`). The target spec decides the shape: a selector (a comma, or a docker-engine glob / `re:` pattern)
+  gives this document even if one target matched; a plain target (every other collector, a docker-engine name or
+  `image:<ref>`) gives the single-target document `{asset, stats, warnings, partial, findings}`. A spec that matches
+  nothing (or an unreachable engine) exits 1 before any scan.
+- **Run history**: every `scan` and `sync` run, from the CLI (`origin: cli`) or the web UI (`origin: ui`), is a row of the
+  table `job` ([data-model](../tech/data-model.md#run-history)): title, parameters (secrets redacted: values of option keys such as
+  `password`, `pass`, `passphrase`, `token`, `secret`, `*key` become `***`, `ssh_option` commands are redacted, URL
+  passwords are dropped (user names kept), also from stored errors and log lines; key-file paths such as `identity`, `tls_key`,
+  `*_file` are kept), status (`ok`, `partial` = a partial inventory or some targets failed, `error` = every
+  target failed or the run failed, `running`), result (the web job result: per-target entries with up to 500 findings, or the
+  sync sources) and the log. A run stopped with Ctrl-C or SIGTERM (exit 143), or whose
+  process is gone, shows as `error` / `interrupted`. `--no-save` runs are listed too (their inventory and findings are not stored). The last 200
+  runs are kept. `secmonk history` lists them (`--kind`, `-n/--limit`, `-f table|json|csv`; JSON rows = `GET /api/jobs`
+  items); `secmonk history show ID` prints one (`--log`, `-f table|json`; JSON = `GET /api/jobs/<id>`); unknown id exits 1.
 - **Lifecycle**: a re-scan marks findings no longer detected as `fixed`; `suppressed` is sticky. First/last seen are kept.
 
 ## Acceptance criteria
@@ -60,6 +84,8 @@ secmonk vuln show CVE-2024-3094 | vuln search --ecosystem PyPI --package django 
 - `-f json` output parses as JSON on stdout with warnings on stderr only; `-f csv` has a header row.
 - An unknown asset id for `match` or `findings` exits 1; an invalid `--priority`/`--fail-on` exits 2.
 - Matching, version ordering and canonicalization have offline unit tests (`tests/engine/`).
+- A multi-target scan with one failing target scans the others, prints `{"targets": [...]}` and exits 1; every run (including
+  `--no-save` and failed ones) appears in `secmonk history` with redacted options (`tests/test_history.py`).
 
 ## Implemented by
 
