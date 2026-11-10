@@ -150,6 +150,8 @@
     ssh: { placeholder: "user@host[:port]" },
     windows: { placeholder: "/path/to/inventory.json (from secmonk windows-script)" },
     process: { placeholder: "(this machine) or a snapshot.json", optional: true },
+    sbom: { placeholder: "path/to/bom.cdx.json (CycloneDX or SPDX JSON)",
+      help: "CycloneDX 1.4–1.6 or SPDX 2.x JSON on the machine running secmonk ui; option asset_id=sbom:<name> to choose the asset id" },
   };
 
   /** Priority counts from a findings list: [{priority, kev}] -> {P1: n, ..., kev: n} */
@@ -179,6 +181,21 @@
   function dismiss(id) {
     const i = toasts.findIndex((t) => t.id === id);
     if (i >= 0) toasts.splice(i, 1);
+  }
+
+  // ------------------------------------------------------------------ downloads
+  /** Save a Blob as a file: a temporary object URL clicked through an <a download> (no inline script, no new
+   * window), revoked right after. Used for API downloads that need the X-SecMonk-Request header (SBOM export). */
+  function saveBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "download";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // ------------------------------------------------------------------ theme
@@ -650,6 +667,6 @@
 
   global.SecMonkUI = Object.assign(global.SecMonkUI || {}, {
     fmt, LAUNCH, FLAGS, METHODS, EVENTS, SEVERITY, PRIORITY_TEXT, MATCHED_BY, JOB_STATUS, JOB_ORIGIN, COLLECTOR_TARGETS, ICONS,
-    COMPONENTS, install, toast, dismiss, toasts, theme, applyTheme, countFindings, worstPriority,
+    COMPONENTS, install, toast, dismiss, toasts, saveBlob, theme, applyTheme, countFindings, worstPriority,
   });
 })(window);

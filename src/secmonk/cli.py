@@ -1064,6 +1064,34 @@ def inv_show(
     _emit(rows, ["category", "name", "version", "ecosystem", "vendor", "purl", "cpe", "path"], fmt, title=asset)
 
 
+class BomFmt(str, Enum):
+    cyclonedx_json = "cyclonedx-json"
+
+
+@inv_app.command("export")
+def inv_export(
+    asset: Annotated[str, typer.Argument(help="Asset id (see `secmonk inventory assets`)")],
+    fmt: Annotated[BomFmt, typer.Option("--format", "-f", help="BOM format")] = BomFmt.cyclonedx_json,
+    with_vulns: Annotated[bool, typer.Option("--with-vulns", help="Add the open findings as CycloneDX "
+                                                                  "vulnerabilities")] = False,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Write to this file (default: stdout)")] = None,
+    db: DbOpt = None,
+):
+    """Software bill of materials of an asset's current components (CycloneDX 1.6 JSON)."""
+    from . import sbom
+
+    with _open(db) as conn:
+        _require_asset(conn, asset)
+        doc = sbom.export_asset(conn, asset, with_vulns=with_vulns)
+    text = sbom.dumps(doc)
+    if output is None:
+        typer.echo(text, nl=False)
+        return
+    output.write_text(text)
+    _info(f"wrote {_e(output)} ({len(doc['components'])} components"
+          + (f", {len(doc['vulnerabilities'])} vulnerabilities" if with_vulns else "") + ")", Fmt.json)
+
+
 @inv_app.command("unmatched")
 def inv_unmatched(db: DbOpt = None, fmt: FmtOpt = Fmt.table):
     """Applications whose product identity is only a normalized name (alias-table candidates)."""

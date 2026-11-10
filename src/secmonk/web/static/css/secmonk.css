@@ -470,6 +470,11 @@ details.sm-target > summary:hover { background: var(--sm-surface-2); }
 .sm-table tbody tr.is-match td { background: var(--sm-ok-soft); }
 .sm-table tbody tr.is-match td:first-child { box-shadow: inset 3px 0 0 var(--sm-ok); }
 
+/* joined buttons (sbom-export) */
+.sm-btn-group { display: inline-flex; }
+.sm-btn-group > .sm-btn:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+.sm-btn-group > .sm-btn:not(:last-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
 /* host auto mode: host summary line and the candidate checkbox panel (host-candidates) */
 .sm-host { display: flex; align-items: center; gap: var(--sm-s2); flex-wrap: wrap; padding: var(--sm-s2) var(--sm-s3);
   border: 1px solid var(--sm-border); border-radius: var(--sm-radius); background: var(--sm-surface-2); }

@@ -1,0 +1,362 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:b6b3041d-177a-57af-9019-a71773c69262",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-11T09:00:00+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "secmonk",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "asset:dir:/srv/app",
+      "type": "application",
+      "name": "javascript",
+      "properties": [
+        {
+          "name": "secmonk:asset_id",
+          "value": "dir:/srv/app"
+        },
+        {
+          "name": "secmonk:asset_type",
+          "value": "directory"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:npm/%40babel/code-frame@7.12.13",
+      "type": "library",
+      "name": "@babel/code-frame",
+      "version": "7.12.13",
+      "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "bun/bun.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "installed/node_modules/@babel/code-frame/package.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v1/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v2/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v3/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v6/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v9/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-v1/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "type": "library",
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "bun/bun.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v1/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v2/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v3/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v6/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v9/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-v1/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/%40babel/highlight@7.25.9",
+      "type": "library",
+      "name": "@babel/highlight",
+      "version": "7.25.9",
+      "purl": "pkg:npm/%40babel/highlight@7.25.9",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "bun/bun.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v1/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v2/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v3/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v6/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v9/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-v1/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/%40isaacs/fs-minipass@4.0.1",
+      "type": "library",
+      "name": "@isaacs/fs-minipass",
+      "version": "4.0.1",
+      "purl": "pkg:npm/%40isaacs/fs-minipass@4.0.1",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/abbrev@5.0.0",
+      "type": "library",
+      "name": "abbrev",
+      "version": "5.0.0",
+      "purl": "pkg:npm/abbrev@5.0.0",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/ansi-styles@3.2.1",
+      "type": "library",
+      "name": "ansi-styles",
+      "version": "3.2.1",
+      "purl": "pkg:npm/ansi-styles@3.2.1",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "bun/bun.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v1/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v2/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v3/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v6/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v9/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-v1/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/chalk@2.4.2",
+      "type": "library",
+      "name": "chalk",
+      "version": "2.4.2",
+      "purl": "pkg:npm/chalk@2.4.2",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "bun/bun.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v1/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v2/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "npm-v3/package-lock.json"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v6/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "pnpm-v9/pnpm-lock.yaml"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-v1/yarn.lock"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/chownr@3.0.0",
+      "type": "library",
+      "name": "chownr",
+      "version": "3.0.0",
+      "purl": "pkg:npm/chownr@3.0.0",
+      "properties": [
+        {
+          "name": "secmonk:category",
+          "value": "library"
+        },
+        {
+          "name": "secmonk:ecosystem",
+          "value": "npm"
+        },
+        {
+          "name": "secmonk:path",
+          "value": "yarn-berry/yarn.lock"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "asset:dir:/srv/app",
+      "dependsOn": [
+        "pkg:npm/%40babel/code-frame@7.12.13",
+        "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+        "pkg:npm/%40babel/highlight@7.25.9",
+        "pkg:npm/%40isaacs/fs-minipass@4.0.1",
+        "pkg:npm/abbrev@5.0.0",
+        "pkg:npm/ansi-styles@3.2.1",
+        "pkg:npm/chalk@2.4.2",
+        "pkg:npm/chownr@3.0.0"
+      ]
+    }
+  ]
+}

@@ -72,6 +72,7 @@ request must send `X-SecMonk-Request: 1` (403 otherwise), reads included: `watch
 | GET | `/api/overview` | `reports.overview`: `{db, totals{assets, components, open_findings, fixable, P1..P4, kev}, assets[], top_findings[], sources[], tables{}}` | |
 | GET | `/api/assets` | `reports.asset_rows` = `inventory assets -f json` (+ `findings_by_priority`) | |
 | GET | `/api/assets/detail?id=` | `reports.asset_detail`: `{asset{…, meta (large values summarized)}, scans[], components[] (with open finding counts), findings[] (all statuses), summary, partial, warnings}` | 404 `unknown-asset` |
+| GET | `/api/assets/<url-encoded id>/sbom[?vulns=1]` | CycloneDX 1.6 JSON (`sbom.export_asset` = `secmonk inventory export -f cyclonedx-json [--with-vulns]`) as `application/vnd.cyclonedx+json`, `Content-Disposition: attachment; filename="<id, unsafe characters -> _>.cdx.json"`, same security headers | 404 `unknown-asset` / `no-db`. Needs `X-SecMonk-Request` like every API call: the UI downloads with `fetch` + blob, not a plain link ([features/sbom](../features/sbom.md)) |
 | POST | `/api/assets/match?id=` | `{asset, stats}` | `secmonk match`; this and `/api/processes/save` answer 409 while a job runs (one writer at a time) |
 | GET | `/api/unmatched` | `inventory unmatched -f json` rows | |
 | GET | `/api/findings?priority&asset&all&fixable&hide_minor&hide_deferred&limit` | `{findings[] (= findings -f json), limit, limit_reached}` | 400 on a bad priority / limit (1..5000); 404 unknown asset |

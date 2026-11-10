@@ -28,6 +28,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Agentless SSH inventory | [inventory-ssh.md](inventory-ssh.md) | implemented | target Linux, macOS, Windows (OpenSSH); analyst machine any | `secmonk collect\|scan ssh user@host[:port]` | fixture trees + in-process sshd only; no real sshd, no real macOS/Windows host |
 | Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | run on a real Mac (macOS 26.5, user + root, 2026-11-08); real trimmed snapshots + synthetic fixtures |
 | Web interface (local) | [web-ui.md](web-ui.md) | implemented | any OS (browser, works offline); live process data on macOS, snapshot files anywhere | `secmonk ui [--snapshot F]` | every CLI area: dashboard, assets, scan, findings, vulnerabilities, sources & sync, jobs, process monitor; design + storybook in [`_design/`](../../_design/README.md); synthetic fixtures |
+| SBOM export / import | [sbom.md](sbom.md) | implemented | any | `secmonk inventory export`, `secmonk scan sbom FILE` | CycloneDX 1.6 export, CycloneDX 1.4-1.6 / SPDX 2.x JSON import; synthetic fixtures + one exporter-generated sample |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 
 Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `vuln ...`) are shared by all inventory features and are described in
@@ -50,7 +51,7 @@ secmonk sync NAMES... | all             fetch into the mirror
     --api-key K         NVD API key (env NVD_API_KEY)
     (`all` = every registered source, in order kev epss osv cvelist nvd euvd msrc debian-tracker; a source with `in_all = False` would be skipped, none currently is)
 
-secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos process rootfs ssh windows)
+secmonk collectors                      list collectors (docker-engine docker-image fs homebrew macos process rootfs sbom ssh windows)
 secmonk collect COLLECTOR [TARGET]      discover installed software, no matching
     --save/--no-save    store the inventory in the DB (default: save)
     -O, --output PATH   write inventory JSON (a hidden `--json` still works but is deprecated)
@@ -119,6 +120,8 @@ secmonk vuln search                     advisories for a package or product
     --package P  --ecosystem E  --product P  --version V  -n/--limit N (default 50)  -f, --format table|json|csv
 secmonk inventory assets [-f FMT]       list assets
 secmonk inventory show ASSET [--category C] [-f FMT]   components of the latest scan
+secmonk inventory export ASSET [--with-vulns] [-o FILE] [--format cyclonedx-json]
+                                        CycloneDX 1.6 JSON of the asset's current components (+ open findings)
 secmonk inventory unmatched [-f FMT]    apps whose identity is only a normalized name (alias-table candidates)
 ```
 
@@ -138,6 +141,7 @@ A key a collector does not know is silently ignored.
 | `docker-engine` | container name/id or `image:<ref>` | `socket` (else `$DOCKER_HOST`, else well-known paths), `timeout` (30 s) *(API)* |
 | `fs` | folder or repo (default `.`) | `binaries` (true; Go/Rust binaries and jars), `max_files` (200000), `asset_id` (override `repo:<path>` / `dir:<path>`) |
 | `ssh` | `user@host[:port]`, `ssh://user@host:port` | transport: `transport` (auto/openssh/paramiko), `identity`, `ssh_option` (repeatable; OpenSSH), `ssh_bin`, `known_hosts`, `ssh_config`, `allow_agent` (true), `look_for_keys` (true) (the last four: paramiko), `insecure_host_key` (false, unsafe), `connect_timeout` (15 s), `timeout` (900 s). Harvest: `os` (`linux`\|`macos`\|`windows`; default auto-detected), `root` (`/`), `sudo` (false), `lang` (true), `binaries` (**false** here), `max_binary_mb` (50), `max_files` (200000), `max_mb` (512), `xdev`, `exclude` (list), `include_system` (true; macOS/Windows), `verbose`. Password only via `SECMONK_SSH_PASSWORD` |
+| `sbom` | CycloneDX 1.4-1.6 or SPDX 2.x JSON file | `asset_id` (default `sbom:<name>@<version or serial>`); see [sbom](sbom.md) |
 | `windows` | `inv.json` (script output), none = live on Windows | `osquery=<file>` (osquery results JSON), `hostname`, `include_system` (true) |
 
 ## Adding a feature doc

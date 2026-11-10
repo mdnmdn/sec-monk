@@ -18,7 +18,7 @@ Assets, scanned with the real collectors from copies of the fixtures under /srv 
 directory): payments-api (tests/fixtures/lang/java: log4j-core 2.14.1), web-frontend (lang/javascript/npm-v3, rescanned
 by a scan job after a lodash upgrade, so one finding is `fixed`), alpine-rootfs (docker/alpine-3.20 + xz-libs
 5.6.0-r0, scanned by the CLI so the history has a `cli` run), macbook (collectors/macos/root) and process:fixture-mac
-(saved by the process monitor).
+(saved by the process monitor), and an imported SPDX document (tests/fixtures/sbom/synthetic.spdx.json, collector sbom).
 
 Docker engine: a fake engine on a Unix socket serving tests/fixtures/collectors/docker/engine (containers web, db,
 old-job; only `web` can be inspected and exported, as the alpine rootfs), found by auto-discovery (the socket is shown
@@ -57,7 +57,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from secmonk import discover as dsc
-from secmonk import ops, reports
+from secmonk import ops, reports, sbom
 from secmonk.cli import app as cli_app
 from secmonk.collectors import docker_engine, harvest
 from secmonk.collectors.process import backend as proc_backend
@@ -363,6 +363,8 @@ def main() -> None:
         for collector, target in (("fs", "payments-api"), ("fs", "web-frontend"), ("macos", "macbook")):
             scan(db, collector, srv / target)
         cli_scan(db, "rootfs", srv / "alpine-rootfs")                                   # job 2, from the CLI
+        shutil.copy(FIX / "sbom/synthetic.spdx.json", srv / "vendor-app.spdx.json")
+        scan(db, "sbom", srv / "vendor-app.spdx.json")                                   # an imported SBOM (sbom:…)
         lock = srv / "web-frontend/package-lock.json"
         text = lock.read_text()
         assert text.count('"version": "4.17.20"') == 1
@@ -433,11 +435,13 @@ def main() -> None:
                 "jobs": [runner.get(j["id"]) for j in runner.list()],
                 "docker": docker,
                 "discover": discovered,
+                # GET /api/assets/<id>/sbom?vulns=1 per asset (the mock drops `vulnerabilities` for the plain export)
+                "sbom": {a["id"]: sbom.export_asset(c, a["id"], with_vulns=True) for a in assets},
             }
         finally:
             c.close()
-        text = json.dumps(data, indent=1, default=str).replace(sock, "/var/run/docker.sock").replace(str(tmp), "")
-    for leak in (str(tmp), str(REPO), str(Path.home())):
+        text = json.dumps(data, indent=1, default=str).replace(sock, "/var/run/docker.sock").replace(str(tmp.resolve()), "").replace(str(tmp), "")
+    for leak in (str(tmp), str(tmp.resolve()), str(REPO), str(Path.home())):   # macOS: /var/folders -> /private/var/…
         if leak in text:
             raise SystemExit(f"local path leaked into the mock: {leak}")
     OUT.parent.mkdir(parents=True, exist_ok=True)

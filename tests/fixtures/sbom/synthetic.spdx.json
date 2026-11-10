@@ -1,0 +1,20 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "example-service",
+  "documentNamespace": "https://example.invalid/spdx/example-service-1",
+  "creationInfo": {"created": "2026-11-01T00:00:00Z", "creators": ["Tool: example-spdx-tool-1.2", "Organization: Example"]},
+  "documentDescribes": ["SPDXRef-root"],
+  "packages": [
+    {"SPDXID": "SPDXRef-root", "name": "example-service", "versionInfo": "0.9.0"},
+    {"SPDXID": "SPDXRef-lodash", "name": "lodash", "versionInfo": "4.17.20", "supplier": "Organization: OpenJS",
+     "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
+                       "referenceLocator": "pkg:npm/lodash@4.17.20"}]},
+    {"SPDXID": "SPDXRef-zlib", "name": "zlib", "versionInfo": "1.2.13",
+     "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl",
+                       "referenceLocator": "pkg:apk/alpine/zlib@1.2.13-r1?distro=alpine-3.18"},
+                      {"referenceCategory": "SECURITY", "referenceType": "cpe23Type",
+                       "referenceLocator": "cpe:2.3:a:zlib:zlib:1.2.13:*:*:*:*:*:*:*"}]}
+  ]
+}

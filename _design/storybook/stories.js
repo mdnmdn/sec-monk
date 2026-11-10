@@ -247,6 +247,13 @@
         { name: "Before exploring", template: `<host-scan/>` },
         { name: "Run again of a host-mode job", template: `<host-scan :again="job"/>`, data: { job: hostJob } },
       ] },
+    { id: "sbom-export", group: "Patterns", title: "SBOM export (sbom-export)",
+      doc: "Asset page header: CycloneDX 1.6 download of an asset (GET /api/assets/<id>/sbom, ?vulns=1 adds the open findings as vulnerabilities). Fetched with the API header and saved as a blob through a temporary <a download> (SecMonkUI.saveBlob); spinner while it downloads, error toast on failure. Props: asset-id, disabled.",
+      variants: [
+        { name: "Default", template: `<sbom-export :asset-id="id"/>`, data: { id: M.assets[0].id } },
+        { name: "Unknown asset (error toast)", template: `<sbom-export asset-id="dir:/nowhere"/>` },
+        { name: "Disabled", template: `<sbom-export :asset-id="id" disabled/>`, data: { id: M.assets[0].id } },
+      ] },
     { id: "job-items", group: "Patterns", title: "Job items (job-items)",
       doc: "The items of a host-mode run (params.items: collector, target, options), in the Jobs drawer.",
       variants: [{ name: "Host-mode run", template: `<job-items :items="job.params.items"/>`, data: { job: hostJob } }] },

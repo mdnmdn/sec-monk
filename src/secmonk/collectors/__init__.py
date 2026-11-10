@@ -7,6 +7,7 @@ from . import (
     macos,  # noqa: F401
     process,  # noqa: F401
     rootfs,  # noqa: F401
+    sbom,  # noqa: F401
     ssh,  # noqa: F401
     windows,  # noqa: F401
 )

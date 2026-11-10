@@ -51,6 +51,18 @@
       assets: () => call("/api/assets"),
       asset: (id) => call("/api/assets/detail" + qs({ id })),
       matchAsset: (id) => post("/api/assets/match" + qs({ id })),
+      // CycloneDX download: {blob, filename} (the header requirement rules out a plain link)
+      sbom: async (id, vulns) => {
+        const res = await fetch(`${base}/api/assets/${encodeURIComponent(id)}/sbom${vulns ? "?vulns=1" : ""}`,
+          { headers: { Accept: "application/vnd.cyclonedx+json, application/json", "X-SecMonk-Request": "1" } });
+        if (!res.ok) {
+          let body = null;
+          try { body = await res.json(); } catch (e) { /* not JSON */ }
+          throw new ApiError((body && body.error) || `HTTP ${res.status}`, res.status, body && body.hint, body && body.code);
+        }
+        const m = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "");
+        return { blob: await res.blob(), filename: m ? m[1] : "sbom.cdx.json" };
+      },
       unmatched: () => call("/api/unmatched"),
       findings: (params) => call("/api/findings" + qs(params)),
       vuln: (id, raw) => call("/api/vulns/show" + qs({ id, raw })),
@@ -103,6 +115,15 @@
       overview: () => wait(data.overview),
       assets: () => wait(data.assets),
       asset: (id) => (data.asset_details[id] ? wait(data.asset_details[id]) : fail(404, `unknown asset '${id}'`, "unknown-asset")),
+      sbom: (id, vulns) => {
+        const doc = (data.sbom || {})[id];
+        if (!doc) return fail(404, `unknown asset '${id}'`, "unknown-asset");
+        const { vulnerabilities, ...rest } = doc;
+        const out = vulns ? doc : rest;
+        const name = id.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "asset";
+        return wait({}).then(() => ({ blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/vnd.cyclonedx+json" }),
+          filename: `${name}.cdx.json` }));
+      },
       matchAsset: (id) => (data.asset_details[id] ? wait({ asset: id, stats: data.asset_details[id].match_stats }) : fail(404, `unknown asset '${id}'`, "unknown-asset")),
       unmatched: () => wait(data.unmatched),
       findings: (p = {}) => {
@@ -987,6 +1008,32 @@
         <div v-if="open" class="sm-target__body">${TARGET_BODY}</div></details>`,
   };
 
+  /** CycloneDX export of an asset (GET /api/assets/<id>/sbom[?vulns=1]): components only, or with its open findings
+   * as vulnerabilities. Fetched with the API header, saved as a blob download. */
+  const SbomExport = {
+    name: "SbomExport",
+    props: { assetId: { type: String, required: true }, disabled: Boolean },
+    setup(props) {
+      const store = useStore();
+      const busy = ref(null);                                 // "plain" | "vulns" while downloading
+      async function exportSbom(vulns) {
+        busy.value = vulns ? "vulns" : "plain";
+        try {
+          const { blob, filename } = await store.source.sbom(props.assetId, vulns);
+          UI.saveBlob(blob, filename);
+          UI.toast(`Saved ${filename}`);
+        } catch (e) { UI.toast(`SBOM export failed: ${e.message}${e.hint ? " — " + e.hint : ""}`, "error", 8000); }
+        finally { busy.value = null; }
+      }
+      return { busy, exportSbom };
+    },
+    template: `<span class="sm-btn-group" role="group" aria-label="Export SBOM">
+      <sm-button icon="download" :loading="busy === 'plain'" :disabled="disabled || !!busy" title="CycloneDX 1.6 JSON of the current components (secmonk inventory export)"
+        @click="exportSbom(false)">Export SBOM</sm-button>
+      <sm-button :loading="busy === 'vulns'" :disabled="disabled || !!busy" title="The same with the open findings as CycloneDX vulnerabilities (--with-vulns)"
+        @click="exportSbom(true)">+ vulnerabilities</sm-button></span>`,
+  };
+
   /** The items of a host-mode run (params.items: [{collector, target, options}]). */
   const JobItems = {
     name: "JobItems",
@@ -1245,7 +1292,8 @@
       <sm-page-header :title="(d && (d.asset.name || d.asset.id)) || id" :subtitle="d ? [d.asset.type, [d.asset.os_name, d.asset.os_version].filter(Boolean).join(' '), d.asset.platform].filter(Boolean).join(' · ') : 'Asset'">
         <sm-button variant="ghost" icon="list" @click="$router.push('/assets')">All assets</sm-button>
         <sm-button icon="refresh" :loading="matching" :disabled="!d" @click="rematch" title="Match the stored inventory against the current mirror (secmonk match)">Re-match</sm-button>
-        <sm-button icon="target" :disabled="!d" @click="rescan" title="Scan again with the same collector">Rescan</sm-button></sm-page-header>
+        <sm-button icon="target" :disabled="!d" @click="rescan" title="Scan again with the same collector">Rescan</sm-button>
+        <sbom-export :asset-id="id" :disabled="!d"/></sm-page-header>
       <data-gate :res="res" what="the asset" v-slot="{ data }">
         <div class="sm-muted"><span class="sm-mono">{{ data.asset.id }}</span> · last scan <span :title="data.asset.last_seen">{{ fmt.ago(data.asset.last_seen) }}</span>
           <template v-if="data.scans[0]"> with <b>{{ data.scans[0].collector }}</b></template></div>
@@ -2111,7 +2159,7 @@
     UI.install(app);
     app.provide("store", store);
     for (const [n, c] of Object.entries({ SnapshotGate, MonitorActions, SnapshotNotes, ProcessDetail, NoDb, DataGate,
-      FindingsTable, FindingDetail, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, ActionsOff })) app.component(n, c);
+      FindingsTable, FindingDetail, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, ActionsOff })) app.component(n, c);
     app.use(router);
     app.mount(el);
     store.loadMeta();
@@ -2122,5 +2170,5 @@
   Object.assign(UI, { ApiSource, MockSource, ApiError, createStore, mountApp, NAV, ROUTES, useResource, fkey,
     VIEWS: { OverviewView, ProcessesView, SoftwareView, LaunchItemsView, ActivityView, AssetsView, AssetDetailView, ScanView,
       UnmatchedView, FindingsView, VulnsView, VulnDetailView, SourcesView, JobsView, AboutView, ProcessDetail, FindingDetail,
-      FindingsTable, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, DataGate, App } });
+      FindingsTable, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, DataGate, App } });
 })(window);

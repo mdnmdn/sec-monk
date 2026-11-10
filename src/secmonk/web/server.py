@@ -19,13 +19,14 @@ from __future__ import annotations
 import ipaddress
 import json
 import mimetypes
+import re
 import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from .. import __version__
 from .api import ApiError, ProcessMonitor
@@ -111,9 +112,12 @@ class Handler(BaseHTTPRequestHandler):
         if getattr(self.server, "verbose", False):
             sys.stderr.write("ui: " + (fmt % args) + "\n")
 
-    def _headers(self, status: int, ctype: str, length: int, *, cache: bool = False) -> None:
+    def _headers(self, status: int, ctype: str, length: int, *, cache: bool = False,
+                 extra: dict[str, str] | None = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
         self.send_header("Content-Length", str(length))
         self.send_header("Content-Security-Policy", CSP)
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -165,6 +169,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, self.server.monitor.watch())
             if path in GET_ROUTES:
                 return self._json(200, GET_ROUTES[path](self.server, query))
+            if path.startswith("/api/assets/") and path.endswith("/sbom"):
+                return self._sbom(unquote(path[len("/api/assets/"):-len("/sbom")]), query)
             if path.startswith("/api/jobs/"):
                 job = path[len("/api/jobs/"):]
                 if not job.isdigit():
@@ -227,6 +233,20 @@ class Handler(BaseHTTPRequestHandler):
         return body
 
     # ------------------------------------------------------------------ handlers
+    def _sbom(self, asset_id: str, query: dict) -> None:
+        """GET /api/assets/<url-encoded id>/sbom[?vulns=1]: a CycloneDX download (a GET with X-SecMonk-Request
+        like every API call; the UI fetches it and saves the blob)."""
+        from .. import sbom
+
+        if not asset_id:
+            raise ApiError(404, "no such endpoint /api/assets//sbom")
+        doc = self.server.data.sbom(asset_id, query)
+        data = sbom.dumps(doc).encode()
+        name = re.sub(r"[^A-Za-z0-9._-]+", "_", asset_id).strip("_")[:80] or "asset"
+        self._headers(200, f"{sbom.MEDIA_TYPE}; charset=utf-8", len(data),
+                      extra={"Content-Disposition": f'attachment; filename="{name}.cdx.json"'})
+        self.wfile.write(data)
+
     def _static(self, rel: str) -> None:
         root = STATIC.resolve()
         try:

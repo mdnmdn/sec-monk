@@ -74,9 +74,11 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/docker_transport.py` | Engine transports and Docker CLI configuration: unix socket, TCP with TLS, `ssh://` (the engine socket reached over OpenSSH), context store reading. |
 | `collectors/fs.py` | Folder/repo: `walk_dir` over lockfiles, manifests, installed packages, binaries; git info in asset meta. |
 | `collectors/harvest.py`, `ssh.py` | Agentless SSH: fixed `find | tar` script, safe extraction into a temp dir, then rootfs/macOS/windows code on it. OpenSSH or paramiko transport. |
+| `collectors/sbom.py` | Import a CycloneDX 1.4-1.6 or SPDX 2.x JSON file as an inventory (asset `sbom:<name>@<version>`). |
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
 | `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
 | `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
+| `sbom.py` | CycloneDX 1.6 export of an asset (pure builder) and CycloneDX / SPDX JSON parsing for the `sbom` collector; see [sbom](sbom.md). |
 | `reports.py` | JSON payloads shared by the CLI's `--format json` and the web API (findings, assets, asset detail, status, vuln show/search, overview, run history, container rows). |
 | `discover.py` | Host mode: explore this machine or an ssh host and list scan candidates (collector, target, options); see [discover](discover.md). |
 | `ops.py` | Operations shared by the CLI and the web UI's jobs: collector options, `sync all` and target expansion, one-source sync with its bookkeeping, collect / save / match per target, the run history (table `job`, redacted parameters), docker-engine listings. |

@@ -94,6 +94,16 @@ class DataApi:
             raise ApiError(404, f"unknown asset {aid!r}", code="unknown-asset")
         return d
 
+    def sbom(self, asset_id: str, q: Query) -> dict[str, Any]:
+        """`secmonk inventory export ASSET [--with-vulns]`: CycloneDX 1.6 of the asset's current components."""
+        from .. import sbom
+
+        with self._conn() as c:
+            doc = sbom.export_asset(c, asset_id, with_vulns=_flag(q, "vulns"))
+        if doc is None:
+            raise ApiError(404, f"unknown asset {asset_id!r}", code="unknown-asset")
+        return doc
+
     def unmatched(self) -> list[dict]:
         with self._conn() as c:
             return reports.unmatched_rows(c)
