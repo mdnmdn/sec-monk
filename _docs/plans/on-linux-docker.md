@@ -7,8 +7,8 @@ context: plans
 status: open
 platform: linux
 tags: [plan, linux, docker, podman, ssh, rootfs]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 related: [tech/collectors/docker-engine.md, tech/collectors/docker-image.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, features/inventory-docker.md, features/inventory-ssh.md]
 ---
 
@@ -84,6 +84,24 @@ Fixtures go to `tests/fixtures/collectors/docker/real/` and `tests/fixtures/coll
   ```
   Verify: default port 2376 when TLS is on; a wrong CA fails with a certificate error, `tls_verify=false` connects;
   the context's TLS files are found under `~/.docker/contexts/tls/<sha256>/docker/`; asset `container:<server>:2376/web`.
+- [ ] **Local images by Id and image selectors** (only tested with a fake engine client, 2026-11-11).
+  ```bash
+  docker pull nginx:1.25 && docker tag nginx:1.25 myreg.example.test/nginx:prod
+  uv run secmonk scan docker-engine 'image:nginx:1.25,image:myreg.example.test/nginx:prod' --db /tmp/lx.db   # one scan
+  uv run secmonk scan docker-engine 'image:*' --db /tmp/lx.db
+  docker pull nginx:latest   # after a new release: the tag moves
+  ```
+  Verify: assumed, unverified: `GET /images/sha256:<Id>/get` exports exactly that image on the classic and the
+  containerd image store (Docker >= 25: `Id` is the manifest/index digest; check that the save of an index Id carries
+  one platform and the scan reads it); Podman returns `Id` with `sha256:` in the compat API; `RepoTags` of dangling
+  images is `[]` or `["<none>:<none>"]`. Asset is `image:@<Id>` with all tags in meta; a moved tag yields a new asset.
+  Check `meta.id_verified` is true on both stores (classic: config digest = Id; containerd: Id = the index or manifest
+  digest and that blob is inside the `docker save` output - assumed, unverified).
+- [ ] **Host auto mode on Linux** (`secmonk.discover.discover_host`, tested only with fakes): run it locally on
+  Debian/Fedora/Alpine and against the SSH server (`discover_host("<user>@<server>")`). Verify: `rootfs` lists the right
+  package manager, `process` is unavailable (no Linux backend), `homebrew` appears only with Linuxbrew, the remote probe
+  detects `docker` and the `docker` candidate becomes unavailable with a readable reason when the ssh user is not in
+  the `docker` group.
 - [ ] **Colima/Lima on Linux or `rootless docker`** socket discovery: `docker context ls; ls $XDG_RUNTIME_DIR/docker.sock`. Mac variants are in [on-macos.md](on-macos.md) section D.
 - [ ] **Running container export consistency and size** (`/export` of a busy container is not a snapshot; big FS).
   ```bash

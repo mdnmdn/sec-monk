@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [docker, container, rootfs, inventory, dependencies, linux]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 code: src/secmonk/collectors/
 related: [tech/collectors/docker-image.md, tech/collectors/docker-engine.md, tech/collectors/rootfs.md, tech/collectors/dependencies.md, features/inventory-dependencies.md, features/README.md]
 ---
@@ -41,6 +41,8 @@ secmonk collect docker-engine image:nginx:1.25    # a local image through the en
 secmonk scan docker-engine 'web,db'               # several containers: comma-separated
 secmonk scan docker-engine 'shop-*'               # glob on names / 12-char ids (running containers)
 secmonk scan docker-engine 're:^api-[0-9]+$' -o all=true    # regex; all=true includes stopped containers
+secmonk scan docker-engine 'image:*'              # every tagged local image, once per image Id
+secmonk scan docker-engine 'image:nginx:*,image:re:^myreg\.example\.test/'
 
 # another engine: Docker CLI context, remote host over ssh, tcp (+TLS)
 secmonk scan docker-engine web -o context=colima
@@ -57,14 +59,14 @@ secmonk containers                            # list containers of the local Doc
 
 ## Behaviour & rules
 
-- Image assets are `image:<repo>@<digest>` (manifest digest; for tarballs the image id), so re-scanning a re-tagged image creates a new asset; container assets by name: `container:<name>` on the local engine, `container:<engine>/<name>` on a remote one (`<engine>` = `host:port` for tcp, the ssh host, plus `:port` when not 22, for ssh; never the ssh user), so same-named containers on two hosts stay apart.
+- Image assets are `image:<repo>@<digest>` (manifest digest; for tarballs the image id), so re-scanning a re-tagged image creates a new asset. Local images read through an engine are `image:@<Id>` (engine image Id): every tag of one image (`nginx:1.25`, `nginx:latest`, `myreg/nginx:prod`) is the same asset and is scanned once per run, while a tag re-pointed to a new build becomes a new asset; the asset lists all its tags; container assets by name: `container:<name>` on the local engine, `container:<engine>/<name>` on a remote one (`<engine>` = `host:port` for tcp, the ssh host, plus `:port` when not 22, for ssh; never the ssh user), so same-named containers on two hosts stay apart.
 - Layers are cached in the per-user cache (`~/.cache/secmonk/blobs/`, or `$SECMONK_CACHE`; digest-verified, never inside the current directory) and applied in order with whiteouts; later layers win.
 - Language files are parsed while the layers stream (`LangAccumulator`): only parsed components are kept, so memory does not grow with binary size; later layers and whiteouts replace or remove them. Directory trees (`rootfs`) use `walk_dir`. Installed metadata beats binaries beats lockfiles beats manifests.
 - Packages are matched on their *source* package (dpkg `Source`, apk origin, rpm source rpm). rpm versions are shown with an epoch (`0:1.2-3.el9`).
 - Warnings are shown, never silent: unsupported rpm BerkeleyDB, no package DB (distroless), skipped zstd layers.
 - Env variable values from the image config are not stored (names only).
 - Engine: `--socket` / `-o host=` / `-o context=` > `$DOCKER_HOST` > `$DOCKER_CONTEXT` > the Docker CLI's current context > `/var/run/docker.sock`, Docker Desktop/Colima/Rancher/OrbStack/Podman paths. Hosts: `unix://`, `tcp://` (TLS from the context, `$DOCKER_TLS_VERIFY`/`$DOCKER_CERT_PATH` or `tls_ca`/`tls_cert`/`tls_key`/`tls_verify`), `ssh://[user@]host[:port]` (system `ssh`, non-interactive, `-o identity=`). An engine or context that was asked for and cannot be used is an error, never replaced by another one; none found -> clear error. Details: [docker-engine](../tech/collectors/docker-engine.md).
-- Container selectors: comma-separated items; `re:<regex>` and globs (`*`, `?`, `[`) match container names and 12-char ids of running containers (`-o all=true`: also stopped); exact names and `image:<ref>` pass through. A pattern matching nothing is an error listing the available containers. Regexes that could backtrack catastrophically on a hostile name (nested quantifiers such as `(a+)+`, a repeated alternation, more than 3 repeating quantifiers) are refused; names over 128 characters are only reachable by their exact name.
+- Container selectors: comma-separated items; `re:<regex>` and globs (`*`, `?`, `[`) match container names and 12-char ids of running containers (`-o all=true`: also stopped); exact names pass through. Image selectors: `image:<ref>` (tag, digest or Id prefix), `image:<glob>` and `image:re:<regex>` over the tags of local images; `image:*` = every tagged image (untagged ones are skipped); aliases are folded into one scan and named in a warning. A pattern matching nothing is an error listing the available containers. Regexes that could backtrack catastrophically on a hostile name (nested quantifiers such as `(a+)+`, a repeated alternation, more than 3 repeating quantifiers) are refused; names over 128 characters are only reachable by their exact name.
 - Remote engines: `-o timeout=N` bounds each wait for data (default 30 s, ssh included); the SSH collector's `identity`, `ssh_option`, `known_hosts`, `insecure_host_key`, `connect_timeout` apply to `ssh://`; paramiko-only options are refused. Same-named containers on two *local* engines (two contexts on unix sockets) share the asset id `container:<name>`.
 
 ## Acceptance criteria

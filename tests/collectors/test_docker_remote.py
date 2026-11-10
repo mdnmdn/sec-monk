@@ -549,9 +549,13 @@ def test_expand_targets():
     c = REGISTRY["docker-engine"]()
     client = _ListClient()
     assert c.expand_targets("web", client=client) == ["web"]
-    assert c.expand_targets("web,db,web,image:alpine:3.20", client=client) == ["web", "db", "image:alpine:3.20"]
+    assert c.expand_targets("web,db,web", client=client) == ["web", "db"]
     assert c.expand_targets(None, client=client) == [None]
     assert client.paths == []                                          # no pattern -> no listing
+    # an image the engine cannot resolve passes through (collect reports it); images are always resolved
+    assert c.expand_targets("web,image:alpine:3.20", client=client) == ["web", "image:alpine:3.20"]
+    assert client.paths == ["/images/alpine:3.20/json"]
+    client.paths.clear()
     assert c.expand_targets("re:.", client=client) == ["web", "db"]   # running only
     assert client.paths == ["/containers/json?all=0"]
     assert c.expand_targets("*-job", client=client, all="true") == ["old-job"]

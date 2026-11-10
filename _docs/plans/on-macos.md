@@ -7,8 +7,8 @@ context: plans
 status: open
 platform: macos
 tags: [plan, macos, homebrew, collector, ssh]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 related: [tech/collectors/macos.md, tech/collectors/homebrew.md, features/inventory-macos.md, features/inventory-homebrew.md, references/homebrew.md, tech/collectors/ssh.md, tech/collectors/process.md]
 ---
 
@@ -322,6 +322,11 @@ The engine collector is validated against a **fake socket only**; the generic te
   Colima and `web` on OrbStack collapse into one asset. If both runtimes are used side by side here, decide whether
   non-default local contexts get a label (e.g. `container:ctx=<context>/<name>`); that changes asset ids, so it needs a
   data-model note and a migration thought.
+- [ ] **Host auto mode on the Mac** (`discover_host()`). 2026-11-11 first live run from a sandboxed agent shell
+  (macOS 26.5, arm64, no Full Disk Access): `macos` (with the Full Disk Access caveat), `homebrew` (`/opt/homebrew`,
+  `/usr/local`, not ticked), `process`, `fs-home`; no Docker candidate (no engine socket visible from the sandbox).
+  Still open: a run from a normal terminal with an engine up (expect `docker` / `docker-images`), with Full Disk Access
+  (expect no caveat), and `discover_host("<user>@<mac>")` (expect `ssh` with the remote Mac description).
 - [ ] **`ssh://` from the Mac** to a Linux engine (`-o host=ssh://<user>@<server>`), with the system OpenSSH and
   1Password / Secretive ssh agents: BatchMode must still find agent keys. Same checks as
   [on-linux-docker.md](on-linux-docker.md) section A, remote engine over ssh.

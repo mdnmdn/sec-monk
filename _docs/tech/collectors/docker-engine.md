@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, docker, containers, engine-api, podman, ssh, tls, contexts]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 sample: synthetic
 fixtures: tests/fixtures/collectors/docker/engine/
 code: [src/secmonk/collectors/docker_engine.py, src/secmonk/collectors/docker_transport.py]
@@ -84,7 +84,9 @@ data is bounded by the `timeout` option (default 30 s, as for sockets: `select()
 are closed, and its stderr is appended to connection errors (`(ssh: ...)`). Hosts and users starting with `-` are
 refused; nothing goes through a shell. Of the SSH collector's options, the system-ssh ones apply: `identity`,
 `ssh_bin`, `connect_timeout`, `ssh_option` (repeatable `-o`, placed first so it wins), `insecure_host_key`
-(`StrictHostKeyChecking=no`, throwaway known_hosts), `known_hosts` (`UserKnownHostsFile`). The paramiko-only ones
+(`StrictHostKeyChecking=no`, throwaway known_hosts), `known_hosts` (`UserKnownHostsFile`), and `remote_docker` (the
+remote CLI when it is not on the non-interactive PATH; only `docker_transport.REMOTE_DOCKER_PATHS` - Homebrew and
+Docker Desktop locations on macOS - are accepted, so the remote command stays fixed). The paramiko-only ones
 (`transport=paramiko`, `allow_agent`, `look_for_keys`, `ssh_config`) are a `ValueError`; `$SECMONK_SSH_PASSWORD` is
 not used (BatchMode). Error messages pass hosts through `strip_url_secrets` and never echo a `user:password` part. `~/.ssh/config`, the agent and known_hosts are the
 user's (BatchMode: no prompts, so an unknown host key fails with ssh's message).
@@ -164,7 +166,7 @@ Never run against a real engine, a real remote over ssh, or a real TLS engine: s
   with `host: None` and the error as description.
 - Container selectors: `DockerEngineCollector.expand_targets(target, **opts)` and the pure
   `select_containers(selector, rows)` on `/containers/json` rows. Comma-separated items (stripped, empties and
-  duplicates dropped, order kept); `image:<ref>` and exact names/ids pass through unchanged; `re:<regex>` (`re.search`,
+  duplicates dropped, order kept); exact container names/ids pass through unchanged; `re:<regex>` (`re.search`,
   at most 256 characters) and globs (`*?[`, `fnmatch.fnmatchcase`) are tested on every container name (no leading `/`)
   and the 12-char id and yield the first name. A pattern that matches nothing, a bad or too long regex -> `ValueError`
   naming it and the available containers (each shortened to 64 characters). Names come from the engine, possibly a
@@ -172,11 +174,26 @@ Never run against a real engine, a real remote over ssh, or a real TLS engine: s
   group containing another quantifier or an alternation (`(a+)+`, `(a|aa)*`) and more than 3 repeating quantifiers
   are refused with a `ValueError`; names and ids longer than 128 characters are never tested against a pattern (they
   can still be given exactly). Only when a pattern is present is the engine listed (running containers,
-  all with `opts["all"]`). `collect()` refuses a selector it was handed unexpanded.
+  all with `opts["all"]`). `collect()` refuses a selector it was handed unexpanded. Containers are never deduped
+  by image: two containers of one image are two targets.
+- Image selectors (in `expand_targets`; pure `select_images(pattern, rows)` on `/images/json` rows): `image:<glob>`
+  and `image:re:<regex>` match the RepoTags of tagged images (same regex guards; tags over 255 characters skipped;
+  `<none>:<none>` / untagged images never match, so `image:*` is every tagged image); an exact `image:<ref>` (tag,
+  digest, Id or Id prefix) is resolved by the engine (`GET /images/{ref}/json`). Every image item becomes
+  `image:<Id>` (full `sha256:` Id), once per Id: aliases in one run are scanned once. The refs folded into one Id are
+  kept in-process (`_FOLDED`, keyed by (engine, Id), bounded, cleared by every `expand_targets`, popped by every
+  `collect` / `image_meta` of that Id whatever the outcome) and recorded as `meta.requested_refs` plus a warning
+  naming them. An exact ref the engine cannot resolve (or an unreachable engine) passes through, so `collect` reports it.
 - Only GET requests; unversioned API paths (engine latest) - `/version` is not enforced against MinAPIVersion.
-- `collect("<container id|name>")`: `GET /containers/{id}/json` (metadata) + `GET /containers/{id}/export` streamed straight into `LayeredTarView` as one layer (nothing touches disk). Asset `container:<name>` (local) or `container:<label>/<name>` (remote), type `container`, meta `container_id, image, image_id, labels, state, privileged, published_ports, user, engine` (`strip_url_secrets` of the endpoint: no ssh user) and `engine_context` when it came from a context. `collect("image:<ref>")` streams `GET /images/{ref}/get` to a temp tar and reuses the docker-image archive path. `collect(None)` raises `ValueError` listing running containers.
-- Helpers for the CLI and the web API: `list_containers(all=False, **opts)` (engine options as for `collect`), `list_contexts(**opts)`, `select_containers(selector, rows)`, `export_image(ref, dest)`, `EngineClient.ping()/version()`.
-- Image assets read through a remote engine keep their content identity (`image:<repo>@<digest>`), without engine label.
+- `collect("<container id|name>")`: `GET /containers/{id}/json` (metadata) + `GET /containers/{id}/export` streamed straight into `LayeredTarView` as one layer (nothing touches disk). Asset `container:<name>` (local) or `container:<label>/<name>` (remote), type `container`, meta `container_id, image, image_id, labels, state, privileged, published_ports, user, engine` (`strip_url_secrets` of the endpoint: no ssh user) and `engine_context` when it came from a context. `collect("image:<ref>")` inspects the image (`GET /images/{ref}/json`), streams `GET /images/{Id}/get` to a temp tar and reuses the docker-image archive path with asset id `image:@<Id>` (engine image Id): aliases share one asset, a tag that now points to a new build is a new asset (the old one keeps its history). Name: the requested ref, or the smallest RepoTag when an Id was requested. Meta (`image_meta`): `source, image_id, tags, repo_digests, requested_ref, inventory_version, engine` (no credentials), `requested_refs` when aliases were folded; `collect` adds `platform` (= asset platform) and `id_verified`. The engine may be remote and untrusted, so `verify_image_archive` checks the export before it is trusted: the config blob named by `manifest.json` must hash to the Id (classic image store), or the Id must be the digest of a manifest / index blob in the export (hash checked) that leads to that config (containerd image store). A mismatch is a warning, `id_verified: false` and a **partial** inventory; an export that cannot be checked (no `manifest.json`) is a warning and `id_verified: false`. Layers are not re-hashed against the config's `diff_ids`. `collect(None)` raises `ValueError` listing running containers.
+- Helpers for the CLI and the web API: `list_containers(all=False, **opts)`, `list_images(**opts)` (engine options as for `collect`), `list_contexts(**opts)`, `select_containers(selector, rows)`, `select_images(pattern, rows)`, `inspect_image(client, ref)`, `image_meta(ref, **opts)`, `image_identity(target)`, `export_image(ref, dest)`, `EngineClient.ping()/version()`.
+- Image assets carry no engine label: the same Id on two engines is the same image content.
+- Reuse of earlier image scans (`image_identity(target)` -> `image:@<Id>` for an expanded `image:<Id>`, no I/O;
+  `image_meta(ref_or_id, **opts)` -> fresh meta from one `GET /images/{id}/json`): a caller may skip the layer export
+  when it already holds a complete inventory of that asset with `meta.id_verified` true and `meta.inventory_version`
+  equal to `IMAGE_INVENTORY_VERSION`.
+  **Bump `IMAGE_INVENTORY_VERSION`** whenever a change to this collector, the image/rootfs/language parsers or the
+  image asset meta makes an earlier inventory of the same Id incomplete or different.
 - Option values may be strings (CLI `-o`): `timeout` / `connect_timeout` are positive seconds, `tls_verify` /
   `insecure_host_key` / `all` booleans; anything else is a `ValueError` naming the option.
 - A context (or `--host`) that points at a **local unix socket** keeps `container:<name>`, without label: two local

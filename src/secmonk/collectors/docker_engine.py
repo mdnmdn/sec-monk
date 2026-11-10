@@ -23,6 +23,7 @@ from ..models import Asset, Inventory
 from .base import Collector, redact_labels, register, strip_url_secrets
 from .docker_image import inventory_from_archive
 from .docker_transport import (
+    REMOTE_DOCKER_PATHS,
     ContextInfo,
     Endpoint,
     SSHHTTPConnection,
@@ -134,6 +135,10 @@ def _ssh_options(ep: Endpoint, opts: dict[str, Any]) -> None:
     if any("\n" in o or "\r" in o for o in options):
         raise ValueError("ssh_option values must not contain newlines")
     ep.ssh_options = options
+    if rd := opts.get("remote_docker"):
+        if rd not in REMOTE_DOCKER_PATHS:
+            raise ValueError(f"remote_docker must be one of {', '.join(REMOTE_DOCKER_PATHS)}")
+        ep.remote_docker = rd
 
 
 def _seconds(opts: dict[str, Any], key: str, default: float) -> float:
@@ -448,6 +453,199 @@ def select_containers(selector: str, containers: list[dict]) -> list[str]:
     return out
 
 
+# --------------------------------------------------------------------------- local images (identified by Id)
+
+# Version of what an engine image inventory contains. Bump it whenever a change to the collector, the image/rootfs
+# parsers or the asset meta makes an earlier inventory of the same image Id incomplete or different: callers reuse a
+# stored `image:@<Id>` inventory only when its meta "inventory_version" equals this.
+IMAGE_INVENTORY_VERSION = 1
+MAX_TAG = 255           # RepoTags longer than this are never tested against a pattern
+MAX_FOLDED = 1000       # remembered alias groups (see _FOLDED)
+# (engine, image Id) -> the refs that expand_targets folded into one `image:<Id>` target; read by collect() to record
+# them on the asset (expansion and collection run in one process, on different collector instances). Cleared by
+# every expand_targets, popped by every collect / image_meta of that Id, whatever the outcome.
+_FOLDED: dict[tuple[str, str], list[str]] = {}
+
+
+def _norm_id(v: Any) -> str | None:
+    """`sha256:<hex>` (Podman may omit the algorithm); None when not an image id."""
+    if not isinstance(v, str):
+        return None
+    v = v if ":" in v else f"sha256:{v}"
+    return v if re.fullmatch(r"sha256:[0-9a-f]{64}", v) else None
+
+
+def image_tags(row: dict) -> list[str]:
+    """Real RepoTags of an /images/json or /images/{ref}/json row (`<none>:<none>` dropped)."""
+    return [t for t in row.get("RepoTags") or [] if isinstance(t, str) and t and t != "<none>:<none>"]
+
+
+def list_images(**opts: Any) -> list[dict]:
+    """Local images as returned by GET /images/json (engine options as for list_containers)."""
+    rows = _client(opts).get_json("/images/json")
+    if isinstance(rows, list):
+        return [r for r in rows if isinstance(r, dict)]
+    raise RuntimeError("Docker API GET /images/json did not return a list")
+
+
+def is_image_pattern(ref: str) -> bool:
+    """The part after `image:` is a pattern: `re:<regex>` or a glob."""
+    return ref.startswith("re:") or any(c in ref for c in _GLOB_CHARS)
+
+
+def select_images(pattern: str, images: list[dict]) -> list[tuple[str, str]]:
+    """(image Id, matching tag) for every tagged image with a RepoTag matched by `pattern` (glob, or `re:<regex>`
+    with the container selector's guards); untagged / dangling images never match. One pair per Id (its first
+    matching tag), in listing order. ValueError when nothing matches."""
+    match = _matcher(pattern)
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for row in images:
+        iid = _norm_id(row.get("Id"))
+        if not iid or iid in seen:
+            continue
+        hit = next((t for t in image_tags(row) if len(t) <= MAX_TAG and match(t)), None)
+        if hit:
+            seen.add(iid)
+            out.append((iid, hit))
+    if not out:
+        tags = [t[:64] for r in images for t in image_tags(r)]
+        more = f" (+{len(tags) - 50} more)" if len(tags) > 50 else ""
+        raise ValueError(f"no image matches 'image:{pattern}'; tagged images: {', '.join(tags[:50]) or 'none'}{more}")
+    return out
+
+
+def inspect_image(client: EngineClient, ref: str) -> dict:
+    """GET /images/{ref}/json (`ref`: name[:tag], name@digest, Id or Id prefix, resolved by the engine)."""
+    info = client.get_json(f"/images/{quote(ref, safe=':/@')}/json")
+    if isinstance(info, dict) and _norm_id(info.get("Id")):
+        return info
+    raise RuntimeError(f"Docker API GET /images/{ref}/json: no image Id in the answer")
+
+
+def image_identity(target: str | None) -> str | None:
+    """Asset id of an expanded image target, without I/O: `image:<full sha256 Id>` (as emitted by expand_targets)
+    -> `image:@<Id>`; anything else (a tag, an Id prefix, a container) -> None."""
+    if not target or not target.startswith("image:"):
+        return None
+    ref = target[len("image:"):]
+    return f"image:@{ref}" if re.fullmatch(r"sha256:[0-9a-f]{64}", ref) else None
+
+
+def _engine_key(client: Any) -> str:
+    return strip_url_secrets(str(getattr(client, "endpoint", ""))) or ""
+
+
+def _pop_folded(client: Any, *refs: str | None) -> list[str] | None:
+    """Remove (and return the first of) the alias groups recorded for these refs' Ids on this engine."""
+    found = None
+    for r in refs:
+        iid = _norm_id(r) if r else None
+        if iid:
+            got = _FOLDED.pop((_engine_key(client), iid), None)
+            found = found or got
+    return found
+
+
+def _image_meta(info: dict, ref: str, client: Any) -> dict:
+    iid = _norm_id(info.get("Id")) or ""
+    meta: dict[str, Any] = {
+        "source": "docker-engine", "image_id": iid, "tags": image_tags(info),
+        "repo_digests": [d for d in info.get("RepoDigests") or [] if isinstance(d, str)],
+        "requested_ref": ref, "inventory_version": IMAGE_INVENTORY_VERSION, "engine": _engine_key(client)}
+    folded = _FOLDED.get((_engine_key(client), iid))
+    if folded:
+        meta["requested_refs"] = list(folded)
+    return meta
+
+
+def image_meta(ref_or_id: str, **opts: Any) -> dict:
+    """The engine-side meta of a local image (one GET /images/{ref}/json, no layer export): `source`, `image_id`,
+    `tags`, `repo_digests`, `requested_ref`, `inventory_version` and, when expand_targets folded aliases into this
+    Id, `requested_refs`. Lets a caller refresh a reused `image:@<Id>` asset. `ref_or_id` may carry `image:`."""
+    ref = ref_or_id.removeprefix("image:")
+    client = _client(opts)
+    iid = None
+    try:
+        info = inspect_image(client, ref)
+        iid = info.get("Id")
+        return _image_meta(info, ref, client)
+    finally:
+        _pop_folded(client, ref, iid)
+
+
+def _remember_folded(client: Any, groups: dict[str, list[str]]) -> None:
+    for iid, refs in groups.items():
+        if len(refs) > 1 or refs[0] != iid:
+            if len(_FOLDED) >= MAX_FOLDED:
+                _FOLDED.pop(next(iter(_FOLDED)))
+            _FOLDED[(_engine_key(client), iid)] = refs
+
+
+def verify_image_archive(path: str | Path, iid: str) -> tuple[bool, str]:
+    """Does the `docker save` archive at `path` really hold image `iid`? (an engine, possibly remote and
+    untrusted, could answer with another image). True when the config blob that manifest.json names hashes to the
+    Id (classic image store), or when the Id is the digest of a manifest / index blob in the archive (containerd
+    image store) whose hash matches and which leads to that config blob. Layers are not re-hashed."""
+    import hashlib
+    import tarfile
+
+    from .docker_image import MAX_CONFIG_BYTES
+
+    def norm(n: str) -> str:
+        return n[2:] if n.startswith("./") else n.lstrip("/")
+
+    def sha(b: bytes) -> str:
+        return "sha256:" + hashlib.sha256(b).hexdigest()
+
+    try:
+        with tarfile.open(path, "r:") as tf:
+            members = {norm(m.name): m for m in tf.getmembers() if m.isfile()}
+
+            def read(name: str) -> bytes | None:
+                m = members.get(norm(name))
+                if m is None or m.size > MAX_CONFIG_BYTES:
+                    return None
+                f = tf.extractfile(m)
+                return f.read() if f else None
+
+            raw = read("manifest.json")
+            entries = json.loads(raw) if raw else None
+            if not isinstance(entries, list) or not entries or not isinstance(entries[0], dict):
+                return False, "no manifest.json in the export"
+            cfg = read(str(entries[0].get("Config") or ""))
+            if cfg is None:
+                return False, "config blob missing from the export"
+            cfg_digest = sha(cfg)
+            if cfg_digest == iid:
+                return True, "config digest"
+            # containerd store: Id = manifest or index digest
+            configs: set[str] = set()
+            todo, seen = [iid], set()
+            while todo and len(seen) < 64:
+                d = todo.pop()
+                if d in seen:
+                    continue
+                seen.add(d)
+                blob = read(f"blobs/{d.replace(':', '/', 1)}")
+                if blob is None or sha(blob) != d:
+                    continue
+                doc = json.loads(blob)
+                if not isinstance(doc, dict):
+                    continue
+                for e in doc.get("manifests") or []:
+                    if isinstance(e, dict) and isinstance(e.get("digest"), str):
+                        todo.append(e["digest"])
+                c = (doc.get("config") or {}).get("digest") if isinstance(doc.get("config"), dict) else None
+                if isinstance(c, str):
+                    configs.add(c)
+            if cfg_digest in configs:
+                return True, "manifest digest"
+            return False, f"the exported config ({cfg_digest[:19]}) does not belong to {iid[:19]}"
+    except (OSError, tarfile.TarError, ValueError, KeyError) as e:
+        return False, f"cannot read the export: {e}"
+
+
 def export_image(ref: str, dest: str | Path | None = None, **opts: Any) -> Path:
     """Stream `docker save` of an image (GET /images/{name}/get) into a tar file and return its path."""
     client = _client(opts)
@@ -470,21 +668,63 @@ class DockerEngineCollector(Collector):
     description = "Live container (or local image) via a local or remote Docker/Podman engine"
 
     def expand_targets(self, target: str | None, **opts: Any) -> list[str]:
-        """`web,db`, `shop-*`, `re:^api-[0-9]+$`, `image:nginx:1.25` (comma-separated, mixed) -> target names.
-        Without patterns nothing is listed and the items come back as given (a falsy target comes back as
-        `[target]`, so `collect` explains what is missing). Patterns see running containers only unless
-        opts['all'] is true."""
+        """`web,db`, `shop-*`, `re:^api-[0-9]+$`, `image:nginx:1.25`, `image:*`, `image:re:^myreg/` (comma-separated,
+        mixed) -> targets. Containers: patterns see running containers only (all with opts['all']); exact names
+        pass through without listing. Images: every `image:` item is resolved to its engine Id and emitted once as
+        `image:<Id>`, so aliases (one Id, several tags) are scanned once; a pattern matches RepoTags of tagged
+        images. An exact image the engine cannot resolve (or an unreachable engine) passes through unchanged, so
+        `collect` reports the error. A falsy target comes back as `[target]`."""
         items = split_selector(target)
         if not items:
             return [target]  # type: ignore[list-item]
-        if not any(is_pattern(i) for i in items):
+        if not any(is_pattern(i) or i.startswith("image:") for i in items):
             return items
         try:
             all_ = bool(as_bool(opts.get("all"), False))
         except ValueError as e:
             raise ValueError(f"all: {e}") from e
-        rows = list_containers(all=all_, **{k: v for k, v in opts.items() if k != "all"})
-        return select_containers(",".join(items), rows)
+        engine_opts = {k: v for k, v in opts.items() if k != "all"}
+        _FOLDED.clear()                         # alias groups of an earlier expansion are never reused
+        client: EngineClient | None = None
+        rows: list[dict] | None = None
+        images: list[dict] | None = None
+        groups: dict[str, list[str]] = {}
+        out: list[str] = []
+
+        def add(item: str) -> None:
+            if item not in out:
+                out.append(item)
+
+        for item in items:
+            if item.startswith("image:"):
+                ref = item[len("image:"):]
+                if is_image_pattern(ref):
+                    client = client or _client(engine_opts)
+                    images = images if images is not None else list_images(client=client)
+                    pairs = select_images(ref, images)
+                else:
+                    try:
+                        client = client or _client(engine_opts)
+                        iid = _norm_id(inspect_image(client, ref)["Id"])
+                    except (RuntimeError, OSError):
+                        add(item)                      # collect() reports it
+                        continue
+                    pairs = [(iid or ref, ref)]
+                for iid, ref_ in pairs:
+                    groups.setdefault(iid, [])
+                    if ref_ not in groups[iid]:
+                        groups[iid].append(ref_)
+                    add(f"image:{iid}")
+            elif is_pattern(item):
+                if rows is None:
+                    rows = list_containers(all=all_, **engine_opts)
+                for name in select_containers(item, rows):
+                    add(name)
+            else:
+                add(item)
+        if client is not None:
+            _remember_folded(client, groups)
+        return out
 
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         client = _client(opts)
@@ -501,15 +741,37 @@ class DockerEngineCollector(Collector):
         return self._collect_container(client, target)
 
     def _collect_image(self, client: EngineClient, ref: str) -> Inventory:
-        fd, tmp = tempfile.mkstemp(prefix="secmonk-image-", suffix=".tar")
-        os.close(fd)
+        """One local image, identified by its engine Id: asset `image:@<Id>` (aliases share it; a tag moved to a
+        new build is a new asset). Name: the requested tag, else the first RepoTag."""
+        iid: str | None = None
         try:
-            export_image(ref, tmp, client=client)
-            inv = inventory_from_archive(tmp, name=ref, collector=self.name,
-                                         platform=f"linux/{_arch(client)}")
+            info = inspect_image(client, ref)
+            extra = _image_meta(info, ref, client)
+            iid, tags = extra["image_id"], extra["tags"]
+            by_id = ref == iid or (re.fullmatch(r"(sha256:)?[0-9a-f]{4,64}", ref) is not None
+                                   and iid.removeprefix("sha256:").startswith(ref.removeprefix("sha256:"))
+                                   and ref not in tags and f"{ref}:latest" not in tags)
+            name = (min(tags) if tags else iid[:19]) if by_id else ref
+            fd, tmp = tempfile.mkstemp(prefix="secmonk-image-", suffix=".tar")
+            os.close(fd)
+            try:
+                export_image(iid, tmp, client=client)
+                verified, how = verify_image_archive(tmp, iid)
+                inv = inventory_from_archive(tmp, name=name, collector=self.name, asset_id=f"image:@{iid}",
+                                             platform=f"linux/{_arch(client)}")
+            finally:
+                os.unlink(tmp)
         finally:
-            os.unlink(tmp)
-        inv.asset.meta["source"] = "docker-engine"
+            _pop_folded(client, ref, iid)
+        inv.asset.meta.update({**extra, "platform": inv.asset.platform, "id_verified": verified})
+        if not verified:
+            msg = f"image Id {iid[:19]} not verified against the export: {how}"
+            inv.warnings.append(msg)
+            if "does not belong" in how:
+                inv.mark_partial(msg)
+        folded = extra.get("requested_refs")
+        if folded and len(folded) > 1:
+            inv.warnings.append(f"aliases of one image (Id {iid[7:19]}) scanned once: {', '.join(folded)}")
         return inv
 
     def _collect_container(self, client: EngineClient, target: str) -> Inventory:

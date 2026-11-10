@@ -37,6 +37,10 @@ MAX_JSON = 1 << 20          # config.json / meta.json
 MAX_PEM = 1 << 20           # ca/cert/key files
 MAX_CONTEXTS = 1000
 SSH_DIAL_COMMAND = "docker system dial-stdio"
+# docker CLIs outside a non-interactive ssh PATH (macOS: Homebrew, Docker Desktop); the only values `remote_docker`
+# accepts, so the remote command stays fixed
+REMOTE_DOCKER_PATHS = ("/usr/local/bin/docker", "/opt/homebrew/bin/docker",
+                       "/Applications/Docker.app/Contents/Resources/bin/docker")
 DEFAULT_SSH_PORT = 22
 
 
@@ -131,6 +135,7 @@ class Endpoint:
     connect_timeout: int = 15
     ssh_options: list[str] = field(default_factory=list)   # `-o` values, as the SSH collector's ssh_option
     insecure_host_key: bool = False
+    remote_docker: str | None = None                 # one of REMOTE_DOCKER_PATHS, else `docker` from PATH
     scheme: str = field(default="")
 
     def __post_init__(self) -> None:
@@ -279,7 +284,10 @@ def ssh_argv(ep: Endpoint) -> list[str]:
         raise ValueError("invalid ssh host (starts with '-')")
     t = OpenSSHTransport(ep.ssh, ssh_bin=ep.ssh_bin, identity=ep.identity, connect_timeout=ep.connect_timeout,
                          ssh_options=ep.ssh_options, insecure_host_key=ep.insecure_host_key)
-    return t.argv(SSH_DIAL_COMMAND)
+    if ep.remote_docker and ep.remote_docker not in REMOTE_DOCKER_PATHS:
+        raise ValueError(f"remote_docker must be one of {', '.join(REMOTE_DOCKER_PATHS)}")
+    cmd = f"{ep.remote_docker} system dial-stdio" if ep.remote_docker else SSH_DIAL_COMMAND
+    return t.argv(cmd)
 
 
 class _TimeoutPipe(io.RawIOBase):
