@@ -61,6 +61,14 @@
       job: (id) => call(`/api/jobs/${encodeURIComponent(id)}`),
       startJob: (body) => post("/api/jobs", body),
       dockerContexts: () => call("/api/docker/contexts"),
+      // host auto mode: {target (blank = this machine), opt: ["k=v", ...]} -> {host, candidates, warnings}
+      discover: ({ target, opt } = {}) => {
+        const q = new URLSearchParams();
+        if (target) q.set("target", target);
+        for (const o of opt || []) q.append("opt", o);
+        const s = q.toString();
+        return call("/api/discover" + (s ? "?" + s : ""));
+      },
       // {host, context, all, match, opt: ["k=v", ...]} (opt repeats)
       dockerContainers: ({ opt, ...params } = {}) => {
         const q = new URLSearchParams(qs(params).slice(1));
@@ -131,16 +139,26 @@
       startJob: (body) => {
         if (!data.meta.actions) return fail(403, "actions are disabled on this server");
         if (jobs.some((j) => j.status === "running")) return fail(409, "another job is running");
-        const tpl = data.jobs.find((j) => j.kind === body.kind);
+        const host = body.kind === "scan" && Array.isArray(body.items);
+        const tpl = data.jobs.find((j) => j.kind === body.kind && !!(j.params && j.params.mode === "host") === host)
+          || data.jobs.find((j) => j.kind === body.kind);
         if (!tpl) return fail(400, "kind: expected 'sync' or 'scan'");
-        const title = body.kind === "scan" ? `scan ${body.collector}${body.target ? " " + body.target : ""}` : `sync ${(body.sources || []).join(", ")}`;
-        const { kind, ...params } = body;
+        const title = host ? `scan host ${body.host || "local"}: ${[...new Set(body.items.map((i) => i.collector))].join(", ")}`
+          : body.kind === "scan" ? `scan ${body.collector}${body.target ? " " + body.target : ""}` : `sync ${(body.sources || []).join(", ")}`;
+        const { kind, ...rest } = body;
+        const params = host ? { mode: "host", ...rest } : rest;
         const j = { ...clone(tpl), id: ++jobSeq, origin: "ui", title, params, started: new Date().toISOString(), finished: null,
           status: "running", log: [tpl.log[0]], result: null, summary: {}, error: null, _tpl: tpl, _ticks: 3 };
         jobs.unshift(j);
         return wait(strip(j));
       },
       dockerContexts: () => (data.meta.actions ? wait(data.docker.contexts) : fail(403, "actions are disabled on this server")),
+      // recorded payloads: this machine (macOS) for a blank / local target, the Linux ssh host for anything else
+      discover: ({ target } = {}) => {
+        if (!data.meta.actions) return fail(403, "actions are disabled on this server");
+        const local = !target || ["local", "localhost"].includes(String(target).trim().toLowerCase());
+        return new Promise((r) => setTimeout(() => r(clone(local ? data.discover.local : data.discover.ssh)), latency * 4));
+      },
       // the API's semantics on the recorded listing: running only unless all, `matched` from the selector
       dockerContainers: (p = {}) => {
         if (!data.meta.actions) return fail(403, "actions are disabled on this server");
@@ -934,12 +952,17 @@
 
   /** One target of a scan result (ops.scan_target entry: {target, asset, scan_id, stats, warnings, partial, findings,
    * counts, error}). `single`: the only target of its job, shown open; otherwise a collapsible row (body on expand). */
-  const TARGET_HEAD = `<span class="sm-mono sm-target__name">{{ t.target || t.asset || '(default target)' }}</span>
+  const TARGET_HEAD = `<sm-badge v-if="t.collector" variant="outline" title="collector">{{ t.collector }}</sm-badge>
+      <span class="sm-mono sm-target__name" :title="t.target">{{ shortTarget(t.target) || t.asset || '(default target)' }}</span>
       <span v-if="t.asset && t.asset !== t.target" class="sm-muted sm-mono sm-truncate" :title="t.asset">{{ t.asset }}</span>
       <sm-findings-summary v-if="!t.error" :counts="t.counts" empty="no findings"/>
+      <span v-if="t.tags && t.tags.length" class="sm-badges" :title="t.tags.join(', ')"><span v-for="g in t.tags.slice(0, 3)" :key="g" class="sm-badge sm-badge--outline sm-mono">{{ g }}</span>
+        <span v-if="t.tags.length > 3" class="sm-muted">+{{ t.tags.length - 3 }}</span></span>
+      <sm-badge v-if="t.reused" variant="info" :title="'image already scanned: components reused, rematched against the current mirror' + (t.reused_scan_id ? ' (scan ' + t.reused_scan_id + ')' : '')">reused</sm-badge>
       <sm-badge v-if="t.error" variant="danger">failed</sm-badge><sm-badge v-if="t.partial" variant="warn" title="Partial inventory: previous components kept">partial</sm-badge>
       <sm-badge v-if="(t.warnings || []).length" variant="outline">{{ $fmt.plural(t.warnings.length, 'warning') }}</sm-badge>`;
   const TARGET_BODY = `<div v-if="t.error" class="sm-job__error">{{ t.error }}</div>
+      <div v-if="t.requested_refs && t.requested_refs.length > 1" class="sm-muted">aliases of one image, scanned once: <span class="sm-mono">{{ t.requested_refs.join(', ') }}</span></div>
       <div v-if="stats" class="sm-muted">{{ stats }}</div>
       <details v-if="(t.warnings || []).length" class="sm-details"><summary>{{ $fmt.plural(t.warnings.length, 'collector warning') }}</summary>
         <ul class="sm-links"><li v-for="(w, i) in t.warnings.slice(0, 50)" :key="i">{{ w }}</li></ul></details>
@@ -954,12 +977,24 @@
       const open = ref(false);
       const stats = computed(() => Object.entries(props.t.stats || {}).map(([k, v]) => `${fmt.num(v)} ${k.replace(/_/g, " ")}`).join(" · "));
       const openFinding = (f) => props.saved && router.push({ name: "findings", params: { key: f.key } });
-      return { open, stats, openFinding };
+      // images expanded from image:* / globs come back as image:sha256:<64 hex>: show the short Id
+      const shortTarget = (x) => (x ? String(x).replace(/^image:(sha256:)?([0-9a-f]{12})[0-9a-f]{52}$/, "image:$2") : x);
+      return { open, stats, openFinding, shortTarget };
     },
     template: `<div v-if="single" class="sm-target sm-target--single"><div class="sm-target__head">${TARGET_HEAD}</div>
         <div class="sm-target__body">${TARGET_BODY}</div></div>
       <details v-else class="sm-target" :open="open" @toggle="open = $event.target.open"><summary class="sm-target__head">${TARGET_HEAD}</summary>
         <div v-if="open" class="sm-target__body">${TARGET_BODY}</div></details>`,
+  };
+
+  /** The items of a host-mode run (params.items: [{collector, target, options}]). */
+  const JobItems = {
+    name: "JobItems",
+    props: { items: { type: Array, required: true } },
+    template: `<div class="sm-table-wrap sm-table-wrap--auto"><table class="sm-table sm-table--static" aria-label="Items">
+      <thead><tr><th>Candidate</th><th>Collector</th><th>Target</th><th>Options</th></tr></thead>
+      <tbody><tr v-for="(it, i) in items" :key="i"><td class="sm-mono">{{ it.id || '—' }}</td><td><sm-badge variant="outline">{{ it.collector }}</sm-badge></td>
+        <td class="sm-mono">{{ it.target || '(default)' }}</td><td class="sm-mono sm-truncate sm-cell-path" :title="(it.options || []).join(' ')">{{ (it.options || []).join(' ') }}</td></tr></tbody></table></div>`,
   };
 
   /** Result of a finished scan or sync job (web/jobs.py; scan = ops.scan_result {saved, targets, stats, counts}). */
@@ -1315,11 +1350,170 @@
   const scrollTop = () => document.querySelector(".sm-main")?.scrollTo({ top: 0, behavior: "smooth" });
 
   // docker-engine options the Engine fields own (the rest stays in the free-form options)
-  const ENGINE_KEYS = ["host", "context", "all", "tls_ca", "tls_cert", "tls_key", "tls_verify", "identity"];
+  const ENGINE_KEYS = ["host", "context", "all", "rescan", "tls_ca", "tls_cert", "tls_key", "tls_verify", "identity"];
   // hosts as the history stores them: "unix:///p" comes back as "unix:/p" (URL normalisation) -> restore the form
   const historyHost = (h) => String(h || "").replace(/^unix:\/(?!\/)/, "unix:///");
-  const engineDefaults = () => ({ mode: "auto", context: "", host: "", all: false, tls_ca: "", tls_cert: "", tls_key: "",
+  const engineDefaults = () => ({ mode: "auto", context: "", host: "", all: false, rescan: false, tls_ca: "", tls_cert: "", tls_key: "",
     tls_verify: "", identity: "" });
+
+  // ---- host auto mode (GET /api/discover -> candidates -> one batch scan job)
+  const LOCAL_HOSTS = ["", "local", "localhost"];
+  /** A candidate's details (discover.py) -> one-line summary + lines for the expandable list. */
+  function candidateFacts(d) {
+    d = d || {};
+    const lines = [];
+    let summary = null;
+    if (Array.isArray(d.containers)) {
+      const running = d.containers.filter((c) => c.state === "running").length;
+      const n = d.containers.length + (d.more || 0);
+      summary = `${fmt.plural(n, "container")}, ${running} running`;
+      for (const c of d.containers) lines.push(`${c.name} — ${c.image}${c.state ? " (" + c.state + ")" : ""}`);
+      if (d.more) lines.push(`+${d.more} more`);
+    }
+    if (Array.isArray(d.images)) {
+      summary = `${fmt.plural(d.tagged_images ?? 0, "tag")} → ${fmt.plural(d.unique_ids ?? d.images.length, "image")}`;
+      for (const i of d.images) lines.push(`${i.id}  ${(i.tags || []).join(", ")}`);
+    }
+    const lists = [["prefixes", "Homebrew prefixes"], ["brew_prefixes", "Homebrew prefixes"], ["package_managers", "package managers"],
+      ["tools", "tools found"]];
+    for (const [k, label] of lists) {
+      if (Array.isArray(d[k]) && d[k].length) {
+        lines.push(`${label}: ${d[k].join(", ")}`);
+        summary = summary || `${label}: ${d[k].join(", ")}`;
+      }
+    }
+    for (const k of ["engine", "path", "platform"]) if (d[k]) lines.push(`${k}: ${d[k]}`);
+    return { summary, lines };
+  }
+  /** Candidate id of a stored host-mode item: its stored `id`; runs recorded before ids were stored get a guess. */
+  const itemId = (it) => (it.collector === "docker-engine" ? (String(it.target || "").startsWith("image:") ? "docker-images" : "docker")
+    : it.collector === "fs" ? "fs-home" : it.collector);
+
+  /** The checkbox panel of host mode: one row per candidate (discover payload rows + `checked`, `orig`), edited in
+   * place. Docker and folder targets are editable (narrow `*` to `web-*`, `image:*` to `image:nginx:*`). */
+  const HostCandidates = {
+    name: "HostCandidates",
+    props: { rows: { type: Array, required: true } },
+    setup() {
+      const editable = (r) => r.collector === "docker-engine" || r.collector === "fs";
+      return { editable, facts: candidateFacts };
+    },
+    template: `<div class="sm-cands" role="group" aria-label="What to scan">
+      <div v-for="r in rows" :key="r.key || r.id" :class="['sm-cand', !r.available && 'is-off', r.checked && r.available && 'is-on']">
+        <input type="checkbox" class="sm-cand__check" v-model="r.checked" :disabled="!r.available" :aria-label="r.label">
+        <div class="sm-cand__main">
+          <div class="sm-cand__head"><b>{{ r.label }}</b><sm-badge variant="outline" title="collector">{{ r.collector }}</sm-badge>
+            <span class="sm-muted sm-mono">{{ r.id }}</span><sm-badge v-if="!r.available" variant="warn">not available</sm-badge></div>
+          <div v-if="r.description" class="sm-cand__desc">{{ r.description }}</div>
+          <div v-if="r.reason" :class="['sm-cand__reason', !r.available && 'is-off']">{{ r.reason }}</div>
+          <div v-if="editable(r)" class="sm-cand__target"><span class="sm-muted">target</span>
+            <input class="sm-input" v-model="r.target" :disabled="!r.available" spellcheck="false" :aria-label="r.label + ' target'">
+            <sm-button v-if="r.target !== r.orig" size="sm" variant="ghost" title="Back to the proposed target" @click="r.target = r.orig">reset</sm-button></div>
+          <div v-else-if="r.target" class="sm-cand__target"><span class="sm-muted">target</span><span class="sm-mono">{{ r.target }}</span></div>
+          <div v-if="facts(r.details).lines.length === 1" class="sm-muted sm-mono">{{ facts(r.details).lines[0] }}</div>
+          <details v-else-if="facts(r.details).lines.length" class="sm-details"><summary>{{ facts(r.details).summary || 'details' }}</summary>
+            <ul class="sm-links sm-mono"><li v-for="(l, i) in facts(r.details).lines" :key="i">{{ l }}</li></ul></details>
+          <div v-if="r.options && r.options.length" class="sm-muted sm-mono sm-truncate" :title="r.options.join(' ')">{{ r.options.map(o => '-o ' + o).join(' ') }}</div>
+        </div>
+      </div></div>`,
+  };
+
+  /** Host mode of the Scan page: explore a host, tick candidates, scan them as one job. `again`: a host-mode job
+   * whose stored items are shown ticked (Run again), without exploring. */
+  const HostScan = {
+    name: "HostScan",
+    props: { again: Object },
+    setup(props) {
+      const store = useStore();
+      const actions = computed(() => !store.state.meta || store.state.meta.actions !== false);
+      const form = reactive({ host: "", identity: "", known_hosts: "", connect_timeout: "", save: true, min_confidence: 0.5 });
+      const adv = ref(false);
+      const disc = reactive({ loading: false, error: null, data: null, from: null });
+      const rows = ref([]);
+      const remote = computed(() => !LOCAL_HOSTS.includes(form.host.trim().toLowerCase()));
+      const discOpts = computed(() => ["identity", "known_hosts", "connect_timeout"].filter((k) => String(form[k]).trim())
+        .map((k) => `${k}=${String(form[k]).trim()}`));
+      async function explore() {
+        disc.loading = true;
+        disc.error = null;
+        try {
+          const d = await store.source.discover({ target: form.host.trim(), opt: discOpts.value });
+          rows.value = d.candidates.map((c) => ({ ...c, options: [...c.options], checked: c.selected && c.available, orig: c.target }));
+          Object.assign(disc, { data: d, from: null });
+        } catch (e) { disc.error = e; } finally { disc.loading = false; }
+      }
+      watch(() => props.again, (job) => {
+        const p = job && job.params;
+        if (!p || p.mode !== "host") return;
+        const host = LOCAL_HOSTS.includes(String(p.host || "").trim().toLowerCase()) ? "" : p.host;   // stored as "local"
+        Object.assign(form, { host, save: p.save !== false, min_confidence: p.min_confidence ?? 0.5 });
+        const seen = {};
+        rows.value = (p.items || []).map((it) => {
+          const id = it.id || itemId(it);
+          seen[id] = (seen[id] || 0) + 1;
+          const masked = (it.options || []).some((o) => splitOpt(o)[1] === "***");
+          return { id, key: seen[id] > 1 ? `${id}#${seen[id]}` : id, guessed: !it.id, collector: it.collector, target: it.target, orig: it.target,
+            options: [...(it.options || [])], label: it.collector, description: `from job #${job.id}`, available: true,
+            reason: masked ? "a secret option was masked in the history: explore again" : null, details: {}, checked: !masked };
+        });
+        Object.assign(disc, { data: null, error: null, from: job.id });
+      }, { immediate: true });
+      const chosen = computed(() => rows.value.filter((r) => r.checked && r.available));
+      const edited = computed(() => chosen.value.some((r) => r.target !== r.orig));
+      const setAll = (on) => { for (const r of rows.value) r.checked = on && r.available; };
+      const warnings = computed(() => (disc.data && disc.data.warnings) || []);
+      const pastHosts = computed(() => uniq(store.state.jobs.list.filter((j) => j.params && j.params.mode === "host" && j.params.host !== "local")
+        .map((j) => j.params.host)));
+      const cli = computed(() => ["secmonk scan-host", form.host.trim() && shellArg(form.host.trim()), ...discOpts.value.map((o) => `-o ${shellArg(o)}`),
+        chosen.value.length ? `--only ${[...new Set(chosen.value.map((r) => r.id))].join(",")}` : "--yes", !form.save && "--no-save",
+        +form.min_confidence !== 0.5 && `--min-confidence ${form.min_confidence}`].filter(Boolean).join(" "));
+      const approx = computed(() => (chosen.value.some((r) => r.guessed) ? "candidate ids guessed: that run did not store them"
+        : edited.value ? "approximate: the CLI scans the proposed targets, not the edited ones" : null));
+      const tooMany = computed(() => chosen.value.length > 20);
+      const canRun = computed(() => actions.value && !store.busy.value && chosen.value.length > 0 && !tooMany.value);
+      const run = () => store.startJob({ kind: "scan", host: form.host.trim() || null, save: form.save, min_confidence: +form.min_confidence,
+        // the candidate id travels with the item (stored in the history: Run again, the scan-host command)
+        items: chosen.value.map((r) => ({ ...(r.guessed ? {} : { id: r.id }), collector: r.collector, target: (r.target || "").trim() || null,
+          options: r.options })) });
+      return { store, actions, form, adv, disc, rows, remote, explore, chosen, setAll, warnings, pastHosts, cli, approx, tooMany, canRun, run };
+    },
+    template: `<div class="sm-stack">
+      <div class="sm-form">
+        <sm-field label="Host" hint="empty = this machine; or [ssh://]user@host[:port] (Linux or macOS, key usable without a prompt)">
+          <input class="sm-input" v-model="form.host" placeholder="user@host or ssh://user@host:2222" list="sm-past-scan-hosts" spellcheck="false"
+            @keydown.enter="actions && !disc.loading && explore()"></sm-field>
+        <datalist id="sm-past-scan-hosts"><option v-for="h in pastHosts" :key="h" :value="h"></option></datalist>
+        <details class="sm-details sm-field--wide" :open="adv" @toggle="adv = $event.target.open"><summary>Advanced: SSH</summary>
+          <div class="sm-form sm-mt-2">
+            <sm-field label="SSH key" hint="identity: private key file on the server machine"><input class="sm-input" v-model="form.identity" placeholder="~/.ssh/id_ed25519" spellcheck="false"></sm-field>
+            <sm-field label="Known hosts" hint="known_hosts file to check the host key against"><input class="sm-input" v-model="form.known_hosts" placeholder="~/.ssh/known_hosts" spellcheck="false"></sm-field>
+            <sm-field label="Connect timeout" hint="seconds"><input class="sm-input" type="number" min="1" max="120" v-model="form.connect_timeout" placeholder="10"></sm-field>
+          </div></details>
+        <div class="sm-form__actions"><sm-button :variant="rows.length ? '' : 'primary'" icon="search" :loading="disc.loading" :disabled="!actions" @click="explore">{{ rows.length ? 'Explore again' : 'Explore' }}</sm-button>
+          <span class="sm-muted">{{ disc.loading ? (remote ? 'probing the host over ssh: this can take up to a minute…' : 'looking at this machine…') : 'lists what can be scanned there (secmonk discover)' }}</span></div>
+      </div>
+      <sm-callout v-if="disc.error" variant="error" :title="disc.error.message">{{ disc.error.hint }}</sm-callout>
+      <template v-if="rows.length">
+        <div v-if="disc.data" class="sm-host"><sm-icon :name="disc.data.host.kind === 'ssh' ? 'link' : 'monitor'"/>
+          <b>{{ disc.data.host.name || disc.data.host.target || 'this machine' }}</b>
+          <span>{{ disc.data.host.os }}<template v-if="disc.data.host.os_version"> {{ disc.data.host.os_version }}</template></span>
+          <span v-if="disc.data.host.arch" class="sm-muted">{{ disc.data.host.arch }}</span>
+          <sm-badge :variant="disc.data.host.kind === 'ssh' ? 'info' : 'outline'">{{ disc.data.host.kind === 'ssh' ? 'ssh ' + disc.data.host.target : 'local' }}</sm-badge></div>
+        <sm-callout v-if="disc.from != null" variant="info" :title="'Settings of job #' + disc.from">The items of that run, not a fresh look at the host: Explore again to see what it offers now.</sm-callout>
+        <sm-callout v-if="warnings.length" variant="warn" :title="$fmt.plural(warnings.length, 'warning')"><ul class="sm-links"><li v-for="(w, i) in warnings" :key="i">{{ w }}</li></ul></sm-callout>
+        <div class="sm-toolbar"><sm-button size="sm" icon="check" @click="setAll(true)">Select all available</sm-button><sm-button size="sm" variant="ghost" @click="setAll(false)">None</sm-button>
+          <span class="sm-toolbar__spacer"></span><span class="sm-toolbar__count">{{ chosen.length }} of {{ rows.length }} selected</span></div>
+        <host-candidates :rows="rows"/>
+        <div class="sm-form">
+          <sm-field label="Minimum confidence" hint="drop name-based matches below this (0–1)"><input class="sm-input" type="number" min="0" max="1" step="0.1" v-model="form.min_confidence"></sm-field>
+          <sm-field label="Save"><sm-switch v-model="form.save">{{ form.save ? 'store the inventories and findings' : 'match only, write nothing' }}</sm-switch></sm-field>
+          <div class="sm-form__actions"><sm-button variant="primary" icon="play" :loading="store.busy.value" :disabled="!canRun" @click="run">Scan selected ({{ chosen.length }})</sm-button>
+            <span v-if="tooMany" class="sm-muted">at most 20 items per scan</span>
+            <span class="sm-muted">Same as</span><code>{{ cli }}</code><span v-if="approx" class="sm-muted">({{ approx }})</span></div>
+        </div>
+      </template>
+    </div>`,
+  };
 
   const ScanView = {
     name: "ScanView",
@@ -1327,6 +1521,9 @@
       const store = useStore();
       const route = useRoute();
       const collectors = useResource(() => store.source.collectors());
+      const mode = ref(route.query.mode === "host" ? "host" : "single");
+      const hostAgain = ref(null);
+      const modes = [{ value: "single", label: "Single collector", icon: "target" }, { value: "host", label: "Host (auto)", icon: "server" }];
       const form = reactive({ collector: route.query.collector || "fs", target: route.query.target || "", options: "", save: true,
         min_confidence: 0.5, engine: engineDefaults() });
       const advanced = ref(false);
@@ -1344,6 +1541,7 @@
         if (e.mode === "context" && e.context) out.push(`context=${e.context}`);
         if (e.mode === "host" && e.host.trim()) out.push(`host=${e.host.trim()}`);
         if (e.all) out.push("all=true");
+        if (e.rescan) out.push("rescan=true");
         for (const k of ["tls_ca", "tls_cert", "tls_key", "identity"]) if (e[k].trim()) out.push(`${k}=${e[k].trim()}`);
         if (e.tls_verify) out.push(`tls_verify=${e.tls_verify}`);
         return out;
@@ -1368,7 +1566,7 @@
         const e = form.engine;
         return { host: e.mode === "host" ? e.host.trim() : "", context: e.mode === "context" ? e.context : "", all: e.all,
           // host / context / all go as parameters; TLS, identity and the free-form options as opt=k=v
-          match: form.target.trim(), opt: [...engineOpts.value.filter((o) => !["host", "context", "all"].includes(splitOpt(o)[0])), ...extra.value] };
+          match: form.target.trim(), opt: [...engineOpts.value.filter((o) => !["host", "context", "all", "rescan"].includes(splitOpt(o)[0])), ...extra.value] };
       });
       async function runPreview() {
         preview.loading = true;
@@ -1391,7 +1589,15 @@
         .filter(([k]) => k === "host").map(([, v]) => historyHost(v)))));
       function prefill(job) {
         const p = job.params || {};
+        if (job.kind === "scan" && p.mode === "host") {
+          mode.value = "host";
+          hostAgain.value = { ...job };
+          UI.toast(`Items of job #${job.id} ticked: check them (or Explore again), then Scan selected`, "info", 6000);
+          scrollTop();
+          return;
+        }
         if (job.kind !== "scan" || !p.collector) return;
+        mode.value = "single";
         const e = engineDefaults();
         const rest = [];
         let masked = false;
@@ -1402,6 +1608,7 @@
           if (k === "host") Object.assign(e, { mode: "host", host: historyHost(v) });
           else if (k === "context") Object.assign(e, { mode: "context", context: v });
           else if (k === "all") e.all = truthy(v);
+          else if (k === "rescan") e.rescan = truthy(v);
           else if (k === "tls_verify") e.tls_verify = truthy(v) ? "true" : "false";
           else e[k] = v;
         }
@@ -1424,13 +1631,15 @@
         && !(docker.value && form.engine.mode === "host" && !form.engine.host.trim()));
       const run = () => store.startJob({ kind: "scan", collector: form.collector, target: form.target.trim() || null,
         options: opts.value, save: form.save, min_confidence: +form.min_confidence });
-      return { store, collectors, form, advanced, info, hint, targetHint, actions, docker, contexts, loadContexts, preview,
+      return { mode, modes, hostAgain, store, collectors, form, advanced, info, hint, targetHint, actions, docker, contexts, loadContexts, preview,
         runPreview, previewStale, matched, previewCols, pastTargets, pastHosts, prefill, cli, canRun, run };
     },
     template: `<div class="sm-page">
-      <sm-page-header title="Scan a target" subtitle="Collect an inventory, save it and match it against the local mirror (secmonk scan)."/>
+      <sm-page-header title="Scan a target" :subtitle="mode === 'host' ? 'Explore a host, choose what to scan there, scan it all in one job (secmonk scan-host).'
+        : 'Collect an inventory, save it and match it against the local mirror (secmonk scan).'"><sm-segmented v-model="mode" :options="modes"/></sm-page-header>
       <actions-off/>
-      <sm-card title="Target" icon="target"><div class="sm-form">
+      <sm-card v-if="mode === 'host'" title="Host" icon="server"><host-scan :again="hostAgain"/></sm-card>
+      <sm-card v-else title="Target" icon="target"><div class="sm-form">
         <sm-field label="Collector" :hint="info && info.description"><select class="sm-select" v-model="form.collector" aria-label="Collector">
           <option v-for="c in collectors.data || [{ name: form.collector }]" :key="c.name" :value="c.name">{{ c.name }}</option></select></sm-field>
         <sm-field label="Target" :hint="targetHint" :wide="docker"><input class="sm-input" v-model="form.target" :placeholder="hint.placeholder"
@@ -1447,6 +1656,7 @@
           <sm-field v-if="form.engine.mode === 'host'" label="Host" hint="ssh://user@host[:port] (key usable without a prompt), tcp://host:2376 (TLS: advanced), unix:///path">
             <input class="sm-input" v-model="form.engine.host" placeholder="ssh://user@host" list="sm-docker-hosts" spellcheck="false"></sm-field>
           <datalist id="sm-docker-hosts"><option v-for="h in pastHosts" :key="h" :value="h"></option></datalist>
+          <sm-field label="Images already scanned"><sm-switch v-model="form.engine.rescan">{{ form.engine.rescan ? 're-collect them (rescan=true)' : 'reuse their components, rematch only' }}</sm-switch></sm-field>
           <sm-field label="Stopped containers"><sm-switch v-model="form.engine.all">{{ form.engine.all ? 'globs and regexes include stopped ones' : 'running containers only' }}</sm-switch></sm-field>
           <details class="sm-details sm-field--wide" :open="advanced" @toggle="advanced = $event.target.open"><summary>Advanced: TLS and SSH key</summary>
             <div class="sm-form sm-mt-2">
@@ -1809,7 +2019,8 @@
           @click="again(selected)">Run again</sm-button></template>
         <sm-job :job="selected"><job-result v-if="selected.result" :job="selected"/></sm-job>
         <sm-section v-if="selected.params && Object.keys(selected.params).length" title="Settings" icon="file" class="sm-mt-3">
-          <sm-kv :rows="Object.entries(selected.params).map(([k, v]) => ({ label: k, value: Array.isArray(v) ? v.join(' · ') : v === true ? 'yes' : v === false ? 'no' : v, mono: true }))"/></sm-section></sm-drawer>
+          <sm-kv :rows="Object.entries(selected.params).filter(([k]) => k !== 'items').map(([k, v]) => ({ label: k, value: Array.isArray(v) ? v.join(' · ') : v === true ? 'yes' : v === false ? 'no' : v, mono: true }))"/>
+          <job-items v-if="selected.params.items" class="sm-mt-2" :items="selected.params.items"/></sm-section></sm-drawer>
       <sm-drawer v-else-if="route.params.id && detail.error" title="Job not found" @close="close"><sm-empty :title="detail.error.message" icon="clock"/></sm-drawer>
     </div>`,
   };
@@ -1900,7 +2111,7 @@
     UI.install(app);
     app.provide("store", store);
     for (const [n, c] of Object.entries({ SnapshotGate, MonitorActions, SnapshotNotes, ProcessDetail, NoDb, DataGate,
-      FindingsTable, FindingDetail, JobResult, JobTarget, JobHistory, ActionsOff })) app.component(n, c);
+      FindingsTable, FindingDetail, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, ActionsOff })) app.component(n, c);
     app.use(router);
     app.mount(el);
     store.loadMeta();
@@ -1911,5 +2122,5 @@
   Object.assign(UI, { ApiSource, MockSource, ApiError, createStore, mountApp, NAV, ROUTES, useResource, fkey,
     VIEWS: { OverviewView, ProcessesView, SoftwareView, LaunchItemsView, ActivityView, AssetsView, AssetDetailView, ScanView,
       UnmatchedView, FindingsView, VulnsView, VulnDetailView, SourcesView, JobsView, AboutView, ProcessDetail, FindingDetail,
-      FindingsTable, JobResult, JobTarget, JobHistory, DataGate, App } });
+      FindingsTable, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, DataGate, App } });
 })(window);

@@ -14,7 +14,9 @@
   const tableRows = M.snapshot.processes.slice(9, 15);
   const finding = (vid) => M.findings.find((f) => f.vuln_id === vid);
   const scanJob = M.jobs.find((j) => j.kind === "scan" && j.result && j.result.targets.length === 1);
-  const multiJob = M.jobs.find((j) => j.kind === "scan" && j.result && j.result.targets.length > 1);
+  const multiJob = M.jobs.find((j) => j.kind === "scan" && j.result && j.result.targets.length > 1 && !j.params.mode);
+  const hostJob = M.jobs.find((j) => j.params && j.params.mode === "host");
+  const candRows = (d) => d.candidates.map((c) => ({ ...c, options: [...c.options], checked: c.selected && c.available, orig: c.target }));
   const cliJob = M.jobs.find((j) => j.origin === "cli");
   const syncJob = M.jobs.find((j) => j.kind === "sync");
 
@@ -223,6 +225,7 @@
       variants: [
         { name: "Scan, one target", template: `<sm-job :job="job"><job-result :job="job"/></sm-job>`, data: { job: scanJob } },
         { name: "Scan, several targets (docker-engine selector)", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: multiJob } },
+        { name: "Host mode, an image reused", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: hostJob } },
         { name: "Target rows", template: `<div class="sm-targets"><job-target v-for="(t, i) in job.result.targets" :key="i" :t="t" saved/></div>`, data: { job: multiJob } },
         { name: "Sync", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: syncJob } },
       ] },
@@ -232,6 +235,21 @@
         { name: "Scans", template: `<job-history kind="scan" :limit="5" @again="j => last = 'again: job #' + j.id"/><div class="sm-muted sm-mt-2">{{ last }}</div>`, data: { last: "" } },
         { name: "Syncs", template: `<job-history kind="sync"/>` },
       ] },
+    { id: "host-candidates", group: "Patterns", title: "Host candidates (host-candidates)",
+      doc: "The checkbox panel of host mode: one row per discover candidate (GET /api/discover) with its collector, description, reason (warn; red when unavailable), editable target for docker-engine and fs (narrow * to web-*, image:* to image:nginx:*), expandable details (containers, images, prefixes). Rows are edited in place: checked, target.",
+      variants: [
+        { name: "This Mac (local)", template: `<host-candidates :rows="rows"/>`, data: { rows: candRows(M.discover.local) } },
+        { name: "Linux host over ssh", template: `<host-candidates :rows="rows"/>`, data: { rows: candRows(M.discover.ssh) } },
+      ] },
+    { id: "host-scan", group: "Patterns", title: "Host scan (host-scan)",
+      doc: "Host mode of the Scan page: host field (blank = this machine), SSH options, Explore (loading state: an ssh probe can take a minute), host summary, warnings, candidates, Scan selected (N) as one batch job, and the secmonk scan-host command. Prop again: a host-mode job whose items are shown ticked (Run again).",
+      variants: [
+        { name: "Before exploring", template: `<host-scan/>` },
+        { name: "Run again of a host-mode job", template: `<host-scan :again="job"/>`, data: { job: hostJob } },
+      ] },
+    { id: "job-items", group: "Patterns", title: "Job items (job-items)",
+      doc: "The items of a host-mode run (params.items: collector, target, options), in the Jobs drawer.",
+      variants: [{ name: "Host-mode run", template: `<job-items :items="job.params.items"/>`, data: { job: hostJob } }] },
     { id: "toolbar", group: "Patterns", title: "Toolbar composition",
       doc: "Search + toggles left, view controls right; second row: filter chips + result count. Same in every list view.",
       variants: [{ name: "Processes toolbar", template: `<div style="display:grid;gap:8px"><div class="sm-toolbar"><sm-search v-model="q" placeholder="Search"/><sm-switch v-model="s">Suspicious only</sm-switch>

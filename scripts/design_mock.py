@@ -24,7 +24,15 @@ Docker engine: a fake engine on a Unix socket serving tests/fixtures/collectors/
 old-job; only `web` can be inspected and exported, as the alpine rootfs), found by auto-discovery (the socket is shown
 as /var/run/docker.sock). A scan job with the selector `web,d*` and `all=true` gives a multi-target result with one
 failed target (status partial). Docker contexts: two synthetic contexts in a temporary DOCKER_CONFIG
-(`build-01`, ssh, and `staging`, tcp + TLS); container listing = `ops.docker_containers(all=True)`.
+(`build-01`, ssh, and `staging`, tcp + TLS); container listing = `ops.docker_containers(all=True)`. The engine also
+serves two images (tags from engine/images-json.json; `docker save` = tests/fixtures/collectors/docker/alpine-mini.tar
+with an image title label added, so each has its own config digest = image Id, as the collector verifies; synthetic):
+job 5 scans `image:nginx:latest`, job 6 is a host-mode batch (the container `web` and
+`image:*`) in which nginx is reused (same image Id) and postgres collected.
+
+Host auto mode (`discover`): the real discovery code with the platform facts patched: a synthetic macOS host
+"alice-mbp" (15.1, arm64, no Full Disk Access, Homebrew in /opt/homebrew, the fake engine) and a synthetic Ubuntu
+host reached over a fake ssh transport (dpkg + docker; the remote engine probe answers with the fixture listing).
 """
 
 from __future__ import annotations
@@ -43,15 +51,19 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from urllib.parse import unquote
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from secmonk import discover as dsc
 from secmonk import ops, reports
 from secmonk.cli import app as cli_app
-from secmonk.collectors import docker_engine
+from secmonk.collectors import docker_engine, harvest
+from secmonk.collectors.process import backend as proc_backend
 from secmonk.collectors.process import snapshot as snapfile
 from secmonk.collectors.process.model import LaunchItem
+from secmonk.collectors.ssh import Transport
 from secmonk.db import connect
 from secmonk.engine.match import canonical_ids, match_asset
 from secmonk.engine.scoring import DEFERRED_TRIAGE, MINOR_TRIAGE
@@ -148,6 +160,38 @@ def cli_scan(db: Path, collector: str, target: Path) -> None:
 ENGINE = FIX / "collectors/docker/engine"
 
 
+def saved_variant(archive: bytes, title: str) -> tuple[str, bytes]:
+    """The fixture `docker save` archive with a label added to its image config: (new image Id, archive). The OCI
+    manifest, index.json and manifest.json are rewritten to the new digests, the layer is unchanged."""
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        members = [m for m in tar.getmembers() if m.isfile()]
+        files = {m.name: tar.extractfile(m).read() for m in members}
+    legacy = json.loads(files["manifest.json"])
+    index = json.loads(files["index.json"])
+    cfg_name, man_name = legacy[0]["Config"], "blobs/sha256/" + index["manifests"][0]["digest"].removeprefix("sha256:")
+    cfg = json.loads(files[cfg_name])
+    cfg["config"].setdefault("Labels", {})["org.opencontainers.image.title"] = title
+    cfg_b = json.dumps(cfg, separators=(",", ":")).encode()
+    cfg_d = hashlib.sha256(cfg_b).hexdigest()
+    man = json.loads(files[man_name])
+    man["config"].update(digest=f"sha256:{cfg_d}", size=len(cfg_b))
+    man_b = json.dumps(man, separators=(",", ":")).encode()
+    man_d = hashlib.sha256(man_b).hexdigest()
+    index["manifests"][0].update(digest=f"sha256:{man_d}", size=len(man_b))
+    legacy[0]["Config"] = f"blobs/sha256/{cfg_d}"
+    renamed = {cfg_name: (f"blobs/sha256/{cfg_d}", cfg_b), man_name: (f"blobs/sha256/{man_d}", man_b),
+               "index.json": ("index.json", json.dumps(index).encode()),
+               "manifest.json": ("manifest.json", json.dumps(legacy).encode())}
+    out = io.BytesIO()
+    with tarfile.open(fileobj=out, mode="w") as tar:
+        for m in members:
+            name, data = renamed.get(m.name, (m.name, files[m.name]))
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    return f"sha256:{cfg_d}", out.getvalue()
+
+
 def fake_engine(sock: str, rootfs: Path) -> socketserver.BaseServer:
     """Docker Engine API subset on a Unix socket: list, inspect and export of the fixture container `web`."""
     buf = io.BytesIO()
@@ -156,6 +200,23 @@ def fake_engine(sock: str, rootfs: Path) -> socketserver.BaseServer:
             tar.add(rootfs / rel, arcname=rel)
     inspect = json.loads((ENGINE / "container-inspect.json").read_text())
     rows = json.loads((ENGINE / "containers-json.json").read_text())
+    archive = (FIX / "collectors/docker/alpine-mini.tar").read_bytes()
+    images, saved = [], {}
+    for im in json.loads((ENGINE / "images-json.json").read_text()):
+        if im["RepoTags"]:                       # tagged images get an archive whose config digest is their Id
+            iid, saved_tar = saved_variant(archive, im["RepoTags"][0])
+            saved[iid] = saved_tar
+            im = {**im, "Id": iid}
+        images.append(im)
+
+    def image(ref: str) -> dict | None:
+        """GET /images/{ref}/...: by tag (name -> name:latest), full Id or Id prefix."""
+        for im in images:
+            iid = im["Id"]
+            if ref in im["RepoTags"] or f"{ref}:latest" in im["RepoTags"] or ref == iid or \
+                    (len(ref.removeprefix("sha256:")) >= 4 and iid.removeprefix("sha256:").startswith(ref.removeprefix("sha256:"))):
+                return im
+        return None
     routes = {"/_ping": b"OK", "/version": (ENGINE / "version.json").read_bytes(),
               "/containers/web/json": json.dumps(inspect).encode(),
               f"/containers/{inspect['Id']}/export": buf.getvalue()}
@@ -174,6 +235,10 @@ def fake_engine(sock: str, rootfs: Path) -> socketserver.BaseServer:
             if path == "/containers/json":
                 body = json.dumps([r for r in rows if "all=1" in query or r["State"] == "running"]).encode()
                 code = 200
+            elif path == "/images/json":
+                code, body = 200, json.dumps(images).encode()
+            elif path.startswith("/images/") and (im := image(unquote(path[len("/images/"):].rsplit("/", 1)[0]))):
+                code, body = 200, (saved[im["Id"]] if path.endswith("/get") else json.dumps({**im, "Architecture": "amd64"}).encode())
             else:
                 name = path.split("/")[2] if path.startswith("/containers/") else path
                 code, body = (200, routes[path]) if path in routes else \
@@ -196,6 +261,59 @@ def docker_config(cfg: Path) -> None:
         d.mkdir(parents=True)
         (d / "meta.json").write_text(json.dumps({"Name": name, "Metadata": {"Description": desc},
                                                  "Endpoints": {"docker": {"Host": host}}}))
+
+
+class FakeSSH(Transport):
+    """Answers the one discovery probe (`sh -s`) like an Ubuntu host with dpkg and docker (synthetic output in the
+    harvest.detect_script format, as tests/test_discover.py builds it)."""
+    name = "fake"
+
+    def stream(self, cmd, timeout=60, stdin=None):
+        raise NotImplementedError
+
+    def run(self, cmd, timeout=60, stdin=None):
+        p = harvest.DETECT_PREFIX
+        lines = [f"{p}kernel@@", "Linux", f"{p}arch@@", "x86_64", f"{p}os-release@@",
+                 'PRETTY_NAME="Ubuntu 24.04.1 LTS"\nID=ubuntu\nVERSION_ID="24.04"', f"{p}sw_vers@@", f"{p}hostname@@",
+                 "build-01", f"{p}machine-id@@", "0123456789abcdef", f"{p}end@@",
+                 *(f"{dsc.TOOL_PREFIX}{t}" for t in ("dpkg", "docker"))]
+        return 0, ("\n".join(lines) + "\n").encode(), b""
+
+
+def discover_payloads() -> dict:
+    """GET /api/discover for this machine (synthetic macOS facts, the fake engine) and for an ssh Linux host."""
+    saved = (dsc._local_os, dsc._local_host, dsc._brew_prefixes, dsc.os, dsc._docker_probe, proc_backend.current_platform)
+
+    class NoFullDiskAccess:                       # the TCC check of the macos candidate, deterministic
+        def __getattr__(self, name):
+            return getattr(os, name)
+
+        def listdir(self, path):
+            raise PermissionError(path)
+
+    try:
+        dsc._local_os = lambda: "macos"
+        dsc._local_host = lambda os_name: {"kind": "local", "target": None, "name": "alice-mbp", "os": "macos",
+                                           "os_version": "15.1", "arch": "arm64"}
+        dsc._brew_prefixes = lambda root=None: ["/opt/homebrew"]
+        dsc.os = NoFullDiskAccess()
+        proc_backend.current_platform = lambda: "darwin"
+        local = ops.discover_host(None, {})
+        engine = json.loads((ENGINE / "containers-json.json").read_text())
+        images = json.loads((ENGINE / "images-json.json").read_text())
+        dsc._docker_probe = lambda o, t: {
+            "state": "ok", "endpoint": "ssh://deploy@build-01.example.internal", "reason": None,
+            "options": ["host=ssh://deploy@build-01.example.internal"],
+            "containers": [{"name": c["Names"][0].lstrip("/"), "image": c["Image"], "state": c["State"]}
+                           for c in engine if c["State"] == "running"],
+            "images": [{"id": i["Id"].removeprefix("sha256:")[:12], "tags": i["RepoTags"]} for i in images if i["RepoTags"]]}
+        remote = ops.discover_host("ssh://deploy@build-01.example.internal",
+                                   {"transport": FakeSSH(), "identity": "~/.ssh/id_ed25519"})
+    finally:
+        (dsc._local_os, dsc._local_host, dsc._brew_prefixes, dsc.os, dsc._docker_probe,
+         proc_backend.current_platform) = saved
+    text = json.dumps({"local": local, "ssh": remote}).replace(str(Path.home()), "/Users/alice")
+    return json.loads(text)
 
 
 def monitor_payloads(tmp: Path, root: Path, db: Path) -> tuple[dict, list]:
@@ -263,6 +381,12 @@ def main() -> None:
         run_job(runner, {"kind": "scan", "collector": "docker-engine", "target": "web,d*", "options": ["all=true"]},
                 status="partial")
         docker = {"contexts": ops.docker_contexts(), "containers": ops.docker_containers(all=True)}
+        run_job(runner, {"kind": "scan", "collector": "docker-engine", "target": "image:nginx:latest"})   # job 5
+        discovered = discover_payloads()
+        by_id = {c["id"]: c for c in discovered["local"]["candidates"]}
+        items = [{**{k: by_id["docker"][k] for k in ("id", "collector", "options")}, "target": "web"},    # narrowed
+                 {k: by_id["docker-images"][k] for k in ("id", "collector", "target", "options")}]
+        run_job(runner, {"kind": "scan", "items": items, "host": None})              # job 6: nginx image reused
         engine.shutdown()
         engine.server_close()
 
@@ -308,6 +432,7 @@ def main() -> None:
                 "collectors": data_api.collectors(),
                 "jobs": [runner.get(j["id"]) for j in runner.list()],
                 "docker": docker,
+                "discover": discovered,
             }
         finally:
             c.close()

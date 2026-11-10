@@ -43,6 +43,7 @@ const SHOTS = [
   ["26-storybook-findings", "_design/storybook/index.html#finding-detail"],
   ["27-scan-docker", "_design/pages/scan-docker.html", 1500],
   ["28-storybook-job-result", "_design/storybook/index.html#job-result"],
+  ["29-scan-host", "_design/pages/scan-host.html", 1500],
 ];
 const TYPES = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json" };
 

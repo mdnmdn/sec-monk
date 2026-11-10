@@ -451,7 +451,7 @@ window.SECMONK_MOCK = {
     ],
     "flags": [],
     "provenance": {
-     "created": "2026-11-10T20:24:29+00:00",
+     "created": "2026-11-10T23:38:10+00:00",
      "sha256": "960e8a69ab7704cd16cb720d1e9e96fa8d2f7a09f1e236193fbd697e7f87d8f3"
     }
    },
@@ -1209,7 +1209,7 @@ window.SECMONK_MOCK = {
    ],
    "flags": [],
    "provenance": {
-    "created": "2026-11-10T20:24:29+00:00",
+    "created": "2026-11-10T23:38:10+00:00",
     "sha256": "960e8a69ab7704cd16cb720d1e9e96fa8d2f7a09f1e236193fbd697e7f87d8f3"
    }
   },
@@ -1234,8 +1234,8 @@ window.SECMONK_MOCK = {
  "overview": {
   "db": "~/.local/share/secmonk/secmonk.db",
   "totals": {
-   "assets": 6,
-   "components": 121,
+   "assets": 8,
+   "components": 133,
    "open_findings": 11,
    "fixable": 11,
    "P1": 1,
@@ -1250,11 +1250,11 @@ window.SECMONK_MOCK = {
     "type": "container",
     "os": "Alpine Linux 3.20.10",
     "platform": null,
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "components": 16,
     "open_findings": 1,
     "name": "web",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1268,11 +1268,11 @@ window.SECMONK_MOCK = {
     "type": "directory",
     "os": "",
     "platform": null,
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "components": 44,
     "open_findings": 1,
     "name": "payments-api",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
     "findings_by_priority": {
      "P1": 1,
      "P2": 0,
@@ -1286,11 +1286,11 @@ window.SECMONK_MOCK = {
     "type": "directory",
     "os": "",
     "platform": null,
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "components": 18,
     "open_findings": 2,
     "name": "web-frontend",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1300,15 +1300,51 @@ window.SECMONK_MOCK = {
     }
    },
    {
+    "id": "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+    "type": "container-image",
+    "os": "Alpine Linux 3.20.10",
+    "platform": "linux/amd64",
+    "last_seen": "2026-11-10T23:38:11+00:00",
+    "components": 6,
+    "open_findings": 0,
+    "name": "postgres:16-alpine",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0
+    }
+   },
+   {
+    "id": "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+    "type": "container-image",
+    "os": "Alpine Linux 3.20.10",
+    "platform": "linux/amd64",
+    "last_seen": "2026-11-10T23:38:11+00:00",
+    "components": 6,
+    "open_findings": 0,
+    "name": "nginx:1.25.3",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0
+    }
+   },
+   {
     "id": "macos:macbook",
     "type": "desktop",
     "os": "macOS 14.5",
     "platform": "darwin/unknown",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "components": 14,
     "open_findings": 2,
     "name": "macbook",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1322,11 +1358,11 @@ window.SECMONK_MOCK = {
     "type": "host-processes",
     "os": "macOS 14.5",
     "platform": "darwin",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "components": 13,
     "open_findings": 4,
     "name": "fixture-mac",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1340,11 +1376,11 @@ window.SECMONK_MOCK = {
     "type": "server",
     "os": "Alpine Linux 3.20.10",
     "platform": null,
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "components": 16,
     "open_findings": 1,
     "name": "alpine-rootfs",
-    "first_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1378,8 +1414,8 @@ window.SECMONK_MOCK = {
      "GHSA-jfh8-c2jp-5v3q"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "Maven",
     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -1406,8 +1442,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-3094"
     ],
     "triage_source": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "Alpine:v3.20",
     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -1434,8 +1470,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-3094"
     ],
     "triage_source": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "Alpine:v3.20",
     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -1462,8 +1498,8 @@ window.SECMONK_MOCK = {
      "GHSA-xvch-5gv4-984h"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "npm",
     "purl": "pkg:npm/minimist@1.2.5"
@@ -1489,8 +1525,8 @@ window.SECMONK_MOCK = {
      "MOCK-2026-0001"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -1517,8 +1553,8 @@ window.SECMONK_MOCK = {
      "GHSA-c2qf-rxjj-qqgw"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "npm",
     "purl": "pkg:npm/semver@7.3.5"
@@ -1544,8 +1580,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-6197"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1571,8 +1607,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-6197"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1598,8 +1634,8 @@ window.SECMONK_MOCK = {
      "GO-2022-1059"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": "Go",
     "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -1625,8 +1661,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-7264"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1635,7 +1671,7 @@ window.SECMONK_MOCK = {
   "sources": [
    {
     "source": "cvelist",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": null,
     "records": 1,
     "status": "ok",
@@ -1643,7 +1679,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "epss",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": "2026-11-06",
     "records": 10,
     "status": "ok",
@@ -1651,7 +1687,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "euvd",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": null,
     "records": 2,
     "status": "ok",
@@ -1659,7 +1695,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "kev",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": "2026.11.06",
     "records": 9,
     "status": "ok",
@@ -1667,7 +1703,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "nvd",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": null,
     "records": 1,
     "status": "ok",
@@ -1675,7 +1711,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "osv",
-    "last_sync": "2026-11-10T20:24:29+00:00",
+    "last_sync": "2026-11-10T23:38:10+00:00",
     "cursor": "2026-11-02T11:17:50.087142138Z",
     "records": 2,
     "status": "ok",
@@ -1688,7 +1724,7 @@ window.SECMONK_MOCK = {
    "affected": 31,
    "kev": 9,
    "epss": 10,
-   "asset": 6,
+   "asset": 8,
    "component": 101,
    "finding": 12
   }
@@ -1699,11 +1735,11 @@ window.SECMONK_MOCK = {
    "type": "container",
    "os": "Alpine Linux 3.20.10",
    "platform": null,
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "components": 16,
    "open_findings": 1,
    "name": "web",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:11+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1717,11 +1753,11 @@ window.SECMONK_MOCK = {
    "type": "directory",
    "os": "",
    "platform": null,
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:10+00:00",
    "components": 44,
    "open_findings": 1,
    "name": "payments-api",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
    "findings_by_priority": {
     "P1": 1,
     "P2": 0,
@@ -1735,11 +1771,11 @@ window.SECMONK_MOCK = {
    "type": "directory",
    "os": "",
    "platform": null,
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "components": 18,
    "open_findings": 2,
    "name": "web-frontend",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1749,15 +1785,51 @@ window.SECMONK_MOCK = {
    }
   },
   {
+   "id": "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+   "type": "container-image",
+   "os": "Alpine Linux 3.20.10",
+   "platform": "linux/amd64",
+   "last_seen": "2026-11-10T23:38:11+00:00",
+   "components": 6,
+   "open_findings": 0,
+   "name": "postgres:16-alpine",
+   "first_seen": "2026-11-10T23:38:11+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 0
+   }
+  },
+  {
+   "id": "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+   "type": "container-image",
+   "os": "Alpine Linux 3.20.10",
+   "platform": "linux/amd64",
+   "last_seen": "2026-11-10T23:38:11+00:00",
+   "components": 6,
+   "open_findings": 0,
+   "name": "nginx:1.25.3",
+   "first_seen": "2026-11-10T23:38:11+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 0
+   }
+  },
+  {
    "id": "macos:macbook",
    "type": "desktop",
    "os": "macOS 14.5",
    "platform": "darwin/unknown",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:10+00:00",
    "components": 14,
    "open_findings": 2,
    "name": "macbook",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1771,11 +1843,11 @@ window.SECMONK_MOCK = {
    "type": "host-processes",
    "os": "macOS 14.5",
    "platform": "darwin",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:10+00:00",
    "components": 13,
    "open_findings": 4,
    "name": "fixture-mac",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1789,11 +1861,11 @@ window.SECMONK_MOCK = {
    "type": "server",
    "os": "Alpine Linux 3.20.10",
    "platform": null,
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "components": 16,
    "open_findings": 1,
    "name": "alpine-rootfs",
-   "first_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:11+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1812,8 +1884,8 @@ window.SECMONK_MOCK = {
     "os_name": "Alpine Linux",
     "os_version": "3.20.10",
     "platform": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "meta": {
      "container_id": "8dfafdbc3a40a1f7c0a2a8e5d4a0b4a3c2f1e0d9c8b7a69584736251403f2e1d",
      "image": "nginx:1.25.3",
@@ -1825,15 +1897,25 @@ window.SECMONK_MOCK = {
      "privileged": false,
      "published_ports": false,
      "user": null,
-     "engine": "unix:/var/run/docker.sock"
+     "engine": "unix:///var/run/docker.sock"
     }
    },
    "scans": [
     {
+     "id": 9,
+     "collector": "docker-engine",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
+     "components": 16,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    },
+    {
      "id": 7,
      "collector": "docker-engine",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
      "components": 16,
      "partial": false,
      "partial_reason": null,
@@ -2169,8 +2251,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-3094"
      ],
      "triage_source": null,
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:11+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Alpine:v3.20",
      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -2207,8 +2289,8 @@ window.SECMONK_MOCK = {
     "os_name": null,
     "os_version": null,
     "platform": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "meta": {
      "path": "/private/srv/payments-api",
      "files_parsed": 5
@@ -2218,8 +2300,8 @@ window.SECMONK_MOCK = {
     {
      "id": 2,
      "collector": "fs",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:10+00:00",
+     "finished_at": "2026-11-10T23:38:10+00:00",
      "components": 44,
      "partial": false,
      "partial_reason": null,
@@ -3088,8 +3170,8 @@ window.SECMONK_MOCK = {
       "GHSA-jfh8-c2jp-5v3q"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Maven",
      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -3126,8 +3208,8 @@ window.SECMONK_MOCK = {
     "os_name": null,
     "os_version": null,
     "platform": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "meta": {
      "path": "/private/srv/web-frontend",
      "files_parsed": 1
@@ -3137,8 +3219,8 @@ window.SECMONK_MOCK = {
     {
      "id": 6,
      "collector": "fs",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
      "components": 18,
      "partial": false,
      "partial_reason": null,
@@ -3147,8 +3229,8 @@ window.SECMONK_MOCK = {
     {
      "id": 3,
      "collector": "fs",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:10+00:00",
+     "finished_at": "2026-11-10T23:38:10+00:00",
      "components": 18,
      "partial": false,
      "partial_reason": null,
@@ -3522,8 +3604,8 @@ window.SECMONK_MOCK = {
       "GHSA-xvch-5gv4-984h"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/minimist@1.2.5"
@@ -3550,8 +3632,8 @@ window.SECMONK_MOCK = {
       "GHSA-c2qf-rxjj-qqgw"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/semver@7.3.5"
@@ -3578,9 +3660,9 @@ window.SECMONK_MOCK = {
       "GHSA-35jh-r3h4-6jhm"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
-     "fixed_at": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:10+00:00",
+     "fixed_at": "2026-11-10T23:38:11+00:00",
      "ecosystem": "npm",
      "purl": "pkg:npm/lodash@4.17.20"
     }
@@ -3608,6 +3690,399 @@ window.SECMONK_MOCK = {
     "patched": 0
    }
   },
+  "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10": {
+   "asset": {
+    "id": "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+    "type": "container-image",
+    "name": "postgres:16-alpine",
+    "os_name": "Alpine Linux",
+    "os_version": "3.20.10",
+    "platform": "linux/amd64",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
+    "meta": {
+     "ref": "alpine:3.20",
+     "archive": "/var/folders/b_/vh501k6j5y37_kj0y8xxq2mm0000gn/T/secmonk-image-62bxj_gk.tar",
+     "digest": "sha256:9ea40adb242d06c20254000fddfefcfde00720bb4a5307c6163f666014b066f5",
+     "layers": 1,
+     "labels": {
+      "org.opencontainers.image.version": "3.20.10",
+      "org.opencontainers.image.title": "postgres:16-alpine"
+     },
+     "created": "2026-04-16T23:53:26Z",
+     "env_names": [
+      "PATH"
+     ],
+     "cmd": [
+      "/bin/sh"
+     ],
+     "source": "docker-engine",
+     "image_id": "sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+     "tags": [
+      "postgres:16-alpine"
+     ],
+     "repo_digests": [
+      "postgres@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+     ],
+     "requested_ref": "sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+     "inventory_version": 1,
+     "engine": "unix:///var/run/docker.sock",
+     "requested_refs": [
+      "postgres:16-alpine"
+     ],
+     "platform": "linux/amd64",
+     "id_verified": true
+    }
+   },
+   "scans": [
+    {
+     "id": 10,
+     "collector": "docker-engine",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
+     "components": 6,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "os",
+     "name": "Alpine Linux",
+     "version": "3.20.10",
+     "ecosystem": null,
+     "vendor": "alpine",
+     "purl": "pkg:generic/alpine@3.20.10",
+     "cpe": null,
+     "path": "etc/os-release",
+     "id": 90,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 91,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout-data",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout-data@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=alpine-baselayout",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 92,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-keys",
+     "version": "2.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-keys@2.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 93,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "apk-tools",
+     "version": "2.14.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/apk-tools@2.14.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 94,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 95,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [],
+   "summary": {
+    "components": 6,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0,
+     "total": 0
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 6,
+    "matches": 0,
+    "findings": 0,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876": {
+   "asset": {
+    "id": "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+    "type": "container-image",
+    "name": "nginx:1.25.3",
+    "os_name": "Alpine Linux",
+    "os_version": "3.20.10",
+    "platform": "linux/amd64",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
+    "meta": {
+     "ref": "alpine:3.20",
+     "archive": "/var/folders/b_/vh501k6j5y37_kj0y8xxq2mm0000gn/T/secmonk-image-n37bqqfb.tar",
+     "digest": "sha256:2fadc3403a7a4f22549e4f0a473b7568aef1c20fa07fb8ad9c0d1cb1ab02896f",
+     "layers": 1,
+     "labels": {
+      "org.opencontainers.image.version": "3.20.10",
+      "org.opencontainers.image.title": "nginx:1.25.3"
+     },
+     "created": "2026-04-16T23:53:26Z",
+     "env_names": [
+      "PATH"
+     ],
+     "cmd": [
+      "/bin/sh"
+     ],
+     "source": "docker-engine",
+     "image_id": "sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+     "tags": [
+      "nginx:1.25.3",
+      "nginx:latest"
+     ],
+     "repo_digests": [
+      "nginx@sha256:10d1f5b58f74683ad34eb29287e07dab1e90f10af243f151bb50aa5dbb4d62ee"
+     ],
+     "requested_ref": "nginx:1.25.3",
+     "inventory_version": 1,
+     "engine": "unix:///var/run/docker.sock",
+     "platform": "linux/amd64",
+     "id_verified": true,
+     "requested_refs": [
+      "nginx:1.25.3"
+     ]
+    }
+   },
+   "scans": [
+    {
+     "id": 8,
+     "collector": "docker-engine",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
+     "components": 6,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "os",
+     "name": "Alpine Linux",
+     "version": "3.20.10",
+     "ecosystem": null,
+     "vendor": "alpine",
+     "purl": "pkg:generic/alpine@3.20.10",
+     "cpe": null,
+     "path": "etc/os-release",
+     "id": 90,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 91,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout-data",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout-data@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=alpine-baselayout",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 92,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-keys",
+     "version": "2.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-keys@2.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 93,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "apk-tools",
+     "version": "2.14.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/apk-tools@2.14.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 94,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 95,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [],
+   "summary": {
+    "components": 6,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0,
+     "total": 0
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 6,
+    "matches": 0,
+    "findings": 0,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
   "macos:macbook": {
    "asset": {
     "id": "macos:macbook",
@@ -3616,16 +4091,16 @@ window.SECMONK_MOCK = {
     "os_name": "macOS",
     "os_version": "14.5",
     "platform": "darwin/unknown",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "meta": {}
    },
    "scans": [
     {
      "id": 4,
      "collector": "macos",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:10+00:00",
+     "finished_at": "2026-11-10T23:38:10+00:00",
      "components": 14,
      "partial": false,
      "partial_reason": null,
@@ -3922,8 +4397,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3949,8 +4424,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3987,8 +4462,8 @@ window.SECMONK_MOCK = {
     "os_name": "macOS",
     "os_version": "14.5",
     "platform": "darwin",
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:10+00:00",
+    "last_seen": "2026-11-10T23:38:10+00:00",
     "meta": {
      "taken_at": "2026-11-07T10:00:00+00:00",
      "process_count": 21,
@@ -4012,8 +4487,8 @@ window.SECMONK_MOCK = {
     {
      "id": 1,
      "collector": "process",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:10+00:00",
+     "finished_at": "2026-11-10T23:38:10+00:00",
      "components": 13,
      "partial": false,
      "partial_reason": null,
@@ -4291,8 +4766,8 @@ window.SECMONK_MOCK = {
       "MOCK-2026-0001"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -4318,8 +4793,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -4345,8 +4820,8 @@ window.SECMONK_MOCK = {
       "GO-2022-1059"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Go",
      "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -4372,8 +4847,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -4410,8 +4885,8 @@ window.SECMONK_MOCK = {
     "os_name": "Alpine Linux",
     "os_version": "3.20.10",
     "platform": null,
-    "first_seen": "2026-11-10T20:24:30+00:00",
-    "last_seen": "2026-11-10T20:24:30+00:00",
+    "first_seen": "2026-11-10T23:38:11+00:00",
+    "last_seen": "2026-11-10T23:38:11+00:00",
     "meta": {
      "path": "/private/srv/alpine-rootfs"
     }
@@ -4420,8 +4895,8 @@ window.SECMONK_MOCK = {
     {
      "id": 5,
      "collector": "rootfs",
-     "started_at": "2026-11-10T20:24:30+00:00",
-     "finished_at": "2026-11-10T20:24:30+00:00",
+     "started_at": "2026-11-10T23:38:11+00:00",
+     "finished_at": "2026-11-10T23:38:11+00:00",
      "components": 16,
      "partial": false,
      "partial_reason": null,
@@ -4757,8 +5232,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-3094"
      ],
      "triage_source": null,
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:11+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Alpine:v3.20",
      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -4884,8 +5359,8 @@ window.SECMONK_MOCK = {
     "GHSA-jfh8-c2jp-5v3q"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "Maven",
    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -4912,8 +5387,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-3094"
    ],
    "triage_source": null,
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:11+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "Alpine:v3.20",
    "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -4940,8 +5415,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-3094"
    ],
    "triage_source": null,
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:11+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "Alpine:v3.20",
    "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -4968,8 +5443,8 @@ window.SECMONK_MOCK = {
     "GHSA-xvch-5gv4-984h"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "npm",
    "purl": "pkg:npm/minimist@1.2.5"
@@ -4995,8 +5470,8 @@ window.SECMONK_MOCK = {
     "MOCK-2026-0001"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -5023,8 +5498,8 @@ window.SECMONK_MOCK = {
     "GHSA-c2qf-rxjj-qqgw"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "npm",
    "purl": "pkg:npm/semver@7.3.5"
@@ -5050,8 +5525,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-6197"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -5077,8 +5552,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-6197"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -5104,8 +5579,8 @@ window.SECMONK_MOCK = {
     "GO-2022-1059"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": "Go",
    "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -5132,9 +5607,9 @@ window.SECMONK_MOCK = {
     "GHSA-35jh-r3h4-6jhm"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
-   "fixed_at": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:10+00:00",
+   "fixed_at": "2026-11-10T23:38:11+00:00",
    "ecosystem": "npm",
    "purl": "pkg:npm/lodash@4.17.20"
   },
@@ -5159,8 +5634,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-7264"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -5186,8 +5661,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-7264"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-10T20:24:30+00:00",
-   "last_seen": "2026-11-10T20:24:30+00:00",
+   "first_seen": "2026-11-10T23:38:10+00:00",
+   "last_seen": "2026-11-10T23:38:11+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -5515,9 +5990,9 @@ window.SECMONK_MOCK = {
       "GHSA-35jh-r3h4-6jhm"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
-     "fixed_at": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:10+00:00",
+     "fixed_at": "2026-11-10T23:38:11+00:00",
      "ecosystem": "npm",
      "purl": "pkg:npm/lodash@4.17.20"
     }
@@ -5952,8 +6427,8 @@ window.SECMONK_MOCK = {
       "GHSA-jfh8-c2jp-5v3q"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Maven",
      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -6980,8 +7455,8 @@ window.SECMONK_MOCK = {
       "GHSA-xvch-5gv4-984h"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/minimist@1.2.5"
@@ -7110,8 +7585,8 @@ window.SECMONK_MOCK = {
       "GHSA-c2qf-rxjj-qqgw"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/semver@7.3.5"
@@ -7193,8 +7668,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -7220,8 +7695,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -7303,8 +7778,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -7330,8 +7805,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -7467,8 +7942,8 @@ window.SECMONK_MOCK = {
       "GO-2022-1059"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": "Go",
      "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -7550,8 +8025,8 @@ window.SECMONK_MOCK = {
       "MOCK-2026-0001"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-10T20:24:30+00:00",
-     "last_seen": "2026-11-10T20:24:30+00:00",
+     "first_seen": "2026-11-10T23:38:10+00:00",
+     "last_seen": "2026-11-10T23:38:11+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -8294,7 +8769,7 @@ window.SECMONK_MOCK = {
    "sources": [
     {
      "source": "cvelist",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": null,
      "records": 1,
      "status": "ok",
@@ -8302,7 +8777,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "epss",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": "2026-11-06",
      "records": 10,
      "status": "ok",
@@ -8310,7 +8785,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "euvd",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": null,
      "records": 2,
      "status": "ok",
@@ -8318,7 +8793,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "kev",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": "2026.11.06",
      "records": 9,
      "status": "ok",
@@ -8326,7 +8801,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "nvd",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": null,
      "records": 1,
      "status": "ok",
@@ -8334,7 +8809,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "osv",
-     "last_sync": "2026-11-10T20:24:29+00:00",
+     "last_sync": "2026-11-10T23:38:10+00:00",
      "cursor": "2026-11-02T11:17:50.087142138Z",
      "records": 2,
      "status": "ok",
@@ -8347,7 +8822,7 @@ window.SECMONK_MOCK = {
     "affected": 31,
     "kev": 9,
     "epss": 10,
-    "asset": 6,
+    "asset": 8,
     "component": 101,
     "finding": 12
    }
@@ -8402,6 +8877,300 @@ window.SECMONK_MOCK = {
  ],
  "jobs": [
   {
+   "id": 6,
+   "kind": "scan",
+   "origin": "ui",
+   "title": "scan host local: docker, docker-images",
+   "params": {
+    "mode": "host",
+    "host": "local",
+    "items": [
+     {
+      "id": "docker",
+      "collector": "docker-engine",
+      "target": "web",
+      "options": [
+       "socket=/var/run/docker.sock"
+      ]
+     },
+     {
+      "id": "docker-images",
+      "collector": "docker-engine",
+      "target": "image:*",
+      "options": [
+       "socket=/var/run/docker.sock"
+      ]
+     }
+    ],
+    "save": true,
+    "min_confidence": 0.5
+   },
+   "started": "2026-11-10T23:38:11+00:00",
+   "finished": "2026-11-10T23:38:11+00:00",
+   "status": "ok",
+   "error": null,
+   "result": {
+    "saved": true,
+    "targets": [
+     {
+      "collector": "docker-engine",
+      "target": "web",
+      "asset": "container:web",
+      "scan_id": 9,
+      "stats": {
+       "components": 16,
+       "matches": 1,
+       "findings": 1,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [
+       {
+        "asset_id": "container:web",
+        "priority": "P3",
+        "vuln_id": "CVE-2024-3094",
+        "component": "xz-libs",
+        "version": "5.6.0-r0",
+        "category": "os-package",
+        "fixed_version": "5.6.1-r2",
+        "severity": "CRITICAL",
+        "cvss_score": 10.0,
+        "epss": null,
+        "kev": false,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 105,
+        "advisory_ids": [
+         "ALPINE-CVE-2024-3094",
+         "CVE-2024-3094"
+        ],
+        "triage_source": null,
+        "first_seen": "2026-11-10T23:38:11+00:00",
+        "last_seen": "2026-11-10T23:38:11+00:00",
+        "fixed_at": null,
+        "ecosystem": "Alpine:v3.20",
+        "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+       }
+      ],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 1,
+       "P4": 0,
+       "kev": 0,
+       "total": 1
+      },
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": []
+     },
+     {
+      "collector": "docker-engine",
+      "target": "image:sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+      "asset": "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+      "scan_id": 8,
+      "stats": {
+       "components": 6,
+       "matches": 0,
+       "findings": 0,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 0,
+       "P4": 0,
+       "kev": 0,
+       "total": 0
+      },
+      "error": null,
+      "reused": true,
+      "reused_scan_id": 8,
+      "tags": [
+       "nginx:1.25.3",
+       "nginx:latest"
+      ],
+      "requested_refs": [
+       "nginx:1.25.3"
+      ]
+     },
+     {
+      "collector": "docker-engine",
+      "target": "image:sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+      "asset": "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+      "scan_id": 10,
+      "stats": {
+       "components": 6,
+       "matches": 0,
+       "findings": 0,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 0,
+       "P4": 0,
+       "kev": 0,
+       "total": 0
+      },
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": [
+       "postgres:16-alpine"
+      ],
+      "requested_refs": [
+       "postgres:16-alpine"
+      ]
+     }
+    ],
+    "stats": {
+     "components": 28,
+     "matches": 1,
+     "findings": 1,
+     "withdrawn": 0,
+     "patched": 0
+    },
+    "counts": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0,
+     "total": 1
+    }
+   },
+   "summary": {
+    "targets": 3,
+    "errors": 0,
+    "components": 28,
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0,
+    "total": 1
+   },
+   "log_lines": 12,
+   "log": [
+    "docker-engine: 1 target(s): web",
+    "collecting with docker-engine on web\u2026",
+    "container:web: 16 components",
+    "matching against the local mirror\u2026",
+    "16 components \u00b7 1 matches \u00b7 1 findings \u00b7 0 withdrawn \u00b7 0 patched",
+    "docker-engine: 2 target(s): image:sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876, image:sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10",
+    "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876: already inventoried (scan 8): reusing it, matching against the current mirror",
+    "6 components \u00b7 0 matches \u00b7 0 findings \u00b7 0 withdrawn \u00b7 0 patched",
+    "collecting with docker-engine on image:sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10\u2026",
+    "image:@sha256:164235a64d245761cb5b3bd154ce55eeeeacefc7e220f4b7e538c61dd5923a10: 6 components",
+    "matching against the local mirror\u2026",
+    "6 components \u00b7 0 matches \u00b7 0 findings \u00b7 0 withdrawn \u00b7 0 patched"
+   ]
+  },
+  {
+   "id": 5,
+   "kind": "scan",
+   "origin": "ui",
+   "title": "scan docker-engine image:nginx:latest",
+   "params": {
+    "collector": "docker-engine",
+    "target": "image:nginx:latest",
+    "options": [],
+    "save": true,
+    "min_confidence": 0.5
+   },
+   "started": "2026-11-10T23:38:11+00:00",
+   "finished": "2026-11-10T23:38:11+00:00",
+   "status": "ok",
+   "error": null,
+   "result": {
+    "saved": true,
+    "targets": [
+     {
+      "collector": "docker-engine",
+      "target": "image:sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+      "asset": "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+      "scan_id": 8,
+      "stats": {
+       "components": 6,
+       "matches": 0,
+       "findings": 0,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 0,
+       "P4": 0,
+       "kev": 0,
+       "total": 0
+      },
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": [
+       "nginx:1.25.3",
+       "nginx:latest"
+      ],
+      "requested_refs": [
+       "nginx:latest"
+      ]
+     }
+    ],
+    "stats": {
+     "components": 6,
+     "matches": 0,
+     "findings": 0,
+     "withdrawn": 0,
+     "patched": 0
+    },
+    "counts": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0,
+     "total": 0
+    }
+   },
+   "summary": {
+    "targets": 1,
+    "errors": 0,
+    "components": 6,
+    "P1": 0,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 0,
+    "total": 0
+   },
+   "log_lines": 5,
+   "log": [
+    "docker-engine: 1 target(s): image:sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876",
+    "collecting with docker-engine on image:sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876\u2026",
+    "image:@sha256:9d1f971448dce8fe7ce44062cd1277f065f02345eef0a949bd8ce73e730fc876: 6 components",
+    "matching against the local mirror\u2026",
+    "6 components \u00b7 0 matches \u00b7 0 findings \u00b7 0 withdrawn \u00b7 0 patched"
+   ]
+  },
+  {
    "id": 4,
    "kind": "scan",
    "origin": "ui",
@@ -8415,14 +9184,15 @@ window.SECMONK_MOCK = {
     "save": true,
     "min_confidence": 0.5
    },
-   "started": "2026-11-10T20:24:30+00:00",
-   "finished": "2026-11-10T20:24:30+00:00",
+   "started": "2026-11-10T23:38:11+00:00",
+   "finished": "2026-11-10T23:38:11+00:00",
    "status": "partial",
    "error": null,
    "result": {
     "saved": true,
     "targets": [
      {
+      "collector": "docker-engine",
       "target": "web",
       "asset": "container:web",
       "scan_id": 7,
@@ -8458,8 +9228,8 @@ window.SECMONK_MOCK = {
          "CVE-2024-3094"
         ],
         "triage_source": null,
-        "first_seen": "2026-11-10T20:24:30+00:00",
-        "last_seen": "2026-11-10T20:24:30+00:00",
+        "first_seen": "2026-11-10T23:38:11+00:00",
+        "last_seen": "2026-11-10T23:38:11+00:00",
         "fixed_at": null,
         "ecosystem": "Alpine:v3.20",
         "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -8473,9 +9243,13 @@ window.SECMONK_MOCK = {
        "kev": 0,
        "total": 1
       },
-      "error": null
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": []
      },
      {
+      "collector": "docker-engine",
       "target": "db",
       "asset": null,
       "scan_id": null,
@@ -8491,7 +9265,10 @@ window.SECMONK_MOCK = {
        "kev": 0,
        "total": 0
       },
-      "error": "RuntimeError: Docker API GET /containers/db/json -> HTTP 404: No such container: db"
+      "error": "RuntimeError: Docker API GET /containers/db/json -> HTTP 404: No such container: db",
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": []
      }
     ],
     "stats": {
@@ -8523,7 +9300,7 @@ window.SECMONK_MOCK = {
    },
    "log_lines": 7,
    "log": [
-    "2 target(s): web, db",
+    "docker-engine: 2 target(s): web, db",
     "collecting with docker-engine on web\u2026",
     "container:web: 16 components",
     "matching against the local mirror\u2026",
@@ -8544,14 +9321,15 @@ window.SECMONK_MOCK = {
     "save": true,
     "min_confidence": 0.5
    },
-   "started": "2026-11-10T20:24:30+00:00",
-   "finished": "2026-11-10T20:24:30+00:00",
+   "started": "2026-11-10T23:38:11+00:00",
+   "finished": "2026-11-10T23:38:11+00:00",
    "status": "ok",
    "error": null,
    "result": {
     "saved": true,
     "targets": [
      {
+      "collector": "fs",
       "target": "/srv/web-frontend",
       "asset": "dir:/private/srv/web-frontend",
       "scan_id": 6,
@@ -8587,8 +9365,8 @@ window.SECMONK_MOCK = {
          "GHSA-xvch-5gv4-984h"
         ],
         "triage_source": "osv",
-        "first_seen": "2026-11-10T20:24:30+00:00",
-        "last_seen": "2026-11-10T20:24:30+00:00",
+        "first_seen": "2026-11-10T23:38:10+00:00",
+        "last_seen": "2026-11-10T23:38:11+00:00",
         "fixed_at": null,
         "ecosystem": "npm",
         "purl": "pkg:npm/minimist@1.2.5"
@@ -8615,8 +9393,8 @@ window.SECMONK_MOCK = {
          "GHSA-c2qf-rxjj-qqgw"
         ],
         "triage_source": "osv",
-        "first_seen": "2026-11-10T20:24:30+00:00",
-        "last_seen": "2026-11-10T20:24:30+00:00",
+        "first_seen": "2026-11-10T23:38:10+00:00",
+        "last_seen": "2026-11-10T23:38:11+00:00",
         "fixed_at": null,
         "ecosystem": "npm",
         "purl": "pkg:npm/semver@7.3.5"
@@ -8630,7 +9408,10 @@ window.SECMONK_MOCK = {
        "kev": 0,
        "total": 2
       },
-      "error": null
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": []
      }
     ],
     "stats": {
@@ -8680,14 +9461,15 @@ window.SECMONK_MOCK = {
     "save": true,
     "min_confidence": 0.5
    },
-   "started": "2026-11-10T20:24:30+00:00",
-   "finished": "2026-11-10T20:24:30+00:00",
+   "started": "2026-11-10T23:38:10+00:00",
+   "finished": "2026-11-10T23:38:11+00:00",
    "status": "ok",
    "error": null,
    "result": {
     "saved": true,
     "targets": [
      {
+      "collector": "rootfs",
       "target": "/srv/alpine-rootfs",
       "asset": "rootfs:/private/srv/alpine-rootfs",
       "scan_id": 5,
@@ -8723,8 +9505,8 @@ window.SECMONK_MOCK = {
          "CVE-2024-3094"
         ],
         "triage_source": null,
-        "first_seen": "2026-11-10T20:24:30+00:00",
-        "last_seen": "2026-11-10T20:24:30+00:00",
+        "first_seen": "2026-11-10T23:38:11+00:00",
+        "last_seen": "2026-11-10T23:38:11+00:00",
         "fixed_at": null,
         "ecosystem": "Alpine:v3.20",
         "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -8738,7 +9520,10 @@ window.SECMONK_MOCK = {
        "kev": 0,
        "total": 1
       },
-      "error": null
+      "error": null,
+      "reused": false,
+      "reused_scan_id": null,
+      "tags": []
      }
     ],
     "stats": {
@@ -8791,8 +9576,8 @@ window.SECMONK_MOCK = {
     "limit": null,
     "path": "/files/kev/known_exploited_vulnerabilities.json"
    },
-   "started": "2026-11-10T20:24:29+00:00",
-   "finished": "2026-11-10T20:24:29+00:00",
+   "started": "2026-11-10T23:38:10+00:00",
+   "finished": "2026-11-10T23:38:10+00:00",
    "status": "ok",
    "error": null,
    "result": {
@@ -8822,7 +9607,7 @@ window.SECMONK_MOCK = {
   "contexts": [
    {
     "name": "default",
-    "host": "unix:/var/run/docker.sock",
+    "host": "unix:///var/run/docker.sock",
     "description": "Local engine (well-known socket)",
     "current": true
    },
@@ -8867,6 +9652,249 @@ window.SECMONK_MOCK = {
     }
    ],
    "engine": "local"
+  }
+ },
+ "discover": {
+  "local": {
+   "host": {
+    "kind": "local",
+    "target": null,
+    "name": "alice-mbp",
+    "os": "macos",
+    "os_version": "15.1",
+    "arch": "arm64"
+   },
+   "candidates": [
+    {
+     "id": "macos",
+     "collector": "macos",
+     "target": null,
+     "options": [],
+     "label": "macOS applications",
+     "description": "Apps (.app bundles), pkgutil receipts, Homebrew formulae and casks, macOS version",
+     "available": true,
+     "reason": "without Full Disk Access some apps and receipts are skipped (they are listed as warnings)",
+     "selected": true,
+     "details": {}
+    },
+    {
+     "id": "homebrew",
+     "collector": "homebrew",
+     "target": null,
+     "options": [],
+     "label": "Homebrew",
+     "description": "Homebrew formulae and casks in /opt/homebrew as a separate asset",
+     "available": true,
+     "reason": "already part of the macos scan; select only for a separate Homebrew asset",
+     "selected": false,
+     "details": {
+      "prefixes": [
+       "/opt/homebrew"
+      ]
+     }
+    },
+    {
+     "id": "process",
+     "collector": "process",
+     "target": null,
+     "options": [],
+     "label": "Running processes",
+     "description": "Running processes: how each was launched, the software behind it, its version",
+     "available": true,
+     "reason": null,
+     "selected": true,
+     "details": {
+      "platform": "darwin"
+     }
+    },
+    {
+     "id": "fs-home",
+     "collector": "fs",
+     "target": "/Users/alice",
+     "options": [
+      "binaries=false"
+     ],
+     "label": "Home folder dependencies",
+     "description": "Lockfiles, manifests and installed language packages under the home folder",
+     "available": true,
+     "reason": "walks the whole home folder (no exclude option): can take minutes",
+     "selected": false,
+     "details": {
+      "path": "/Users/alice"
+     }
+    },
+    {
+     "id": "docker",
+     "collector": "docker-engine",
+     "target": "*",
+     "options": [
+      "socket=/var/run/docker.sock"
+     ],
+     "label": "Docker containers",
+     "description": "Running containers of the Docker engine on this machine (2 running)",
+     "available": true,
+     "reason": null,
+     "selected": true,
+     "details": {
+      "engine": "unix:///var/run/docker.sock",
+      "containers": [
+       {
+        "name": "web",
+        "image": "nginx:1.25.3",
+        "state": "running"
+       },
+       {
+        "name": "db",
+        "image": "postgres:16-alpine",
+        "state": "running"
+       }
+      ]
+     }
+    },
+    {
+     "id": "docker-images",
+     "collector": "docker-engine",
+     "target": "image:*",
+     "options": [
+      "socket=/var/run/docker.sock"
+     ],
+     "label": "Docker images",
+     "description": "Tagged images of the Docker engine on this machine: 2 unique (3 tags), each scanned once per image Id",
+     "available": true,
+     "reason": null,
+     "selected": false,
+     "details": {
+      "tagged_images": 3,
+      "unique_ids": 2,
+      "images": [
+       {
+        "id": "9d1f971448dc",
+        "tags": [
+         "nginx:1.25.3",
+         "nginx:latest"
+        ]
+       },
+       {
+        "id": "164235a64d24",
+        "tags": [
+         "postgres:16-alpine"
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "warnings": []
+  },
+  "ssh": {
+   "host": {
+    "kind": "ssh",
+    "target": "deploy@build-01.example.internal",
+    "name": "build-01",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.1 LTS",
+    "arch": "x86_64"
+   },
+   "candidates": [
+    {
+     "id": "ssh",
+     "collector": "ssh",
+     "target": "deploy@build-01.example.internal",
+     "options": [
+      "identity=~/.ssh/id_ed25519"
+     ],
+     "label": "Remote host software",
+     "description": "OS packages (dpkg), language packages of the remote host, read-only over ssh",
+     "available": true,
+     "reason": null,
+     "selected": true,
+     "details": {
+      "package_managers": [
+       "dpkg"
+      ],
+      "brew_prefixes": [],
+      "tools": [
+       "dpkg",
+       "docker"
+      ]
+     }
+    },
+    {
+     "id": "docker",
+     "collector": "docker-engine",
+     "target": "*",
+     "options": [
+      "host=ssh://deploy@build-01.example.internal",
+      "identity=~/.ssh/id_ed25519"
+     ],
+     "label": "Docker containers",
+     "description": "Running containers of the Docker engine on deploy@build-01.example.internal (2 running)",
+     "available": true,
+     "reason": null,
+     "selected": true,
+     "details": {
+      "engine": "ssh://deploy@build-01.example.internal",
+      "containers": [
+       {
+        "name": "web",
+        "image": "nginx:1.25.3",
+        "state": "running"
+       },
+       {
+        "name": "db",
+        "image": "postgres:16-alpine",
+        "state": "running"
+       }
+      ]
+     }
+    },
+    {
+     "id": "docker-images",
+     "collector": "docker-engine",
+     "target": "image:*",
+     "options": [
+      "host=ssh://deploy@build-01.example.internal",
+      "identity=~/.ssh/id_ed25519"
+     ],
+     "label": "Docker images",
+     "description": "Tagged images of the Docker engine on deploy@build-01.example.internal: 2 unique (3 tags), each scanned once per image Id",
+     "available": true,
+     "reason": null,
+     "selected": false,
+     "details": {
+      "tagged_images": 3,
+      "unique_ids": 2,
+      "images": [
+       {
+        "id": "a6bd71f48f68",
+        "tags": [
+         "nginx:1.25.3",
+         "nginx:latest"
+        ]
+       },
+       {
+        "id": "0123456789ab",
+        "tags": [
+         "postgres:16-alpine"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "process",
+     "collector": "process",
+     "target": null,
+     "options": [],
+     "label": "Running processes",
+     "description": "Running processes and how they were launched",
+     "available": false,
+     "reason": "processes are only collected locally",
+     "selected": false,
+     "details": {}
+    }
+   ],
+   "warnings": []
   }
  }
 };
