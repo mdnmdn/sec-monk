@@ -10,7 +10,7 @@ Architecture and API: [`_docs/tech/web-ui.md`](../_docs/tech/web-ui.md). Stack d
 | [`storybook/index.html`](storybook/index.html) | Every shared component and view pattern, with variants and the template to copy (`stories.js`). |
 | [`pages/*.html`](pages/) | Sample pages: the real app (`secmonk-views.js`) mounted on mock data at a given route. |
 | [`mock/data.js`](mock/data.js) | Mock payloads, **generated** by `uv run python scripts/design_mock.py` from the test fixtures (do not edit). |
-| `assets/design-boot.js` | Mounts the app with `MockSource` for the sample pages. |
+| `assets/design-boot.js` | Mounts the app with `MockSource` for the sample pages (`<body data-route data-watch data-click>`: route, mock watch, one click after render, e.g. the container preview of `scan-docker.html`). |
 | `storybook/storybook.{js,css}` | The storybook frame only (navigation, canvas). |
 
 ## One component library, no copies

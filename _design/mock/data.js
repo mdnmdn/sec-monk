@@ -97,6 +97,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -122,6 +123,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -156,6 +158,7 @@ window.SECMONK_MOCK = {
     ],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "c900c24d5c057d499b1fbc5636b133eec727760dcb2270dae158287164fe0e10"
     }
    },
@@ -181,6 +184,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -206,6 +210,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -290,6 +295,7 @@ window.SECMONK_MOCK = {
      "unidentified"
     ],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "70c11d97725b2248e523d3ea4b03ae5cbbb43aaaec260ff25fdfc0275bc377b6"
     }
    },
@@ -315,6 +321,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -340,6 +347,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -365,6 +373,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -407,6 +416,7 @@ window.SECMONK_MOCK = {
     ],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -441,6 +451,7 @@ window.SECMONK_MOCK = {
     ],
     "flags": [],
     "provenance": {
+     "created": "2026-11-10T20:24:29+00:00",
      "sha256": "960e8a69ab7704cd16cb720d1e9e96fa8d2f7a09f1e236193fbd697e7f87d8f3"
     }
    },
@@ -466,6 +477,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -491,6 +503,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -516,6 +529,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -541,6 +555,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -594,6 +609,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -619,6 +635,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    },
@@ -644,6 +661,7 @@ window.SECMONK_MOCK = {
     "findings_detail": [],
     "flags": [],
     "provenance": {
+     "created": "2026-11-08T15:03:47+00:00",
      "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
     }
    }
@@ -1156,6 +1174,7 @@ window.SECMONK_MOCK = {
     "unidentified"
    ],
    "provenance": {
+    "created": "2026-11-08T15:03:47+00:00",
     "sha256": "fe7a42d3c0546a5fb621923937404b321b292e7fe3e7c8b3835b054b0e92eea2"
    }
   },
@@ -1190,6 +1209,7 @@ window.SECMONK_MOCK = {
    ],
    "flags": [],
    "provenance": {
+    "created": "2026-11-10T20:24:29+00:00",
     "sha256": "960e8a69ab7704cd16cb720d1e9e96fa8d2f7a09f1e236193fbd697e7f87d8f3"
    }
   },
@@ -1214,27 +1234,45 @@ window.SECMONK_MOCK = {
  "overview": {
   "db": "~/.local/share/secmonk/secmonk.db",
   "totals": {
-   "assets": 5,
-   "components": 105,
-   "open_findings": 10,
-   "fixable": 10,
+   "assets": 6,
+   "components": 121,
+   "open_findings": 11,
+   "fixable": 11,
    "P1": 1,
    "P2": 0,
-   "P3": 7,
+   "P3": 8,
    "P4": 2,
    "kev": 1
   },
   "assets": [
    {
-    "id": "dir:/srv/payments-api",
+    "id": "container:web",
+    "type": "container",
+    "os": "Alpine Linux 3.20.10",
+    "platform": null,
+    "last_seen": "2026-11-10T20:24:30+00:00",
+    "components": 16,
+    "open_findings": 1,
+    "name": "web",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "findings_by_priority": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0
+    }
+   },
+   {
+    "id": "dir:/private/srv/payments-api",
     "type": "directory",
     "os": "",
     "platform": null,
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "components": 44,
     "open_findings": 1,
     "name": "payments-api",
-    "first_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
     "findings_by_priority": {
      "P1": 1,
      "P2": 0,
@@ -1244,15 +1282,15 @@ window.SECMONK_MOCK = {
     }
    },
    {
-    "id": "dir:/srv/web-frontend",
+    "id": "dir:/private/srv/web-frontend",
     "type": "directory",
     "os": "",
     "platform": null,
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "components": 18,
     "open_findings": 2,
     "name": "web-frontend",
-    "first_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1266,11 +1304,11 @@ window.SECMONK_MOCK = {
     "type": "desktop",
     "os": "macOS 14.5",
     "platform": "darwin/unknown",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "components": 14,
     "open_findings": 2,
     "name": "macbook",
-    "first_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1284,11 +1322,11 @@ window.SECMONK_MOCK = {
     "type": "host-processes",
     "os": "macOS 14.5",
     "platform": "darwin",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "components": 13,
     "open_findings": 4,
     "name": "fixture-mac",
-    "first_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1298,15 +1336,15 @@ window.SECMONK_MOCK = {
     }
    },
    {
-    "id": "rootfs:/srv/alpine-rootfs",
+    "id": "rootfs:/private/srv/alpine-rootfs",
     "type": "server",
     "os": "Alpine Linux 3.20.10",
     "platform": null,
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "components": 16,
     "open_findings": 1,
     "name": "alpine-rootfs",
-    "first_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
     "findings_by_priority": {
      "P1": 0,
      "P2": 0,
@@ -1318,7 +1356,7 @@ window.SECMONK_MOCK = {
   ],
   "top_findings": [
    {
-    "asset_id": "dir:/srv/payments-api",
+    "asset_id": "dir:/private/srv/payments-api",
     "priority": "P1",
     "vuln_id": "CVE-2021-44228",
     "component": "org.apache.logging.log4j:log4j-core",
@@ -1340,14 +1378,14 @@ window.SECMONK_MOCK = {
      "GHSA-jfh8-c2jp-5v3q"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": "Maven",
     "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
    },
    {
-    "asset_id": "rootfs:/srv/alpine-rootfs",
+    "asset_id": "rootfs:/private/srv/alpine-rootfs",
     "priority": "P3",
     "vuln_id": "CVE-2024-3094",
     "component": "xz-libs",
@@ -1362,20 +1400,48 @@ window.SECMONK_MOCK = {
     "matched_by": "osv-package",
     "confidence": 1.0,
     "status": "open",
-    "component_id": 91,
+    "component_id": 105,
     "advisory_ids": [
      "ALPINE-CVE-2024-3094",
      "CVE-2024-3094"
     ],
     "triage_source": null,
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": "Alpine:v3.20",
     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
    },
    {
-    "asset_id": "dir:/srv/web-frontend",
+    "asset_id": "container:web",
+    "priority": "P3",
+    "vuln_id": "CVE-2024-3094",
+    "component": "xz-libs",
+    "version": "5.6.0-r0",
+    "category": "os-package",
+    "fixed_version": "5.6.1-r2",
+    "severity": "CRITICAL",
+    "cvss_score": 10.0,
+    "epss": null,
+    "kev": false,
+    "triage": null,
+    "matched_by": "osv-package",
+    "confidence": 1.0,
+    "status": "open",
+    "component_id": 105,
+    "advisory_ids": [
+     "ALPINE-CVE-2024-3094",
+     "CVE-2024-3094"
+    ],
+    "triage_source": null,
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
+    "fixed_at": null,
+    "ecosystem": "Alpine:v3.20",
+    "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+   },
+   {
+    "asset_id": "dir:/private/srv/web-frontend",
     "priority": "P3",
     "vuln_id": "CVE-2021-44906",
     "component": "minimist",
@@ -1396,8 +1462,8 @@ window.SECMONK_MOCK = {
      "GHSA-xvch-5gv4-984h"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": "npm",
     "purl": "pkg:npm/minimist@1.2.5"
@@ -1423,14 +1489,14 @@ window.SECMONK_MOCK = {
      "MOCK-2026-0001"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
    },
    {
-    "asset_id": "dir:/srv/web-frontend",
+    "asset_id": "dir:/private/srv/web-frontend",
     "priority": "P3",
     "vuln_id": "CVE-2022-25883",
     "component": "semver",
@@ -1451,8 +1517,8 @@ window.SECMONK_MOCK = {
      "GHSA-c2qf-rxjj-qqgw"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": "npm",
     "purl": "pkg:npm/semver@7.3.5"
@@ -1478,8 +1544,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-6197"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1505,8 +1571,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-6197"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1532,8 +1598,8 @@ window.SECMONK_MOCK = {
      "GO-2022-1059"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": "Go",
     "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -1559,35 +1625,8 @@ window.SECMONK_MOCK = {
      "CVE-2024-7264"
     ],
     "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
-    "fixed_at": null,
-    "ecosystem": null,
-    "purl": "pkg:brew/curl@8.7.1"
-   },
-   {
-    "asset_id": "macos:macbook",
-    "priority": "P4",
-    "vuln_id": "CVE-2024-7264",
-    "component": "curl",
-    "version": "8.7.1",
-    "category": "package",
-    "fixed_version": "8.9.1",
-    "severity": "MEDIUM",
-    "cvss_score": 6.5,
-    "epss": null,
-    "kev": false,
-    "triage": null,
-    "matched_by": "cve-product",
-    "confidence": 0.85,
-    "status": "open",
-    "component_id": 8,
-    "advisory_ids": [
-     "CVE-2024-7264"
-    ],
-    "triage_source": "osv",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:36+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "fixed_at": null,
     "ecosystem": null,
     "purl": "pkg:brew/curl@8.7.1"
@@ -1596,7 +1635,7 @@ window.SECMONK_MOCK = {
   "sources": [
    {
     "source": "cvelist",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": null,
     "records": 1,
     "status": "ok",
@@ -1604,7 +1643,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "epss",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": "2026-11-06",
     "records": 10,
     "status": "ok",
@@ -1612,7 +1651,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "euvd",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": null,
     "records": 2,
     "status": "ok",
@@ -1620,7 +1659,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "kev",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": "2026.11.06",
     "records": 9,
     "status": "ok",
@@ -1628,7 +1667,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "nvd",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": null,
     "records": 1,
     "status": "ok",
@@ -1636,7 +1675,7 @@ window.SECMONK_MOCK = {
    },
    {
     "source": "osv",
-    "last_sync": "2026-11-07T16:22:35+00:00",
+    "last_sync": "2026-11-10T20:24:29+00:00",
     "cursor": "2026-11-02T11:17:50.087142138Z",
     "records": 2,
     "status": "ok",
@@ -1649,22 +1688,40 @@ window.SECMONK_MOCK = {
    "affected": 31,
    "kev": 9,
    "epss": 10,
-   "asset": 5,
+   "asset": 6,
    "component": 101,
-   "finding": 11
+   "finding": 12
   }
  },
  "assets": [
   {
-   "id": "dir:/srv/payments-api",
+   "id": "container:web",
+   "type": "container",
+   "os": "Alpine Linux 3.20.10",
+   "platform": null,
+   "last_seen": "2026-11-10T20:24:30+00:00",
+   "components": 16,
+   "open_findings": 1,
+   "name": "web",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "findings_by_priority": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0
+   }
+  },
+  {
+   "id": "dir:/private/srv/payments-api",
    "type": "directory",
    "os": "",
    "platform": null,
-   "last_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "components": 44,
    "open_findings": 1,
    "name": "payments-api",
-   "first_seen": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
    "findings_by_priority": {
     "P1": 1,
     "P2": 0,
@@ -1674,15 +1731,15 @@ window.SECMONK_MOCK = {
    }
   },
   {
-   "id": "dir:/srv/web-frontend",
+   "id": "dir:/private/srv/web-frontend",
    "type": "directory",
    "os": "",
    "platform": null,
-   "last_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "components": 18,
    "open_findings": 2,
    "name": "web-frontend",
-   "first_seen": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1696,11 +1753,11 @@ window.SECMONK_MOCK = {
    "type": "desktop",
    "os": "macOS 14.5",
    "platform": "darwin/unknown",
-   "last_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "components": 14,
    "open_findings": 2,
    "name": "macbook",
-   "first_seen": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1714,11 +1771,11 @@ window.SECMONK_MOCK = {
    "type": "host-processes",
    "os": "macOS 14.5",
    "platform": "darwin",
-   "last_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "components": 13,
    "open_findings": 4,
    "name": "fixture-mac",
-   "first_seen": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1728,15 +1785,15 @@ window.SECMONK_MOCK = {
    }
   },
   {
-   "id": "rootfs:/srv/alpine-rootfs",
+   "id": "rootfs:/private/srv/alpine-rootfs",
    "type": "server",
    "os": "Alpine Linux 3.20.10",
    "platform": null,
-   "last_seen": "2026-11-07T16:22:35+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "components": 16,
    "open_findings": 1,
    "name": "alpine-rootfs",
-   "first_seen": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
    "findings_by_priority": {
     "P1": 0,
     "P2": 0,
@@ -1747,18 +1804,413 @@ window.SECMONK_MOCK = {
   }
  ],
  "asset_details": {
-  "dir:/srv/payments-api": {
+  "container:web": {
    "asset": {
-    "id": "dir:/srv/payments-api",
+    "id": "container:web",
+    "type": "container",
+    "name": "web",
+    "os_name": "Alpine Linux",
+    "os_version": "3.20.10",
+    "platform": null,
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
+    "meta": {
+     "container_id": "8dfafdbc3a40a1f7c0a2a8e5d4a0b4a3c2f1e0d9c8b7a69584736251403f2e1d",
+     "image": "nginx:1.25.3",
+     "image_id": "sha256:a6bd71f48f6839d9faae1f29d3babef831e76bc213107682c5cc80f0cbb30866",
+     "labels": {
+      "com.docker.compose.project": "shop"
+     },
+     "state": "running",
+     "privileged": false,
+     "published_ports": false,
+     "user": null,
+     "engine": "unix:/var/run/docker.sock"
+    }
+   },
+   "scans": [
+    {
+     "id": 7,
+     "collector": "docker-engine",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
+     "components": 16,
+     "partial": false,
+     "partial_reason": null,
+     "warnings": []
+    }
+   ],
+   "components": [
+    {
+     "category": "os",
+     "name": "Alpine Linux",
+     "version": "3.20.10",
+     "ecosystem": null,
+     "vendor": "alpine",
+     "purl": "pkg:generic/alpine@3.20.10",
+     "cpe": null,
+     "path": "etc/os-release",
+     "id": 90,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 91,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-baselayout-data",
+     "version": "3.6.5-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-baselayout-data@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=alpine-baselayout",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 92,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "alpine-keys",
+     "version": "2.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/alpine-keys@2.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 93,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "apk-tools",
+     "version": "2.14.4-r1",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/apk-tools@2.14.4-r1?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 94,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 95,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "busybox-binsh",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/busybox-binsh@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 96,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "ca-certificates-bundle",
+     "version": "20260413-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/ca-certificates-bundle@20260413-r0?arch=x86_64&distro=alpine-3.20.10&upstream=ca-certificates",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 97,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "libcrypto3",
+     "version": "3.3.7-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/libcrypto3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 98,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "libssl3",
+     "version": "3.3.7-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/libssl3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 99,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "musl",
+     "version": "1.2.5-r3",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/musl@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 100,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "musl-utils",
+     "version": "1.2.5-r3",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/musl-utils@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10&upstream=musl",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 101,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "scanelf",
+     "version": "1.3.7-r2",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/scanelf@1.3.7-r2?arch=x86_64&distro=alpine-3.20.10&upstream=pax-utils",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 102,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "ssl_client",
+     "version": "1.36.1-r31",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/ssl_client@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 103,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "xz-libs",
+     "version": "5.6.0-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 105,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+     }
+    },
+    {
+     "category": "os-package",
+     "name": "zlib",
+     "version": "1.3.2-r0",
+     "ecosystem": "Alpine:v3.20",
+     "vendor": "alpine",
+     "purl": "pkg:apk/alpine/zlib@1.3.2-r0?arch=x86_64&distro=alpine-3.20.10",
+     "cpe": null,
+     "path": "lib/apk/db/installed",
+     "id": 104,
+     "findings": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 0,
+      "total": 0
+     }
+    }
+   ],
+   "findings": [
+    {
+     "asset_id": "container:web",
+     "priority": "P3",
+     "vuln_id": "CVE-2024-3094",
+     "component": "xz-libs",
+     "version": "5.6.0-r0",
+     "category": "os-package",
+     "fixed_version": "5.6.1-r2",
+     "severity": "CRITICAL",
+     "cvss_score": 10.0,
+     "epss": null,
+     "kev": false,
+     "triage": null,
+     "matched_by": "osv-package",
+     "confidence": 1.0,
+     "status": "open",
+     "component_id": 105,
+     "advisory_ids": [
+      "ALPINE-CVE-2024-3094",
+      "CVE-2024-3094"
+     ],
+     "triage_source": null,
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
+     "fixed_at": null,
+     "ecosystem": "Alpine:v3.20",
+     "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+    }
+   ],
+   "summary": {
+    "components": 16,
+    "open": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0,
+     "total": 1
+    },
+    "closed": 0,
+    "limit_reached": false
+   },
+   "partial": false,
+   "warnings": [],
+   "match_stats": {
+    "components": 16,
+    "matches": 1,
+    "findings": 1,
+    "withdrawn": 0,
+    "patched": 0
+   }
+  },
+  "dir:/private/srv/payments-api": {
+   "asset": {
+    "id": "dir:/private/srv/payments-api",
     "type": "directory",
     "name": "payments-api",
     "os_name": null,
     "os_version": null,
     "platform": null,
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "meta": {
-     "path": "/srv/payments-api",
+     "path": "/private/srv/payments-api",
      "files_parsed": 5
     }
    },
@@ -1766,8 +2218,8 @@ window.SECMONK_MOCK = {
     {
      "id": 2,
      "collector": "fs",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 44,
      "partial": false,
      "partial_reason": null,
@@ -2614,7 +3066,7 @@ window.SECMONK_MOCK = {
    ],
    "findings": [
     {
-     "asset_id": "dir:/srv/payments-api",
+     "asset_id": "dir:/private/srv/payments-api",
      "priority": "P1",
      "vuln_id": "CVE-2021-44228",
      "component": "org.apache.logging.log4j:log4j-core",
@@ -2636,8 +3088,8 @@ window.SECMONK_MOCK = {
       "GHSA-jfh8-c2jp-5v3q"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "Maven",
      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -2666,18 +3118,18 @@ window.SECMONK_MOCK = {
     "patched": 0
    }
   },
-  "dir:/srv/web-frontend": {
+  "dir:/private/srv/web-frontend": {
    "asset": {
-    "id": "dir:/srv/web-frontend",
+    "id": "dir:/private/srv/web-frontend",
     "type": "directory",
     "name": "web-frontend",
     "os_name": null,
     "os_version": null,
     "platform": null,
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "meta": {
-     "path": "/srv/web-frontend",
+     "path": "/private/srv/web-frontend",
      "files_parsed": 1
     }
    },
@@ -2685,8 +3137,8 @@ window.SECMONK_MOCK = {
     {
      "id": 6,
      "collector": "fs",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 18,
      "partial": false,
      "partial_reason": null,
@@ -2695,8 +3147,8 @@ window.SECMONK_MOCK = {
     {
      "id": 3,
      "collector": "fs",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 18,
      "partial": false,
      "partial_reason": null,
@@ -3049,7 +3501,7 @@ window.SECMONK_MOCK = {
    ],
    "findings": [
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2021-44906",
      "component": "minimist",
@@ -3070,14 +3522,14 @@ window.SECMONK_MOCK = {
       "GHSA-xvch-5gv4-984h"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/minimist@1.2.5"
     },
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2022-25883",
      "component": "semver",
@@ -3098,14 +3550,14 @@ window.SECMONK_MOCK = {
       "GHSA-c2qf-rxjj-qqgw"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/semver@7.3.5"
     },
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2021-23337",
      "component": "lodash",
@@ -3126,9 +3578,9 @@ window.SECMONK_MOCK = {
       "GHSA-35jh-r3h4-6jhm"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:35+00:00",
-     "fixed_at": "2026-11-07T16:22:35+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
+     "fixed_at": "2026-11-10T20:24:30+00:00",
      "ecosystem": "npm",
      "purl": "pkg:npm/lodash@4.17.20"
     }
@@ -3164,16 +3616,16 @@ window.SECMONK_MOCK = {
     "os_name": "macOS",
     "os_version": "14.5",
     "platform": "darwin/unknown",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "meta": {}
    },
    "scans": [
     {
-     "id": 5,
+     "id": 4,
      "collector": "macos",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 14,
      "partial": false,
      "partial_reason": null,
@@ -3190,7 +3642,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/apple/Disk%20Utility@22.6?bundle_id=com.apple.DiskUtility",
      "cpe": null,
      "path": "/Applications/Utilities/Disk Utility.app",
-     "id": 97,
+     "id": 81,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3209,7 +3661,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/mozilla/Firefox@127.0.2?bundle_id=org.mozilla.firefox",
      "cpe": "cpe:2.3:a:mozilla:firefox:127.0.2:*:*:*:*:*:*:*",
      "path": "/Applications/Firefox.app",
-     "id": 93,
+     "id": 77,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3266,7 +3718,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/example/Something@2.1?bundle_id=com.example.something",
      "cpe": null,
      "path": "/Applications/Utilities/Something.app",
-     "id": 98,
+     "id": 82,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3285,7 +3737,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/microsoft/Visual%20Studio%20Code@1.90.0?bundle_id=com.microsoft.VSCode",
      "cpe": "cpe:2.3:a:microsoft:visual_studio_code:1.90.0:*:*:*:*:*:*:*",
      "path": "/Applications/Visual Studio Code.app",
-     "id": 99,
+     "id": 83,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3323,7 +3775,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/com.apple.pkg.CLTools_Executables@15.3.0.0.1.1708646388",
      "cpe": null,
      "path": "/var/db/receipts/com.apple.pkg.CLTools_Executables.plist",
-     "id": 104,
+     "id": 88,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3342,7 +3794,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/com.example.pkg@1.4.2",
      "cpe": null,
      "path": "/var/db/receipts/com.example.pkg.plist",
-     "id": 105,
+     "id": 89,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3380,7 +3832,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:brew/openssl%403@3.3.1",
      "cpe": "cpe:2.3:a:openssl:openssl:3.3.1:*:*:*:*:*:*:*",
      "path": "/opt/homebrew/Cellar/openssl@3/3.3.1",
-     "id": 103,
+     "id": 87,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3418,7 +3870,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:npm/electron@29.4.0",
      "cpe": "cpe:2.3:a:electronjs:electron:29.4.0:*:*:*:*:*:*:*",
      "path": "/Applications/Visual Studio Code.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist",
-     "id": 100,
+     "id": 84,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3437,7 +3889,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/apple/Safari@17.5?bundle_id=com.apple.Safari",
      "cpe": "cpe:2.3:a:apple:safari:17.5:*:*:*:*:*:*:*",
      "path": "/System/Applications/Safari.app",
-     "id": 101,
+     "id": 85,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -3470,8 +3922,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3497,8 +3949,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3535,8 +3987,8 @@ window.SECMONK_MOCK = {
     "os_name": "macOS",
     "os_version": "14.5",
     "platform": "darwin",
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "meta": {
      "taken_at": "2026-11-07T10:00:00+00:00",
      "process_count": 21,
@@ -3560,8 +4012,8 @@ window.SECMONK_MOCK = {
     {
      "id": 1,
      "collector": "process",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 13,
      "partial": false,
      "partial_reason": null,
@@ -3839,8 +4291,8 @@ window.SECMONK_MOCK = {
       "MOCK-2026-0001"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -3866,8 +4318,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3893,8 +4345,8 @@ window.SECMONK_MOCK = {
       "GO-2022-1059"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "Go",
      "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -3920,8 +4372,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -3950,26 +4402,26 @@ window.SECMONK_MOCK = {
     "patched": 0
    }
   },
-  "rootfs:/srv/alpine-rootfs": {
+  "rootfs:/private/srv/alpine-rootfs": {
    "asset": {
-    "id": "rootfs:/srv/alpine-rootfs",
+    "id": "rootfs:/private/srv/alpine-rootfs",
     "type": "server",
     "name": "alpine-rootfs",
     "os_name": "Alpine Linux",
     "os_version": "3.20.10",
     "platform": null,
-    "first_seen": "2026-11-07T16:22:35+00:00",
-    "last_seen": "2026-11-07T16:22:35+00:00",
+    "first_seen": "2026-11-10T20:24:30+00:00",
+    "last_seen": "2026-11-10T20:24:30+00:00",
     "meta": {
-     "path": "/srv/alpine-rootfs"
+     "path": "/private/srv/alpine-rootfs"
     }
    },
    "scans": [
     {
-     "id": 4,
+     "id": 5,
      "collector": "rootfs",
-     "started_at": "2026-11-07T16:22:35+00:00",
-     "finished_at": "2026-11-07T16:22:35+00:00",
+     "started_at": "2026-11-10T20:24:30+00:00",
+     "finished_at": "2026-11-10T20:24:30+00:00",
      "components": 16,
      "partial": false,
      "partial_reason": null,
@@ -3986,7 +4438,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:generic/alpine@3.20.10",
      "cpe": null,
      "path": "etc/os-release",
-     "id": 76,
+     "id": 90,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4005,7 +4457,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/alpine-baselayout@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 77,
+     "id": 91,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4024,7 +4476,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/alpine-baselayout-data@3.6.5-r0?arch=x86_64&distro=alpine-3.20.10&upstream=alpine-baselayout",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 78,
+     "id": 92,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4043,7 +4495,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/alpine-keys@2.4-r1?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 79,
+     "id": 93,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4062,7 +4514,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/apk-tools@2.14.4-r1?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 80,
+     "id": 94,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4081,7 +4533,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/busybox@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 81,
+     "id": 95,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4100,7 +4552,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/busybox-binsh@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 82,
+     "id": 96,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4119,7 +4571,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/ca-certificates-bundle@20260413-r0?arch=x86_64&distro=alpine-3.20.10&upstream=ca-certificates",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 83,
+     "id": 97,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4138,7 +4590,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/libcrypto3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 84,
+     "id": 98,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4157,7 +4609,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/libssl3@3.3.7-r0?arch=x86_64&distro=alpine-3.20.10&upstream=openssl",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 85,
+     "id": 99,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4176,7 +4628,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/musl@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 86,
+     "id": 100,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4195,7 +4647,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/musl-utils@1.2.5-r3?arch=x86_64&distro=alpine-3.20.10&upstream=musl",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 87,
+     "id": 101,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4214,7 +4666,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/scanelf@1.3.7-r2?arch=x86_64&distro=alpine-3.20.10&upstream=pax-utils",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 88,
+     "id": 102,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4233,7 +4685,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/ssl_client@1.36.1-r31?arch=x86_64&distro=alpine-3.20.10&upstream=busybox",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 89,
+     "id": 103,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4252,7 +4704,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 91,
+     "id": 105,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4271,7 +4723,7 @@ window.SECMONK_MOCK = {
      "purl": "pkg:apk/alpine/zlib@1.3.2-r0?arch=x86_64&distro=alpine-3.20.10",
      "cpe": null,
      "path": "lib/apk/db/installed",
-     "id": 90,
+     "id": 104,
      "findings": {
       "P1": 0,
       "P2": 0,
@@ -4284,7 +4736,7 @@ window.SECMONK_MOCK = {
    ],
    "findings": [
     {
-     "asset_id": "rootfs:/srv/alpine-rootfs",
+     "asset_id": "rootfs:/private/srv/alpine-rootfs",
      "priority": "P3",
      "vuln_id": "CVE-2024-3094",
      "component": "xz-libs",
@@ -4299,14 +4751,14 @@ window.SECMONK_MOCK = {
      "matched_by": "osv-package",
      "confidence": 1.0,
      "status": "open",
-     "component_id": 91,
+     "component_id": 105,
      "advisory_ids": [
       "ALPINE-CVE-2024-3094",
       "CVE-2024-3094"
      ],
      "triage_source": null,
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "Alpine:v3.20",
      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
@@ -4410,7 +4862,7 @@ window.SECMONK_MOCK = {
  ],
  "findings": [
   {
-   "asset_id": "dir:/srv/payments-api",
+   "asset_id": "dir:/private/srv/payments-api",
    "priority": "P1",
    "vuln_id": "CVE-2021-44228",
    "component": "org.apache.logging.log4j:log4j-core",
@@ -4432,14 +4884,14 @@ window.SECMONK_MOCK = {
     "GHSA-jfh8-c2jp-5v3q"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": "Maven",
    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
   },
   {
-   "asset_id": "rootfs:/srv/alpine-rootfs",
+   "asset_id": "container:web",
    "priority": "P3",
    "vuln_id": "CVE-2024-3094",
    "component": "xz-libs",
@@ -4454,20 +4906,48 @@ window.SECMONK_MOCK = {
    "matched_by": "osv-package",
    "confidence": 1.0,
    "status": "open",
-   "component_id": 91,
+   "component_id": 105,
    "advisory_ids": [
     "ALPINE-CVE-2024-3094",
     "CVE-2024-3094"
    ],
    "triage_source": null,
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": "Alpine:v3.20",
    "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
   },
   {
-   "asset_id": "dir:/srv/web-frontend",
+   "asset_id": "rootfs:/private/srv/alpine-rootfs",
+   "priority": "P3",
+   "vuln_id": "CVE-2024-3094",
+   "component": "xz-libs",
+   "version": "5.6.0-r0",
+   "category": "os-package",
+   "fixed_version": "5.6.1-r2",
+   "severity": "CRITICAL",
+   "cvss_score": 10.0,
+   "epss": null,
+   "kev": false,
+   "triage": null,
+   "matched_by": "osv-package",
+   "confidence": 1.0,
+   "status": "open",
+   "component_id": 105,
+   "advisory_ids": [
+    "ALPINE-CVE-2024-3094",
+    "CVE-2024-3094"
+   ],
+   "triage_source": null,
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
+   "fixed_at": null,
+   "ecosystem": "Alpine:v3.20",
+   "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+  },
+  {
+   "asset_id": "dir:/private/srv/web-frontend",
    "priority": "P3",
    "vuln_id": "CVE-2021-44906",
    "component": "minimist",
@@ -4488,8 +4968,8 @@ window.SECMONK_MOCK = {
     "GHSA-xvch-5gv4-984h"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": "npm",
    "purl": "pkg:npm/minimist@1.2.5"
@@ -4515,14 +4995,14 @@ window.SECMONK_MOCK = {
     "MOCK-2026-0001"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
   },
   {
-   "asset_id": "dir:/srv/web-frontend",
+   "asset_id": "dir:/private/srv/web-frontend",
    "priority": "P3",
    "vuln_id": "CVE-2022-25883",
    "component": "semver",
@@ -4543,8 +5023,8 @@ window.SECMONK_MOCK = {
     "GHSA-c2qf-rxjj-qqgw"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": "npm",
    "purl": "pkg:npm/semver@7.3.5"
@@ -4570,8 +5050,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-6197"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -4597,8 +5077,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-6197"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -4624,14 +5104,14 @@ window.SECMONK_MOCK = {
     "GO-2022-1059"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": "Go",
    "purl": "pkg:golang/golang.org/x/text@0.3.7"
   },
   {
-   "asset_id": "dir:/srv/web-frontend",
+   "asset_id": "dir:/private/srv/web-frontend",
    "priority": "P3",
    "vuln_id": "CVE-2021-23337",
    "component": "lodash",
@@ -4652,9 +5132,9 @@ window.SECMONK_MOCK = {
     "GHSA-35jh-r3h4-6jhm"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:35+00:00",
-   "fixed_at": "2026-11-07T16:22:35+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
+   "fixed_at": "2026-11-10T20:24:30+00:00",
    "ecosystem": "npm",
    "purl": "pkg:npm/lodash@4.17.20"
   },
@@ -4679,8 +5159,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-7264"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -4706,8 +5186,8 @@ window.SECMONK_MOCK = {
     "CVE-2024-7264"
    ],
    "triage_source": "osv",
-   "first_seen": "2026-11-07T16:22:35+00:00",
-   "last_seen": "2026-11-07T16:22:36+00:00",
+   "first_seen": "2026-11-10T20:24:30+00:00",
+   "last_seen": "2026-11-10T20:24:30+00:00",
    "fixed_at": null,
    "ecosystem": null,
    "purl": "pkg:brew/curl@8.7.1"
@@ -5014,7 +5494,7 @@ window.SECMONK_MOCK = {
    "affected_limit_reached": false,
    "findings": [
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2021-23337",
      "component": "lodash",
@@ -5035,9 +5515,9 @@ window.SECMONK_MOCK = {
       "GHSA-35jh-r3h4-6jhm"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:35+00:00",
-     "fixed_at": "2026-11-07T16:22:35+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
+     "fixed_at": "2026-11-10T20:24:30+00:00",
      "ecosystem": "npm",
      "purl": "pkg:npm/lodash@4.17.20"
     }
@@ -5450,7 +5930,7 @@ window.SECMONK_MOCK = {
    "affected_limit_reached": false,
    "findings": [
     {
-     "asset_id": "dir:/srv/payments-api",
+     "asset_id": "dir:/private/srv/payments-api",
      "priority": "P1",
      "vuln_id": "CVE-2021-44228",
      "component": "org.apache.logging.log4j:log4j-core",
@@ -5472,8 +5952,8 @@ window.SECMONK_MOCK = {
       "GHSA-jfh8-c2jp-5v3q"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "Maven",
      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
@@ -6479,7 +6959,7 @@ window.SECMONK_MOCK = {
    "affected_limit_reached": false,
    "findings": [
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2021-44906",
      "component": "minimist",
@@ -6500,8 +6980,8 @@ window.SECMONK_MOCK = {
       "GHSA-xvch-5gv4-984h"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/minimist@1.2.5"
@@ -6609,7 +7089,7 @@ window.SECMONK_MOCK = {
    "affected_limit_reached": false,
    "findings": [
     {
-     "asset_id": "dir:/srv/web-frontend",
+     "asset_id": "dir:/private/srv/web-frontend",
      "priority": "P3",
      "vuln_id": "CVE-2022-25883",
      "component": "semver",
@@ -6630,8 +7110,8 @@ window.SECMONK_MOCK = {
       "GHSA-c2qf-rxjj-qqgw"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "npm",
      "purl": "pkg:npm/semver@7.3.5"
@@ -6713,8 +7193,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -6740,8 +7220,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-6197"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -6823,8 +7303,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -6850,8 +7330,8 @@ window.SECMONK_MOCK = {
       "CVE-2024-7264"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:brew/curl@8.7.1"
@@ -6987,8 +7467,8 @@ window.SECMONK_MOCK = {
       "GO-2022-1059"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": "Go",
      "purl": "pkg:golang/golang.org/x/text@0.3.7"
@@ -7070,8 +7550,8 @@ window.SECMONK_MOCK = {
       "MOCK-2026-0001"
      ],
      "triage_source": "osv",
-     "first_seen": "2026-11-07T16:22:35+00:00",
-     "last_seen": "2026-11-07T16:22:36+00:00",
+     "first_seen": "2026-11-10T20:24:30+00:00",
+     "last_seen": "2026-11-10T20:24:30+00:00",
      "fixed_at": null,
      "ecosystem": null,
      "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater"
@@ -7814,7 +8294,7 @@ window.SECMONK_MOCK = {
    "sources": [
     {
      "source": "cvelist",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": null,
      "records": 1,
      "status": "ok",
@@ -7822,7 +8302,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "epss",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": "2026-11-06",
      "records": 10,
      "status": "ok",
@@ -7830,7 +8310,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "euvd",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": null,
      "records": 2,
      "status": "ok",
@@ -7838,7 +8318,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "kev",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": "2026.11.06",
      "records": 9,
      "status": "ok",
@@ -7846,7 +8326,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "nvd",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": null,
      "records": 1,
      "status": "ok",
@@ -7854,7 +8334,7 @@ window.SECMONK_MOCK = {
     },
     {
      "source": "osv",
-     "last_sync": "2026-11-07T16:22:35+00:00",
+     "last_sync": "2026-11-10T20:24:29+00:00",
      "cursor": "2026-11-02T11:17:50.087142138Z",
      "records": 2,
      "status": "ok",
@@ -7867,16 +8347,16 @@ window.SECMONK_MOCK = {
     "affected": 31,
     "kev": 9,
     "epss": 10,
-    "asset": 5,
+    "asset": 6,
     "component": 101,
-    "finding": 11
+    "finding": 12
    }
   }
  },
  "collectors": [
   {
    "name": "docker-engine",
-   "description": "Live container (or local image) via the Docker/Podman engine socket",
+   "description": "Live container (or local image) via a local or remote Docker/Podman engine",
    "in_all": true
   },
   {
@@ -7922,8 +8402,140 @@ window.SECMONK_MOCK = {
  ],
  "jobs": [
   {
-   "id": 2,
+   "id": 4,
    "kind": "scan",
+   "origin": "ui",
+   "title": "scan docker-engine web,d*",
+   "params": {
+    "collector": "docker-engine",
+    "target": "web,d*",
+    "options": [
+     "all=true"
+    ],
+    "save": true,
+    "min_confidence": 0.5
+   },
+   "started": "2026-11-10T20:24:30+00:00",
+   "finished": "2026-11-10T20:24:30+00:00",
+   "status": "partial",
+   "error": null,
+   "result": {
+    "saved": true,
+    "targets": [
+     {
+      "target": "web",
+      "asset": "container:web",
+      "scan_id": 7,
+      "stats": {
+       "components": 16,
+       "matches": 1,
+       "findings": 1,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [
+       {
+        "asset_id": "container:web",
+        "priority": "P3",
+        "vuln_id": "CVE-2024-3094",
+        "component": "xz-libs",
+        "version": "5.6.0-r0",
+        "category": "os-package",
+        "fixed_version": "5.6.1-r2",
+        "severity": "CRITICAL",
+        "cvss_score": 10.0,
+        "epss": null,
+        "kev": false,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 105,
+        "advisory_ids": [
+         "ALPINE-CVE-2024-3094",
+         "CVE-2024-3094"
+        ],
+        "triage_source": null,
+        "first_seen": "2026-11-10T20:24:30+00:00",
+        "last_seen": "2026-11-10T20:24:30+00:00",
+        "fixed_at": null,
+        "ecosystem": "Alpine:v3.20",
+        "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+       }
+      ],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 1,
+       "P4": 0,
+       "kev": 0,
+       "total": 1
+      },
+      "error": null
+     },
+     {
+      "target": "db",
+      "asset": null,
+      "scan_id": null,
+      "stats": {},
+      "warnings": [],
+      "partial": false,
+      "findings": [],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 0,
+       "P4": 0,
+       "kev": 0,
+       "total": 0
+      },
+      "error": "RuntimeError: Docker API GET /containers/db/json -> HTTP 404: No such container: db"
+     }
+    ],
+    "stats": {
+     "components": 16,
+     "matches": 1,
+     "findings": 1,
+     "withdrawn": 0,
+     "patched": 0
+    },
+    "counts": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0,
+     "total": 1
+    }
+   },
+   "summary": {
+    "targets": 2,
+    "errors": 1,
+    "components": 16,
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0,
+    "total": 1
+   },
+   "log_lines": 7,
+   "log": [
+    "2 target(s): web, db",
+    "collecting with docker-engine on web\u2026",
+    "container:web: 16 components",
+    "matching against the local mirror\u2026",
+    "16 components \u00b7 1 matches \u00b7 1 findings \u00b7 0 withdrawn \u00b7 0 patched",
+    "collecting with docker-engine on db\u2026",
+    "error: RuntimeError: Docker API GET /containers/db/json -> HTTP 404: No such container: db"
+   ]
+  },
+  {
+   "id": 3,
+   "kind": "scan",
+   "origin": "ui",
    "title": "scan fs /srv/web-frontend",
    "params": {
     "collector": "fs",
@@ -7932,14 +8544,95 @@ window.SECMONK_MOCK = {
     "save": true,
     "min_confidence": 0.5
    },
-   "started": "2026-11-07T16:22:35+00:00",
-   "finished": "2026-11-07T16:22:35+00:00",
+   "started": "2026-11-10T20:24:30+00:00",
+   "finished": "2026-11-10T20:24:30+00:00",
    "status": "ok",
    "error": null,
    "result": {
-    "asset": "dir:/srv/web-frontend",
     "saved": true,
-    "scan_id": 6,
+    "targets": [
+     {
+      "target": "/srv/web-frontend",
+      "asset": "dir:/private/srv/web-frontend",
+      "scan_id": 6,
+      "stats": {
+       "components": 18,
+       "matches": 2,
+       "findings": 2,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [
+       {
+        "asset_id": "dir:/private/srv/web-frontend",
+        "priority": "P3",
+        "vuln_id": "CVE-2021-44906",
+        "component": "minimist",
+        "version": "1.2.5",
+        "category": "library",
+        "fixed_version": "1.2.6",
+        "severity": "CRITICAL",
+        "cvss_score": 9.8,
+        "epss": null,
+        "kev": false,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 71,
+        "advisory_ids": [
+         "CVE-2021-44906",
+         "GHSA-xvch-5gv4-984h"
+        ],
+        "triage_source": "osv",
+        "first_seen": "2026-11-10T20:24:30+00:00",
+        "last_seen": "2026-11-10T20:24:30+00:00",
+        "fixed_at": null,
+        "ecosystem": "npm",
+        "purl": "pkg:npm/minimist@1.2.5"
+       },
+       {
+        "asset_id": "dir:/private/srv/web-frontend",
+        "priority": "P3",
+        "vuln_id": "CVE-2022-25883",
+        "component": "semver",
+        "version": "7.3.5",
+        "category": "library",
+        "fixed_version": "7.5.2",
+        "severity": "HIGH",
+        "cvss_score": 7.5,
+        "epss": null,
+        "kev": false,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 73,
+        "advisory_ids": [
+         "CVE-2022-25883",
+         "GHSA-c2qf-rxjj-qqgw"
+        ],
+        "triage_source": "osv",
+        "first_seen": "2026-11-10T20:24:30+00:00",
+        "last_seen": "2026-11-10T20:24:30+00:00",
+        "fixed_at": null,
+        "ecosystem": "npm",
+        "purl": "pkg:npm/semver@7.3.5"
+       }
+      ],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 2,
+       "P4": 0,
+       "kev": 0,
+       "total": 2
+      },
+      "error": null
+     }
+    ],
     "stats": {
      "components": 18,
      "matches": 2,
@@ -7947,66 +8640,6 @@ window.SECMONK_MOCK = {
      "withdrawn": 0,
      "patched": 0
     },
-    "warnings": [],
-    "partial": false,
-    "findings": [
-     {
-      "asset_id": "dir:/srv/web-frontend",
-      "priority": "P3",
-      "vuln_id": "CVE-2021-44906",
-      "component": "minimist",
-      "version": "1.2.5",
-      "category": "library",
-      "fixed_version": "1.2.6",
-      "severity": "CRITICAL",
-      "cvss_score": 9.8,
-      "epss": null,
-      "kev": false,
-      "triage": null,
-      "matched_by": "osv-package",
-      "confidence": 1.0,
-      "status": "open",
-      "component_id": 71,
-      "advisory_ids": [
-       "CVE-2021-44906",
-       "GHSA-xvch-5gv4-984h"
-      ],
-      "triage_source": "osv",
-      "first_seen": "2026-11-07T16:22:35+00:00",
-      "last_seen": "2026-11-07T16:22:35+00:00",
-      "fixed_at": null,
-      "ecosystem": "npm",
-      "purl": "pkg:npm/minimist@1.2.5"
-     },
-     {
-      "asset_id": "dir:/srv/web-frontend",
-      "priority": "P3",
-      "vuln_id": "CVE-2022-25883",
-      "component": "semver",
-      "version": "7.3.5",
-      "category": "library",
-      "fixed_version": "7.5.2",
-      "severity": "HIGH",
-      "cvss_score": 7.5,
-      "epss": null,
-      "kev": false,
-      "triage": null,
-      "matched_by": "osv-package",
-      "confidence": 1.0,
-      "status": "open",
-      "component_id": 73,
-      "advisory_ids": [
-       "CVE-2022-25883",
-       "GHSA-c2qf-rxjj-qqgw"
-      ],
-      "triage_source": "osv",
-      "first_seen": "2026-11-07T16:22:35+00:00",
-      "last_seen": "2026-11-07T16:22:35+00:00",
-      "fixed_at": null,
-      "ecosystem": "npm",
-      "purl": "pkg:npm/semver@7.3.5"
-     }
-    ],
     "counts": {
      "P1": 0,
      "P2": 0,
@@ -8016,17 +8649,137 @@ window.SECMONK_MOCK = {
      "total": 2
     }
    },
+   "summary": {
+    "targets": 1,
+    "errors": 0,
+    "components": 18,
+    "P1": 0,
+    "P2": 0,
+    "P3": 2,
+    "P4": 0,
+    "kev": 0,
+    "total": 2
+   },
    "log_lines": 4,
    "log": [
     "collecting with fs on /srv/web-frontend\u2026",
-    "dir:/srv/web-frontend: 18 components",
+    "dir:/private/srv/web-frontend: 18 components",
     "matching against the local mirror\u2026",
     "18 components \u00b7 2 matches \u00b7 2 findings \u00b7 0 withdrawn \u00b7 0 patched"
    ]
   },
   {
+   "id": 2,
+   "kind": "scan",
+   "origin": "cli",
+   "title": "scan rootfs /srv/alpine-rootfs",
+   "params": {
+    "collector": "rootfs",
+    "target": "/srv/alpine-rootfs",
+    "options": [],
+    "save": true,
+    "min_confidence": 0.5
+   },
+   "started": "2026-11-10T20:24:30+00:00",
+   "finished": "2026-11-10T20:24:30+00:00",
+   "status": "ok",
+   "error": null,
+   "result": {
+    "saved": true,
+    "targets": [
+     {
+      "target": "/srv/alpine-rootfs",
+      "asset": "rootfs:/private/srv/alpine-rootfs",
+      "scan_id": 5,
+      "stats": {
+       "components": 16,
+       "matches": 1,
+       "findings": 1,
+       "withdrawn": 0,
+       "patched": 0
+      },
+      "warnings": [],
+      "partial": false,
+      "findings": [
+       {
+        "asset_id": "rootfs:/private/srv/alpine-rootfs",
+        "priority": "P3",
+        "vuln_id": "CVE-2024-3094",
+        "component": "xz-libs",
+        "version": "5.6.0-r0",
+        "category": "os-package",
+        "fixed_version": "5.6.1-r2",
+        "severity": "CRITICAL",
+        "cvss_score": 10.0,
+        "epss": null,
+        "kev": false,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 105,
+        "advisory_ids": [
+         "ALPINE-CVE-2024-3094",
+         "CVE-2024-3094"
+        ],
+        "triage_source": null,
+        "first_seen": "2026-11-10T20:24:30+00:00",
+        "last_seen": "2026-11-10T20:24:30+00:00",
+        "fixed_at": null,
+        "ecosystem": "Alpine:v3.20",
+        "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+       }
+      ],
+      "counts": {
+       "P1": 0,
+       "P2": 0,
+       "P3": 1,
+       "P4": 0,
+       "kev": 0,
+       "total": 1
+      },
+      "error": null
+     }
+    ],
+    "stats": {
+     "components": 16,
+     "matches": 1,
+     "findings": 1,
+     "withdrawn": 0,
+     "patched": 0
+    },
+    "counts": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 1,
+     "P4": 0,
+     "kev": 0,
+     "total": 1
+    }
+   },
+   "summary": {
+    "targets": 1,
+    "errors": 0,
+    "components": 16,
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0,
+    "total": 1
+   },
+   "log_lines": 4,
+   "log": [
+    "collecting with rootfs on /srv/alpine-rootfs\u2026",
+    "rootfs:/private/srv/alpine-rootfs: 16 components",
+    "matching against the local mirror\u2026",
+    "16 components \u00b7 1 matches \u00b7 1 findings \u00b7 0 withdrawn \u00b7 0 patched"
+   ]
+  },
+  {
    "id": 1,
    "kind": "sync",
+   "origin": "ui",
    "title": "sync kev",
    "params": {
     "sources": [
@@ -8038,8 +8791,8 @@ window.SECMONK_MOCK = {
     "limit": null,
     "path": "/files/kev/known_exploited_vulnerabilities.json"
    },
-   "started": "2026-11-07T16:22:35+00:00",
-   "finished": "2026-11-07T16:22:35+00:00",
+   "started": "2026-11-10T20:24:29+00:00",
+   "finished": "2026-11-10T20:24:29+00:00",
    "status": "ok",
    "error": null,
    "result": {
@@ -8053,11 +8806,67 @@ window.SECMONK_MOCK = {
      }
     ]
    },
+   "summary": {
+    "sources": 1,
+    "errors": 0,
+    "records": 9
+   },
    "log_lines": 2,
    "log": [
     "syncing kev\u2026",
     "kev: ok \u2014 9 records in 0.0s 9 entries from file /files/kev/known_exploited_vulnerabilities.json"
    ]
   }
- ]
+ ],
+ "docker": {
+  "contexts": [
+   {
+    "name": "default",
+    "host": "unix:/var/run/docker.sock",
+    "description": "Local engine (well-known socket)",
+    "current": true
+   },
+   {
+    "name": "build-01",
+    "host": "ssh://build-01.example.internal",
+    "description": "CI builder (over ssh)",
+    "current": false
+   },
+   {
+    "name": "staging",
+    "host": "tcp://staging.example.internal:2376",
+    "description": "Staging engine (TLS)",
+    "current": false
+   }
+  ],
+  "containers": {
+   "containers": [
+    {
+     "id": "8dfafdbc3a40",
+     "name": "web",
+     "image": "nginx:1.25.3",
+     "state": "running",
+     "status": "Up 3 days",
+     "matched": true
+    },
+    {
+     "id": "1b2c3d4e5f60",
+     "name": "db",
+     "image": "postgres:16-alpine",
+     "state": "running",
+     "status": "Up 3 days (healthy)",
+     "matched": true
+    },
+    {
+     "id": "ffeeddccbbaa",
+     "name": "old-job",
+     "image": "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+     "state": "exited",
+     "status": "Exited (0) 2 weeks ago",
+     "matched": true
+    }
+   ],
+   "engine": "local"
+  }
+ }
 };

@@ -446,6 +446,30 @@ textarea.sm-input { height: auto; min-height: 64px; padding: 6px 10px; font-fami
   font: var(--sm-fs-xs)/1.5 var(--sm-mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--sm-text-2); }
 .sm-job + .sm-job { margin-top: var(--sm-s3); }
 
+/* run history (job-history), scan targets (job-target), collapsible details, container preview */
+.sm-history { display: flex; flex-direction: column; gap: var(--sm-s3); min-width: 0; }
+.sm-history__title { display: inline-block; max-width: 420px; vertical-align: bottom; }
+.sm-targets { display: flex; flex-direction: column; border: 1px solid var(--sm-border); border-radius: var(--sm-radius); }
+.sm-target + .sm-target { border-top: 1px solid var(--sm-border); }
+.sm-target__head { display: flex; align-items: center; gap: var(--sm-s2); flex-wrap: wrap; padding: var(--sm-s2) var(--sm-s3);
+  min-width: 0; }
+details.sm-target > summary { cursor: pointer; list-style: none; }
+details.sm-target > summary::-webkit-details-marker { display: none; }
+details.sm-target > summary::before { content: "▸"; color: var(--sm-text-3); width: 10px; }
+details.sm-target[open] > summary::before { content: "▾"; }
+details.sm-target > summary:hover { background: var(--sm-surface-2); }
+.sm-target__name { font-weight: 600; overflow-wrap: anywhere; }
+.sm-target__body { display: flex; flex-direction: column; gap: var(--sm-s2); padding: 0 var(--sm-s3) var(--sm-s3); min-width: 0; }
+.sm-target--single .sm-target__head, .sm-target--single .sm-target__body { padding-left: 0; padding-right: 0; }
+.sm-target--single .sm-target__head { padding-top: 0; }
+.sm-details > summary { cursor: pointer; font-size: var(--sm-fs-sm); font-weight: 600; color: var(--sm-text-2); }
+.sm-details > summary:hover { color: var(--sm-text); }
+.sm-details .sm-links { margin-top: var(--sm-s1); }
+.sm-preview { display: flex; flex-direction: column; gap: var(--sm-s2); min-width: 0; }
+.sm-preview .sm-table-wrap { max-height: 320px; min-height: 0; }
+.sm-table tbody tr.is-match td { background: var(--sm-ok-soft); }
+.sm-table tbody tr.is-match td:first-child { box-shadow: inset 3px 0 0 var(--sm-ok); }
+
 /* ------------------------------------------------------------------ layout helpers for data pages */
 .sm-stack { display: flex; flex-direction: column; gap: var(--sm-s4); min-width: 0; }
 .sm-grid-main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--sm-s4); align-items: start; }

@@ -57,9 +57,17 @@
       vulnSearch: (params) => call("/api/vulns/search" + qs(params)),
       sources: () => call("/api/sources"),
       collectors: () => call("/api/collectors"),
-      jobs: () => call("/api/jobs"),
+      jobs: (params) => call("/api/jobs" + qs(params)),            // {kind, limit}: persisted history, newest first
       job: (id) => call(`/api/jobs/${encodeURIComponent(id)}`),
       startJob: (body) => post("/api/jobs", body),
+      dockerContexts: () => call("/api/docker/contexts"),
+      // {host, context, all, match, opt: ["k=v", ...]} (opt repeats)
+      dockerContainers: ({ opt, ...params } = {}) => {
+        const q = new URLSearchParams(qs(params).slice(1));
+        for (const o of opt || []) q.append("opt", o);
+        const s = q.toString();
+        return call("/api/docker/containers" + (s ? "?" + s : ""));
+      },
     };
   }
 
@@ -109,12 +117,13 @@
       },
       sources: () => wait(data.sources),
       collectors: () => wait(data.collectors),
-      jobs: () => wait(jobs.map((j) => { const { log, ...rest } = strip(j); return rest; })),
+      jobs: (p = {}) => wait(jobs.filter((j) => !p.kind || j.kind === p.kind).slice(0, +p.limit || 50)
+        .map((j) => { const { log, ...rest } = strip(j); return rest; })),
       job: (id) => {
         const j = jobs.find((x) => String(x.id) === String(id));
         if (!j) return fail(404, `no job ${id}`);
         if (j.status === "running" && --j._ticks <= 0) {      // a started mock job finishes after a few polls
-          Object.assign(j, { status: j._tpl.status, log: j._tpl.log, result: j._tpl.result, error: j._tpl.error,
+          Object.assign(j, { status: j._tpl.status, log: j._tpl.log, result: j._tpl.result, summary: j._tpl.summary, error: j._tpl.error,
             finished: new Date().toISOString() });
         }
         return wait(strip(j));
@@ -125,12 +134,39 @@
         const tpl = data.jobs.find((j) => j.kind === body.kind);
         if (!tpl) return fail(400, "kind: expected 'sync' or 'scan'");
         const title = body.kind === "scan" ? `scan ${body.collector}${body.target ? " " + body.target : ""}` : `sync ${(body.sources || []).join(", ")}`;
-        const j = { ...clone(tpl), id: ++jobSeq, title, params: body, started: new Date().toISOString(), finished: null,
-          status: "running", log: [tpl.log[0]], result: null, error: null, _tpl: tpl, _ticks: 3 };
+        const { kind, ...params } = body;
+        const j = { ...clone(tpl), id: ++jobSeq, origin: "ui", title, params, started: new Date().toISOString(), finished: null,
+          status: "running", log: [tpl.log[0]], result: null, summary: {}, error: null, _tpl: tpl, _ticks: 3 };
         jobs.unshift(j);
         return wait(strip(j));
       },
+      dockerContexts: () => (data.meta.actions ? wait(data.docker.contexts) : fail(403, "actions are disabled on this server")),
+      // the API's semantics on the recorded listing: running only unless all, `matched` from the selector
+      dockerContainers: (p = {}) => {
+        if (!data.meta.actions) return fail(403, "actions are disabled on this server");
+        const rows = data.docker.containers.containers.filter((c) => p.all || c.state === "running");
+        let hit;
+        try { hit = mockSelector(p.match); } catch (e) { return fail(400, e.message); }
+        return wait({ containers: rows.map((c) => ({ ...c, matched: hit(c) })),
+          engine: p.host || (p.context ? `context ${p.context}` : data.docker.containers.engine) });
+      },
     };
+  }
+
+  /** The docker-engine selector (names / ids, globs, re:<regex>, image:<ref>) for the mock only: the server's is
+   * collectors/docker_engine.select_containers. */
+  function mockSelector(sel) {
+    const items = String(sel || "").split(",").map((x) => x.trim()).filter(Boolean);
+    if (!items.length) return () => true;
+    const tests = items.filter((i) => !i.startsWith("image:")).map((i) => {
+      if (i.startsWith("re:")) { const r = new RegExp(i.slice(3)); return (k) => r.test(k); }
+      if (/[*?[]/.test(i)) {
+        const r = new RegExp("^" + i.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+        return (k) => r.test(k);
+      }
+      return (k) => k === i;
+    });
+    return (c) => [...c.name.split(", "), c.id].some((k) => tests.some((t) => t(k)));
   }
 
   // ================================================================== store
@@ -140,7 +176,9 @@
       stale: 0,                                              // events seen since the snapshot was loaded
       watch: { on: false, interval: 10, last: null, events: [], unseen: 0, busy: false, error: null },
       dataVersion: 0,                                        // bumped when a job finishes: data views reload
-      jobs: { list: [], loaded: false },                     // newest first (web/jobs.py; list rows carry no log)
+      // run history, newest first: this server's jobs and the stored runs of the CLI and earlier servers (web/jobs.py;
+      // list rows carry no log). `mine`: ids started from this tab (their card opens by itself).
+      jobs: { list: [], loaded: false, error: null, mine: [] },
     });
     let timer = null;
     let seq = 0;
@@ -220,20 +258,28 @@
     const polling = new Set();
     const running = computed(() => state.jobs.list.filter((j) => j.status === "running"));
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const JOBS_KEPT = 200;
     function upsertJob(j) {
-      const i = state.jobs.list.findIndex((x) => x.id === j.id);
-      // same id but another start time = another server process (ids restart at 1): replace, never merge
-      if (i >= 0) state.jobs.list[i] = state.jobs.list[i].started === j.started ? { ...state.jobs.list[i], ...j } : j;
-      else state.jobs.list.unshift(j);
-      state.jobs.list.splice(20);
+      const list = state.jobs.list;
+      const i = list.findIndex((x) => x.id === j.id);
+      // ids are history row ids (stable across restarts); the same id with another start time is another run
+      // (history pruned or database replaced): replace, never merge
+      if (i >= 0) list[i] = list[i].started === j.started ? { ...list[i], ...j } : j;
+      else list.push(j);
+      list.sort((a, b) => b.id - a.id);
+      list.splice(JOBS_KEPT);
     }
     async function loadJobs() {
       try {
-        const list = await source.jobs();
-        for (const j of list.slice().reverse()) upsertJob(j);
+        const list = await source.jobs({ limit: 100 });
+        const known = new Set(list.map((j) => j.id));
+        // rows gone from the history (pruned, other database) disappear, except a job being polled right now
+        state.jobs.list = state.jobs.list.filter((j) => known.has(j.id) || polling.has(j.id));
+        for (const j of list) upsertJob(j);
         state.jobs.loaded = true;
+        state.jobs.error = null;
         for (const j of list) if (j.status === "running") pollJob(j.id);
-      } catch (e) { /* older server or no jobs: the jobs view shows the error */ }
+      } catch (e) { state.jobs.error = e; }
     }
     async function pollJob(id) {
       if (polling.has(id)) return;
@@ -266,6 +312,7 @@
     async function startJob(body) {
       try {
         const j = await source.startJob(body);
+        state.jobs.mine.unshift(j.id);
         upsertJob(j);
         pollJob(j.id);
         UI.toast(`Started: ${j.title}`);
@@ -275,8 +322,10 @@
         return null;
       }
     }
+    // only this server's jobs block a new one (the server answers 409); a CLI run in progress is shown, not waited for
+    const busy = computed(() => running.value.some((j) => j.origin !== "cli"));
     return { state, source, loadMeta, refresh, save, startWatch, stopWatch, setInterval: setInterval_, byPid,
-      running, loadJobs, startJob };
+      running, busy, loadJobs, startJob };
   }
 
   // ================================================================== navigation
@@ -883,25 +932,59 @@
     </sm-drawer>`,
   };
 
-  /** Result of a finished scan or sync job (web/jobs.py result shapes). */
+  /** One target of a scan result (ops.scan_target entry: {target, asset, scan_id, stats, warnings, partial, findings,
+   * counts, error}). `single`: the only target of its job, shown open; otherwise a collapsible row (body on expand). */
+  const TARGET_HEAD = `<span class="sm-mono sm-target__name">{{ t.target || t.asset || '(default target)' }}</span>
+      <span v-if="t.asset && t.asset !== t.target" class="sm-muted sm-mono sm-truncate" :title="t.asset">{{ t.asset }}</span>
+      <sm-findings-summary v-if="!t.error" :counts="t.counts" empty="no findings"/>
+      <sm-badge v-if="t.error" variant="danger">failed</sm-badge><sm-badge v-if="t.partial" variant="warn" title="Partial inventory: previous components kept">partial</sm-badge>
+      <sm-badge v-if="(t.warnings || []).length" variant="outline">{{ $fmt.plural(t.warnings.length, 'warning') }}</sm-badge>`;
+  const TARGET_BODY = `<div v-if="t.error" class="sm-job__error">{{ t.error }}</div>
+      <div v-if="stats" class="sm-muted">{{ stats }}</div>
+      <details v-if="(t.warnings || []).length" class="sm-details"><summary>{{ $fmt.plural(t.warnings.length, 'collector warning') }}</summary>
+        <ul class="sm-links"><li v-for="(w, i) in t.warnings.slice(0, 50)" :key="i">{{ w }}</li></ul></details>
+      <findings-table v-if="(t.findings || []).length" :rows="t.findings.slice(0, 10)" :show-asset="false" compact label="Scan findings" @select="openFinding"/>
+      <div v-if="(t.findings || []).length > 10" class="sm-muted">10 of {{ t.findings.length }} open findings shown<template v-if="saved && t.asset">: the asset page lists them all</template>.</div>
+      <div v-if="saved && t.asset && !t.error"><sm-button size="sm" icon="server" @click="$router.push({ name: 'asset', params: { id: t.asset } })">Open asset</sm-button></div>`;
+  const JobTarget = {
+    name: "JobTarget",
+    props: { t: { type: Object, required: true }, saved: Boolean, single: Boolean },
+    setup(props) {
+      const router = useRouter();
+      const open = ref(false);
+      const stats = computed(() => Object.entries(props.t.stats || {}).map(([k, v]) => `${fmt.num(v)} ${k.replace(/_/g, " ")}`).join(" · "));
+      const openFinding = (f) => props.saved && router.push({ name: "findings", params: { key: f.key } });
+      return { open, stats, openFinding };
+    },
+    template: `<div v-if="single" class="sm-target sm-target--single"><div class="sm-target__head">${TARGET_HEAD}</div>
+        <div class="sm-target__body">${TARGET_BODY}</div></div>
+      <details v-else class="sm-target" :open="open" @toggle="open = $event.target.open"><summary class="sm-target__head">${TARGET_HEAD}</summary>
+        <div v-if="open" class="sm-target__body">${TARGET_BODY}</div></details>`,
+  };
+
+  /** Result of a finished scan or sync job (web/jobs.py; scan = ops.scan_result {saved, targets, stats, counts}). */
   const JobResult = {
     name: "JobResult",
     props: { job: { type: Object, required: true } },
     setup(props) {
-      const router = useRouter();
-      const stats = computed(() => Object.entries(props.job.result?.stats || {}).map(([k, v]) => `${v} ${k.replace(/_/g, " ")}`).join(" · "));
-      const open = (f) => props.job.result.saved && router.push({ name: "findings", params: { key: f.key } });
-      return { stats, open };
+      const r = computed(() => props.job.result || {});
+      // a result stored before multi-target scans ({asset, findings, ...}) reads as its single target
+      const targets = computed(() => r.value.targets
+        || (r.value.asset !== undefined ? [{ target: props.job.params?.target, warnings: [], findings: [], ...r.value, error: null }] : []));
+      const failed = computed(() => targets.value.filter((t) => t.error).length);
+      const stats = computed(() => Object.entries(r.value.stats || {}).map(([k, v]) => `${fmt.num(v)} ${k.replace(/_/g, " ")}`).join(" · "));
+      return { r, targets, failed, stats };
     },
     template: `<template v-if="job.result && job.kind === 'scan'">
-        <div class="sm-badges"><b class="sm-mono">{{ job.result.asset }}</b><sm-findings-summary :counts="job.result.counts" empty="no findings"/>
-          <sm-badge v-if="!job.result.saved" variant="outline" title="Matched in a temporary overlay: nothing was written">not saved</sm-badge>
-          <sm-badge v-if="job.result.partial" variant="warn">partial</sm-badge></div>
-        <div class="sm-muted">{{ stats }}</div>
-        <sm-callout v-if="job.result.warnings.length" variant="warn" :title="job.result.warnings.length + ' collector warning(s)'">
-          <ul><li v-for="(w, i) in job.result.warnings.slice(0, 8)" :key="i">{{ w }}</li></ul></sm-callout>
-        <findings-table v-if="job.result.findings.length" :rows="job.result.findings.slice(0, 10)" :show-asset="false" compact label="Scan findings" @select="open"/>
-        <div v-if="job.result.saved"><sm-button size="sm" icon="server" @click="$router.push({ name: 'asset', params: { id: job.result.asset } })">Open asset</sm-button></div>
+        <template v-if="targets.length !== 1">
+          <div class="sm-badges"><sm-findings-summary :counts="r.counts" empty="no findings"/>
+            <span class="sm-muted">{{ $fmt.plural(targets.length, 'target') }}</span><sm-badge v-if="failed" variant="danger">{{ failed }} failed</sm-badge>
+            <sm-badge v-if="!r.saved" variant="outline" title="Matched in a temporary overlay: nothing was written">not saved</sm-badge></div>
+          <div v-if="stats" class="sm-muted">{{ stats }}</div>
+          <div class="sm-targets"><job-target v-for="(t, i) in targets" :key="i" :t="t" :saved="r.saved"/></div>
+        </template>
+        <template v-else><sm-badge v-if="!r.saved" variant="outline" title="Matched in a temporary overlay: nothing was written">not saved</sm-badge>
+          <job-target single :t="targets[0]" :saved="r.saved"/></template>
       </template>
       <div v-else-if="job.result && job.kind === 'sync'" class="sm-table-wrap sm-table-wrap--auto"><table class="sm-table sm-table--static">
         <thead><tr><th>Source</th><th>Status</th><th class="is-num">Records</th><th class="is-num">Seconds</th><th>Message</th></tr></thead>
@@ -910,17 +993,51 @@
           <td class="is-num">{{ $fmt.num(r.records) }}</td><td class="is-num">{{ r.seconds }}</td><td>{{ r.message }}</td></tr></tbody></table></div>`,
   };
 
-  /** Jobs of one kind (scan / sync), newest first, with their results. */
-  const JobList = {
-    name: "JobList",
-    props: { kind: String, limit: { type: Number, default: 3 } },
+  /** Run history of one kind (scan / sync), newest first: the persisted runs of this UI and of the CLI (GET /api/jobs).
+   * A row opens its card (log + result, GET /api/jobs/<id>); the newest job started from this tab opens by itself.
+   * "Run again" emits `again(job)`: the page prefills its form from job.params (never runs it). */
+  const JobHistory = {
+    name: "JobHistory",
+    props: { kind: String, limit: { type: Number, default: 10 } },
+    emits: ["again"],
     setup(props) {
       const store = useStore();
-      const jobs = computed(() => store.state.jobs.list.filter((j) => !props.kind || j.kind === props.kind).slice(0, props.limit));
-      return { jobs };
+      onMounted(() => store.loadJobs());                     // CLI runs since the app loaded
+      const jobs = computed(() => store.state.jobs.list.filter((j) => !props.kind || j.kind === props.kind));
+      const shown = computed(() => jobs.value.slice(0, props.limit));
+      const picked = ref(null);                              // a row id, CLOSED, or null (= the newest of this tab)
+      const CLOSED = -1;
+      const openId = computed(() => (picked.value === CLOSED ? null
+        : picked.value ?? jobs.value.find((j) => store.state.jobs.mine.includes(j.id))?.id ?? null));
+      const listed = computed(() => jobs.value.find((j) => j.id === openId.value) || null);
+      const detail = useResource(() => (openId.value == null || listed.value?.log ? Promise.resolve(null)
+        : store.source.job(openId.value)), () => openId.value);
+      const open = computed(() => (listed.value?.log ? listed.value
+        : detail.data && detail.data.id === openId.value ? detail.data : listed.value));
+      const toggle = (j) => { picked.value = openId.value === j.id ? CLOSED : j.id; };
+      const columns = [{ key: "status", label: "Status" }, { key: "title", label: props.kind === "sync" ? "Sync" : "Scan" },
+        { key: "started", label: "Started" }, { key: "summary", label: "Outcome" }, { key: "actions", label: "", cls: "is-num" }];
+      return { store, jobs, shown, openId, open, toggle, columns, picked, CLOSED, JOB_STATUS: UI.JOB_STATUS, ORIGIN: UI.JOB_ORIGIN };
     },
-    template: `<div v-if="jobs.length"><sm-job v-for="j in jobs" :key="j.id" :job="j"><job-result v-if="j.result" :job="j"/></sm-job></div>
-      <div v-else class="sm-muted">Nothing run from this page since the server started.</div>`,
+    template: `<div class="sm-history">
+      <sm-job v-if="open" :job="open" closable @close="picked = CLOSED"><template #actions>
+          <sm-button size="sm" icon="refresh" :disabled="open.status === 'running'" title="Fill the form with this run's settings" @click="$emit('again', open)">Run again</sm-button></template>
+        <job-result v-if="open.result" :job="open"/></sm-job>
+      <sm-table v-if="shown.length" :columns="columns" :rows="shown" row-key="id" :selected="openId" :label="(kind || 'job') + ' history'" @select="toggle">
+        <template #cell-status="{ row }"><sm-badge :variant="(JOB_STATUS[row.status] || {}).variant || 'outline'">{{ (JOB_STATUS[row.status] || {}).label || row.status }}</sm-badge></template>
+        <template #cell-title="{ row }"><span class="sm-badges"><b class="sm-mono sm-truncate sm-history__title" :title="row.title">{{ row.title }}</b>
+            <sm-badge v-if="row.origin" variant="outline" :title="ORIGIN[row.origin] || row.origin">{{ row.origin }}</sm-badge></span>
+          <div v-if="row.error" class="sm-muted sm-truncate sm-history__title" :title="row.error">{{ row.error }}</div></template>
+        <template #cell-started="{ row }"><span :title="$fmt.datetime(row.started)">{{ $fmt.ago(row.started) }}</span></template>
+        <template #cell-summary="{ row }"><sm-job-summary :job="row"/></template>
+        <template #cell-actions="{ row }"><span @click.stop @keydown.enter.stop><sm-button size="sm" variant="ghost" icon="refresh"
+          :disabled="row.status === 'running'" title="Fill the form with this run's settings (does not start it)" @click="$emit('again', row)">Run again</sm-button></span></template>
+      </sm-table>
+      <div v-if="jobs.length > limit" class="sm-muted">{{ limit }} of {{ jobs.length }} shown — <router-link :to="{ name: 'jobs', query: kind ? { kind } : {} }">all in Jobs</router-link></div>
+      <sm-callout v-if="store.state.jobs.error" variant="error" title="Could not load the history">{{ store.state.jobs.error.message }}</sm-callout>
+      <div v-else-if="!jobs.length && store.state.jobs.loaded" class="sm-muted">No {{ kind || 'job' }} recorded yet: runs from this page and from the
+        command line (<code>secmonk {{ kind || 'scan' }}</code>) are kept here, with their results.</div>
+    </div>`,
   };
 
   const ActionsOff = {
@@ -1174,6 +1291,35 @@
 
   // ================================================================== Scan
   const shellArg = (v) => (/^[\w@%+=:,./-]+$/.test(v) ? v : `'${String(v).replace(/'/g, "'\\''")}'`);
+  const truthy = (v) => /^(1|true|yes|on)$/i.test(String(v).trim());
+  const uniq = (xs, n = 30) => [...new Set(xs.filter(Boolean))].slice(0, n);
+  /** "k=v" -> [k, v] (v "" when there is no "="). */
+  const splitOpt = (o) => { const i = o.indexOf("="); return i > 0 ? [o.slice(0, i).trim(), o.slice(i + 1).trim()] : [o.trim(), ""]; };
+
+  /** `?again=<job id>` (Jobs page "Run again"): hand the job to `prefill` once, then drop the parameter. */
+  function useRunAgain(prefill) {
+    const store = useStore();
+    const route = useRoute();
+    const router = useRouter();
+    watch(() => route.query.again, async (id) => {
+      if (!id) return;
+      let job = store.state.jobs.list.find((j) => String(j.id) === String(id));
+      if (!job) {
+        try { job = await store.source.job(id); } catch (e) { UI.toast(`Job #${id}: ${e.message}`, "error", 6000); }
+      }
+      if (job) prefill(job);
+      const { again, ...query } = route.query;
+      router.replace({ query });
+    }, { immediate: true });
+  }
+  const scrollTop = () => document.querySelector(".sm-main")?.scrollTo({ top: 0, behavior: "smooth" });
+
+  // docker-engine options the Engine fields own (the rest stays in the free-form options)
+  const ENGINE_KEYS = ["host", "context", "all", "tls_ca", "tls_cert", "tls_key", "tls_verify", "identity"];
+  // hosts as the history stores them: "unix:///p" comes back as "unix:/p" (URL normalisation) -> restore the form
+  const historyHost = (h) => String(h || "").replace(/^unix:\/(?!\/)/, "unix:///");
+  const engineDefaults = () => ({ mode: "auto", context: "", host: "", all: false, tls_ca: "", tls_cert: "", tls_key: "",
+    tls_verify: "", identity: "" });
 
   const ScanView = {
     name: "ScanView",
@@ -1181,19 +1327,105 @@
       const store = useStore();
       const route = useRoute();
       const collectors = useResource(() => store.source.collectors());
-      const form = reactive({ collector: route.query.collector || "fs", target: route.query.target || "", options: "", save: true, min_confidence: 0.5 });
+      const form = reactive({ collector: route.query.collector || "fs", target: route.query.target || "", options: "", save: true,
+        min_confidence: 0.5, engine: engineDefaults() });
+      const advanced = ref(false);
       const info = computed(() => (collectors.data || []).find((c) => c.name === form.collector) || null);
       const hint = computed(() => UI.COLLECTOR_TARGETS[form.collector] || { placeholder: "target" });
-      const busy = computed(() => store.running.value.length > 0);
+      const targetHint = computed(() => (hint.value.optional ? "optional" : "required") + (hint.value.help ? " · " + hint.value.help : ""));
       const actions = computed(() => !store.state.meta || store.state.meta.actions !== false);
-      const opts = computed(() => form.options.split("\n").map((x) => x.trim()).filter(Boolean));
+      const docker = computed(() => form.collector === "docker-engine");
+
+      // ---- engine (docker-engine): fields -> -o lines, merged with the free-form options
+      const engineOpts = computed(() => {
+        if (!docker.value) return [];
+        const e = form.engine;
+        const out = [];
+        if (e.mode === "context" && e.context) out.push(`context=${e.context}`);
+        if (e.mode === "host" && e.host.trim()) out.push(`host=${e.host.trim()}`);
+        if (e.all) out.push("all=true");
+        for (const k of ["tls_ca", "tls_cert", "tls_key", "identity"]) if (e[k].trim()) out.push(`${k}=${e[k].trim()}`);
+        if (e.tls_verify) out.push(`tls_verify=${e.tls_verify}`);
+        return out;
+      });
+      const extra = computed(() => form.options.split("\n").map((x) => x.trim()).filter(Boolean));
+      const opts = computed(() => [...engineOpts.value, ...extra.value]);
+      const contexts = reactive({ data: null, error: null, loading: false });
+      async function loadContexts() {
+        contexts.loading = true;
+        try {
+          contexts.data = await store.source.dockerContexts();
+          contexts.error = null;
+          if (!form.engine.context) form.engine.context = (contexts.data.find((c) => c.current) || {}).name || "";
+        } catch (e) { contexts.error = e; } finally { contexts.loading = false; }
+      }
+      watch(() => docker.value && form.engine.mode === "context", (on) => { if (on && !contexts.data && !contexts.loading) loadContexts(); },
+        { immediate: true });
+
+      // ---- container preview: what the target selector picks on that engine (GET /api/docker/containers)
+      const preview = reactive({ data: null, error: null, loading: false, key: null, selector: "" });
+      const previewParams = computed(() => {
+        const e = form.engine;
+        return { host: e.mode === "host" ? e.host.trim() : "", context: e.mode === "context" ? e.context : "", all: e.all,
+          // host / context / all go as parameters; TLS, identity and the free-form options as opt=k=v
+          match: form.target.trim(), opt: [...engineOpts.value.filter((o) => !["host", "context", "all"].includes(splitOpt(o)[0])), ...extra.value] };
+      });
+      async function runPreview() {
+        preview.loading = true;
+        const key = JSON.stringify(previewParams.value);
+        try {
+          preview.data = await store.source.dockerContainers(previewParams.value);
+          Object.assign(preview, { error: null, key, selector: previewParams.value.match });
+        } catch (e) { Object.assign(preview, { error: e, data: null }); } finally { preview.loading = false; }
+      }
+      const previewStale = computed(() => !!preview.data && preview.key !== JSON.stringify(previewParams.value));
+      const matched = computed(() => (preview.data?.containers || []).filter((c) => c.matched).length);
+      const previewCols = [{ key: "name", label: "Container" }, { key: "image", label: "Image" }, { key: "state", label: "State" },
+        { key: "status", label: "Status" }, { key: "id", label: "Id" }];
+      watch(() => form.collector, () => { preview.data = null; preview.error = null; });
+
+      // ---- history: datalists of earlier values, "Run again" fills the form (never starts the scan)
+      const past = computed(() => store.state.jobs.list.filter((j) => j.kind === "scan" && j.params && j.params.collector));
+      const pastTargets = computed(() => uniq(past.value.filter((j) => j.params.collector === form.collector).map((j) => j.params.target)));
+      const pastHosts = computed(() => uniq(past.value.flatMap((j) => (j.params.options || []).map(splitOpt)
+        .filter(([k]) => k === "host").map(([, v]) => historyHost(v)))));
+      function prefill(job) {
+        const p = job.params || {};
+        if (job.kind !== "scan" || !p.collector) return;
+        const e = engineDefaults();
+        const rest = [];
+        let masked = false;
+        for (const o of p.options || []) {
+          const [k, v] = splitOpt(o);
+          if (v === "***") masked = true;
+          if (p.collector !== "docker-engine" || !ENGINE_KEYS.includes(k) || v === "***") { rest.push(o); continue; }
+          if (k === "host") Object.assign(e, { mode: "host", host: historyHost(v) });
+          else if (k === "context") Object.assign(e, { mode: "context", context: v });
+          else if (k === "all") e.all = truthy(v);
+          else if (k === "tls_verify") e.tls_verify = truthy(v) ? "true" : "false";
+          else e[k] = v;
+        }
+        Object.assign(form, { collector: p.collector, target: p.target || "", options: rest.join("\n"), save: p.save !== false,
+          min_confidence: p.min_confidence ?? 0.5 });
+        Object.assign(form.engine, e);
+        advanced.value = !!(e.tls_ca || e.tls_cert || e.tls_key || e.tls_verify || e.identity);
+        // the history keeps no credentials: masked options and the user of ssh:// hosts must be typed again
+        const sshNoUser = e.mode === "host" && /^ssh:\/\/[^@/]+$/.test(e.host) ? " The history does not keep ssh user names: add user@ if needed." : "";
+        const warn = (masked ? " A secret option was masked in the history: type it again." : "") + sshNoUser;
+        UI.toast(`Form filled from job #${job.id}: check it, then Run scan.${warn}`, warn ? "warn" : "info", warn ? 10000 : 6000);
+        scrollTop();
+      }
+      useRunAgain(prefill);
+
       const cli = computed(() => ["secmonk scan", form.collector, form.target && shellArg(form.target),
         ...opts.value.map((o) => `-o ${shellArg(o)}`), !form.save && "--no-save",
         +form.min_confidence !== 0.5 && `--min-confidence ${form.min_confidence}`].filter(Boolean).join(" "));
-      const canRun = computed(() => actions.value && !busy.value && (hint.value.optional || form.target.trim()));
+      const canRun = computed(() => actions.value && !store.busy.value && (hint.value.optional || form.target.trim())
+        && !(docker.value && form.engine.mode === "host" && !form.engine.host.trim()));
       const run = () => store.startJob({ kind: "scan", collector: form.collector, target: form.target.trim() || null,
         options: opts.value, save: form.save, min_confidence: +form.min_confidence });
-      return { store, collectors, form, info, hint, busy, cli, canRun, run };
+      return { store, collectors, form, advanced, info, hint, targetHint, actions, docker, contexts, loadContexts, preview,
+        runPreview, previewStale, matched, previewCols, pastTargets, pastHosts, prefill, cli, canRun, run };
     },
     template: `<div class="sm-page">
       <sm-page-header title="Scan a target" subtitle="Collect an inventory, save it and match it against the local mirror (secmonk scan)."/>
@@ -1201,15 +1433,56 @@
       <sm-card title="Target" icon="target"><div class="sm-form">
         <sm-field label="Collector" :hint="info && info.description"><select class="sm-select" v-model="form.collector" aria-label="Collector">
           <option v-for="c in collectors.data || [{ name: form.collector }]" :key="c.name" :value="c.name">{{ c.name }}</option></select></sm-field>
-        <sm-field label="Target" :hint="hint.optional ? 'optional' : 'required'"><input class="sm-input" v-model="form.target" :placeholder="hint.placeholder" @keydown.enter="canRun && run()"></sm-field>
+        <sm-field label="Target" :hint="targetHint" :wide="docker"><input class="sm-input" v-model="form.target" :placeholder="hint.placeholder"
+          list="sm-scan-targets" spellcheck="false" @keydown.enter="canRun && run()"></sm-field>
+        <datalist id="sm-scan-targets"><option v-for="t in pastTargets" :key="t" :value="t"></option></datalist>
+        <template v-if="docker">
+          <sm-field label="Engine" hint="where the containers run (-o host= / -o context=)"><select class="sm-select" v-model="form.engine.mode" aria-label="Engine">
+            <option value="auto">Auto (current context / DOCKER_HOST / local socket)</option><option value="context">Docker context</option>
+            <option value="host">Host (ssh://, tcp://, unix://)</option></select></sm-field>
+          <sm-field v-if="form.engine.mode === 'context'" label="Context" :hint="contexts.error ? contexts.error.message : 'docker context ls on the machine running secmonk ui'">
+            <select class="sm-select" v-model="form.engine.context" aria-label="Docker context" :disabled="!contexts.data">
+              <option value="" disabled>{{ contexts.loading ? 'loading…' : contexts.error ? 'contexts unavailable' : 'choose a context' }}</option>
+              <option v-for="c in contexts.data || []" :key="c.name" :value="c.name" :title="c.description">{{ c.name }}{{ c.current ? ' (current)' : '' }}{{ c.host ? ' — ' + c.host : '' }}</option></select></sm-field>
+          <sm-field v-if="form.engine.mode === 'host'" label="Host" hint="ssh://user@host[:port] (key usable without a prompt), tcp://host:2376 (TLS: advanced), unix:///path">
+            <input class="sm-input" v-model="form.engine.host" placeholder="ssh://user@host" list="sm-docker-hosts" spellcheck="false"></sm-field>
+          <datalist id="sm-docker-hosts"><option v-for="h in pastHosts" :key="h" :value="h"></option></datalist>
+          <sm-field label="Stopped containers"><sm-switch v-model="form.engine.all">{{ form.engine.all ? 'globs and regexes include stopped ones' : 'running containers only' }}</sm-switch></sm-field>
+          <details class="sm-details sm-field--wide" :open="advanced" @toggle="advanced = $event.target.open"><summary>Advanced: TLS and SSH key</summary>
+            <div class="sm-form sm-mt-2">
+              <sm-field label="TLS CA" hint="tls_ca: PEM file on the server machine"><input class="sm-input" v-model="form.engine.tls_ca" placeholder="~/.docker/ca.pem" spellcheck="false"></sm-field>
+              <sm-field label="TLS client certificate" hint="tls_cert"><input class="sm-input" v-model="form.engine.tls_cert" placeholder="~/.docker/cert.pem" spellcheck="false"></sm-field>
+              <sm-field label="TLS client key" hint="tls_key"><input class="sm-input" v-model="form.engine.tls_key" placeholder="~/.docker/key.pem" spellcheck="false"></sm-field>
+              <sm-field label="Verify the server" hint="tls_verify"><select class="sm-select" v-model="form.engine.tls_verify" aria-label="TLS verify">
+                <option value="">default</option><option value="true">verify</option><option value="false">do not verify</option></select></sm-field>
+              <sm-field label="SSH key" hint="identity: for ssh:// hosts"><input class="sm-input" v-model="form.engine.identity" placeholder="~/.ssh/id_ed25519" spellcheck="false"></sm-field>
+            </div></details>
+          <div class="sm-field--wide sm-preview"><div class="sm-toolbar">
+              <sm-button size="sm" icon="eye" :loading="preview.loading" :disabled="!actions || (form.engine.mode === 'host' && !form.engine.host.trim())" @click="runPreview">Preview containers</sm-button>
+              <template v-if="preview.data"><span class="sm-toolbar__count">{{ preview.selector ? matched + ' of ' + preview.data.containers.length + ' match' : $fmt.plural(preview.data.containers.length, 'container') }}</span>
+                <span class="sm-muted">on <span class="sm-mono">{{ preview.data.engine }}</span></span>
+                <span v-if="previewStale" class="sm-muted">· engine or selector changed: preview again</span></template>
+              <span v-else class="sm-muted">lists the engine's containers and highlights what the target selects</span></div>
+            <sm-callout v-if="preview.error" variant="error" :title="preview.error.message">{{ preview.error.hint }}</sm-callout>
+            <sm-table v-if="preview.data" static :columns="previewCols" :rows="preview.data.containers" row-key="id" label="Containers"
+              :row-class="r => preview.selector && r.matched ? 'is-match' : ''">
+              <template #cell-name="{ row }"><b>{{ row.name }}</b></template>
+              <template #cell-image="{ row }"><span class="sm-mono sm-truncate sm-cell-path" :title="row.image">{{ row.image }}</span></template>
+              <template #cell-state="{ row }"><sm-badge :variant="row.state === 'running' ? 'ok' : 'outline'">{{ row.state }}</sm-badge></template>
+              <template #cell-id="{ row }"><span class="sm-mono">{{ row.id }}</span></template>
+              <template #empty><sm-empty :title="form.engine.all ? 'No containers on this engine' : 'No running containers (try Stopped containers)'" icon="inbox"/></template>
+            </sm-table>
+            <div v-if="preview.data && /(^|,)\\s*image:/.test(preview.selector)" class="sm-muted sm-mt-1">image:&lt;ref&gt; items are scanned as images, not listed here.</div>
+          </div>
+        </template>
         <sm-field label="Minimum confidence" hint="drop name-based matches below this (0–1)"><input class="sm-input" type="number" min="0" max="1" step="0.1" v-model="form.min_confidence"></sm-field>
         <sm-field label="Save"><sm-switch v-model="form.save">{{ form.save ? 'store the inventory and findings' : 'match only, write nothing' }}</sm-switch></sm-field>
         <sm-field label="Collector options" hint="one key=value per line, like -o (e.g. platform=linux/arm64, use_brew_cli=true, exclude=node_modules,dist)" wide>
           <textarea class="sm-input" v-model="form.options" rows="3" spellcheck="false"></textarea></sm-field>
-        <div class="sm-form__actions"><sm-button variant="primary" icon="play" :loading="busy" :disabled="!canRun" @click="run">Run scan</sm-button>
+        <div class="sm-form__actions"><sm-button variant="primary" icon="play" :loading="store.busy.value" :disabled="!canRun" @click="run">Run scan</sm-button>
           <span class="sm-muted">Same as</span><code>{{ cli }}</code></div>
       </div></sm-card>
-      <sm-card title="Recent scans" icon="clock"><job-list kind="scan" :limit="3"/></sm-card>
+      <sm-card title="Scan history" icon="clock"><job-history kind="scan" :limit="10" @again="prefill"/></sm-card>
     </div>`,
   };
 
@@ -1427,9 +1700,18 @@
       const options = computed(() => [{ value: "all", label: "all" }, ...(res.data?.registry || []).map((r) => ({ value: r.name, label: r.name }))]);
       const toggle = (r) => { const s = new Set(form.sources); s.has(r.name) ? s.delete(r.name) : s.add(r.name); form.sources = [...s]; };
       const wantsEco = computed(() => form.sources.includes("osv") || form.sources.includes("all"));
-      const busy = computed(() => store.running.value.length > 0);
+      const busy = computed(() => store.busy.value);
       const actions = computed(() => !store.state.meta || store.state.meta.actions !== false);
       const list = (v) => v.split(",").map((x) => x.trim()).filter(Boolean);   // names may contain spaces (Rocky Linux:9)
+      function prefill(job) {                                // "Run again": fill the form, never start the sync
+        const p = job.params || {};
+        if (job.kind !== "sync") return;
+        Object.assign(form, { sources: [...(p.sources || [])], ecosystems: (p.ecosystems || []).join(", "), since: p.since || "",
+          full: !!p.full, limit: p.limit ? String(p.limit) : "", path: p.path || "" });
+        UI.toast(`Form filled from job #${job.id}: check it, then Run sync`, "info", 6000);
+        document.querySelector(".sm-sync-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      useRunAgain(prefill);
       const cli = computed(() => ["secmonk sync", ...(form.sources.length ? form.sources : ["<source>"]),
         ...list(form.ecosystems).map((e) => `-e ${shellArg(e)}`), form.since && `--since ${shellArg(form.since)}`, form.full && "--full",
         form.limit && `-n ${form.limit}`, form.path && `--path ${shellArg(form.path)}`].filter(Boolean).join(" "));
@@ -1439,7 +1721,7 @@
         { key: "status", label: "Status" }, { key: "message", label: "Message" }];
       const TABLES = { vulnerability: "Vulnerability records", affected: "Affected ranges", kev: "KEV entries",
         epss: "EPSS scores", asset: "Assets", component: "Components", finding: "Findings" };
-      return { res, form, rows, options, toggle, wantsEco, busy, actions, cli, run, columns, TABLES, fmt };
+      return { res, form, rows, options, toggle, wantsEco, busy, actions, cli, run, prefill, columns, TABLES, fmt };
     },
     template: `<div class="sm-page">
       <sm-page-header title="Sources &amp; sync" subtitle="What the local vulnerability mirror holds, how fresh each source is, and syncing it (secmonk status / sync)."/>
@@ -1457,7 +1739,7 @@
           <template #cell-message="{ row }"><span class="sm-truncate sm-cell-path" :title="row.message">{{ row.message }}</span></template>
         </sm-table>
         <actions-off/>
-        <sm-card title="Sync" icon="database"><div class="sm-form">
+        <sm-card title="Sync" icon="database"><div class="sm-form sm-sync-form">
           <sm-field label="Sources" hint="click rows above or chips; 'all' = every source marked for sync all, in the recommended order" wide>
             <sm-chips v-model="form.sources" :options="options"/></sm-field>
           <sm-field v-if="wantsEco" label="OSV ecosystems" hint="comma separated; empty = every ecosystem (large)"><input class="sm-input" v-model="form.ecosystems" placeholder="PyPI, npm, Go, Debian:12"></sm-field>
@@ -1468,7 +1750,7 @@
           <div class="sm-form__actions"><sm-button variant="primary" icon="refresh" :loading="busy" :disabled="!actions || busy || !form.sources.length" @click="run">Run sync</sm-button>
             <span class="sm-muted">Same as</span><code>{{ cli }}</code></div>
         </div></sm-card>
-        <sm-card title="Recent syncs" icon="clock"><job-list kind="sync" :limit="3"/></sm-card>
+        <sm-card title="Sync history" icon="clock"><job-history kind="sync" :limit="5" @again="prefill"/></sm-card>
       </data-gate></div>`,
   };
 
@@ -1479,6 +1761,7 @@
       const store = useStore();
       const route = useRoute();
       const router = useRouter();
+      const f = useQueryState({ kind: "", origin: "" });
       onMounted(() => store.loadJobs());
       const detail = useResource(() => (route.params.id ? store.source.job(route.params.id) : Promise.resolve(null)), () => route.params.id);
       const selected = computed(() => {
@@ -1486,25 +1769,47 @@
         const l = store.state.jobs.list.find((j) => String(j.id) === String(route.params.id));
         return l && l.log ? l : detail.data || l || null;
       });
-      const columns = [{ key: "id", label: "#", cls: "is-num", width: "48px" }, { key: "status", label: "Status" }, { key: "title", label: "Job" },
-        { key: "started", label: "Started" }, { key: "finished", label: "Finished" }];
-      const close = () => router.push("/jobs");
-      return { store, selected, detail, columns, close, route, JOB_STATUS: UI.JOB_STATUS, fmt };
+      const rows = computed(() => store.state.jobs.list.filter((j) => (!f.kind || j.kind === f.kind) && (!f.origin || j.origin === f.origin)));
+      const columns = [{ key: "id", label: "#", cls: "is-num", width: "56px" }, { key: "status", label: "Status" }, { key: "title", label: "Job" },
+        { key: "origin", label: "From" }, { key: "started", label: "Started" }, { key: "duration", label: "Took", cls: "is-num" },
+        { key: "summary", label: "Outcome" }];
+      const kinds = [{ value: "", label: "All" }, { value: "scan", label: "Scans" }, { value: "sync", label: "Syncs" }];
+      const origins = [{ value: "", label: "Anywhere" }, { value: "ui", label: "This UI" }, { value: "cli", label: "CLI" }];
+      const secs = (j) => {
+        const a = new Date(j.started), b = j.finished ? new Date(j.finished) : null;
+        return b && !isNaN(a) && !isNaN(b) ? `${Math.max(0, Math.round((b - a) / 1000))} s` : "";
+      };
+      const open = (j) => router.push({ name: "jobs", params: { id: j.id }, query: route.query });
+      const close = () => router.push({ name: "jobs", query: route.query });
+      // "Run again" fills the scan / sync form on its own page (?again=<id>); it never starts the job
+      const again = (j) => router.push({ name: j.kind === "sync" ? "sources" : "scan", query: { again: j.id } });
+      return { store, f, rows, selected, detail, columns, kinds, origins, secs, open, close, again, route, JOB_STATUS: UI.JOB_STATUS,
+        ORIGIN: UI.JOB_ORIGIN, fmt };
     },
     template: `<div class="sm-page">
-      <sm-page-header title="Jobs" subtitle="Scans and syncs started from this interface since the server started (one at a time).">
+      <sm-page-header title="Jobs" subtitle="Run history: scans and syncs from this interface and from the command line, with their logs and results (one job at a time).">
         <sm-button icon="refresh" @click="store.loadJobs()">Refresh</sm-button></sm-page-header>
-      <sm-table :columns="columns" :rows="store.state.jobs.list" row-key="id" :selected="selected && selected.id" label="Jobs" @select="j => $router.push('/jobs/' + j.id)">
+      <div class="sm-toolbar"><sm-segmented v-model="f.kind" :options="kinds"/><sm-segmented v-model="f.origin" :options="origins"/>
+        <span class="sm-toolbar__spacer"></span><span class="sm-toolbar__count">{{ rows.length }} of {{ store.state.jobs.list.length }} recent runs</span></div>
+      <sm-callout v-if="store.state.jobs.error" variant="error" title="Could not load the history">{{ store.state.jobs.error.message }}</sm-callout>
+      <sm-table :columns="columns" :rows="rows" row-key="id" :selected="selected && selected.id" label="Jobs" @select="open">
         <template #cell-status="{ row }"><sm-badge :variant="(JOB_STATUS[row.status] || {}).variant || 'outline'">{{ (JOB_STATUS[row.status] || {}).label || row.status }}</sm-badge></template>
-        <template #cell-title="{ row }"><b>{{ row.title }}</b><div v-if="row.error" class="sm-muted sm-truncate">{{ row.error }}</div></template>
-        <template #cell-started="{ row }">{{ fmt.datetime(row.started) }}</template>
-        <template #cell-finished="{ row }">{{ fmt.time(row.finished) }}</template>
-        <template #empty><sm-empty title="No jobs yet" icon="clock"><div>Start a scan or a sync: it runs in the background and shows up here.</div>
+        <template #cell-title="{ row }"><b>{{ row.title }}</b><div v-if="row.error" class="sm-muted sm-truncate sm-history__title" :title="row.error">{{ row.error }}</div></template>
+        <template #cell-origin="{ row }"><sm-badge variant="outline" :title="ORIGIN[row.origin] || row.origin">{{ row.origin }}</sm-badge></template>
+        <template #cell-started="{ row }"><span :title="fmt.ago(row.started)">{{ fmt.datetime(row.started) }}</span></template>
+        <template #cell-duration="{ row }">{{ secs(row) }}</template>
+        <template #cell-summary="{ row }"><sm-job-summary :job="row"/></template>
+        <template #empty><sm-empty :title="store.state.jobs.list.length ? 'No run matches the filters' : 'No jobs yet'" icon="clock">
+          <div v-if="!store.state.jobs.list.length">Start a scan or a sync: it runs in the background and stays in this history (CLI runs too).</div>
           <div class="sm-badges sm-mt-2"><sm-button size="sm" icon="target" @click="$router.push('/scan')">Scan</sm-button>
             <sm-button size="sm" icon="database" @click="$router.push('/sources')">Sync</sm-button></div></sm-empty></template>
       </sm-table>
-      <sm-drawer v-if="selected" :title="selected.title" :subtitle="'job #' + selected.id + ' · ' + selected.kind" @close="close">
-        <sm-job :job="selected"><job-result v-if="selected.result" :job="selected"/></sm-job></sm-drawer>
+      <sm-drawer v-if="selected" :title="selected.title" :subtitle="'job #' + selected.id + ' · ' + selected.kind + ' · from ' + (selected.origin || 'ui')" @close="close">
+        <template #actions><sm-button size="sm" icon="refresh" :disabled="selected.status === 'running'" title="Fill the form with this run's settings (does not start it)"
+          @click="again(selected)">Run again</sm-button></template>
+        <sm-job :job="selected"><job-result v-if="selected.result" :job="selected"/></sm-job>
+        <sm-section v-if="selected.params && Object.keys(selected.params).length" title="Settings" icon="file" class="sm-mt-3">
+          <sm-kv :rows="Object.entries(selected.params).map(([k, v]) => ({ label: k, value: Array.isArray(v) ? v.join(' · ') : v === true ? 'yes' : v === false ? 'no' : v, mono: true }))"/></sm-section></sm-drawer>
       <sm-drawer v-else-if="route.params.id && detail.error" title="Job not found" @close="close"><sm-empty :title="detail.error.message" icon="clock"/></sm-drawer>
     </div>`,
   };
@@ -1595,7 +1900,7 @@
     UI.install(app);
     app.provide("store", store);
     for (const [n, c] of Object.entries({ SnapshotGate, MonitorActions, SnapshotNotes, ProcessDetail, NoDb, DataGate,
-      FindingsTable, FindingDetail, JobResult, JobList, ActionsOff })) app.component(n, c);
+      FindingsTable, FindingDetail, JobResult, JobTarget, JobHistory, ActionsOff })) app.component(n, c);
     app.use(router);
     app.mount(el);
     store.loadMeta();
@@ -1606,5 +1911,5 @@
   Object.assign(UI, { ApiSource, MockSource, ApiError, createStore, mountApp, NAV, ROUTES, useResource, fkey,
     VIEWS: { OverviewView, ProcessesView, SoftwareView, LaunchItemsView, ActivityView, AssetsView, AssetDetailView, ScanView,
       UnmatchedView, FindingsView, VulnsView, VulnDetailView, SourcesView, JobsView, AboutView, ProcessDetail, FindingDetail,
-      FindingsTable, JobResult, DataGate, App } });
+      FindingsTable, JobResult, JobTarget, JobHistory, DataGate, App } });
 })(window);

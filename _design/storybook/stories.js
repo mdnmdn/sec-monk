@@ -13,7 +13,9 @@
   ];
   const tableRows = M.snapshot.processes.slice(9, 15);
   const finding = (vid) => M.findings.find((f) => f.vuln_id === vid);
-  const scanJob = M.jobs.find((j) => j.kind === "scan");
+  const scanJob = M.jobs.find((j) => j.kind === "scan" && j.result && j.result.targets.length === 1);
+  const multiJob = M.jobs.find((j) => j.kind === "scan" && j.result && j.result.targets.length > 1);
+  const cliJob = M.jobs.find((j) => j.origin === "cli");
   const syncJob = M.jobs.find((j) => j.kind === "sync");
 
   global.SECMONK_STORIES = [
@@ -171,8 +173,18 @@
       variants: [
         { name: "Running", template: `<sm-job :job="{ id: 3, kind: 'sync', title: 'sync osv', status: 'running', started: '2026-11-07T10:00:00Z', log: ['syncing osv…', 'osv: PyPI 1,204 records'] }"/>` },
         { name: "Done (scan)", template: `<sm-job :job="job"/>`, data: { job: scanJob } },
+        { name: "From the CLI, with actions", template: `<sm-job :job="job" closable><template #actions><sm-button size="sm" icon="refresh">Run again</sm-button></template></sm-job>`,
+          data: { job: cliJob } },
         { name: "Failed", template: `<sm-job :job="{ id: 4, kind: 'scan', title: 'scan ssh admin@build-01', status: 'error', started: '2026-11-07T10:00:00Z', finished: '2026-11-07T10:00:12Z',
   error: 'ConnectionError: timed out', log: ['collecting with ssh on admin@build-01…', 'error: ConnectionError: timed out'] }"/>` },
+      ] },
+    { id: "job-summary", group: "Data", title: "Job summary (sm-job-summary)",
+      doc: "One-line outcome of a run from its `summary` (reports.job_summary): a scan's findings by priority, targets, components and failed targets; a sync's sources and records. The Outcome column of the history tables.",
+      variants: [
+        { name: "Scan, several targets, one failed", template: `<sm-job-summary :job="job"/>`, data: { job: multiJob } },
+        { name: "Scan", template: `<sm-job-summary :job="job"/>`, data: { job: scanJob } },
+        { name: "Sync", template: `<sm-job-summary :job="job"/>`, data: { job: syncJob } },
+        { name: "Running / failed before a result", template: `<span class="sm-badges"><sm-job-summary :job="{ kind: 'scan', status: 'running', summary: {} }"/> <sm-job-summary :job="{ kind: 'scan', status: 'error', summary: {} }"/></span>` },
       ] },
     { id: "drawer", group: "Data", title: "Drawer (sm-drawer)", doc: "Detail panel: title, subtitle, actions slot; Esc / close emits close. `inline` renders it in the flow (storybook, print).",
       variants: [{ name: "Inline", template: `<sm-drawer inline title="com.sync.agent" subtitle="launchd-agent · user:alice">
@@ -207,10 +219,18 @@
         { name: "Fixed finding", template: `<finding-detail inline :finding="f"/>`, data: { f: M.findings.find((f) => f.status === "fixed") } },
       ] },
     { id: "job-result", group: "Patterns", title: "Job result (job-result)",
-      doc: "What a finished job produced: a scan's asset, stats and findings; a sync's per-source status. Used inside sm-job.",
+      doc: "What a finished job produced (ops.scan_result: {saved, targets, stats, counts}): one target is shown open (asset, stats, warnings, top findings); several get totals and a collapsible row each (job-target: findings, partial / failed badges, warnings, error). A sync shows its per-source status. Used inside sm-job.",
       variants: [
-        { name: "Scan", template: `<sm-job :job="job"><job-result :job="job"/></sm-job>`, data: { job: scanJob } },
+        { name: "Scan, one target", template: `<sm-job :job="job"><job-result :job="job"/></sm-job>`, data: { job: scanJob } },
+        { name: "Scan, several targets (docker-engine selector)", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: multiJob } },
+        { name: "Target rows", template: `<div class="sm-targets"><job-target v-for="(t, i) in job.result.targets" :key="i" :t="t" saved/></div>`, data: { job: multiJob } },
         { name: "Sync", template: `<sm-job :job="job" :log="false"><job-result :job="job"/></sm-job>`, data: { job: syncJob } },
+      ] },
+    { id: "job-history", group: "Patterns", title: "Run history (job-history)",
+      doc: "Persisted scans or syncs, newest first, from the UI and the CLI (GET /api/jobs; origin badge). A row opens its card with log and result (GET /api/jobs/<id>); Run again emits again(job) for the page to fill its form, it never starts the job. Props: kind, limit.",
+      variants: [
+        { name: "Scans", template: `<job-history kind="scan" :limit="5" @again="j => last = 'again: job #' + j.id"/><div class="sm-muted sm-mt-2">{{ last }}</div>`, data: { last: "" } },
+        { name: "Syncs", template: `<job-history kind="sync"/>` },
       ] },
     { id: "toolbar", group: "Patterns", title: "Toolbar composition",
       doc: "Search + toggles left, view controls right; second row: filter chips + result count. Same in every list view.",

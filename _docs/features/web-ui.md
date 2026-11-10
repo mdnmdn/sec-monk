@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [web-ui, cli, process, findings, sync, design]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-10
+verified: 2026-11-10
 code: src/secmonk/web/, src/secmonk/cli.py
 related: [tech/web-ui.md, decisions/0009-web-ui-vendored-libraries.md, features/process-monitor.md, features/scan-and-findings.md, features/vuln-sync.md, features/README.md]
 ---
@@ -53,11 +53,13 @@ Design system, sample pages and the component storybook: [`_design/`](../../_des
 | D2 | **Assets**: every scanned target (type, OS, components, open findings per priority, last scan); filter by text, type, "with findings". | `inventory assets` |
 | D3 | **Asset detail**: findings (incl. fixed), components (with their findings, category filter), scans (partial, warnings), collector facts; **re-match** against the current mirror; rescan. | `inventory show`, `findings ASSET --all`, `match` |
 | D4 | **Unmatched identities** (alias-table candidates). | `inventory unmatched` |
-| D5 | **Scan a target**: collector, target, `-o` options, save or match-only, minimum confidence; runs as a background job, result = asset, stats, findings. The equivalent CLI command is shown. | `scan` |
+| D5 | **Scan a target**: collector, target, `-o` options, save or match-only, minimum confidence; runs as a background job, result = one entry per target (asset, stats, warnings, findings, error) with totals. The equivalent CLI command is shown. | `scan` |
+| D5a | **Docker engine** (collector `docker-engine`): choose the engine (auto = current context / `DOCKER_HOST` / local socket, a Docker context from `docker context ls`, or a host `ssh://user@host`, `tcp://host:2376`, `unix:///path`), include stopped containers, and under *Advanced* only TLS file paths (`tls_ca`, `tls_cert`, `tls_key`), `tls_verify` and an SSH key (`identity`); the target is a selector: comma-separated names / ids, globs (`web-*`), `re:<regex>`, `image:<ref>`. **Preview containers** lists the engine's containers and highlights what the selector picks ("N of M match"). The fields become `-o` options in the CLI command shown. | `scan docker-engine -o host=… -o context=… -o all=true`, `containers` |
+| D5b | **Run history**: scans and syncs from the UI *and* the CLI are kept in the database (origin `ui` / `cli`, status, time, outcome, log, result) and survive restarts; **Run again** fills the form from a run's settings (never starts it). Secrets are stored masked and ssh user names are not stored: the form says what to type again. Earlier targets and hosts are offered as suggestions. | `history` |
 | D6 | **Findings** across assets with the CLI filters (priority, asset, fixable, hide minor / deferred, include fixed, limit) plus text search and KEV only; **finding detail**: why this priority, match method and confidence, distro triage, timeline, matched advisories, the vulnerability's KEV / EPSS. | `findings` |
 | D7 | **Vulnerability search** by package (ecosystem, name, version) or product (name, version); **vulnerability page** per id (aliases resolve): every source's record, affected ranges, findings on your assets, KEV, EPSS, references, raw records. | `vuln search`, `vuln show [--raw]` |
 | D8 | **Sources & sync**: table sizes, each source's last sync / records / status (OSV per ecosystem); **sync** selected sources (or `all`) with ecosystems, since, full, limit, or import from a local file; runs as a job. | `sources`, `status`, `sync` |
-| D9 | **Jobs**: scans and syncs started from the UI with status, log and result; one at a time; a toast when one ends and every page reloads its data. | — |
+| D9 | **Jobs**: the run history (UI and CLI) filtered by kind and origin, with status, duration, outcome; a run's log, result and settings; Run again; one job at a time (a CLI run in progress does not block the UI); a toast when one ends and every page reloads its data. | `history`, `history show` |
 
 Suppression of findings is not in the UI because the CLI has no command for it yet (the engine keeps `suppressed`
 sticky; VEX ingestion is planned in [engine-and-quality](../plans/engine-and-quality.md)).
@@ -122,13 +124,13 @@ sticky; VEX ingestion is planned in [engine-and-quality](../plans/engine-and-qua
 | `#/overview` | **Dashboard** (start page) | stat cards (open, P1, P2, KEV, fixable, components), most urgent findings, assets at risk (priority bar), mirror freshness (stale > 7 days in amber) | every stat opens the filtered findings / assets; row click -> finding, asset, sources |
 | `#/assets` | **Assets** | table: name + id, type, OS / platform, components, open findings by priority, priority bar, last scan | search, type chips, "with open findings", row -> asset page; Scan a target, Unmatched |
 | `#/assets/:id` | **Asset detail** (page) | id, last scan; partial / warning callouts; stats; tabs Findings / Components / Scans / Details | priority chips, include fixed, finding -> drawer (`?f=`); component row -> its findings; Re-match, Rescan |
-| `#/scan` | **Scan** | form (collector with its description, target with a per-collector hint, minimum confidence, save, options) and the equivalent CLI command; recent scan jobs with their results | Run scan (disabled while a job runs or actions are off); result -> asset, finding |
+| `#/scan` | **Scan** | form (collector with its description, target with a per-collector hint and earlier targets, minimum confidence, save, options; for docker-engine the Engine fields and the container preview) and the equivalent CLI command; **Scan history** (10 newest, origin badge, outcome) with the open run's log and result: totals, then one collapsible row per target (findings, partial / failed, warnings, top findings, asset link) | Run scan (disabled while a job of this server runs or actions are off); Preview containers; row -> its card; Run again -> form filled; `?again=<job id>` fills the form from that run |
 | `#/unmatched` | **Unmatched identities** | name, version, category, normalized product, bundle id | search |
 | `#/findings/:key?` | **Findings** + **finding detail** drawer | table: priority + KEV, vulnerability, component + version + match method, asset, fixed in, severity + CVSS, EPSS, triage, status | search, priority segmented, asset select, KEV / fixable / hide minor / hide deferred / include fixed, limit; drawer -> asset, vulnerability, advisories |
 | `#/vulns` | **Vulnerability search** | package (ecosystem, name) or product search with version; id lookup; examples | results -> vulnerability page |
 | `#/vulns/:id` | **Vulnerability** (page) | severity, KEV, EPSS, open findings; on your assets; records by source (summary, details, CVSS vector, CWE, dates, state); affected ranges; raw records on demand; exploitation; aliases; references | alias -> its page (canonical), finding -> drawer |
-| `#/sources` | **Sources & sync** | table sizes; per source: description, last sync, records, status, message, OSV ecosystems | row / chip selects sources; sync form (ecosystems, since, limit, local file, full) with the CLI command; recent sync jobs |
-| `#/jobs/:id?` | **Jobs** | jobs table (status, title, started, finished) | row -> drawer with log and result |
+| `#/sources` | **Sources & sync** | table sizes; per source: description, last sync, records, status, message, OSV ecosystems | row / chip selects sources; sync form (ecosystems, since, limit, local file, full) with the CLI command; sync history with Run again (`?again=<job id>`) |
+| `#/jobs/:id?` | **Jobs** | run history of the UI and the CLI (newest 100): #, status, title + error, origin, started, duration, outcome; filters kind (`?kind=`) and origin (`?origin=`) | row -> drawer with log, result and settings; Run again -> Scan / Sources form filled |
 | `#/about` | **About** | version, database path and status, actions on/off, bind address, links to docs / storybook | — |
 
 ## Navigation paradigm
@@ -157,6 +159,8 @@ sticky; VEX ingestion is planned in [engine-and-quality](../plans/engine-and-qua
 | Copy | detail values (paths, hashes, URLs) | copy button next to mono values | toast "Copied" |
 | Theme | top bar | light / dark / system, remembered in `localStorage` | — |
 | Run scan / sync | Scan, Sources & sync | `POST /api/jobs`; the client polls the job every second; one job at a time (409 otherwise) | job card with live log; badge in the top bar and count on Jobs; toast when it ends; every data view reloads |
+| Preview containers | Scan (docker-engine) | `GET /api/docker/containers` with the engine fields and the target as selector; contexts from `GET /api/docker/contexts`; refused like jobs when actions are off | table with matched rows highlighted, "N of M match", engine label; engine errors with a hint |
+| Run again | Scan / Sources history, Jobs drawer | fills the form from the run's stored `params` (docker engine options back into the Engine fields) | toast; warns when a secret was masked or an ssh host lost its user name |
 | Re-match | asset page | `POST /api/assets/match` (like `secmonk match`) | toast with the stats; the page reloads |
 
 Empty and error states are explicit: no database (data pages show what to do first with links to Sources & sync and
@@ -168,7 +172,7 @@ alternative), no asset / finding / result, nothing matches the filters, limit re
 - `secmonk ui --snapshot tests/fixtures/collectors/process/snapshot.json` serves the app on any OS; on a Mac `secmonk ui`
   shows the live machine.
 - Every view in the table above is reachable from the sidebar and by URL; every CLI command except `procs --watch`
-  in a terminal, `windows-script` and `containers` has a page (the containers list is a target hint on the Scan page).
+  in a terminal and `windows-script` has a page (`containers` is the container preview of the Scan page, `history` the Jobs page).
 - A scan and a sync started from the UI produce the same database content as the CLI commands shown next to the button.
 - The storybook renders every shared component from the same `secmonk-ui.js` / `secmonk.css` the app loads.
 - API and security behaviour covered by `tests/test_web.py`.

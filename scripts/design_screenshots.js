@@ -41,6 +41,8 @@ const SHOTS = [
   ["24-jobs", "_design/pages/jobs.html"],
   ["25-overview-dark", "_design/pages/overview.html", 0, "dark"],
   ["26-storybook-findings", "_design/storybook/index.html#finding-detail"],
+  ["27-scan-docker", "_design/pages/scan-docker.html", 1500],
+  ["28-storybook-job-result", "_design/storybook/index.html#job-result"],
 ];
 const TYPES = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json" };
 

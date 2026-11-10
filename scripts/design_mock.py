@@ -17,23 +17,39 @@ The EPSS fixture is a synthetic sample (illustrative scores).
 Assets, scanned with the real collectors from copies of the fixtures under /srv (paths rewritten from the temporary
 directory): payments-api (tests/fixtures/lang/java: log4j-core 2.14.1), web-frontend (lang/javascript/npm-v3, rescanned
 by a scan job after a lodash upgrade, so one finding is `fixed`), alpine-rootfs (docker/alpine-3.20 + xz-libs
-5.6.0-r0), macbook (collectors/macos/root) and process:fixture-mac (saved by the process monitor).
+5.6.0-r0, scanned by the CLI so the history has a `cli` run), macbook (collectors/macos/root) and process:fixture-mac
+(saved by the process monitor).
+
+Docker engine: a fake engine on a Unix socket serving tests/fixtures/collectors/docker/engine (containers web, db,
+old-job; only `web` can be inspected and exported, as the alpine rootfs), found by auto-discovery (the socket is shown
+as /var/run/docker.sock). A scan job with the selector `web,d*` and `all=true` gives a multi-target result with one
+failed target (status partial). Docker contexts: two synthetic contexts in a temporary DOCKER_CONFIG
+(`build-01`, ssh, and `staging`, tcp + TLS); container listing = `ops.docker_containers(all=True)`.
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import io
 import json
+import os
 import shutil
+import socketserver
 import sys
+import tarfile
 import tempfile
+import threading
 import time
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from secmonk import ops, reports
+from secmonk.cli import app as cli_app
+from secmonk.collectors import docker_engine
 from secmonk.collectors.process import snapshot as snapfile
 from secmonk.collectors.process.model import LaunchItem
 from secmonk.db import connect
@@ -110,15 +126,76 @@ def scan(db: Path, collector: str, target: Path) -> str:
     return inv.asset.id
 
 
-def run_job(runner: JobRunner, body: dict) -> dict:
+def run_job(runner: JobRunner, body: dict, status: str = "ok") -> dict:
     job = runner.start(body)
     for _ in range(600):
         j = runner.get(job["id"])
         if j["status"] != "running":
-            assert j["status"] == "ok", j
+            assert j["status"] == status, j
             return j
         time.sleep(0.05)
     raise SystemExit(f"job did not finish: {job}")
+
+
+def cli_scan(db: Path, collector: str, target: Path) -> None:
+    """A scan through the real CLI (`secmonk scan`): recorded in the run history with origin `cli`."""
+    from typer.testing import CliRunner
+
+    res = CliRunner().invoke(cli_app, ["scan", collector, str(target), "--db", str(db), "-q"])
+    assert res.exit_code == 0, res.output
+
+
+ENGINE = FIX / "collectors/docker/engine"
+
+
+def fake_engine(sock: str, rootfs: Path) -> socketserver.BaseServer:
+    """Docker Engine API subset on a Unix socket: list, inspect and export of the fixture container `web`."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for rel in ("etc/os-release", "lib/apk/db/installed"):
+            tar.add(rootfs / rel, arcname=rel)
+    inspect = json.loads((ENGINE / "container-inspect.json").read_text())
+    rows = json.loads((ENGINE / "containers-json.json").read_text())
+    routes = {"/_ping": b"OK", "/version": (ENGINE / "version.json").read_bytes(),
+              "/containers/web/json": json.dumps(inspect).encode(),
+              f"/containers/{inspect['Id']}/export": buf.getvalue()}
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def address_string(self) -> str:
+            return "unix"
+
+        def log_message(self, *a) -> None:
+            pass
+
+        def do_GET(self) -> None:
+            path, _, query = self.path.partition("?")
+            if path == "/containers/json":
+                body = json.dumps([r for r in rows if "all=1" in query or r["State"] == "running"]).encode()
+                code = 200
+            else:
+                name = path.split("/")[2] if path.startswith("/containers/") else path
+                code, body = (200, routes[path]) if path in routes else \
+                    (404, json.dumps({"message": f"No such container: {name}"}).encode())
+            self.send_response(code)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = socketserver.ThreadingUnixStreamServer(sock, Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def docker_config(cfg: Path) -> None:
+    """Two contexts as `docker context create` writes them (meta.json under a sha256 of the name)."""
+    for name, host, desc in (("build-01", "ssh://deploy@build-01.example.internal", "CI builder (over ssh)"),
+                             ("staging", "tcp://staging.example.internal:2376", "Staging engine (TLS)")):
+        d = cfg / "contexts/meta" / hashlib.sha256(name.encode()).hexdigest()
+        d.mkdir(parents=True)
+        (d / "meta.json").write_text(json.dumps({"Name": name, "Metadata": {"Description": desc},
+                                                 "Endpoints": {"docker": {"Host": host}}}))
 
 
 def monitor_payloads(tmp: Path, root: Path, db: Path) -> tuple[dict, list]:
@@ -165,14 +242,29 @@ def main() -> None:
         with (srv / "alpine-rootfs/lib/apk/db/installed").open("a") as fh:
             fh.write("P:xz-libs\nV:5.6.0-r0\nA:x86_64\no:xz\n\n")
         shutil.copytree(FIX / "collectors/macos/root", srv / "macbook")
-        for collector, target in (("fs", "payments-api"), ("fs", "web-frontend"), ("rootfs", "alpine-rootfs"),
-                                  ("macos", "macbook")):
+        for collector, target in (("fs", "payments-api"), ("fs", "web-frontend"), ("macos", "macbook")):
             scan(db, collector, srv / target)
+        cli_scan(db, "rootfs", srv / "alpine-rootfs")                                   # job 2, from the CLI
         lock = srv / "web-frontend/package-lock.json"
         text = lock.read_text()
         assert text.count('"version": "4.17.20"') == 1
         lock.write_text(text.replace('"version": "4.17.20"', '"version": "4.17.21"'))
-        run_job(runner, {"kind": "scan", "collector": "fs", "target": str(srv / "web-frontend")})   # job 2: lodash fixed
+        run_job(runner, {"kind": "scan", "collector": "fs", "target": str(srv / "web-frontend")})   # job 3: lodash fixed
+
+        # docker engine: auto-discovered fake socket, two contexts; job 4 = selector over two containers, one fails
+        sock = str(tmp / "engine.sock")
+        engine = fake_engine(sock, srv / "alpine-rootfs")
+        for var in ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"):
+            os.environ.pop(var, None)
+        os.environ["DOCKER_CONFIG"] = str(tmp / "dockercfg")
+        docker_config(tmp / "dockercfg")
+        docker_engine.candidate_sockets = lambda opts=None: [sock]
+        docker_engine._refuses = lambda path: False
+        run_job(runner, {"kind": "scan", "collector": "docker-engine", "target": "web,d*", "options": ["all=true"]},
+                status="partial")
+        docker = {"contexts": ops.docker_contexts(), "containers": ops.docker_containers(all=True)}
+        engine.shutdown()
+        engine.server_close()
 
         c = connect(db)
         try:
@@ -215,11 +307,12 @@ def main() -> None:
                 "vulns": vulns, "vuln_ids": vuln_ids, "vuln_index": index, "sources": sources,
                 "collectors": data_api.collectors(),
                 "jobs": [runner.get(j["id"]) for j in runner.list()],
+                "docker": docker,
             }
         finally:
             c.close()
-        text = json.dumps(data, indent=1, default=str).replace(str(tmp), "")
-    for leak in (str(tmp), str(REPO)):
+        text = json.dumps(data, indent=1, default=str).replace(sock, "/var/run/docker.sock").replace(str(tmp), "")
+    for leak in (str(tmp), str(REPO), str(Path.home())):
         if leak in text:
             raise SystemExit(f"local path leaked into the mock: {leak}")
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -227,7 +320,7 @@ def main() -> None:
                    f"window.SECMONK_MOCK = {text};\n")
     print(f"wrote {OUT.relative_to(REPO)} ({len(text) // 1024} KiB): {len(snapshot['processes'])} processes, "
           f"{len(events)} events, {len(assets)} assets, {len(data['findings'])} findings, {len(vulns)} vulnerabilities, "
-          f"{len(data['jobs'])} jobs")
+          f"{len(data['jobs'])} jobs, {len(docker['containers']['containers'])} containers")
 
 
 if __name__ == "__main__":

@@ -136,6 +136,8 @@
     running: { variant: "live", label: "running" }, ok: { variant: "ok", label: "done" },
     partial: { variant: "warn", label: "partial" }, error: { variant: "danger", label: "failed" },
   };
+  /** Where a job was started (job.origin). */
+  const JOB_ORIGIN = { ui: "Started from this web interface", cli: "Run from the command line (secmonk scan / sync)" };
   /** What to type as the target of each collector (secmonk scan <collector> <target>). */
   const COLLECTOR_TARGETS = {
     macos: { placeholder: "(this Mac) or a mounted root, e.g. /Volumes/Backup", optional: true },
@@ -143,7 +145,8 @@
     rootfs: { placeholder: "/path/to/extracted/rootfs" },
     fs: { placeholder: "/path/to/project or directory" },
     "docker-image": { placeholder: "alpine:3.20, image.tar or an OCI layout dir" },
-    "docker-engine": { placeholder: "container name or id (see `secmonk containers`)" },
+    "docker-engine": { placeholder: "web, api-*, re:^shop-, image:nginx:1.25",
+      help: "comma separated: container names or ids, globs (web-*), re:<regex> (search), image:<ref>; patterns see running containers unless 'include stopped'" },
     ssh: { placeholder: "user@host[:port]" },
     windows: { placeholder: "/path/to/inventory.json (from secmonk windows-script)" },
     process: { placeholder: "(this machine) or a snapshot.json", optional: true },
@@ -417,7 +420,8 @@
       <span v-if="hint" class="sm-field__hint">{{ hint }}</span></label>`,
   };
 
-  /** A background job (web/jobs.py): status, timing, log; result in the default slot. Emits close if closable. */
+  /** A scan / sync run (web/jobs.py, also CLI runs): status, origin, timing, log; result in the default slot, buttons in
+   * the `actions` slot. Emits close if closable. */
   const SmJob = {
     name: "SmJob",
     props: { job: { type: Object, required: true }, log: { type: Boolean, default: true }, closable: Boolean },
@@ -430,11 +434,28 @@
       },
     },
     template: `<section class="sm-job"><header class="sm-job__header"><span :class="['sm-badge', 'sm-badge--' + st.variant]">{{ st.label }}</span>
-      <b class="sm-job__title">{{ job.title }}</b><span class="sm-muted">#{{ job.id }} · {{ fmt.time(job.started) }}<template v-if="secs != null"> · {{ secs }} s</template></span>
-      <span class="sm-toolbar__spacer"></span><sm-button v-if="closable" size="sm" variant="ghost" icon-only icon="x" title="Close" @click="$emit('close')"/></header>
+      <b class="sm-job__title">{{ job.title }}</b><span v-if="job.origin" class="sm-badge sm-badge--outline" :title="ORIGIN[job.origin] || job.origin">{{ job.origin }}</span>
+      <span class="sm-muted">#{{ job.id }} · {{ fmt.datetime(job.started) }}<template v-if="secs != null"> · {{ secs }} s</template></span>
+      <span class="sm-toolbar__spacer"></span><slot name="actions"/><sm-button v-if="closable" size="sm" variant="ghost" icon-only icon="x" title="Close" @click="$emit('close')"/></header>
       <div v-if="job.error" class="sm-job__error">{{ job.error }}</div>
       <pre v-if="log && job.log && job.log.length" class="sm-log">{{ job.log.join('\\n') }}</pre>
       <div v-if="$slots.default" class="sm-job__result"><slot/></div></section>`,
+    setup() { return { fmt, ORIGIN: JOB_ORIGIN }; },
+  };
+
+  /** One-line outcome of a job from its `summary` (reports.job_summary): scan findings + targets, sync records. */
+  const SmJobSummary = {
+    name: "SmJobSummary",
+    props: { job: { type: Object, required: true } },
+    computed: { s() { return this.job.summary || {}; } },
+    template: `<span class="sm-badges"><template v-if="job.kind === 'scan' && s.targets != null">
+        <sm-findings-summary v-if="s.errors < s.targets" :counts="s" empty="no findings"/>
+        <span class="sm-muted">{{ fmt.plural(s.targets, 'target') }} · {{ fmt.num(s.components) }} components</span>
+        <sm-badge v-if="s.errors" variant="danger">{{ s.errors }} failed</sm-badge></template>
+      <template v-else-if="job.kind === 'sync' && s.sources != null">
+        <span class="sm-muted">{{ fmt.plural(s.sources, 'source') }} · {{ fmt.num(s.records) }} records</span>
+        <sm-badge v-if="s.errors" variant="danger">{{ s.errors }} failed</sm-badge></template>
+      <span v-else class="sm-muted">{{ job.status === 'running' ? 'running…' : '—' }}</span></span>`,
     setup() { return { fmt }; },
   };
 
@@ -617,7 +638,7 @@
   };
 
   const COMPONENTS = { SmIcon, SmButton, SmBadge, SmPriority, SmFindingsSummary, SmSeverity, SmPriorityBar, SmLaunchBadge,
-    SmFlag, SmFlags, SmChip, SmChips, SmSearch, SmSwitch, SmSegmented, SmSelect, SmTabs, SmField, SmJob, SmCard, SmStat,
+    SmFlag, SmFlags, SmChip, SmChips, SmSearch, SmSwitch, SmSegmented, SmSelect, SmTabs, SmField, SmJob, SmJobSummary, SmCard, SmStat,
     SmKv, SmCopy, SmTable, SmDrawer, SmSection, SmCallout, SmEmpty, SmSpinner, SmChain, SmEventBadge, SmFeedItem,
     SmPageHeader, SmToasts, SmThemeToggle, SmNav };
 
@@ -628,7 +649,7 @@
   }
 
   global.SecMonkUI = Object.assign(global.SecMonkUI || {}, {
-    fmt, LAUNCH, FLAGS, METHODS, EVENTS, SEVERITY, PRIORITY_TEXT, MATCHED_BY, JOB_STATUS, COLLECTOR_TARGETS, ICONS,
+    fmt, LAUNCH, FLAGS, METHODS, EVENTS, SEVERITY, PRIORITY_TEXT, MATCHED_BY, JOB_STATUS, JOB_ORIGIN, COLLECTOR_TARGETS, ICONS,
     COMPONENTS, install, toast, dismiss, toasts, theme, applyTheme, countFindings, worstPriority,
   });
 })(window);
