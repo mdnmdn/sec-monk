@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [data-model, sqlite, matching]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 code: src/secmonk/db.py
 related: [decisions/0007-process-monitor.md, decisions/0004-sqlite-schema-v2.md, decisions/0006-per-user-state-locations.md, tech/engine/matching.md, tech/architecture.md, references/vuln-sources/debian-tracker.md]
 ---
@@ -83,10 +83,26 @@ Filled by `sync debian-tracker` (full snapshot replace). Read by `engine/match.p
 
 | Table | Key | Purpose |
 |---|---|---|
-| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>`, `container:<name>` (local engine) or `container:<label>/<name>` (remote engine reached with `-o host=` / `-o context=`; label = `host:port` for tcp, the ssh host with `:port` unless 22, never the user), `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`, `process:<host>` (running processes only, see [process collector](collectors/process.md))) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`, `host-processes`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
+| `asset` | `id` (`macos:<host>`, `homebrew:<host>`, `image:<repo>@<digest>` (registry pulls and archives; `image:@<Id>` for local images read through a Docker engine: aliases share it, a tag moved to a new build is a new asset), `container:<name>` (local engine) or `container:<label>/<name>` (remote engine reached with `-o host=` / `-o context=`; label = `host:port` for tcp, the ssh host with `:port` unless 22, never the user), `rootfs:<path>`, `repo:<path>` / `dir:<path>`, `ssh:<host>` or `ssh:<host>:<port>` (IPv6 bracketed; Linux, macOS and Windows hosts), `windows:<host>`, `process:<host>` (running processes only, see [process collector](collectors/process.md))) | Target + `type` (`desktop`, `server`, `container-image`, `container`, `repo`, `directory`, `host-processes`; Homebrew assets are `server`) + OS + platform + `meta` (labels, env, exposure, git info, ssh `machine_id`). |
 | `scan` | autoinc | One collector run. |
 | `component` | `key` (purl, else `name:<category>/<vendor>/<name>@<version>`) | Deduplicated software identity shared across assets; `meta` = identity facts used for matching (vendor/product hints, source package...), shared by every asset with this key (the last writer wins). |
 | `asset_component` | `(asset_id, component_id)` | Presence; `last_scan_id` tells whether it is still installed. Per-asset facts: `paths` (JSON list of **every** location of the component on this asset; `source_path` = the first) and `meta` (JSON: this asset's own users, install location, scope...). |
+
+### Reused image inventories
+
+An engine image is identified by its Id (`image:@sha256:<Id>`, the digest of the image config), so its content cannot
+change. A docker-engine scan of such an image is not collected again (`ops._reuse_image`) only when all of these hold
+(the trust rule): the run saves; no `-o rescan=true`; the asset's latest scan is complete and was written by the current
+inventory format (`asset.meta.inventory_version`) from an export the collector checked against the Id
+(`asset.meta.id_verified` is true); the engine confirms the image now (`image_meta` succeeds and returns
+the same `image_id`: not deleted, not unreachable); the stored `asset.meta.engine` is the engine this scan talks to; and,
+when the engine reports a platform, it equals the stored one (`asset.meta.platform`, else `asset.platform`). Otherwise the image is collected, which reports any
+engine error. On reuse it refreshes `asset.meta` from `image_meta` (tags, digests; `requested_ref` stays the ref the user
+asked for, `requested_refs` only when aliases were folded this time; `engine`), `asset.name` (the current tag) and
+`asset.last_seen`, then re-matches. **No `scan` row is written**: `current_components` (last_scan_id >= latest complete scan)
+stays exactly as the reused scan left it. The reuse is visible only in the run (target entry `reused: true`,
+`reused_scan_id`, `scan_id` = that scan). `-o rescan=true`, a partial latest scan, another `inventory_version` or
+`--no-save` (the overlay hides stored rows) collect again.
 
 ### Partial scans
 
@@ -130,11 +146,11 @@ findings are not stored.
 | `id` | autoincrement; also the web job id |
 | `kind`, `origin` | `scan` \| `sync`; `cli` \| `ui` |
 | `title` | `scan <collector> <target>` / `sync <sources>` (a URL target keeps its user name, never a password) |
-| `params` | JSON. Scan: `{collector, target, options[], save, min_confidence}`; sync: `{sources[], ecosystems[], since, full, limit, path}` (+ `ids` from the CLI). Redacted (`collectors/base.redact_option`): keys naming a file keep their value (exactly `identity`, `tls_ca`, `tls_cert`, `tls_key`, `known_hosts`, `ssh_config`, or `*_file` / `*_path`); any other key matching `pass` (password, passphrase, `tls_key_passphrase`…), `token`, `secret`, `…key` or `looks_secret` becomes `***`; `ssh_option` values go through `redact_command` (and `sshpass -p X` is masked); URL passwords, queries and fragments are dropped while user names are kept, so a run can be repeated (`strip_url_secrets(keep_user=True)`, `scrub_text`) |
+| `params` | JSON. Scan: `{collector, target, options[], save, min_confidence}`; host-mode scan (`scan-host`, web `items`): `{mode: "host", host ("local" for this machine), items[{id (discover candidate id or null), collector, target, options[]}], save, min_confidence}`; sync: `{sources[], ecosystems[], since, full, limit, path}` (+ `ids` from the CLI). Redacted (`collectors/base.redact_option`): keys naming a file keep their value (exactly `identity`, `tls_ca`, `tls_cert`, `tls_key`, `known_hosts`, `ssh_config`, or `*_file` / `*_path`); any other key matching `pass` (password, passphrase, `tls_key_passphrase`…), `token`, `secret`, `…key` or `looks_secret` becomes `***`; `ssh_option` values go through `redact_command` (and `sshpass -p X` is masked); URL passwords, queries and fragments are dropped while user names are kept, so a run can be repeated (`strip_url_secrets(keep_user=True)`, `scrub_text`) |
 | `status` | `running` \| `ok` \| `partial` \| `error`. Scan: ok = every target ok; partial = a partial inventory or some targets failed; error = every target failed, or the run failed before any target (no match, engine unreachable) |
 | `started_at`, `finished_at` | ISO timestamps (UTC) |
 | `error` | error message (URL credentials scrubbed); `interrupted` for a run stopped with Ctrl-C or SIGTERM (CLI) or whose process is gone (see `owner`) |
-| `result` | JSON. Scan: `{saved, targets[{target, asset, scan_id, stats, warnings, partial, findings[] (finding rows, at most `ops.STORED_FINDINGS` = 500 per target; CLI runs: its display filters, then capped), counts, error}], stats (summed), counts (summed)}`; sync: `{sources[{source, status, records, seconds, message}]}` |
+| `result` | JSON. Scan: `{saved, targets[{collector, target, asset, scan_id, reused, reused_scan_id, tags[] (image assets; else []), requested_refs[] (only when aliases were folded into one image Id), stats, warnings, partial, findings[] (finding rows, at most `ops.STORED_FINDINGS` = 500 per target; CLI runs: its display filters, then capped), counts, error}], stats (summed), counts (summed)}`; sync: `{sources[{source, status, records, seconds, message}]}` |
 | `log` | JSON list of log lines (the last `JOB_LOG_LINES` = 300; URL credentials scrubbed) |
 | `summary` | JSON `reports.job_summary` of the stored result, written at the end; lists (`db.job_rows`) read it and `json_array_length(log)` instead of the log |
 | `owner` | JSON `{pid, host}` of the process running it. A `running` row whose owner is gone (`db.owner_alive`: other host name, or `os.kill(pid, 0)` finds no process; on Windows only this process's rows count as alive) reads as `error` / `interrupted` (`reports.job_dict`, nothing written); a web server started with actions enabled also writes that (`db.job_mark_interrupted`, errors such as a locked database ignored). A run that does finish later overwrites it. No process-start token: a reused pid keeps a dead run `running` until that pid ends |

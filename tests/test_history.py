@@ -438,8 +438,8 @@ def test_cli_multi_target_scan_and_history(mirror, monkeypatch):
     assert set(doc) == {"saved", "targets", "stats", "counts"}                 # = the stored scan result
     assert doc["saved"] is True and doc["counts"]["total"] == 2 and doc["stats"]["components"] == 2
     assert [t["asset"] for t in doc["targets"]] == ["multi:a", "multi:b"]
-    assert set(doc["targets"][0]) == {"target", "asset", "scan_id", "stats", "warnings", "partial", "findings",
-                                      "counts", "error"}
+    assert set(doc["targets"][0]) == {"collector", "target", "asset", "scan_id", "stats", "warnings", "partial",
+                                      "findings", "counts", "error", "reused", "reused_scan_id", "tags"}
     assert doc["targets"][0]["counts"]["total"] == 1
     assert json.loads(run("scan", "multi", "a", "-f", "json", "--priority", "P1").stdout)["findings"] == []
     single = json.loads(run("scan", "multi", "a", "-f", "json").stdout)

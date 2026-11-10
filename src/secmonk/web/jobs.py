@@ -27,6 +27,24 @@ from .api import ApiError
 KEEP = 20
 MAX_LOG = 1000
 LIST_MAX = 200
+# collector options a scan started from the browser may not set: they choose what runs on this machine (the CLI keeps
+# them); the same policy as GET /api/discover
+WEB_FORBIDDEN_SCAN_OPTS = frozenset({"ssh_bin", "transport", "ssh_option"})
+
+
+def _web_item(collector: Any, target: Any, options: Any, where: str, id: Any = None):
+    """ops.scan_item + the web policy (WEB_FORBIDDEN_SCAN_OPTS); ApiError 400 prefixed with `where`."""
+    try:
+        item = ops.scan_item(collector, target, options, id)
+    except ValueError as e:
+        raise ApiError(400, f"{where}: {e}") from None
+    bad = sorted(set(item.opts) & WEB_FORBIDDEN_SCAN_OPTS)
+    if bad:
+        raise ApiError(400, f"{where}: option not accepted from the browser: {', '.join(bad)}",
+                       "Run scans that need a custom ssh binary, transport or ssh_option with the secmonk CLI.")
+    return item
+
+
 # docker-engine options the containers listing accepts from the browser (no `socket`, no `ssh_bin`: a path to run)
 DOCKER_LIST_OPTS = frozenset({"tls_ca", "tls_cert", "tls_key", "tls_verify", "identity", "timeout", "connect_timeout"})
 _CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
@@ -87,6 +105,7 @@ class JobRunner:
         self.jobs: list[Job] = []
         self.lock = threading.Lock()
         self.starting = False                 # a start() between its check and its job being listed
+        self.discovering = threading.Lock()   # one host discovery at a time (it runs ssh / probes)
         if enabled and self.db_path.exists():
             # runs whose process is gone (dead server, killed CLI) -> error "interrupted"; lists show them so anyway
             # (reports.job_dict), this only makes it permanent. Never blocks the server from starting.
@@ -204,18 +223,7 @@ class JobRunner:
                   "path": path}
         return ops.sync_title(names), params, lambda job: self._sync(job, reg, params)
 
-    def _prepare_scan(self, body: dict[str, Any]):
-        reg = ops.collectors_registry()
-        collector = _opt_str(body.get("collector"), "collector")
-        if collector not in reg:
-            raise ApiError(400, f"collector: expected one of {', '.join(sorted(reg))}")
-        target = _opt_str(body.get("target"), "target")
-        raw_opts = _str_list(body.get("options"), "options") if isinstance(body.get("options"), list) else \
-            [x.strip() for x in (_opt_str(body.get("options"), "options") or "").splitlines() if x.strip()]
-        try:
-            opts = ops.parse_opts(raw_opts)
-        except ValueError as e:
-            raise ApiError(400, f"options: {e}") from None
+    def _scan_common(self, body: dict[str, Any]) -> tuple[bool, float]:
         save = body.get("save", True) is not False
         mc = body.get("min_confidence", self.min_confidence)
         if not isinstance(mc, (int, float)) or isinstance(mc, bool) or not 0 <= mc <= 1:
@@ -223,9 +231,42 @@ class JobRunner:
         if not save and not self.db_path.exists():
             raise ApiError(409, f"no database at {self.db_path}",
                            "A scan without saving needs an existing mirror: sync first, or keep 'Save' on.")
-        params = ops.scan_params(collector, target, raw_opts, save=save, min_confidence=float(mc))
+        return save, float(mc)
+
+    def _prepare_scan(self, body: dict[str, Any]):
+        if body.get("items") is not None:
+            return self._prepare_batch(body)
+        reg = ops.collectors_registry()
+        collector = _opt_str(body.get("collector"), "collector")
+        if collector not in reg:
+            raise ApiError(400, f"collector: expected one of {', '.join(sorted(reg))}")
+        target = _opt_str(body.get("target"), "target")
+        raw_opts = _str_list(body.get("options"), "options") if isinstance(body.get("options"), list) else \
+            [x.strip() for x in (_opt_str(body.get("options"), "options") or "").splitlines() if x.strip()]
+        item = _web_item(collector, target, raw_opts, "options")
+        save, mc = self._scan_common(body)
+        params = ops.scan_params(collector, target, raw_opts, save=save, min_confidence=mc)
         return (ops.scan_title(collector, target), params,
-                lambda job: self._scan(job, collector, target, opts, save, float(mc)))
+                lambda job: self._scan(job, [item], save, mc, strict_expand=True))
+
+    def _prepare_batch(self, body: dict[str, Any]):
+        """Host mode: {kind: scan, items: [{collector, target, options}], save, min_confidence, host}."""
+        raw = body.get("items")
+        if not isinstance(raw, list) or not raw:
+            raise ApiError(400, "items: expected a non-empty list of {collector, target, options}")
+        if len(raw) > ops.MAX_ITEMS:
+            raise ApiError(400, f"items: at most {ops.MAX_ITEMS} per scan")
+        items = []
+        for n, it in enumerate(raw, 1):
+            if not isinstance(it, dict):
+                raise ApiError(400, f"items[{n}]: expected an object {{collector, target, options}}")
+            items.append(_web_item(it.get("collector"), it.get("target"), it.get("options"), f"items[{n}]",
+                                   it.get("id")))
+        host = _opt_str(body.get("host"), "host")
+        save, mc = self._scan_common(body)
+        params = ops.batch_params(items, save=save, min_confidence=mc, host=host)
+        return (ops.batch_title(host, [i.id or i.collector for i in items]), params,
+                lambda job: self._scan(job, items, save, mc))
 
     # ------------------------------------------------------------------ execution (worker thread)
     def _run(self, job: Job, fn) -> None:
@@ -269,22 +310,43 @@ class JobRunner:
             conn.close()
         return ops.sync_status(results), {"sources": results}
 
-    def _scan(self, job: Job, collector: str, target: str | None, opts: dict, save: bool, min_confidence: float):
-        targets = ops.expand_targets(collector, target, opts)    # no match / engine unreachable -> job error
-        if len(targets) > 1 or targets[0] != target:
-            job.say(f"{len(targets)} target(s): {', '.join(str(ops.redact_target(t)) for t in targets)}")
-        entries = []
+    def _scan(self, job: Job, items: list, save: bool, min_confidence: float, *, strict_expand: bool = False):
+        """ops.scan_items: a single-collector job fails as a whole when its target matches nothing
+        (strict_expand); in a batch that item gets an error entry and the others run."""
         conn = dbm.connect(self.db_path)
         try:
             if not save:
                 dbm.ephemeral_overlay(conn)       # nothing persisted (the history row lives on the real table)
-            for t in targets:
-                entry, _ = ops.scan_target(conn, collector, t, opts, save=save, min_confidence=min_confidence,
-                                           say=job.say)
-                entries.append(entry)
+            entries = ops.scan_items(conn, items, save=save, min_confidence=min_confidence, say=job.say,
+                                     strict_expand=strict_expand)
         finally:
             conn.close()
         return ops.scan_result(entries, saved=save)
+
+    # ------------------------------------------------------------------ host discovery (contacts the host)
+    def discover(self, *, target: str | None, options: list[str]) -> dict[str, Any]:
+        self.require_actions()
+        try:
+            opts = ops.parse_opts(options)
+        except ValueError as e:
+            raise ApiError(400, f"opt: {e}") from None
+        bad = sorted(set(opts) - ops.DISCOVER_WEB_OPTS)
+        if bad:
+            raise ApiError(400, f"opt: not accepted here: {', '.join(bad)}",
+                           f"Allowed: {', '.join(sorted(ops.DISCOVER_WEB_OPTS))}.")
+        if not self.discovering.acquire(blocking=False):
+            raise ApiError(409, "a discovery is already running", "Wait for it to finish, then try again.")
+        try:
+            return ops.discover_host(target, opts)
+        except ValueError as e:
+            raise ApiError(400, scrub_text(f"{type(e).__name__}: {e}") or "invalid request",
+                           "Expected nothing (this machine) or [ssh://]user@host[:port].") from None
+        except Exception as e:  # noqa: BLE001
+            raise ApiError(502, f"cannot explore the host ({type(e).__name__})",
+                           "Is the host reachable over ssh with a key (no password prompt) from the machine running "
+                           "secmonk ui? `secmonk discover <target>` shows the full error.") from None
+        finally:
+            self.discovering.release()
 
     # ------------------------------------------------------------------ docker engine (contacts other hosts)
     def docker_contexts(self) -> list[dict]:

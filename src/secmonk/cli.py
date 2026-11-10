@@ -611,57 +611,79 @@ def scan(
     A target that expands to several (docker-engine selectors) is scanned one by one: a section per target, JSON
     {"targets": [...]}; a failing target does not stop the others (exit 1 at the end).
     """
-    quiet = quiet or _state.quiet
     if collector not in _collectors():
         raise _fail(f"unknown collector {_e(collector)} (known: {', '.join(sorted(_collectors()))})", 2)
-    opts = _parse_opts(opt)
-    fkw = {"priority": priority, "fixable": fixable, "hide_minor": hide_minor, "hide_deferred": hide_deferred,
-           "limit": limit}
-    params = ops.scan_params(collector, target, opt, save=save, min_confidence=min_confidence)
-    hit = 0
-    csv_rows: list[dict] = []
+    try:
+        item = ops.scan_item(collector, target, opt)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from None
+    _run_scan(
+        [item], title=ops.scan_title(collector, target),
+        params=ops.scan_params(collector, target, opt, save=save, min_confidence=min_confidence),
+        single_spec=not ops.is_selector(collector, target), save=save, min_confidence=min_confidence,
+        fail_on=fail_on, fmt=fmt, quiet=quiet or _state.quiet, db=db,
+        fkw={"priority": priority, "fixable": fixable, "hide_minor": hide_minor, "hide_deferred": hide_deferred,
+             "limit": limit})
+
+
+def _run_scan(items: list, *, title: str, params: dict, single_spec: bool, save: bool, min_confidence: float,
+              fail_on: str | None, fkw: dict, fmt: Fmt, quiet: bool, db: Path | None) -> None:
+    """`scan` and `scan-host`: ops.scan_items (the web job's loop) with the CLI's output, history and exit codes.
+    A single-collector scan (single_spec, one item) whose target expands to exactly that one target prints the
+    single-target document; otherwise a section per target and JSON = the stored result."""
     if not save and not _db_path(db).exists():        # before the history row would create the database
         raise _fail(f"no database at {_e(_db_path(db))} — run `secmonk sync …` first")
+    strict = len(items) == 1 and single_spec
+    state = {"single": False, "hit": 0}
+    csv_rows: list[dict] = []
+
+    def on_expanded(item, targets) -> None:
+        state["single"] = strict and len(targets) == 1
+
+    def on_entry(entry: dict, inv) -> None:
+        single = state["single"]
+        name = " ".join(x for x in (entry["collector"] if len(items) > 1 else "",
+                                    entry["target"] or "") if x) or entry["collector"]
+        if not single and fmt is Fmt.table and not quiet:
+            console.rule(_e(name))
+        if entry["error"]:
+            if not single:
+                err_console.print(f"[red]{_e(name)}: {_e(entry['error'])}[/]")
+            return
+        if fmt is not Fmt.json:
+            if inv is not None:                        # None: a reused image inventory (nothing collected)
+                _report_inventory_notes(inv)
+            elif entry.get("reused"):
+                _info(f"[dim]{_e(entry['asset'])}: already inventoried (scan {entry['reused_scan_id']}), "
+                      "re-matched without collecting (-o rescan=true collects again)[/]", fmt)
+            if not quiet:
+                (console if fmt is Fmt.table else err_console).print(_stats_line(entry["asset"], entry["stats"]))
+            if fmt is Fmt.csv:
+                csv_rows.extend(entry["findings"])     # one CSV document for every target
+            else:
+                _emit_findings(entry["findings"], fmt)
+        if fail_on:
+            state["hit"] += queries.count_open_at_or_above(conn, entry["asset"], fail_on)
+
     # the history row lives on its own connection and is finished after the scan connection is closed: recording
     # a run never commits (or waits on) the scan's own transaction
-    with ops.record_run(_db_path(db), "scan", "cli", ops.scan_title(collector, target), params) as run:
+    with ops.record_run(_db_path(db), "scan", "cli", title, params) as run:
         with _open(db, create=save) as conn:
-            try:
-                targets = ops.expand_targets(collector, target, opts)
-            except Exception as e:  # noqa: BLE001  # no match, engine unreachable
-                _traceback()
-                run.finish("error", None, f"{type(e).__name__}: {e}")
-                raise _fail(f"{_e(collector)}: {_e(type(e).__name__)}: {_e(e)}") from None
-            single = len(targets) == 1 and not ops.is_selector(collector, target)
             if not save:
                 _ephemeral(conn)
-            entries = []
-            for t in targets:
-                if not single and fmt is Fmt.table and not quiet:
-                    console.rule(_e(ops.redact_target(t) or collector))
-                entry, inv = ops.scan_target(conn, collector, t, opts, save=save, min_confidence=min_confidence,
-                                             findings=fkw, say=run.say, on_exception=lambda e: _traceback())
-                entries.append(entry)
-                if entry["error"]:
-                    if single:
-                        break
-                    err_console.print(f"[red]{_e(entry['target'] or collector)}: {_e(entry['error'])}[/]")
-                    continue
-                if fmt is not Fmt.json:
-                    _report_inventory_notes(inv)
-                    if not quiet:
-                        (console if fmt is Fmt.table else err_console).print(
-                            _stats_line(entry["asset"], entry["stats"]))
-                    if fmt is Fmt.csv:
-                        csv_rows += entry["findings"]     # one CSV document for every target
-                    else:
-                        _emit_findings(entry["findings"], fmt)
-                if fail_on:
-                    hit += queries.count_open_at_or_above(conn, entry["asset"], fail_on)
+            try:
+                entries = ops.scan_items(conn, items, save=save, min_confidence=min_confidence, findings=fkw,
+                                         say=run.say, on_exception=lambda e: _traceback(), on_expanded=on_expanded,
+                                         on_entry=on_entry, strict_expand=strict)
+            except Exception as e:  # noqa: BLE001  # single collector: no match, engine unreachable
+                _traceback()
+                run.finish("error", None, f"{type(e).__name__}: {e}")
+                raise _fail(f"{_e(items[0].collector)}: {_e(type(e).__name__)}: {_e(e)}") from None
         status, result, error = ops.scan_result(entries, saved=save)
         run.finish(status, result, error)
+    single, hit = state["single"], state["hit"]
     if single and entries[0]["error"]:
-        raise _fail(f"{_e(collector)}: {_e(entries[0]['error'])}")
+        raise _fail(f"{_e(items[0].collector)}: {_e(entries[0]['error'])}")
     if fmt is Fmt.csv:
         _emit_findings(csv_rows, fmt)
     if fmt is Fmt.json:
@@ -685,6 +707,145 @@ def _emit_findings(rows: list[dict], fmt: Fmt) -> None:
     if fmt is not Fmt.json:
         _emit(rows, FINDING_COLS if fmt is Fmt.table else FINDING_COLS + ["asset_id", "status"], fmt,
               title="Findings", cell=_FINDING_CELLS)
+
+
+# --------------------------------------------------------------------------- host mode (discover + batch scan)
+
+HostTarget = Annotated[str | None, typer.Argument(
+    help="Host to explore: nothing = this machine, or [ssh://]user@host[:port] (Linux/macOS over ssh)")]
+DiscoverOpts = Annotated[list[str] | None, typer.Option(
+    "--opt", "-o", help="Discovery option key=value (repeatable): identity, known_hosts, connect_timeout, context, "
+                        "host (docker engine)…")]
+
+
+def _discover(target: str | None, opt: list[str] | None) -> dict:
+    try:
+        return ops.discover_host(target, _parse_opts(opt))
+    except ValueError as e:
+        raise _fail(f"discover: {_e(e)}", 2) from None
+    except Exception as e:  # noqa: BLE001  # ssh / engine failures: a clean message (-v for the traceback)
+        _traceback()
+        raise _fail(f"discover: {_e(type(e).__name__)}: {_e(e)}") from None
+
+
+def _host_notes(payload: dict) -> None:
+    """Host line and discovery warnings on stderr (never hidden: warnings; the host line: not with --quiet)."""
+    h = payload["host"]
+    if not _state.quiet:
+        os_text = " ".join(str(x) for x in (h["os"], h["os_version"], h["arch"]) if x)
+        err_console.print(f"[bold]{_e(h['name'] or h['target'] or 'this machine')}[/] ({_e(h['kind'])}"
+                          f"{', ' + _e(os_text) if os_text else ''})")
+    for w in payload["warnings"]:
+        err_console.print(f"[yellow]warning:[/] {_e(w)}")
+
+
+def _candidate_table(cands: list[dict], *, numbered: bool = False) -> Table:
+    t = Table(title="Scan candidates")
+    cols = (["#"] if numbered else []) + ["id", "available", "selected", "collector", "target", "label / reason"]
+    for c in cols:
+        t.add_column(c, overflow="fold")
+    for n, c in enumerate(cands, 1):
+        note = c["label"] + (f" — {c['reason']}" if c["reason"] else "")
+        t.add_row(*([_t(n)] if numbered else []), _t(c["id"]), _t(_plain(c["available"])), _t(_plain(c["selected"])),
+                  _t(c["collector"]), _t(c["target"]), _t(note, style="" if c["available"] else "dim"))
+    return t
+
+
+@app.command()
+def discover(
+    target: HostTarget = None,
+    opt: DiscoverOpts = None,
+    fmt: Annotated[Fmt, typer.Option("--format", "-f", help="Output format: table or json")] = Fmt.table,
+):
+    """Explore a host and list what can be scanned there (candidates for `secmonk scan-host`)."""
+    if fmt is Fmt.csv:
+        raise typer.BadParameter("discover supports --format table or json")
+    payload = _discover(target, opt)
+    if fmt is Fmt.json:
+        typer.echo(json.dumps(payload, indent=2, default=str))
+        return
+    _host_notes(payload)
+    _print(_candidate_table(payload["candidates"]))
+
+
+def _interactive() -> bool:
+    import sys
+
+    return sys.stdin.isatty()
+
+
+def _choose(payload: dict, *, only: str | None, all_: bool, yes: bool) -> list[str]:
+    """Candidate ids to scan: --only, --all, --yes, or a prompt on a terminal. Exit 2 when no choice is possible."""
+    cands = payload["candidates"]
+    if sum(bool(x) for x in (only, all_, yes)) > 1:
+        raise _fail("choose one of --only, --all, --yes", 2)
+    if only:
+        return [x.strip() for x in only.split(",") if x.strip()]
+    if all_:
+        return [c["id"] for c in cands if c["available"]]
+    default = [c["id"] for c in cands if c["available"] and c["selected"]]
+    if yes:
+        return default
+    if not _interactive():
+        raise _fail("nothing chosen: pass --only id,id, --all (every available) or --yes (the default selection); "
+                    "see `secmonk discover`", 2)
+    err_console.print(_candidate_table(cands, numbered=True))      # stdout may carry the JSON result
+    nums = [str(n) for n, c in enumerate(cands, 1) if c["id"] in default]
+    answer = typer.prompt("Scan which (numbers or ids, comma separated; no ranges)", default=",".join(nums) or "",
+                          show_default=True, err=True)
+    out = []
+    for x in (y.strip() for y in answer.split(",")):
+        if not x:
+            continue
+        if re.fullmatch(r"[0-9]+", x):
+            if not 1 <= int(x) <= len(cands):
+                raise _fail(f"no candidate number {_e(x)}", 2)
+            out.append(cands[int(x) - 1]["id"])
+        else:
+            out.append(x)
+    return out
+
+
+@app.command("scan-host")
+def scan_host(
+    target: HostTarget = None,
+    only: Annotated[str | None, typer.Option("--only", help="Candidate ids to scan, comma separated")] = None,
+    all_: Annotated[bool, typer.Option("--all", help="Every available candidate")] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="The default selection, without asking")] = False,
+    opt: DiscoverOpts = None,
+    min_confidence: Annotated[float, typer.Option(help="Drop name-based matches below this")] = 0.5,
+    fail_on: Annotated[str | None, typer.Option(
+        "--fail-on", callback=_check_priority,
+        help="Exit 3 if any open finding is at or above this priority (P1 highest)")] = None,
+    limit: LimitOpt = 200,
+    save: Annotated[bool, typer.Option(help="Store inventories and findings (--no-save: needs an existing mirror, "
+                                            "stores none; the run is listed in the history)")] = True,
+    fmt: FmtOpt = Fmt.table,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Only the findings")] = False,
+    db: DbOpt = None,
+):
+    """Host mode: explore a host (`secmonk discover`), choose what to scan, then scan it all in one run.
+
+    Without --only / --all / --yes the candidates are listed and you are asked (on a terminal). Output like a
+    multi-target scan: a section per target, JSON = {saved, targets, stats, counts}; a failing item does not stop
+    the others (exit 1 at the end).
+    """
+    if not save and not _db_path(db).exists():
+        raise _fail(f"no database at {_e(_db_path(db))} — run `secmonk sync …` first")
+    payload = _discover(target, opt)
+    _host_notes(payload)
+    ids = list(dict.fromkeys(_choose(payload, only=only, all_=all_, yes=yes)))
+    if not ids:
+        raise _fail("nothing to scan (no candidate chosen)", 2)
+    try:
+        items = ops.candidate_items(payload, ids)
+    except ValueError as e:
+        raise _fail(_e(e), 2) from None
+    host = payload["host"]
+    _run_scan(items, title=ops.batch_title(host["name"] or host["target"] or target, ids),
+              params=ops.batch_params(items, save=save, min_confidence=min_confidence, host=target),
+              single_spec=False, save=save, min_confidence=min_confidence, fail_on=fail_on, fkw={"limit": limit},
+              fmt=fmt, quiet=quiet or _state.quiet, db=db)
 
 
 @app.command()

@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [cli, index, features]
-updated: 2026-11-10
-verified: 2026-11-10
+updated: 2026-11-11
+verified: 2026-11-11
 code: src/secmonk/cli.py
 related: [tech/architecture.md, references/vuln-sources/README.md, references/probes.md, _meta/README.md]
 ---
@@ -19,7 +19,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 
 | Feature | Doc | Status | Platforms | CLI entry point | Validation caveat |
 |---|---|---|---|---|---|
-| Scan, match and findings | [scan-and-findings.md](scan-and-findings.md) | implemented | any | `secmonk scan`, `match`, `findings`, `history`, `inventory *`, `vuln show/search` | engine and CLI covered by offline tests (`tests/engine/`, `tests/test_cli.py`); priorities are draft rules |
+| Scan, match and findings | [scan-and-findings.md](scan-and-findings.md) | implemented | any | `secmonk scan`, `scan-host`, `discover`, `match`, `findings`, `history`, `inventory *`, `vuln show/search` | engine and CLI covered by offline tests (`tests/engine/`, `tests/test_cli.py`); priorities are draft rules |
 | Vulnerability data sync (8 sources) | [vuln-sync.md](vuln-sync.md) | implemented | any (needs network per source, or `--path` import) | `secmonk sync <source>`, `sources`, `status`, `vuln show/search` | osv, cvelist, kev run on real data; epss, nvd, euvd, msrc, debian-tracker only on fixtures (hosts blocked in the dev sandbox) |
 | macOS inventory | [inventory-macos.md](inventory-macos.md) | implemented | macOS host or a copied Mac directory tree (analysed on any OS) | `secmonk collect\|scan macos [/]` | fixtures synthetic; not run on a real Mac |
 | Homebrew inventory | [inventory-homebrew.md](inventory-homebrew.md) | implemented | macOS and Linuxbrew prefixes (any OS can read a mounted prefix) | `secmonk collect\|scan homebrew [prefix]` | fixtures built from real registry manifests and formulae; real-prefix scan not done |
@@ -68,7 +68,16 @@ secmonk scan COLLECTOR [TARGET]         collect + save + match, then print findi
          secmonk scan docker-engine image:nginx:1.27 -o context=staging
          secmonk scan docker-engine 'web-*' -o all=yes          (stopped containers too)
     -f, --format table|json|csv   -q, --quiet
-    -o, --opt KEY=VAL
+    -o, --opt KEY=VAL   (docker-engine: rescan=true collects an image already inventoried again)
+secmonk discover [TARGET]               host mode: list what can be scanned on this machine or an ssh host
+                                        ([ssh://]user@host[:port]): candidates id, available, selected, collector, target
+    -o, --opt KEY=VAL   discovery option: identity, known_hosts, connect_timeout, probe_timeout, host, context…
+    -f, --format table|json
+secmonk scan-host [TARGET]              discover, choose candidates, scan them all in one run (like a multi-target scan)
+    --only ID,ID        these candidates (unknown / unavailable: exit 2)
+    --all               every available candidate      -y, --yes   the default selection
+                        (none of the three: numbered list + prompt on a terminal; exit 2 otherwise)
+    --min-confidence F  --fail-on P1..P4  -n, --limit N  --save/--no-save  -f, --format table|json|csv  -q  -o KEY=VAL
 secmonk match ASSET                     (re)match a stored asset against the current mirror
     --min-confidence F  (default 0.5)
 secmonk windows-script [--compact]      print the read-only PowerShell inventory script (`secmonk windows-script > secmonk-inventory.ps1`)
@@ -115,7 +124,7 @@ secmonk inventory unmatched [-f FMT]    apps whose identity is only a normalized
 
 ### Collector options (`-o key=value`)
 
-Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`, `allow_agent`, `look_for_keys`, `all`, `tls_verify`)
+Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`, `allow_agent`, `look_for_keys`, `all`, `tls_verify`, `rescan`)
 and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`). Keys marked *(API)* are read by the collector but are not
 boolean/list-parsed on the command line (use them from Python, or pass a value the collector treats as truthy); `0`/`false` strings are **not** falsy for them.
 A key a collector does not know is silently ignored.

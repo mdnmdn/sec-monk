@@ -10,7 +10,7 @@ Local and unauthenticated by design, hardened for that setting:
   * strict Content-Security-Policy; static files resolved inside the static directory only.
 
 Routes: GET / (app), GET /static/*, the JSON API in `GET_ROUTES` / `POST_ROUTES` (table in _docs/tech/web-ui.md).
-Jobs (scan, sync) and the docker endpoints (they contact engines, possibly on other hosts) are refused when `actions`
+Jobs (scan, sync), discovery and the docker endpoints (they contact hosts and engines) are refused when `actions`
 is off: the default when listening on a non-loopback address.
 """
 
@@ -264,6 +264,8 @@ GET_ROUTES = {
     "/api/collectors": lambda s, q: s.data.collectors(),
     "/api/jobs": lambda s, q: s.jobs.list(_one(q, "kind"), _int(q, "limit", 50, hi=LIST_MAX)),
     "/api/docker/contexts": lambda s, q: s.jobs.docker_contexts(),
+    "/api/discover": lambda s, q: s.jobs.discover(target=_one(q, "target"),
+                                                  options=[o for o in q.get("opt", []) if o.strip()]),
     "/api/docker/containers": lambda s, q: _docker_containers(s, q),
 }
 

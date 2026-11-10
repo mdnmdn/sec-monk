@@ -139,7 +139,8 @@ CREATE INDEX IF NOT EXISTS ix_triage_cve ON distro_triage(cve_id);
 -- ------------------------------------------------------------------ inventory
 CREATE TABLE IF NOT EXISTS asset (
     id            TEXT PRIMARY KEY,          -- stable id: 'macos:<host>', 'homebrew:<host>', 'windows:<host>', 'ssh:<host>[:<port>]',
-                                             -- 'image:<repo>@<digest>', 'container:<name>' ('container:<label>/<name>' on a remote engine),
+                                             -- 'image:<repo>@<digest>', 'image:@<Id>' (engine image, by image Id),
+                                             -- 'container:<name>' ('container:<label>/<name>' on a remote engine),
                                              -- 'rootfs:<path>', 'repo:<path>', 'dir:<path>',
                                              -- 'process:<host>' (running processes only)
     type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory | host-processes

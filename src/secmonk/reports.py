@@ -297,3 +297,23 @@ def container_rows(raw: list[dict], matched: set[str] | None = None) -> list[dic
         out.append({"id": cid[:12], "name": ", ".join(names), "image": c.get("Image"), "state": c.get("State"),
                     "status": c.get("Status"), "matched": hit})
     return out
+
+
+# --------------------------------------------------------------------------- host discovery
+
+def discover_payload(raw: dict) -> dict:
+    """discover.discover_host output -> `secmonk discover -f json` / `GET /api/discover`: every key present, host
+    target without a password, warnings and reasons scrubbed of URL credentials."""
+    from .collectors.base import scrub_text, strip_url_secrets
+
+    h = raw.get("host") or {}
+    host = {"kind": h.get("kind") or "local", "target": strip_url_secrets(h.get("target"), keep_user=True),
+            "name": h.get("name"), "os": h.get("os"), "os_version": h.get("os_version"), "arch": h.get("arch")}
+    cands = []
+    for c in raw.get("candidates") or []:
+        cands.append({"id": c.get("id"), "collector": c.get("collector"), "target": c.get("target"),
+                      "options": [str(o) for o in c.get("options") or []], "label": c.get("label") or c.get("id"),
+                      "description": c.get("description") or "", "available": bool(c.get("available")),
+                      "reason": scrub_text(c.get("reason")), "selected": bool(c.get("selected")),
+                      "details": c.get("details") if isinstance(c.get("details"), (dict, list)) else {}})
+    return {"host": host, "candidates": cands, "warnings": [scrub_text(str(w)) for w in raw.get("warnings") or []]}
