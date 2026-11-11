@@ -44,7 +44,7 @@
       return { q, groups, story, pick, count: stories.length };
     },
     template: `<div class="sb">
-      <aside class="sb-side"><div class="sb-brand"><span class="sm-brand__mark">◆</span> sec-monk <span class="sm-muted">storybook</span></div>
+      <aside class="sb-side"><div class="sb-brand"><span class="sm-brand__mark" aria-hidden="true"></span> sec-monk <span class="sm-muted">storybook</span></div>
         <sm-search v-model="q" placeholder="Find a component" :hotkey="false"/>
         <nav v-for="g in groups" :key="g.label"><div class="sb-group">{{ g.label }}</div>
           <a v-for="s in g.items" :key="s.id" :href="'#' + s.id" :class="['sb-link', s.id === story.id && 'is-active']" @click.prevent="pick(s.id)">{{ s.title }}</a></nav>

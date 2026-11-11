@@ -2297,7 +2297,7 @@
       return { store, route, nav, s, monitor, crumb };
     },
     template: `<div class="sm-shell">
-      <div class="sm-brand"><span class="sm-brand__mark">◆</span><span class="sm-brand__text">sec-monk <span class="sm-brand__sub">local</span></span></div>
+      <div class="sm-brand"><span class="sm-brand__mark" aria-hidden="true"></span><span class="sm-brand__text">sec-monk <span class="sm-brand__sub">local</span></span></div>
       <header class="sm-topbar"><div class="sm-topbar__crumbs"><span>{{ route.meta.group }}</span><span>/</span><b>{{ route.meta.title }}</b>
           <template v-if="crumb"><span>/</span><span class="sm-mono sm-truncate" :title="crumb">{{ crumb }}</span></template></div>
         <span class="sm-topbar__spacer"></span>

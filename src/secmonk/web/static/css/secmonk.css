@@ -131,8 +131,8 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
   grid-area: brand; display: flex; align-items: center; gap: var(--sm-s2); padding: 0 var(--sm-s4);
   background: var(--sm-sidebar); color: #fff; font-weight: 650; letter-spacing: .2px;
 }
-.sm-brand__mark { width: 22px; height: 22px; border-radius: 6px; background: var(--sm-accent); display: grid;
-  place-items: center; color: var(--sm-accent-text); font-size: 13px; }
+.sm-brand__mark { width: 24px; height: 24px; flex: none; display: inline-block; border-radius: 6px;
+  background: url(../img/logo-64.png) center / contain no-repeat; }
 .sm-brand__sub { color: var(--sm-sidebar-muted); font-weight: 400; font-size: var(--sm-fs-xs); }
 .sm-topbar {
   grid-area: top; display: flex; align-items: center; gap: var(--sm-s3); padding: 0 var(--sm-s4);

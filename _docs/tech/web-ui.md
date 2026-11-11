@@ -54,6 +54,7 @@ scripts/design_mock.py ──> runs ProcessMonitor on the fixtures ──> _desi
 | `static/css/secmonk.css` | design tokens (light / dark) + every component style |
 | `static/js/secmonk-ui.js` | vocabulary (launch kinds, flags, methods, events), formatting, toasts, theme, base components |
 | `static/js/secmonk-views.js` | `ApiSource` / `MockSource`, store, `NAV`, `ROUTES`, views, `mountApp()` |
+| `static/img/` | brand mark (`logo-64.png`, drawn by `.sm-brand__mark` as a CSS background so every page resolves it relative to the stylesheet) and `favicon-32.png`; copied from the desktop app icons (`rust/apps/desktop/src-tauri/icons`) |
 | `static/vendor/` | Vue and Vue Router global builds + LICENSE, `MANIFEST.json` (sha256), README; written by `scripts/vendor_web.py` |
 | `cli.py` `ui` | `secmonk ui [--host] [--port] [--allow-host NAME] [--allow-actions/--no-actions] [--snapshot F] [--open] [-o k=v] [--db]` |
 | `errors.py` | `COLLECT_ERRORS`, the collector error group shared by the CLI (exit 1) and the API (503) |
