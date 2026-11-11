@@ -29,6 +29,7 @@ One row per feature doc. "Platforms" = where the feature runs / what it inspects
 | Process / executable monitor | [process-monitor.md](process-monitor.md) | implemented | macOS live; snapshots analysed on any OS (Linux/Windows backends designed) | `secmonk procs [--watch N]`, `secmonk collect\|scan process [snapshot.json]` | run on a real Mac (macOS 26.5, user + root, 2026-11-08); real trimmed snapshots + synthetic fixtures |
 | Web interface (local) | [web-ui.md](web-ui.md) | implemented | any OS (browser, works offline); live process data on macOS, snapshot files anywhere | `secmonk ui [--snapshot F]` | every CLI area: dashboard, assets, scan, findings, vulnerabilities, sources & sync, jobs, process monitor; design + storybook in [`_design/`](../../_design/README.md); synthetic fixtures |
 | SBOM export / import | [sbom.md](sbom.md) | implemented | any | `secmonk inventory export`, `secmonk scan sbom FILE` | CycloneDX 1.6 export, CycloneDX 1.4-1.6 / SPDX 2.x JSON import; synthetic fixtures + one exporter-generated sample |
+| Kubernetes clusters | [inventory-k8s.md](inventory-k8s.md) | implemented | any OS with `kubectl` and a kubeconfig (EKS, GKE, AKS, kind, k3s...) | `secmonk collect\|scan k8s [k8s://context]`, `secmonk scan-host k8s://context` | synthetic kubectl output only; no real cluster yet |
 | Windows inventory | [inventory-windows.md](inventory-windows.md) | implemented | target Windows (script, osquery, live); analyst machine any | `secmonk windows-script`, `secmonk collect\|scan windows [inv.json]` | script never run on real Windows; fixtures synthetic, Microsoft CNA records real |
 
 Scanning and findings commands (`scan`, `match`, `findings`, `inventory ...`, `vuln ...`) are shared by all inventory features and are described in
@@ -74,6 +75,7 @@ secmonk discover [TARGET]               host mode: list what can be scanned on t
                                         ([ssh://]user@host[:port]): candidates id, available, selected, collector, target
     -o, --opt KEY=VAL   discovery option: identity, known_hosts, connect_timeout, probe_timeout, host, context…
     -f, --format table|json
+    TARGET k8s://<context> (or k8s:// = current context): a Kubernetes cluster and its images (via kubectl)
 secmonk scan-host [TARGET]              discover, choose candidates, scan them all in one run (like a multi-target scan)
     --only ID,ID        these candidates (unknown / unavailable: exit 2)
     --all               every available candidate      -y, --yes   the default selection
@@ -97,12 +99,16 @@ secmonk ui                              local web interface on http://127.0.0.1:
                                         vulnerabilities, sources & sync, jobs, process monitor
     --host H (IPv4/IPv6)  --port N  --allow-host NAME  --snapshot F (serve a snapshot file)  --open  -o KEY=VAL  --db PATH
     --allow-actions/--no-actions   scans and syncs from the browser (default: only when listening on loopback)
-secmonk procs [SNAPSHOT.json]           process monitor: tree, launch origin, identity, findings, flags (live macOS by default)
+secmonk procs [SNAPSHOT.json | ssh://user@host[:port]]
+                                        process monitor: tree, launch origin, identity, findings, flags (this machine
+                                        live by default; ssh:// = live snapshot of a remote Linux host, -o identity=…
+                                        -o sudo=true …)
     --flat              one row per process instead of the tree
     -s, --suspicious    only processes with findings or risk flags
     --match/--no-match  match against the mirror if a database exists (default: match, temporary overlay)
     --save              persist asset process:<host> and its findings
-    -w, --watch N       re-snapshot every N s; print new executables and new/removed launch items (live only)
+    -w, --watch N       re-snapshot every N s; print new executables and new/removed launch items (live only:
+                        this machine or ssh://, remote at least every 10 s; not for snapshot files)
     --snapshot-out F    also write the raw snapshot (secmonk-process-snapshot/1)
     --min-confidence F  -f, --format table|json|csv   -o, --opt KEY=VAL   --db PATH
 
@@ -127,8 +133,8 @@ secmonk inventory unmatched [-f FMT]    apps whose identity is only a normalized
 
 ### Collector options (`-o key=value`)
 
-Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`, `allow_agent`, `look_for_keys`, `all`, `tls_verify`, `rescan`)
-and comma lists for `exclude`, `home`, `ecosystems`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`). Keys marked *(API)* are read by the collector but are not
+Values stay strings, except `true/false/yes/no` for the boolean keys (`binaries`, `sudo`, `all_kegs`, `use_brew_cli`, `include_system`, `insecure_host_key`, `xdev`, `no_cache`, `lang`, `verbose`, `allow_agent`, `look_for_keys`, `all`, `tls_verify`, `rescan`, `kernel_threads`, `packages`)
+and comma lists for `exclude`, `home`, `ecosystems`, `namespace`. A repeated key becomes a list (`-o ssh_option=A=1 -o ssh_option=B=2`). Keys marked *(API)* are read by the collector but are not
 boolean/list-parsed on the command line (use them from Python, or pass a value the collector treats as truthy); `0`/`false` strings are **not** falsy for them.
 A key a collector does not know is silently ignored.
 

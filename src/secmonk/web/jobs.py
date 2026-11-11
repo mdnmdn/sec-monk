@@ -29,7 +29,8 @@ MAX_LOG = 1000
 LIST_MAX = 200
 # collector options a scan started from the browser may not set: they choose what runs on this machine (the CLI keeps
 # them); the same policy as GET /api/discover
-WEB_FORBIDDEN_SCAN_OPTS = frozenset({"ssh_bin", "transport", "ssh_option"})
+# (`kubectl`: a path to run; `ssh_config`: a local file that can carry ProxyCommand)
+WEB_FORBIDDEN_SCAN_OPTS = frozenset({"ssh_bin", "transport", "ssh_option", "kubectl", "ssh_config"})
 
 
 def _web_item(collector: Any, target: Any, options: Any, where: str, id: Any = None):
@@ -41,7 +42,8 @@ def _web_item(collector: Any, target: Any, options: Any, where: str, id: Any = N
     bad = sorted(set(item.opts) & WEB_FORBIDDEN_SCAN_OPTS)
     if bad:
         raise ApiError(400, f"{where}: option not accepted from the browser: {', '.join(bad)}",
-                       "Run scans that need a custom ssh binary, transport or ssh_option with the secmonk CLI.")
+                       "Run scans that need a custom ssh binary, transport, ssh_option, ssh_config or kubectl with "
+                       "the secmonk CLI.")
     return item
 
 
@@ -322,6 +324,15 @@ class JobRunner:
         finally:
             conn.close()
         return ops.scan_result(entries, saved=save)
+
+    # ------------------------------------------------------------------ kubernetes (reads local kubeconfigs)
+    def k8s_kubeconfigs(self) -> list[dict]:
+        """Gated like discovery for consistency (the files are local and no secret is returned)."""
+        self.require_actions()
+        try:
+            return ops.k8s_kubeconfigs()
+        except Exception as e:  # noqa: BLE001
+            raise ApiError(500, f"cannot list kubeconfigs ({type(e).__name__})") from None
 
     # ------------------------------------------------------------------ host discovery (contacts the host)
     def discover(self, *, target: str | None, options: list[str]) -> dict[str, Any]:

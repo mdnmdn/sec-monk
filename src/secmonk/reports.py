@@ -317,3 +317,19 @@ def discover_payload(raw: dict) -> dict:
                       "reason": scrub_text(c.get("reason")), "selected": bool(c.get("selected")),
                       "details": c.get("details") if isinstance(c.get("details"), (dict, list)) else {}})
     return {"host": host, "candidates": cands, "warnings": [scrub_text(str(w)) for w in raw.get("warnings") or []]}
+
+
+# --------------------------------------------------------------------------- kubernetes
+
+def kubeconfig_rows(raw: list[dict]) -> list[dict]:
+    """k8s.list_kubeconfigs -> `GET /api/k8s/kubeconfigs`: [{path, contexts[{name, cluster, server, namespace,
+    current}], error}]; server URLs without credentials. Kubeconfigs hold tokens and keys: nothing else is returned."""
+    from .collectors.base import scrub_text, strip_url_secrets
+
+    out = []
+    for f in raw or []:
+        ctxs = [{"name": c.get("name"), "cluster": c.get("cluster"), "server": strip_url_secrets(c.get("server")),
+                 "namespace": c.get("namespace"), "current": bool(c.get("current"))}
+                for c in f.get("contexts") or [] if isinstance(c, dict)]
+        out.append({"path": str(f.get("path")), "contexts": ctxs, "error": scrub_text(f.get("error"))})
+    return out

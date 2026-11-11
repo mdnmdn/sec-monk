@@ -7,7 +7,7 @@ context: tech
 status: implemented
 tags: [architecture, cli, engine, collector, vuln-source]
 updated: 2026-11-11
-verified: 2026-11-07
+verified: 2026-11-11
 code: src/secmonk/
 related: [tech/web-ui.md, product/vision.md, tech/data-model.md, decisions/0003-prototype-scope.md, tech/collectors/README.md, tech/engine/matching.md, tech/engine/classification.md, features/README.md]
 ---
@@ -76,11 +76,12 @@ Python package with a CLI and a SQLite file as the only state.
 | `collectors/harvest.py`, `ssh.py` | Agentless SSH: fixed `find | tar` script, safe extraction into a temp dir, then rootfs/macOS/windows code on it. OpenSSH or paramiko transport. |
 | `collectors/sbom.py` | Import a CycloneDX 1.4-1.6 or SPDX 2.x JSON file as an inventory (asset `sbom:<name>@<version>`). |
 | `collectors/windows.py` | Windows inventory JSON (script), osquery rows or live `winreg`; OS build identity, display-name cleanup. Script in `src/secmonk/data/windows/`. |
-| `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine). See [process](collectors/process.md). |
+| `collectors/process/` | Process monitor: platform-neutral `Snapshot` + JSON format, shared launch classification and risk flags, per-OS backends (`macos.py`: ps, launchctl, launchd plists, bundle/keg/pkgutil/binary identity, codesign, quarantine; `linux.py`: /proc, systemd units, dpkg / rpm / apk ownership), `remote.py` (`ssh://` target: one fixed read-only snapshot script over ssh, asset `process:ssh:<host>[:<port>]`). See [process](collectors/process.md). |
+| `collectors/k8s.py` | Kubernetes cluster via `kubectl` (read-only `get`): nodes, namespaces, pods and their images (asset `k8s:<cluster>@<server host[:port]>`, type `cluster`); `list_kubeconfigs` / `list_k8s_contexts` for pickers. |
 | `procmon.py` | `secmonk procs` views: process tree rows joined with findings, `Watcher` for `--watch`; payload builders shared with the web API. |
 | `sbom.py` | CycloneDX 1.6 export of an asset (pure builder) and CycloneDX / SPDX JSON parsing for the `sbom` collector; see [sbom](sbom.md). |
 | `reports.py` | JSON payloads shared by the CLI's `--format json` and the web API (findings, assets, asset detail, status, vuln show/search, overview, run history, container rows). |
-| `discover.py` | Host mode: explore this machine or an ssh host and list scan candidates (collector, target, options); see [discover](discover.md). |
+| `discover.py` | Host mode: explore this machine, an ssh host (incl. its running processes on Linux) or a Kubernetes context (`k8s://`) and list scan candidates (collector, target, options); see [discover](discover.md). |
 | `ops.py` | Operations shared by the CLI and the web UI's jobs: collector options, `sync all` and target expansion, one-source sync with its bookkeeping, collect / save / match per target, the run history (table `job`, redacted parameters), docker-engine listings. |
 | `web/` | Local web interface (`secmonk ui`): stdlib server + JSON API (`server.py`; `api.py` process monitor, `data.py` database reads, `jobs.py` background scan / sync), static Vue app (`static/`). Design system and storybook in [`_design/`](../../_design/README.md). See [web-ui](web-ui.md). |
 | `collectors/lang/*.py` | `base.py` registry (`LangParser`, evidence ranks, `dedupe`), parsers: javascript, python, php, golang, rust, java, dotnet; `walk.py` (`walk_dir`, `LangAccumulator`, `WalkLimits`). |
@@ -144,5 +145,5 @@ reappears re-opens; `suppressed` is sticky. `secmonk findings` shows open only u
   disabled with `SECMONK_OSV_STORE_RAW=0` for big ecosystems).
 - **Same CVE, many sources:** rows are keyed `(source, id)`; `alias` links ids; the matcher
   canonicalizes to the CVE id and picks facts by source preference `nvd > cvelist > osv > euvd`.
-- **Read-only collection:** nothing is executed on the target except the fixed SSH scripts, the read-only Windows script and the process monitor's fixed read-only commands (`ps`, `launchctl list`, `codesign -dv`, `pkgutil --file-info`); archives are never extracted blindly.
+- **Read-only collection:** nothing is executed on the target except the fixed SSH scripts, the read-only Windows script the process monitor's fixed read-only commands (`ps`, `launchctl list`, `codesign -dv`, `pkgutil --file-info`; on Linux /proc reads and `dpkg-query -S` / `rpm -qf` / apk ownership, run locally or as the fixed remote snapshot script over ssh, optionally `sudo -n`) and the k8s collector's `kubectl config view --minify` / `kubectl get --raw /version` / `kubectl get nodes|namespaces|pods -o json`; archives are never extracted blindly.
 - **Evidence-based docs:** see [`_meta`](../_meta/README.md). What was validated on real data and which hosts are reachable: [probe log](../references/probes.md); open work: [plans](../plans/README.md).

@@ -24,8 +24,9 @@ SYNC_ALL_ORDER = ("kev", "epss", "osv", "cvelist", "nvd", "euvd", "msrc", "debia
 # Collector options that really are booleans / comma-separated lists (see parse_opts).
 BOOL_OPTS = frozenset({"binaries", "sudo", "all_kegs", "use_brew_cli", "include_system",
                        "insecure_host_key", "xdev", "no_cache", "lang", "verbose",
-                       "allow_agent", "look_for_keys", "all", "tls_verify", "rescan"})
-LIST_OPTS = frozenset({"exclude", "home", "ecosystems"})
+                       "allow_agent", "look_for_keys", "all", "tls_verify", "rescan", "kernel_threads",
+                       "packages"})
+LIST_OPTS = frozenset({"exclude", "home", "ecosystems", "namespace"})
 
 
 def sources_registry() -> dict:
@@ -602,7 +603,8 @@ def docker_containers(*, host: str | None = None, context: str | None = None, so
 
 # discovery options the web API accepts (no ssh_option / ssh_bin / transport: they choose what runs locally)
 DISCOVER_WEB_OPTS = frozenset({"identity", "known_hosts", "insecure_host_key", "connect_timeout", "probe_timeout",
-                               "context", "host", "tls_ca", "tls_cert", "tls_key", "tls_verify"})
+                               "context", "host", "tls_ca", "tls_cert", "tls_key", "tls_verify", "kubeconfig",
+                               "namespace", "sudo"})
 
 
 def discover_host(target: str | None = None, opts: dict | None = None) -> dict:
@@ -624,3 +626,12 @@ def candidate_items(payload: dict, ids: list[str]) -> list[ScanItem]:
     if off:
         raise ValueError("not available: " + "; ".join(f"{i} ({by_id[i]['reason'] or 'unavailable'})" for i in off))
     return [scan_item(by_id[i]["collector"], by_id[i]["target"], by_id[i]["options"], i) for i in ids]
+
+
+# --------------------------------------------------------------------------- kubernetes
+
+def k8s_kubeconfigs(**opts: Any) -> list[dict]:
+    """Kubeconfig files and their contexts for a picker (k8s.list_kubeconfigs, shaped by reports.kubeconfig_rows)."""
+    from .collectors import k8s
+
+    return reports.kubeconfig_rows(k8s.list_kubeconfigs(**opts))

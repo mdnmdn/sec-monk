@@ -142,8 +142,10 @@ CREATE TABLE IF NOT EXISTS asset (
                                              -- 'image:<repo>@<digest>', 'image:@<Id>' (engine image, by image Id),
                                              -- 'container:<name>' ('container:<label>/<name>' on a remote engine),
                                              -- 'rootfs:<path>', 'repo:<path>', 'dir:<path>',
-                                             -- 'process:<host>' (running processes only)
+                                             -- 'process:<host>' (running processes only; a remote host over ssh:
+                                             -- 'process:ssh:<host>[:<port>]'), 'k8s:<cluster>@<server host[:port]>' (or 'k8s:<cluster>'), 'sbom:<name>@<version>'
     type          TEXT NOT NULL,             -- desktop | server | container-image | container | repo | directory | host-processes
+                                             -- | cluster
     name          TEXT,
     os_name       TEXT,
     os_version    TEXT,

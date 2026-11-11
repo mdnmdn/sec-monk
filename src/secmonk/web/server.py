@@ -284,6 +284,7 @@ GET_ROUTES = {
     "/api/collectors": lambda s, q: s.data.collectors(),
     "/api/jobs": lambda s, q: s.jobs.list(_one(q, "kind"), _int(q, "limit", 50, hi=LIST_MAX)),
     "/api/docker/contexts": lambda s, q: s.jobs.docker_contexts(),
+    "/api/k8s/kubeconfigs": lambda s, q: s.jobs.k8s_kubeconfigs(),
     "/api/discover": lambda s, q: s.jobs.discover(target=_one(q, "target"),
                                                   options=[o for o in q.get("opt", []) if o.strip()]),
     "/api/docker/containers": lambda s, q: _docker_containers(s, q),

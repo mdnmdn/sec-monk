@@ -902,10 +902,15 @@ def _event_line(ev, fmap: dict) -> tuple[str, dict]:
             f"  [{data['source']}]"), data
 
 
+REMOTE_MIN_WATCH = 10.0        # seconds between two ssh process snapshots of a remote host (`procs --watch`)
+
+
 @app.command()
 def procs(
     target: Annotated[str | None, typer.Argument(
-        help="Process snapshot JSON (secmonk-process-snapshot/1); default: this machine, live")] = None,
+        help="Process snapshot JSON (secmonk-process-snapshot/1), or ssh://user@host[:port] for a live snapshot of a "
+             "remote Linux host (ssh options with -o, e.g. -o identity=… -o sudo=true); default: this machine, "
+             "live")] = None,
     flat: Annotated[bool, typer.Option("--flat", help="List instead of a parent/child tree")] = False,
     suspicious: Annotated[bool, typer.Option(
         "--suspicious", "-s", help="Only processes with findings or risk flags")] = False,
@@ -915,7 +920,8 @@ def procs(
         "--save", help="Persist asset process:<host> + findings (default: match in a temporary overlay)")] = False,
     watch: Annotated[float | None, typer.Option(
         "--watch", "-w", min=1.0, help="Keep running: re-snapshot every N seconds, report new executables "
-                                       "and new/removed launch items (live only)")] = None,
+                                       "and new/removed launch items (live only: this machine or ssh://; remote "
+                                       f"hosts at least every {REMOTE_MIN_WATCH:g} s)")] = None,
     max_ticks: Annotated[int | None, typer.Option("--max-ticks", hidden=True)] = None,
     snapshot_out: Annotated[Path | None, typer.Option(
         "--snapshot-out", help="Also write the raw process snapshot JSON here")] = None,
@@ -926,13 +932,17 @@ def procs(
 ):
     """Process monitor: what runs, how it was started, which software/version it is, findings, provenance."""
     from . import procmon
-    from .collectors.process.collector import ProcessCollector
+    from .collectors.process.collector import ProcessCollector, is_remote_target
 
     opts = _parse_opts(opt)
     if snapshot_out:
         opts["snapshot_out"] = str(snapshot_out)
-    if watch and target:
-        raise _fail("--watch needs a live snapshot (no TARGET)", 2)
+    remote = is_remote_target(target)
+    if watch and target and not remote:
+        raise _fail("--watch needs a live snapshot (this machine, or an ssh://user@host target), not a file", 2)
+    if watch and remote and watch < REMOTE_MIN_WATCH:
+        _info(f"[dim]remote host: watching every {REMOTE_MIN_WATCH:g}s (minimum for ssh snapshots)[/]", fmt)
+        watch = REMOTE_MIN_WATCH
     col = ProcessCollector()
     try:
         snap, inspector, views = col.analyse(target, **opts)
@@ -985,7 +995,8 @@ def procs(
                 ticks += 1
                 time.sleep(watch)
                 try:
-                    snap = col.snapshot(None, **{k: v for k, v in opts.items() if k != "snapshot_out"})
+                    snap = col.snapshot(target if remote else None,
+                                        **{k: v for k, v in opts.items() if k != "snapshot_out"})
                 except COLLECT_ERRORS as e:
                     err_console.print(f"[yellow]snapshot failed: {_e(e)}[/]")
                     continue
