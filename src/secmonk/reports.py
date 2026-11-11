@@ -59,12 +59,31 @@ def asset_rows(conn: sqlite3.Connection) -> list[dict]:
             for r in queries.assets(conn)]
 
 
+# component facts a UI shows next to a version (from component.meta / asset_component.meta, also under "process")
+COMPONENT_META_KEYS = ("pre_release", "vendor_build", "version_is_installed_not_running")
+
+
+def component_meta(*metas: dict | None) -> dict:
+    """The COMPONENT_META_KEYS present in the given meta dicts (first one wins), scalars only."""
+    out: dict = {}
+    for m in metas:
+        if not isinstance(m, dict):
+            continue
+        for src in (m, m.get("process") if isinstance(m.get("process"), dict) else {}):
+            for k in COMPONENT_META_KEYS:
+                v = src.get(k)
+                if k not in out and isinstance(v, (bool, int, float, str)) and v not in ("", None):
+                    out[k] = v
+    return out
+
+
 def component_rows(conn: sqlite3.Connection, asset_id: str, category: str | None = None) -> list[dict]:
-    """`secmonk inventory show` rows (components of the latest scan)."""
+    """`secmonk inventory show` rows (components of the latest scan); `meta` = component_meta (may be {})."""
     from .engine.inventory import current_components
 
     return [{"category": r["category"], "name": r["name"], "version": r["version"], "ecosystem": r["ecosystem"],
-             "vendor": r["vendor"], "purl": r["purl"], "cpe": r["cpe"], "path": r["source_path"], "id": r["id"]}
+             "vendor": r["vendor"], "purl": r["purl"], "cpe": r["cpe"], "path": r["source_path"], "id": r["id"],
+             "meta": component_meta(loads(r["asset_meta"], {}), loads(r["meta"], {}))}
             for r in current_components(conn, asset_id) if not category or r["category"] == category]
 
 
@@ -84,6 +103,10 @@ def _small(value: Any, depth: int = 0) -> Any:
             return f"({len(value)} keys)"
         return {str(k): _small(v, 1) for k, v in value.items()}
     return str(value)
+
+
+# asset meta keys passed whole (not summarized) by asset type: key -> max list items
+STRUCTURED_META = {"cluster": {"images": 2000, "access": 0}}
 
 
 def asset_detail(conn: sqlite3.Connection, asset_id: str, *, include_closed: bool = True,
@@ -109,10 +132,17 @@ def asset_detail(conn: sqlite3.Connection, asset_id: str, *, include_closed: boo
         fs = per_comp.get(c["id"], [])
         comps.append({**c, "findings": priority_counts(fs)})
     meta = loads(a["meta"], {}) or {}
+    shown = {str(k): _small(v) for k, v in meta.items()}
+    for k, cap in STRUCTURED_META.get(a["type"], {}).items():     # kept whole: the page renders them as tables
+        v = meta.get(k)
+        if isinstance(v, list):
+            shown[k] = v[:cap]
+        elif isinstance(v, dict):
+            shown[k] = v
     latest = scans[0] if scans else None
     return {"asset": {"id": a["id"], "type": a["type"], "name": a["name"], "os_name": a["os_name"],
                       "os_version": a["os_version"], "platform": a["platform"], "first_seen": a["first_seen"],
-                      "last_seen": a["last_seen"], "meta": {str(k): _small(v) for k, v in meta.items()}},
+                      "last_seen": a["last_seen"], "meta": shown},
             "scans": scans, "components": comps, "findings": rows,
             "summary": {"components": len(comps), "open": priority_counts([f for f in rows if f["status"] == "open"]),
                         "closed": sum(f["status"] != "open" for f in rows), "limit_reached": len(rows) >= limit},
@@ -301,6 +331,11 @@ def container_rows(raw: list[dict], matched: set[str] | None = None) -> list[dic
 
 # --------------------------------------------------------------------------- host discovery
 
+# host facts beyond {kind, target, name, os, os_version, arch}, by host kind (see _docs/tech/discover.md)
+DISCOVER_HOST_EXTRA = {"k8s": ("context", "server", "kubernetes_version", "distro", "access", "other_contexts"),
+                       "ssh": ("remote_hostname",)}
+
+
 def discover_payload(raw: dict) -> dict:
     """discover.discover_host output -> `secmonk discover -f json` / `GET /api/discover`: every key present, host
     target without a password, warnings and reasons scrubbed of URL credentials."""
@@ -309,6 +344,9 @@ def discover_payload(raw: dict) -> dict:
     h = raw.get("host") or {}
     host = {"kind": h.get("kind") or "local", "target": strip_url_secrets(h.get("target"), keep_user=True),
             "name": h.get("name"), "os": h.get("os"), "os_version": h.get("os_version"), "arch": h.get("arch")}
+    for k in DISCOVER_HOST_EXTRA.get(host["kind"], ()):       # documented extra facts of that kind, when present
+        if h.get(k) is not None:
+            host[k] = strip_url_secrets(h[k]) if k == "server" and isinstance(h[k], str) else h[k]
     cands = []
     for c in raw.get("candidates") or []:
         cands.append({"id": c.get("id"), "collector": c.get("collector"), "target": c.get("target"),

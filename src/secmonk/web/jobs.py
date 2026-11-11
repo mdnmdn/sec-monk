@@ -353,9 +353,7 @@ class JobRunner:
             raise ApiError(400, scrub_text(f"{type(e).__name__}: {e}") or "invalid request",
                            "Expected nothing (this machine) or [ssh://]user@host[:port].") from None
         except Exception as e:  # noqa: BLE001
-            raise ApiError(502, f"cannot explore the host ({type(e).__name__})",
-                           "Is the host reachable over ssh with a key (no password prompt) from the machine running "
-                           "secmonk ui? `secmonk discover <target>` shows the full error.") from None
+            raise _discover_error(e, target, opts) from None
         finally:
             self.discovering.release()
 
@@ -383,6 +381,30 @@ class JobRunner:
             return ops.docker_containers(host=host, context=context, all=all, match=match, opts=opts)
         except Exception as e:  # noqa: BLE001
             raise _engine_error(e) from None
+
+
+def _discover_error(e: Exception, target: str | None, opts: dict) -> ApiError:
+    """A discovery failure as an API error: kubectl missing -> 424 (code kubectl-missing), refused by the cluster ->
+    502 (code k8s-denied), other cluster errors -> 502 (code k8s-unreachable), anything else (ssh) -> 502. Generic
+    messages: nothing the remote side said is echoed."""
+    from ..collectors import k8s
+
+    is_k8s = isinstance(e, k8s.KubectlError) or (target or "").startswith("k8s://")
+    if is_k8s:
+        if isinstance(e, k8s.KubectlError) and "not found" in str(e) and "kubectl" in str(e):
+            return ApiError(424, "kubectl is not installed on the machine running secmonk ui",
+                            "Install kubectl (on PATH), or use the CLI with -o kubectl=/path/to/kubectl.",
+                            code="kubectl-missing")
+        if getattr(e, "denied", False):
+            return ApiError(502, "the cluster refused the request (KubectlError)",
+                            "The kubeconfig user lacks read access (RBAC) or its credentials expired; "
+                            "`secmonk discover k8s://<context>` shows the full error.", code="k8s-denied")
+        return ApiError(502, f"cannot reach the Kubernetes cluster ({type(e).__name__})",
+                        "Check the kubeconfig and context (and the VPN, if the API server needs one); "
+                        "`secmonk discover k8s://<context>` shows the full error.", code="k8s-unreachable")
+    return ApiError(502, f"cannot explore the host ({type(e).__name__})",
+                    "Is the host reachable over ssh with a key (no password prompt) from the machine running "
+                    "secmonk ui? `secmonk discover <target>` shows the full error.")
 
 
 def _engine_error(e: Exception) -> ApiError:

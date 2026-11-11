@@ -764,7 +764,9 @@ def list_kubeconfigs(**opts: Any) -> list[dict]:
                 raise ValueError("not a kubeconfig (no contexts)")
             out.append({"path": key, "contexts": _contexts_of(data), "error": None})
         except FileNotFoundError:
-            if explicit:
+            # a missing default ~/.kube/config just means "no kubeconfig"; a named one is reported
+            if explicit and not (p == Path.home() / ".kube" / "config" and not opts.get("kubeconfig")
+                                 and not os.environ.get("KUBECONFIG")):
                 out.append({"path": key, "contexts": [], "error": "not found"})
         except Exception as e:  # noqa: BLE001 - yaml / permission / size
             if explicit:

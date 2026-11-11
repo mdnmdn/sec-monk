@@ -172,3 +172,110 @@ def test_docker_image_source_option_is_a_plain_string():
     assert item.opts == {"source": "registry"} and item.id == "k8s-images"        # accepted from the browser
     assert ops.batch_params([item], save=True, min_confidence=0.5, host=None)["items"][0]["options"] == \
         ["source=registry"]                                                         # stored as is, not a secret
+
+
+# --------------------------------------------------------------------------- UI payload gaps
+
+def _seed_assets(conn):
+    from secmonk.engine.inventory import save_inventory
+    from secmonk.models import Asset, Component, Inventory
+
+    images = [{"image": f"reg.example/app{i}:1", "namespace": "shop", "pods": 1} for i in range(2500)]
+    access = {"version": "ok", "pods": "partial", "denied_namespaces": ["kube-system", "vault"]}
+    big = {"images": images, "access": access, "context": "prod"}
+    k8s = Inventory(Asset("k8s:prod@k8s.example:6443", "cluster", "prod", meta=big), "k8s", [
+        Component("kubernetes", "1.31.0-rc.1", "runtime", purl="pkg:golang/k8s.io/kubernetes@v1.31.0-rc.1",
+                  meta={"pre_release": True, "vendor_build": True, "git_version": "v1.31.0-rc.1+abc"})])
+    proc = Inventory(Asset("process:ssh:web1", "host-processes", "web1", meta=big), "process", [
+        Component("nginx", "1.24.0", "application",
+                  meta={"process": {"version_is_installed_not_running": True, "count": 2}, "product": "nginx"})])
+    save_inventory(conn, k8s)
+    save_inventory(conn, proc)
+
+
+def test_asset_detail_keeps_cluster_tables_and_component_meta(tmp_path):
+    from secmonk import reports
+    from secmonk.db import connect
+
+    conn = connect(tmp_path / "u.db")
+    try:
+        _seed_assets(conn)
+        d = reports.asset_detail(conn, "k8s:prod@k8s.example:6443")
+        other = reports.asset_detail(conn, "process:ssh:web1")
+        rows = reports.component_rows(conn, "process:ssh:web1")
+    finally:
+        conn.close()
+    m = d["asset"]["meta"]
+    assert len(m["images"]) == 2000 and m["images"][0] == {"image": "reg.example/app0:1", "namespace": "shop",
+                                                           "pods": 1}
+    assert m["access"]["denied_namespaces"] == ["kube-system", "vault"] and m["context"] == "prod"
+    assert other["asset"]["meta"]["images"] == "(2500 items)"            # other asset types: still summarized
+    assert d["components"][0]["meta"] == {"pre_release": True, "vendor_build": True}
+    assert rows[0]["meta"] == {"version_is_installed_not_running": True}
+
+
+def test_discover_payload_keeps_host_facts_by_kind():
+    from secmonk import reports
+
+    k = reports.discover_payload({"host": {"kind": "k8s", "target": "k8s://prod", "name": "prod", "context": "prod",
+                                           "server": "https://u:pw@k8s.example:6443", "kubernetes_version": "v1.31.0",
+                                           "distro": ["eks"], "access": {"pods": "ok"}, "other_contexts": ["dev"],
+                                           "secret_stuff": "x"}})
+    h = k["host"]
+    assert h["server"] == "https://k8s.example:6443" and h["kubernetes_version"] == "v1.31.0"
+    assert h["distro"] == ["eks"] and h["access"] == {"pods": "ok"} and h["other_contexts"] == ["dev"]
+    assert "secret_stuff" not in h
+    s = reports.discover_payload({"host": {"kind": "ssh", "target": "u@h", "remote_hostname": "web-01",
+                                           "context": "nope"}})["host"]
+    assert s["remote_hostname"] == "web-01" and "context" not in s
+    assert set(reports.discover_payload({"host": {"kind": "local", "server": "x"}})["host"]) == {
+        "kind", "target", "name", "os", "os_version", "arch"}
+
+
+def test_list_kubeconfigs_without_kube_dir(tmp_path, monkeypatch):
+    from secmonk.collectors import k8s
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("KUBECONFIG", raising=False)
+    assert k8s.list_kubeconfigs() == []                                   # no ~/.kube: nothing, not an error
+    monkeypatch.setenv("KUBECONFIG", str(tmp_path / "named.yaml"))
+    assert k8s.list_kubeconfigs() == [{"path": str(tmp_path / "named.yaml"), "contexts": [], "error": "not found"}]
+    monkeypatch.delenv("KUBECONFIG")
+    (tmp_path / ".kube").mkdir()
+    (tmp_path / ".kube" / "config").write_text("contexts: [unclosed")
+    rows = k8s.list_kubeconfigs()
+    assert len(rows) == 1 and rows[0]["error"]                           # exists but broken: reported
+
+
+def test_discover_k8s_errors(make_srv, monkeypatch):
+    import sys
+    import types
+
+    import secmonk
+    from secmonk.collectors import k8s
+
+    state = {}
+
+    def discover_host(target=None, **opts):
+        raise state["e"]
+
+    fake = types.ModuleType("secmonk.discover")
+    fake.discover_host = discover_host
+    monkeypatch.setitem(sys.modules, "secmonk.discover", fake)
+    monkeypatch.setattr(secmonk, "discover", fake, raising=False)
+    srv = make_srv()
+    cases = [
+        (k8s.KubectlError("kubectl not found on PATH (install it, or pass -o kubectl=/path/to/kubectl)"), 424,
+         "kubectl-missing", "Install kubectl"),
+        (k8s.KubectlError("Unable to connect to the server: <html>internal secret page</html>"), 502,
+         "k8s-unreachable", "VPN"),
+        (k8s.KubectlError("Forbidden: user u cannot list pods", denied=True), 502, "k8s-denied", "RBAC"),
+    ]
+    for err, status, code, hint in cases:
+        state["e"] = err
+        s, e = _req(srv, "/api/discover?target=" + urllib.parse.quote("k8s://prod"))
+        assert (s, e["code"]) == (status, code) and hint in e["hint"], (err, e)
+        assert "secret page" not in json.dumps(e) and "cannot list pods" not in json.dumps(e)
+    state["e"] = OSError("ssh: banner")
+    s, e = _req(srv, "/api/discover?target=u@h")
+    assert s == 502 and e["error"] == "cannot explore the host (OSError)" and "ssh" in e["hint"]
