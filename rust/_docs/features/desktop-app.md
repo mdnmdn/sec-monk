@@ -88,6 +88,14 @@ other sources are not; (3) and (4) the API parity test is not written yet, the p
 (5) only the uv and Python install was audited (`uv_audit`), not a full scan; (6) tested on Unix. Linux and Windows
 were not run: see [on-linux](../plans/on-linux.md) and [on-windows](../plans/on-windows.md).
 
+## App icon
+
+The icon is `assets/logo-orange.png` (single origin). `python3 scripts/make_icons.py` (stdlib plus the `cargo tauri`
+CLI) turns its black rounded tile into `assets/app-icon.png` (outside corners transparent, radius measured from the
+image, about 20% of the tile) and runs `cargo tauri icon` into `apps/desktop/src-tauri/icons/` (committed: Tauri needs
+it at build time; the mobile sets are dropped). `bundle.icon` in `tauri.conf.json` lists the 32/128/256 PNGs, `.icns`
+and `.ico`. Rerun the script when the logo changes.
+
 ## Implemented by
 
 [architecture](../tech/architecture.md) · [contracts](../tech/contracts.md) · [api-contract](../tech/api-contract.md) ·
