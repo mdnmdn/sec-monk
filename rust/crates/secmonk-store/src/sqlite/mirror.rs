@@ -21,7 +21,7 @@ use crate::{
 pub const MAX_OPS_PER_BATCH: usize = 5_000;
 
 /// Tables whose primary key has no `source` column, and the source that owns them (it may replace another
-/// source's row, as its Python `INSERT OR REPLACE` does; e.g. FIRST EPSS scores win over EUVD's).
+/// source's row, as its Python `INSERT OR REPLACE` does; e.g. FIRST EPSS scores replace EUVD's).
 fn owner_of_sourceless_key(t: MirrorTable) -> Option<&'static str> {
     match t {
         MirrorTable::Kev => Some("kev"),

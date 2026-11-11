@@ -2,20 +2,21 @@
 //! (a local HTTP server, never the network). Fixture: `tests/fixtures/sources/kev` of the repository (read only).
 //! The comparison with the Python source is `secmonk-engine/tests/real_modules.rs` (differential test).
 
+mod common;
+
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::StreamExt;
+use common::{of, ops, serve, serve_raw};
 use secmonk_model::{JsonMap, MirrorTable, RowOp};
 use secmonk_sources::batch::Limits;
 use secmonk_sources::kev::KevSource;
 use secmonk_traits::{
-    AppliedMark, CallCtx, ErrorCode, MirrorView, NATIVE_GENERATION, ProgressUpdate, RowsBatch,
-    Source, StepResult, StreamMsg, SyncEnd, SyncParams,
+    AppliedMark, CallCtx, ErrorCode, MirrorView, NATIVE_GENERATION, RowsBatch, Source, StepResult,
+    SyncEnd, SyncParams,
 };
 use serde_json::{Value, json};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn fixture() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -48,43 +49,11 @@ impl MirrorView for FakeView {
 }
 
 fn params(options: Value) -> SyncParams {
-    serde_json::from_value(json!({"source": "kev", "options": options})).unwrap()
+    common::params("kev", options)
 }
 
 async fn run(src: &KevSource, options: Value) -> (Vec<RowsBatch>, SyncEnd, Vec<String>) {
-    let lines = Arc::new(Mutex::new(Vec::new()));
-    let l = lines.clone();
-    let ctx = CallCtx {
-        deadline: None,
-        progress: Some(Arc::new(move |u: ProgressUpdate| {
-            l.lock().unwrap().extend(u.message);
-        })),
-    };
-    let mut s = src.sync(params(options), ctx).await.unwrap();
-    let mut batches = Vec::new();
-    let mut end = None;
-    while let Some(m) = s.next().await {
-        match m.unwrap() {
-            StreamMsg::Item(b) => batches.push(b),
-            StreamMsg::End(e) => end = Some(e),
-        }
-    }
-    let lines = lines.lock().unwrap().clone();
-    (batches, end.unwrap(), lines)
-}
-
-fn ops(b: &[RowsBatch]) -> Vec<RowOp> {
-    b.iter().flat_map(|b| b.ops.clone()).collect()
-}
-
-fn of(ops: &[RowOp], table: MirrorTable, upsert: bool) -> Vec<JsonMap> {
-    ops.iter()
-        .filter_map(|o| match o {
-            RowOp::Upsert { table: t, row } if upsert && *t == table => Some(row.clone()),
-            RowOp::Delete { table: t, key } if !upsert && *t == table => Some(key.clone()),
-            _ => None,
-        })
-        .collect()
+    common::run(src, "kev", options).await
 }
 
 fn view(v: FakeView) -> Arc<dyn MirrorView> {
@@ -314,27 +283,6 @@ async fn bad_input_is_an_error_entry_never_rows() {
     assert_eq!(src.sources()[0].name, "kev");
 }
 
-/// A one-shot local HTTP server: answers each connection with the next canned response.
-async fn serve(responses: Vec<(u16, Vec<u8>)>) -> String {
-    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = l.local_addr().unwrap();
-    tokio::spawn(async move {
-        for (status, body) in responses {
-            let (mut s, _) = l.accept().await.unwrap();
-            let mut buf = [0u8; 4096];
-            let _ = s.read(&mut buf).await;
-            let head = format!(
-                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            let _ = s.write_all(head.as_bytes()).await;
-            let _ = s.write_all(&body).await;
-            let _ = s.shutdown().await;
-        }
-    });
-    format!("http://{addr}")
-}
-
 #[tokio::test]
 async fn the_mirror_is_tried_when_the_official_feed_fails_and_downloads_are_capped() {
     let body = std::fs::read(fixture()).unwrap();
@@ -367,20 +315,6 @@ async fn the_mirror_is_tried_when_the_official_feed_fails_and_downloads_are_capp
     assert_eq!(end.entry.status, "error");
     assert!(end.entry.message.unwrap().contains("larger than 100 bytes"));
     assert_eq!(ops(&b).len(), 1);
-}
-
-/// A one-shot local server writing `raw` (status line, headers and body as given) and closing.
-async fn serve_raw(raw: Vec<u8>) -> String {
-    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = l.local_addr().unwrap();
-    tokio::spawn(async move {
-        let (mut s, _) = l.accept().await.unwrap();
-        let mut buf = [0u8; 4096];
-        let _ = s.read(&mut buf).await;
-        let _ = s.write_all(&raw).await;
-        let _ = s.shutdown().await;
-    });
-    format!("http://{addr}/feed.json")
 }
 
 #[tokio::test]

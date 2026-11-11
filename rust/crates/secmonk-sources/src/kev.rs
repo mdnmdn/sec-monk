@@ -15,16 +15,16 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use async_trait::async_trait;
-use futures_util::StreamExt;
-use secmonk_model::{JsonMap, MirrorTable, RowOp, SyncEntry};
+use secmonk_model::{JsonMap, MirrorTable, RowOp};
 use secmonk_traits::{
-    CallCtx, ErrorCode, MirrorView, NATIVE_GENERATION, ProgressUpdate, ResultStream, RowsBatch,
-    Source, SourceInfo, StepResult, StreamMsg, SyncEnd, SyncParams, WireError,
+    CallCtx, MirrorView, ProgressUpdate, ResultStream, RowsBatch, Source, SourceInfo, StepResult,
+    SyncEnd, SyncParams,
 };
 use serde_json::{Value, json};
 
-use crate::batch::{self, Limits};
+use crate::batch::Limits;
 use crate::feed;
+use crate::native::{self, Outcome};
 
 /// Source name.
 pub const NAME: &str = "kev";
@@ -133,59 +133,24 @@ impl KevSource {
         }
     }
 
-    /// One sync: the batches and the run's end. Infrastructure failures (the mirror view) are wire errors; feed
-    /// problems are an `error` entry with its `source_sync` row, as `ops.sync_source` records them.
+    /// One sync: the stream of batches and the run's end. Infrastructure failures (the mirror view) are wire
+    /// errors; feed problems are an `error` entry with its `source_sync` row, as `ops.sync_source` records them.
     async fn run(
         &self,
         params: &SyncParams,
         ctx: &CallCtx,
-    ) -> StepResult<(Vec<RowsBatch>, SyncEnd)> {
+    ) -> StepResult<ResultStream<RowsBatch, SyncEnd>> {
         let t0 = Instant::now();
         let opts = &params.options;
-        let limit = opts.limit.flatten();
-        if limit == Some(0) {
-            return Err(WireError::new(
-                ErrorCode::InvalidParams,
-                "options.limit: expected >= 1",
-            ));
-        }
+        let limit = native::limit(opts)?;
         let path = opts.path.clone().flatten().filter(|p| !p.is_empty());
         let full = opts.full.unwrap_or(false);
         let outcome = match self.load(path.as_deref(), ctx).await {
             Ok((doc, origin)) => self.rows(&doc, &origin, limit, full, ctx).await?,
             Err(message) => Outcome::error(message),
         };
-        let base = self
-            .view
-            .applied(NAME)
-            .await?
-            .filter(|a| a.generation.as_deref() == Some(NATIVE_GENERATION))
-            .map_or(0, |a| a.seq);
-        let now = secmonk_model::time::now_iso();
-        let message = outcome.message.as_deref().map(feed::scrub);
-        let mut ops = outcome.ops;
-        ops.push(sync_row(
-            &outcome.status,
-            outcome.records,
-            outcome.cursor,
-            message.clone(),
-            &now,
-        ));
-        let n_ops = ops.len() as u64;
-        let batches = batch::cut(NAME, ops, base + 1, self.limits);
-        let end = SyncEnd {
-            entry: SyncEntry {
-                source: NAME.into(),
-                status: outcome.status,
-                records: outcome.records,
-                seconds: (t0.elapsed().as_secs_f64() * 10.0).round() / 10.0,
-                message,
-            },
-            batches: batches.len() as u64,
-            last_seq: batches.last().map_or(0, |b| b.seq),
-            ops: n_ops,
-        };
-        Ok((batches, end))
+        let first = native::first_seq(self.view.as_ref(), NAME).await?;
+        Ok(native::stream(NAME, outcome, first, self.limits, t0))
     }
 
     /// `KevSource.sync` of the Python source: the rows of a loaded document (or the error entry).
@@ -264,7 +229,7 @@ impl KevSource {
                 doc.get("catalogVersion").and_then(cursor_text)
             },
             message: Some(format!("{} entries {origin}", entries.len())),
-            ops,
+            ops: Box::new(ops.into_iter()),
         })
     }
 
@@ -288,59 +253,10 @@ impl KevSource {
     }
 }
 
-/// What one run produced before batching.
-struct Outcome {
-    status: String,
-    records: u64,
-    cursor: Option<String>,
-    message: Option<String>,
-    ops: Vec<RowOp>,
-}
-
-impl Outcome {
-    /// A failed run: no rows, only the `source_sync` status (`set_sync_state` keeps the last good totals).
-    fn error(message: String) -> Outcome {
-        Outcome {
-            status: "error".into(),
-            records: 0,
-            cursor: None,
-            message: Some(message),
-            ops: Vec::new(),
-        }
-    }
-}
-
 fn obj(v: Value) -> JsonMap {
     match v {
         Value::Object(m) => m,
         _ => JsonMap::new(),
-    }
-}
-
-/// `db.set_sync_state` as a row operation. ok/partial: `last_sync` = now, the cursor only when there is one (the
-/// SQL's `COALESCE(excluded.cursor, cursor)`), records, status, message. error: status and message only (an upsert
-/// updates only the given columns; a new row gets `last_sync`/`cursor` NULL and `records` 0, as there).
-fn sync_row(
-    status: &str,
-    records: u64,
-    cursor: Option<String>,
-    message: Option<String>,
-    now: &str,
-) -> RowOp {
-    let mut row = JsonMap::new();
-    row.insert("source".into(), json!(NAME));
-    if status != "error" {
-        row.insert("last_sync".into(), json!(now));
-        if let Some(c) = cursor {
-            row.insert("cursor".into(), json!(c));
-        }
-        row.insert("records".into(), json!(records));
-    }
-    row.insert("status".into(), json!(status));
-    row.insert("message".into(), json!(message));
-    RowOp::Upsert {
-        table: MirrorTable::SourceSync,
-        row,
     }
 }
 
@@ -435,19 +351,8 @@ impl Source for KevSource {
         params: SyncParams,
         ctx: CallCtx,
     ) -> StepResult<ResultStream<RowsBatch, SyncEnd>> {
-        if params.source != NAME {
-            return Err(WireError::new(
-                ErrorCode::UnknownSource,
-                format!("unknown source {:?} (known: kev)", params.source),
-            ));
-        }
-        let (batches, end) = self.run(&params, &ctx).await?;
-        let mut msgs: Vec<StepResult<StreamMsg<RowsBatch, SyncEnd>>> = batches
-            .into_iter()
-            .map(|b| Ok(StreamMsg::Item(b)))
-            .collect();
-        msgs.push(Ok(StreamMsg::End(end)));
-        Ok(futures_util::stream::iter(msgs).boxed())
+        native::check_name(NAME, &params.source)?;
+        self.run(&params, &ctx).await
     }
 
     async fn ack(&self, _source: &str, _through_seq: u64, _ctx: CallCtx) -> StepResult<()> {
@@ -459,12 +364,7 @@ impl Source for KevSource {
         source: &str,
         _ctx: CallCtx,
     ) -> StepResult<ResultStream<RowsBatch, Value>> {
-        Err(WireError::new(
-            ErrorCode::UnknownMethod,
-            format!(
-                "{source}: native importer: no staging database, source.export is not supported; run a sync to rewrite the rows"
-            ),
-        ))
+        Err(native::export_refused(source))
     }
 
     fn native(&self) -> bool {

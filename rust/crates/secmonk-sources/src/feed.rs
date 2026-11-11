@@ -1,7 +1,7 @@
 //! Reading a feed document: a download over the workspace's `reqwest` client (rustls) or a local file (`--path`),
-//! both size-capped, then parsed as JSON. Feeds are untrusted input: the cap is checked while reading (and against
-//! `Content-Length` first), JSON nesting is bounded by `serde_json`'s recursion limit, and every message that leaves
-//! here is free of URL credentials.
+//! both size-capped, then parsed as JSON (kev) or returned as bytes or an open file (epss). Feeds are untrusted
+//! input: the cap is checked while reading (and against `Content-Length` first), JSON nesting is bounded by
+//! `serde_json`'s recursion limit, and every message that leaves here is free of URL credentials.
 
 use std::path::Path;
 use std::time::Duration;
@@ -23,12 +23,23 @@ pub const TIMEOUT: Duration = Duration::from_secs(60);
 /// Download `url` (at most `max_bytes`) and parse it as JSON. Plain `http://` is refused unless `allow_http` (tests
 /// against a local server). Proxies come from the environment (`HTTPS_PROXY`, as `httpx` with `trust_env`).
 pub async fn download_json(url: &str, max_bytes: u64, allow_http: bool) -> Result<Value, String> {
+    parse(&download(url, max_bytes, allow_http, TIMEOUT).await?)
+}
+
+/// Download `url` into memory: at most `max_bytes` (checked against `Content-Length` first, then while the body
+/// streams), connect and read timeout `timeout`. Errors carry no URL credentials.
+pub async fn download(
+    url: &str,
+    max_bytes: u64,
+    allow_http: bool,
+    timeout: Duration,
+) -> Result<Vec<u8>, String> {
     let shown = secmonk_safeio::strip_url_secrets(url, false);
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .https_only(!allow_http)
-        .connect_timeout(TIMEOUT)
-        .read_timeout(TIMEOUT)
+        .connect_timeout(timeout)
+        .read_timeout(timeout)
         .build()
         .map_err(|e| scrub(&e.to_string()))?;
     let resp = client
@@ -52,7 +63,7 @@ pub async fn download_json(url: &str, max_bytes: u64, allow_http: bool) -> Resul
         }
         body.extend_from_slice(&chunk);
     }
-    parse(&body)
+    Ok(body)
 }
 
 /// Read a local feed file (at most `max_bytes`) and parse it as JSON. I/O errors read like Python's `OSError`
@@ -61,26 +72,14 @@ pub async fn download_json(url: &str, max_bytes: u64, allow_http: bool) -> Resul
 /// Only a regular file is opened (symlinks followed): a directory answers Python's `[Errno 21] Is a directory`, anything
 /// else (a FIFO, a device, a socket) is refused before `open`, which would block on a FIFO with no writer.
 pub async fn read_json(path: &Path, max_bytes: u64) -> Result<Value, String> {
-    let kind = |meta: &std::fs::Metadata| -> Result<(), String> {
-        if meta.is_dir() {
-            Err(os_error(&std::io::Error::from_raw_os_error(21), path))
-        } else if !meta.is_file() {
-            Err(format!("not a regular file: {}", py_repr(&py_path(path))))
-        } else {
-            Ok(())
-        }
-    };
-    kind(
-        &tokio::fs::metadata(path)
-            .await
-            .map_err(|e| os_error(&e, path))?,
-    )?;
-    let f = tokio::fs::File::open(path)
+    let owned = path.to_path_buf();
+    let f = tokio::task::spawn_blocking(move || open_regular(&owned))
         .await
-        .map_err(|e| os_error(&e, path))?;
-    kind(&f.metadata().await.map_err(|e| os_error(&e, path))?)?; // replaced between the check and the open
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.message)?;
     let mut body = Vec::new();
-    f.take(max_bytes + 1)
+    tokio::fs::File::from_std(f)
+        .take(max_bytes + 1)
         .read_to_end(&mut body)
         .await
         .map_err(|e| os_error(&e, path))?;
@@ -88,6 +87,60 @@ pub async fn read_json(path: &Path, max_bytes: u64) -> Result<Value, String> {
         return Err(format!("{}: larger than {max_bytes} bytes", py_path(path)));
     }
     parse(&body)
+}
+
+/// A local file that could not be opened: Python's exception class and `str(exception)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileError {
+    /// `FileNotFoundError`, `IsADirectoryError`, `PermissionError`, `OSError`, ...
+    pub class: &'static str,
+    /// `[Errno 2] No such file or directory: '<path>'`, or `not a regular file: '<path>'`.
+    pub message: String,
+}
+
+impl FileError {
+    /// `f"{type(e).__name__}: {e}"`, as the Python sources that report the class (epss) word it.
+    pub fn with_class(&self) -> String {
+        format!("{}: {}", self.class, self.message)
+    }
+}
+
+/// Open a local feed file for reading: a regular file only (symlinks followed). A directory answers Python's
+/// `[Errno 21] Is a directory`; anything else (a FIFO, a device, a socket) is refused before `open`, which would block
+/// on a FIFO with no writer. The kind is checked again on the opened file (replaced between the check and the open).
+pub fn open_regular(path: &Path) -> Result<std::fs::File, FileError> {
+    let io = |e: &std::io::Error| FileError {
+        class: py_exception(e),
+        message: os_error(e, path),
+    };
+    let kind = |meta: &std::fs::Metadata| -> Result<(), FileError> {
+        if meta.is_dir() {
+            Err(io(&std::io::Error::from_raw_os_error(21)))
+        } else if !meta.is_file() {
+            Err(FileError {
+                class: "OSError",
+                message: format!("not a regular file: {}", py_repr(&py_path(path))),
+            })
+        } else {
+            Ok(())
+        }
+    };
+    kind(&std::fs::metadata(path).map_err(|e| io(&e))?)?;
+    let f = std::fs::File::open(path).map_err(|e| io(&e))?;
+    kind(&f.metadata().map_err(|e| io(&e))?)?;
+    Ok(f)
+}
+
+/// The `OSError` subclass Python raises for an errno (POSIX numbers; others are `OSError`).
+pub fn py_exception(e: &std::io::Error) -> &'static str {
+    match e.raw_os_error() {
+        Some(2) => "FileNotFoundError",
+        Some(1 | 13) => "PermissionError",
+        Some(20) => "NotADirectoryError",
+        Some(21) => "IsADirectoryError",
+        Some(4) => "InterruptedError",
+        _ => "OSError",
+    }
 }
 
 /// JSON text -> value. Python's `json.loads` errors read differently (`Expecting value: line 1 column 1 (char 0)`);
@@ -102,7 +155,7 @@ pub fn scrub(text: &str) -> String {
 }
 
 /// Python's `str(OSError)`: `[Errno N] <strerror>: '<path>'`.
-fn os_error(e: &std::io::Error, path: &Path) -> String {
+pub fn os_error(e: &std::io::Error, path: &Path) -> String {
     let text = e.to_string();
     match e.raw_os_error() {
         Some(code) => {
@@ -116,7 +169,7 @@ fn os_error(e: &std::io::Error, path: &Path) -> String {
 }
 
 /// Python's `repr(str)` for the common case (single quotes unless the text has one and no double quote).
-fn py_repr(s: &str) -> String {
+pub fn py_repr(s: &str) -> String {
     let body: String = s
         .chars()
         .flat_map(|c| match c {

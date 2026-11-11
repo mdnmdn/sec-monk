@@ -13,6 +13,9 @@ related: [decisions/0010-source-staging-adapter.md, tech/source-kev.md, tech/con
 
 # ADR-0011 — Native importers
 
+> Status note 2026-11-11: epss is the second native importer. It never deletes rows, so it reads only `applied` and
+> `count_rows`; `MirrorView` is unchanged. `row_keys` measured at about 226 MiB for 400k keys ([source-epss](../tech/source-epss.md)).
+
 ## Context
 
 [rust ADR-0010](0010-source-staging-adapter.md) gives every source the same contract: `source.sync` streams

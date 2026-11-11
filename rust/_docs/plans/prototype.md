@@ -79,6 +79,9 @@ Assumptions (cheap to reverse, confirm or correct):
 | W7.1 | App icon from `rust/assets/logo-orange.png` (transparent corners, Tauri icon set, tauri.conf.json, regeneration script, desktop-app note) | icon agent | done: cargo tauri icon via scripts/make_icons.py, master assets/app-icon.png (corner radius ~253 px, transparent), bundle.icon set, .app bundles with icon.icns; Dock/taskbar look not observed |
 | W7.2 | Logo in the shared web UI (brand mark + favicon) for both the Python and the Rust app | ui agent | done: committed 84d2892 (img/logo-64.png, favicon-32.png, CSS brand mark); not observed in a browser here |
 | W6.6 | Plain technical wording in native importer messages and docs (user decision) | kev agent | done (in 3c64c75) |
+| W8.1 | Native epss importer (R1 step 2): diff strategy for ~400k rows, gzip caps, EUVD coexistence, differential test, measured apply time | epss agent | in review: epss native by default; 400k rows 5.3 s native vs 16-18 s py-sources (M2); no new crate; differential + contract tests green; review fixes W8.3 done; awaiting commit approval |
+| W8.2 | Independent read-only review of W8.1 | reviewer | done: 0 high, 1 medium (M1 parser memory unbounded on repeated date lines / long CVE fields), 5 low (Unicode digits, limit vs row cap, wording, seconds doc, line width) |
+| W8.3 | Fix W8.2 findings | epss agent | done: M1 (rows 48 B, dates inline, CVE-bytes cap 64 MiB, worst case ~250 MiB), L1 Unicode digits as Python, L2 documented, L3-L5 fixed |
 
 ## Log
 
@@ -120,3 +123,7 @@ Assumptions (cheap to reverse, confirm or correct):
 - 2026-11-11 User: use rust/assets/logo-orange.png as logo and app icon. W7.1 (app icon) dispatched; in-app logo asked (the UI is shared with the Python reference in src/).
 - 2026-11-11 User: rust ADR-0011 accepted; logo in the shared UI for both apps (W7.2 dispatched; touches src/secmonk/web/static by user request).
 - 2026-11-11 User: commits authorized; D1 = continue with sources; wording rule: technical, no figurative phrases ("native importer"). Desktop .app rebuilt (the earlier bundle predated the logo). Commits: 9289d40 icon, 84d2892 UI logo, 3c64c75 native kev, then the roadmap.
+- 2026-11-11 W8.1 (epss) dispatched.
+- 2026-11-11 W8.1 reported done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 234 passed 0 failed 5 ignored (4 volume measurements + network). W8.2 review dispatched; INDEX/roadmap/backlog/README/ADR-0011 note updated.
+- 2026-11-11 W8.2 review done; findings routed to the epss agent (W8.3).
+- 2026-11-11 W8.3 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 235 passed 0 failed 5 ignored; rust/_docs lint only L12; wording grep clean (ADR-0010 "win over" reworded).

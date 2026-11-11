@@ -10,7 +10,7 @@ updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-store/src/, rust/crates/secmonk-store/migrations/]
 fixtures: rust/crates/secmonk-store/tests/golden/
-related: [decisions/0005-schema-v3-store-sqlx.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, tech/contracts.md, tech/configuration.md]
+related: [decisions/0005-schema-v3-store-sqlx.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, decisions/0011-native-sources.md, tech/contracts.md, tech/configuration.md, tech/source-kev.md, tech/source-epss.md]
 ---
 
 # Data model — schema v3
@@ -69,7 +69,7 @@ and the collectors).
 
 | Trait | Operations (implemented 2026-11-11, signatures in `secmonk-store/src/lib.rs`) |
 |---|---|
-| `MirrorStore` | `apply_rows(&RowsBatch) -> ApplyStats {upserts, deleted, skipped}` (one transaction; table and column allowlists in `mirror_schema.rs`; the whole batch is validated before the transaction, so a bad op writes nothing; at most 5000 ops, the schema's `maxItems`; **source binding**: every row and key carries `source == batch.source`, and for `kev` / `epss`, whose keys have no `source`, an update or delete touches only the batch source's rows, while the owning source may replace another's row, as FIRST EPSS scores win over EUVD's in Python; **idempotent**: the batch's `seq` and `generation` are recorded in `source_applied` in the same transaction and a batch at or below that seq is skipped, `skipped = true`; **generation-bound**: a batch with a `generation` other than the recorded one, or with `acked_through` above the applied seq (none = 0), writes nothing and answers `needs_repair = true`; a batch without a generation keeps the plain seq rule), `applied_seq(source)`, `applied_state(source) -> AppliedState {seq, generation}`, `reset_applied_seq(source)` (tests, manual recovery, and the switch of a source from `py-sources` to its native importer: rust ADR-0011), `begin_repair(source) -> Box<dyn MirrorRepair>` (one transaction on the write connection: deletes the source's rows in every mirror table, `source_sync` `<source>:*` included; `apply(&RowsBatch)` per export batch, same allowlists and binding, no seq check; `commit(high_water, generation) -> RepairStats {deleted, upserts, batches}` records the applied state; dropping it rolls back), `sync_state(source)`, `count_rows(table, source)` and `row_keys(table, source)` (reads of the rows whose `source` column is the source, primary keys in key order, `Invalid` for `affected`: the `MirrorView` of the native importers), `is_initialized()`, `checkpoint()` (`wal_checkpoint(TRUNCATE)` on both files) |
+| `MirrorStore` | `apply_rows(&RowsBatch) -> ApplyStats {upserts, deleted, skipped}` (one transaction; table and column allowlists in `mirror_schema.rs`; the whole batch is validated before the transaction, so a bad op writes nothing; at most 5000 ops, the schema's `maxItems`; **source binding**: every row and key carries `source == batch.source`, and for `kev` / `epss`, whose keys have no `source`, an update or delete touches only the batch source's rows, while the owning source may replace another's row, as FIRST EPSS scores replace EUVD's in Python; **idempotent**: the batch's `seq` and `generation` are recorded in `source_applied` in the same transaction and a batch at or below that seq is skipped, `skipped = true`; **generation-bound**: a batch with a `generation` other than the recorded one, or with `acked_through` above the applied seq (none = 0), writes nothing and answers `needs_repair = true`; a batch without a generation keeps the plain seq rule), `applied_seq(source)`, `applied_state(source) -> AppliedState {seq, generation}`, `reset_applied_seq(source)` (tests, manual recovery, and the switch of a source from `py-sources` to its native importer: rust ADR-0011), `begin_repair(source) -> Box<dyn MirrorRepair>` (one transaction on the write connection: deletes the source's rows in every mirror table, `source_sync` `<source>:*` included; `apply(&RowsBatch)` per export batch, same allowlists and binding, no seq check; `commit(high_water, generation) -> RepairStats {deleted, upserts, batches}` records the applied state; dropping it rolls back), `sync_state(source)`, `count_rows(table, source)` and `row_keys(table, source)` (reads of the rows whose `source` column is the source, primary keys in key order, `Invalid` for `affected`: the `MirrorView` of the native importers), `is_initialized()`, `checkpoint()` (`wal_checkpoint(TRUNCATE)` on both files) |
 | `StateStore` | `save_inventory(&Inventory, job_id) -> scan_id` (port of `engine/inventory.save_inventory` **without** its `classify` call: the engine classifies on ingest), `asset_exists`, `asset_reuse_facts(asset_id) -> {name, platform, meta, last_seen, latest_scan_id, latest_scan_partial}`, `update_asset_meta`, `update_asset_reused(asset_id, name, meta)` (the reuse rule's write: name, meta, `last_seen` in one statement, no scan row), `latest_scan_id`, `replace_findings(asset_id, &[Finding], &BasedOn)` (stale check, `StoreError::Stale`), `job_insert` / `job_finish` / `job_rows(kind, limit)` / `job_row` / `job_mark_interrupted` (ports of `db.py`, `JOB_KEEP` 200, `JOB_LOG_LINES` 300), `is_initialized()` |
 | `SqliteStore` | the SQLite backend of both traits: `open(state_path, mirror_path, &StoreOptions)` / `open_urls(state_url, mirror_url, ..)` creates the files 0600, runs the migrations, stamps `user_version` and `store_meta`, holds the write pools and the read-only pools (`read_pool()`: extension point for the API read queries, added later as trait methods), `state_path()` / `mirror_path()`, `close()` (called last by `Host::shutdown`) |
 
@@ -79,6 +79,24 @@ partial re-scan; every v2 column of `asset`, `scan`, `component`, `asset_compone
 timestamps, JSON text byte-equal thanks to `serde_json` `preserve_order`). `replace_findings` has no Python
 counterpart (Python updates findings in place); it is unit-tested. Errors: `StoreError::{Sqlx, Migrate, Invalid,
 Stale, NotFound, Corrupt, Io}`; `Invalid` maps to `invalid-params`, `Stale` to `stale` on the wire.
+
+### Sourceless keys: `kev` and `epss`
+
+`kev` and `epss` are keyed by `cve_id` alone, so two sources could address the same row. `apply_rows` (and the
+export repair) binds them to an owner (`owner_of_sourceless_key` in `secmonk-store/src/sqlite/mirror.rs`), reproducing
+the Python writers:
+
+| Operation in a batch of source `S` | Owner (`kev` -> `kev`, `epss` -> `epss`) | Another source |
+|---|---|---|
+| upsert, no stored row | inserted with `source = S` | inserted with `source = S` |
+| upsert over a row of another source | replaces it: every given column, `source` becomes `S` (Python's `INSERT OR REPLACE`; FIRST EPSS replaces a EUVD score) | not written (`ON CONFLICT … DO UPDATE … WHERE <table>.source = S`; EUVD never overwrites a FIRST score, `euvd.py`) |
+| upsert over its own row | updated | updated |
+| delete by `cve_id` | only a row with `source = S` | only a row with `source = S` |
+
+In Python only `kev.py` writes `kev`; `epss.py` (`source = 'epss'`) and `euvd.py` (`source = 'euvd'`, percentile
+NULL) write `epss`. The native epss importer emits no delete (the Python source never deletes), so a EUVD row of a CVE
+the FIRST file lacks stays ([source-epss](source-epss.md#ownership-with-euvd-rows)). The export repair of a source
+deletes only rows with its `source`; the other source's rows of the shared table stay.
 
 ## SQL library and migrations
 

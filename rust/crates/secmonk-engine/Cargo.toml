@@ -23,6 +23,7 @@ secmonk-traits.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "time"] }
+flate2.workspace = true             # gzip variants of the epss fixture (tests/real_modules.rs, tests/epss_volume.rs)
 tempfile.workspace = true
 regex.workspace = true
 # the native sources, driven through the engine (tests/engine.rs, tests/real_modules.rs); the engine itself sees traits

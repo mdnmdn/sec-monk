@@ -89,6 +89,14 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
       `secmonk-desktop.log.<date>`. Add `logs/modules/<name>.log`; use or drop `jobs/`. (The instance lock `run/instance.lock` and the
       default module list are done.)
 - [ ] **epss host-side apply is slow**: about 72 s for 400k rows. Measure and speed up (batching, staging copy).
+  - 2026-11-11: remeasured on an Apple M2: py-sources 16-18 s, native importer 5.3 s for 400k rows
+    ([source-epss](../tech/source-epss.md)). Remaining cost: `MirrorStore::apply_rows` at about 12 µs per upsert;
+    multi-row statements could reduce it.
+- [ ] **`MirrorView::row_keys` memory**: about 570 bytes per key (226 MiB for 400k keys). A large source that computes
+      deletes needs a compact or streamed read.
+- [ ] **Retire the `py-sources` epss path** one release after the native epss importer.
+- [ ] **Live-feed check per native importer**: sync the live kev and epss feeds once by hand and compare row counts
+      with py-sources (roadmap R1 exit criterion).
 - [ ] **Repair holds the mirror write connection for a whole export.** Measure the effect on a full OSV mirror.
 - [ ] **Staging restored from an older copy with the same generation repeats seqs.** Define how a restored staging copy is detected.
 - [ ] **Missing tests**: L5 (the process group is killed on a failed handshake) and L2 (the loopback accept loop recovers from accept errors).

@@ -61,7 +61,7 @@ and `src/` must not change.
   cannot interleave with the stream. Batches applied before a failed stream are still acknowledged.
 - The store binds every batch to its source: a row or key naming another source is refused (the whole batch). For
   `kev` and `epss`, whose keys have no `source`, a source updates or deletes only its own rows; the owning source may
-  replace another's (FIRST EPSS scores win over EUVD's, as in Python).
+  replace another's (FIRST EPSS scores replace EUVD's, as in Python).
 - Seqs come from one counter in the staging database (`_sm_meta.next_batch`), so they only grow across syncs, which
   is what the per-source skip relies on.
 - Seeding staging from an existing Python `secmonk.db` would skip the first full download (backlog).

@@ -10,7 +10,7 @@ updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-sources/src/, rust/crates/secmonk-engine/src/sync.rs, rust/crates/secmonk-engine/src/view.rs, rust/crates/secmonk-host/src/engine.rs]
 fixtures: [tests/fixtures/sources/kev/]
-related: [decisions/0011-native-sources.md, decisions/0010-source-staging-adapter.md, tech/contracts.md, tech/engine-service.md, tech/configuration.md, tech/component-lifecycle.md]
+related: [tech/source-epss.md, decisions/0011-native-sources.md, decisions/0010-source-staging-adapter.md, tech/contracts.md, tech/engine-service.md, tech/configuration.md, tech/component-lifecycle.md]
 ---
 
 # Source kev (native importer)
@@ -21,6 +21,12 @@ The first source ported to Rust (stage 6 of the [standard process](component-lif
 ([rust ADR-0011](../decisions/0011-native-sources.md)). The feed itself is described in the Python tree's
 [KEV reference](../../../_docs/references/vuln-sources/kev.md); the reference implementation is
 `src/secmonk/sources/kev.py` `KevSource.sync` plus `ops.sync_source` / `db.set_sync_state`.
+
+Shared with the second native importer, [epss](source-epss.md), in `secmonk-sources`: `feed.rs` (downloads with a
+size cap, `open_regular` for local files, Python-style `OSError` text), `batch.rs` (`Cutter`: operations cut into
+batches as they come; `cut` for a list), `native.rs` (crate-private: the run's `Outcome`, the `source_sync` row of
+`set_sync_state`, the first seq, the lazy stream of batches and end, the `limit` / name / export checks), and
+`tests/common` (stream runner, local HTTP servers).
 
 ## Selection
 
@@ -41,7 +47,7 @@ run repairs kev from the staging export; a failed or limited run leaves the mirr
 | Guard | Without `limit` and `full`: an empty snapshot, or one under half of the stored `kev` rows (`MirrorView::count_rows`), is refused with Python's message (`kev: refusing to replace 30 rows with a snapshot of only 9 (< 50%; use --full to force)`). |
 | Rows | In order: a `kev` delete for every stored key (`MirrorView::row_keys`) not in the snapshot (not with `limit`); per entry a `raw_record` upsert (`modified` = `dateAdded`, `fetched_at` = now, `data` = the entry) and a `kev` upsert (all nine columns; `ransomware` `"1"` when `knownRansomwareCampaignUse` is `Known` else `"0"`; `extra` = the unmapped fields in feed order); last the `source_sync` upsert. |
 | `source_sync` | ok / partial: `last_sync` = now, `cursor` = `catalogVersion` only when set (Python's `COALESCE`), `records`, `status`, `message` (`9 entries from file …`). error: only `status` and `message`, so the last good totals stay (as `set_sync_state`). Messages pass `scrub_text`. |
-| Batches | At most 5 000 ops and about 2 MiB of JSON each; `generation = "native-rust"`, no `acked_through`; seqs continue the applied seq of that generation, else from 1. |
+| Batches | At most 5 000 ops and about 2 MiB of JSON each, cut while the engine reads the stream (`native::stream`); `generation = "native-rust"`, no `acked_through`; seqs continue the applied seq of that generation, else from 1. |
 
 The engine applies the batches like any source's; a native stream is never acknowledged nor repaired from an export.
 The next sync is the repair: it is computed against the mirror as it is (a cut stream, a reset or restored mirror).
@@ -78,7 +84,7 @@ Equal by test: missing `vulnerabilities` / `cveID` (`'vulnerabilities'`, `'cveID
 | Test | What |
 |---|---|
 | `secmonk-sources/tests/kev.rs` | rows of the fixture, deletes, seq continuation within the native generation and restart after another generation, guard, `limit`, `full`, error entries, the official-to-mirror fallback and the size cap against a local HTTP server (never the network); `the_size_cap_holds_without_a_trustworthy_content_length` (no `Content-Length`, chunked, understated and overstated `Content-Length`) |
-| `secmonk-sources/src/{batch,feed}.rs` | batch limits; Python-style paths and `OSError` messages; file cap; `a_fifo_is_refused_without_blocking` |
+| `secmonk-sources/src/{batch,feed}.rs` | batch limits (`Cutter`, `cut`); Python-style paths and `OSError` messages; file cap; `a_fifo_is_refused_without_blocking` |
 | `secmonk-engine/tests/engine.rs` | through the engine on a real store: `native_kev_*` (sync, no-op, update, guard, full; reset of an applied state of the py-sources staging generation; a stream cut after two batches converges on the next sync); `a_native_batch_the_store_skips_is_an_error`; `a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back`; `native_kev_batches_follow_the_row_contract` (every batch and end of a sync, an update with deletes, a limited and a failed run, validated against `source/rows.schema.json` and `source/sync-end.schema.json` with the dev venv's `jsonschema`) |
 | `secmonk-engine/tests/real_modules.rs` `native_kev_matches_py_sources` | **differential** (needs `rust/python/.venv`): `py-sources` and the Rust source, each on its own mirror, through the engine; all eight mirror tables equal (timestamps `raw_record.fetched_at` and `source_sync.last_sync` aside) after: first sync, no-op, update (removed, changed, added entries), limit, guard refusal, unreadable file, invalid JSON (message aside), full; a switch from py-sources to the native importer and back to py-sources on a third mirror (equal to the Python-only mirror, then to its staging after the export repair); a reset mirror rebuilt by the next native sync (`kev`, `source_sync`); a failed and a limited Python run after the Rust one leave the mirror and the native applied state unchanged; the stored text of `kev.extra` is equal in both mirrors and keeps the feed's key order. Run with `SECMONK_REQUIRE_VENV=1` so a missing venv fails instead of skipping |
 | `secmonk-host/src/engine.rs` | the configuration selects the native importer; `rust` without an implementation, `python` with no module serving the name, and a misspelled name refuse the start |

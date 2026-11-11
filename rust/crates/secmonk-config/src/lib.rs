@@ -266,7 +266,7 @@ pub enum SourceImpl {
 }
 
 /// Sources whose default implementation is `rust` (their differential test against `py-sources` is green).
-pub const DEFAULT_RUST_SOURCES: [&str; 1] = ["kev"];
+pub const DEFAULT_RUST_SOURCES: [&str; 2] = ["epss", "kev"];
 
 /// `[log]`.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]

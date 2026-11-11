@@ -23,9 +23,10 @@ _data/                                        everything written at run time (gi
 _docs/                                        documentation (follows ../_docs/_meta rules)
 ```
 
-Crates worth naming: `secmonk-sources` holds the native (Rust) vulnerability sources. `kev` runs natively by default
-(no Python, no staging copy: [source-kev](_docs/tech/source-kev.md), [ADR-0011](_docs/decisions/0011-native-sources.md));
-`[sources.implementation] kev = "python"` in `sec-monk.toml` switches it back to the Python module.
+Crates worth naming: `secmonk-sources` holds the native (Rust) vulnerability sources. `kev` and `epss` run natively by
+default (no Python, no staging copy: [source-kev](_docs/tech/source-kev.md), [source-epss](_docs/tech/source-epss.md),
+[ADR-0011](_docs/decisions/0011-native-sources.md)); `[sources.implementation] kev = "python"` (or `epss = "python"`)
+in `sec-monk.toml` switches a source back to the Python module.
 
 ## Rules that matter here
 

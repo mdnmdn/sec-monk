@@ -9,7 +9,7 @@ tags: [architecture, rust, tauri, python, modules, desktop]
 updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/crates/secmonk-sources/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
-related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md]
+related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md]
 ---
 
 # Rust prototype architecture
@@ -36,7 +36,7 @@ simplifications listed in [§9 below](#9-prototype-boundary-and-migration-order)
 |     |  Store traits             |  EngineSteps / Source traits     |  Probe trait                |
 |     v                           v                                  v                             |
 |  secmonk-store (SQL)       module host (registry, sessions, supervisor, PythonRuntime = uv)      |
-|  state.sqlite3              |  in-process: Rust sources (secmonk-sources: kev) over a MirrorView |
+|  state.sqlite3              |  in-process: secmonk-sources (kev, epss) over a MirrorView         |
 |  mirror.sqlite3 <-- ro --+  |  child stdio: py-engine  py-procmon  py-sources  py-probe          |
 +--------------------------|--|----------------------------------------------------------------------+
                            +--+ Python engine modules read SQLite read-only; every write goes through the store
@@ -69,7 +69,7 @@ rust/
     secmonk-runtime          PythonRuntime trait, UvRuntime (download, verify, install, env, launch command)
     secmonk-modhost          registry, transports (inproc, child-stdio), sessions, supervisor, Py* adapters
     secmonk-probe            local probe service: collector allowlist, dispatch to Probe impls
-    secmonk-sources          native vulnerability sources (kev): feeds -> row batches over a read-only MirrorView
+    secmonk-sources          native vulnerability sources (kev, epss): feeds -> row batches over a read-only MirrorView
     secmonk-engine           engine service: jobs, sync, scan, reuse rule, run history, payload facade
     secmonk-api              engine<->ui route table, validation, ApiError, static files, security headers
     secmonk-host             composition root: Host::start, preparing Gate, Service, logging, secmonk-headless
@@ -93,7 +93,7 @@ rust/
 | `secmonk-runtime` | config, model, safeio, dunce, reqwest (rustls), sha2, tar, flate2, zip | store, engine, api | compiler |
 | `secmonk-modhost` | traits, proto, runtime, config, safeio, model, rustix (unix, process-group kill) | **store**, engine, api | compiler + `deny.toml` + `cargo tree` check |
 | `secmonk-probe` | traits, model, proto, modhost | **store**, engine, sources | compiler + CI `cargo tree -p secmonk-probe` must not list `secmonk-store` |
-| `secmonk-sources` | traits, model, safeio, reqwest (rustls, the workspace client), tokio | **store**, modhost, engine (reads the mirror only through `MirrorView`) | compiler |
+| `secmonk-sources` | traits, model, safeio, reqwest (rustls, the workspace client), tokio, flate2 (the epss gzip feed) | **store**, modhost, engine (reads the mirror only through `MirrorView`) | compiler |
 | `secmonk-engine` | traits, store, model, proto, safeio | **modhost** (gets trait objects; `modhost`, `runtime`, `config` only as dev-dependencies of the gated `tests/real_modules.rs`), api | compiler + `deny.toml` (dev wrapper) |
 | `secmonk-api` | engine (its service types and errors), http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
 | `secmonk-host` | everything; with `engine` off only config, runtime, modhost, probe, traits, model, proto, safeio | — | composition root (the only crate that names modhost and engine together) |
@@ -356,7 +356,7 @@ on all three and reports the missing capability as an unavailable feature ([rust
 |---|---|---|
 | Tauri shell, config, store + schema v3, module host + uv, API router, jobs, run history, reuse rule, redaction helpers | **Rust** | — |
 | Collectors, discovery, docker/k8s listings | Python (`py-probe`) | Rust by value: `safeio`, `lang`, `fs`, `rootfs`, process backends first (proposal §9.6) |
-| Sources | Python (`py-sources`, staging adapter); `kev` native in Rust (`secmonk-sources`, [rust ADR-0011](../decisions/0011-native-sources.md)) | Native record emitters; possibly Python for good |
+| Sources | Python (`py-sources`, staging adapter); `kev` and `epss` native in Rust (`secmonk-sources`, [rust ADR-0011](../decisions/0011-native-sources.md)) | Native record emitters; possibly Python for good |
 | classify, match, scoring, versions | Python (`py-engine`) | **Rust first** after the prototype (hot, security-critical; differential tests against `univers`) |
 | Report payloads (`reports.*`, `procmon.*`) | Python (`py-engine`, `py-procmon`) | Rust together with the store queries they need |
 

@@ -9,16 +9,18 @@ license.workspace = true
 
 [dependencies]
 async-trait.workspace = true
+flate2.workspace = true             # epss: the gzip feed (already in the lock for the uv archive); single member, capped output
 futures-util.workspace = true
 reqwest.workspace = true            # the workspace's rustls client (as secmonk-runtime); no second HTTP stack
 secmonk-model.workspace = true
 secmonk-safeio.workspace = true
 secmonk-traits.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["fs", "io-util", "time"] }
+tokio = { workspace = true, features = ["fs", "io-util", "rt", "time"] }
 tracing.workspace = true
 
 [dev-dependencies]
+flate2.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "net", "io-util"] }
 tempfile.workspace = true
 

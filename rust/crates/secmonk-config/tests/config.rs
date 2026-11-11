@@ -326,6 +326,7 @@ fn source_implementations_default_and_override() {
     };
     let c = load("config_version = 1\n").unwrap();
     assert_eq!(c.source_impl("kev"), SourceImpl::Rust); // DEFAULT_RUST_SOURCES
+    assert_eq!(c.source_impl("epss"), SourceImpl::Rust);
     assert_eq!(c.source_impl("osv"), SourceImpl::Python);
     let c = load("[sources.implementation]\nkev = \"python\"\nosv = \"rust\"\n").unwrap();
     assert_eq!(c.source_impl("kev"), SourceImpl::Python);

@@ -6,8 +6,9 @@
 //! the `py-sources` module. Batches carry [`secmonk_traits::NATIVE_GENERATION`]; there is no change log, so `ack` is a
 //! no-op and `export` is refused: a native sync is computed against the current mirror and is its own repair.
 //!
-//! Sources: [`kev`] (CISA KEV). Selection per source: `[sources.implementation]` in `sec-monk.toml`
-//! (`rust/_docs/tech/configuration.md`).
+//! Sources: [`kev`] (CISA KEV), [`epss`] (FIRST EPSS). Shared: [`feed`] (downloads, local files), [`batch`]
+//! (cutting operations into batches), and the crate-private `native` module (outcome, `source_sync` row, lazy
+//! stream). Selection per source: `[sources.implementation]` in `sec-monk.toml` (`rust/_docs/tech/configuration.md`).
 
 #![forbid(unsafe_code)]
 
@@ -16,15 +17,18 @@ use std::sync::Arc;
 use secmonk_traits::{MirrorView, Source};
 
 pub mod batch;
+pub mod epss;
 pub mod feed;
 pub mod kev;
+mod native;
 
 /// Sources with a native implementation.
-pub const NATIVE_SOURCES: &[&str] = &["kev"];
+pub const NATIVE_SOURCES: &[&str] = &["epss", "kev"];
 
 /// The native implementation of `name` over `view`, if there is one.
 pub fn native_source(name: &str, view: Arc<dyn MirrorView>) -> Option<Arc<dyn Source>> {
     match name {
+        "epss" => Some(Arc::new(epss::EpssSource::new(view))),
         "kev" => Some(Arc::new(kev::KevSource::new(view))),
         _ => None,
     }

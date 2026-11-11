@@ -9,7 +9,7 @@ tags: [engine, jobs, sync, scan, rust]
 updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-engine/src/, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/]
-related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md, tech/source-kev.md, decisions/0011-native-sources.md]
+related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md]
 ---
 
 # Engine service
@@ -82,9 +82,10 @@ then `Source.ack(high_water)`. A failed export rolls back (nothing acknowledged;
 log says why, how many batches were not applied, rows removed and written, and a closing line counts skipped replays
 and repaired sources.
 
-**Native importers** ([rust ADR-0011](../decisions/0011-native-sources.md), `Source::native()`, today `kev` from
-`secmonk-sources`, see [source-kev](source-kev.md)). The native importer computed its batches against the mirror
-through `StoreMirrorView`, under the generation `native-rust`. **Switch from `py-sources` to the native importer:**
+**Native importers** ([rust ADR-0011](../decisions/0011-native-sources.md), `Source::native()`, today `kev` and `epss`
+from `secmonk-sources`, see [source-kev](source-kev.md) and [source-epss](source-epss.md)). The native importer
+computed its batches against the mirror through `StoreMirrorView`, under the generation `native-rust`; it builds them
+while the engine reads the stream (one batch in memory at a time). **Switch from `py-sources` to the native importer:**
 `sync_native` first resets an applied state of another generation (`reset_applied_seq`; job log `<source>: native
 importer: applied state of generation <g> (seq N) reset; full sync against the mirror`), then applies the stream as
 above. There is no ack and no export repair: a batch the store skips (`native importer: N batch(es) skipped by the
@@ -114,9 +115,11 @@ the payloads the engine builds (meta, sources, collectors, jobs, match result) a
 venv's `jsonschema` (skipped without `rust/python/.venv`). `tests/real_modules.rs` starts the real `py-sources` and
 `py-engine` from `rust/python/.venv` (skipped without it): a `kev` sync from the repo fixture applied and
 acknowledged, a second sync, `sources` read by py-engine, a persisted match written by the host; the repair scenarios of
-W4.4; and `native_kev_matches_py_sources`, the differential test of the native kev source against `py-sources`
-([source-kev](source-kev.md#tests)). `tests/engine.rs` `native_kev_*` and
-`a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back` drive the native kev source over the
+W4.4; `native_kev_matches_py_sources` and `native_epss_matches_py_sources`, the differential tests of the native
+sources against `py-sources` ([source-kev](source-kev.md#tests), [source-epss](source-epss.md#tests); both on the
+`Diff` harness of that file); and the ignored `epss_volume_*` measurements ([source-epss](source-epss.md#volume-measured)).
+`tests/engine.rs` `native_kev_*`, `native_epss_*` and
+`a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back` drive the native sources over the
 real store without Python. The venv-gated tests skip without `rust/python/.venv`; with `SECMONK_REQUIRE_VENV=1` in the
 environment a missing venv or fixture fails them instead (CI and release checks:
 `SECMONK_REQUIRE_VENV=1 cargo test --workspace`).

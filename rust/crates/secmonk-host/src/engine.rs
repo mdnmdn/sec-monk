@@ -207,18 +207,28 @@ mod tests {
         let names = |v: &[Arc<dyn Source>]| -> Vec<String> {
             v.iter().flat_map(|s| s.sources()).map(|i| i.name).collect()
         };
-        // default: kev is native
+        // default: epss and kev are native
         let served: Vec<String> = ["epss", "kev", "osv"]
             .iter()
             .map(|n| (*n).to_owned())
             .collect();
         let native = native_sources(&config_with(d.path(), ""), &store, &served).unwrap();
-        assert_eq!(names(&native), vec!["kev"]);
-        assert!(native[0].native());
-        // python: nothing native (py-sources serves kev)
-        let c = config_with(d.path(), "[sources.implementation]\nkev = \"python\"\n");
+        assert_eq!(names(&native), vec!["epss", "kev"]);
+        assert!(native.iter().all(|s| s.native()));
+        // python: nothing native (py-sources serves both)
+        let c = config_with(
+            d.path(),
+            "[sources.implementation]\nkev = \"python\"\nepss = \"python\"\n",
+        );
         assert!(native_sources(&c, &store, &served).unwrap().is_empty());
+        // one of them only
+        let only_kev = config_with(d.path(), "[sources.implementation]\nepss = \"python\"\n");
+        assert_eq!(
+            names(&native_sources(&only_kev, &store, &served).unwrap()),
+            vec!["kev"]
+        );
         // ... but not when no enabled module serves it
+        let c = config_with(d.path(), "[sources.implementation]\nkev = \"python\"\n");
         let e = native_sources(&c, &store, &[]).err().unwrap();
         assert!(
             e.to_string().contains("no enabled module serves kev"),

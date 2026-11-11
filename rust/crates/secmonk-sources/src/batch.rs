@@ -1,12 +1,13 @@
 //! Cutting row operations into `secmonk-mirror-rows/1` batches: at most [`MAX_OPS`] operations and about
-//! [`MAX_BYTES`] of JSON each (the limits of `py-sources`, `rows.schema.json` `ops.maxItems`).
+//! [`MAX_BYTES`] of JSON each (the limits of `py-sources`, `rows.schema.json` `ops.maxItems`). [`Cutter`] cuts as the
+//! operations come (one batch in memory); [`cut`] numbers a list.
 
 use secmonk_model::{RowOp, RowsBatch};
 use secmonk_traits::NATIVE_GENERATION;
 
 /// Operations per batch.
 pub const MAX_OPS: usize = 5_000;
-/// Approximate JSON bytes per batch (a single larger operation travels alone).
+/// Approximate JSON bytes per batch (a single larger operation is sent in a batch of its own).
 pub const MAX_BYTES: usize = 2 * 1024 * 1024;
 
 /// Batch limits (tests use small ones to get several batches out of a small fixture).
@@ -27,34 +28,87 @@ impl Default for Limits {
     }
 }
 
+/// Cuts a sequence of operations into native batches of `source` as they come, seqs from `first_seq`: memory holds
+/// one batch at a time (a large snapshot is never materialized as a list of operations).
+#[derive(Debug)]
+pub struct Cutter {
+    source: String,
+    next_seq: u64,
+    ops_cap: usize,
+    bytes_cap: usize,
+    cur: Vec<RowOp>,
+    bytes: usize,
+    emitted: u64,
+}
+
+impl Cutter {
+    /// A cutter for `source`, numbering from `first_seq`.
+    pub fn new(source: &str, first_seq: u64, limits: Limits) -> Cutter {
+        Cutter {
+            source: source.to_owned(),
+            next_seq: first_seq,
+            ops_cap: limits.ops.clamp(1, MAX_OPS),
+            bytes_cap: limits.bytes,
+            cur: Vec::new(),
+            bytes: 0,
+            emitted: 0,
+        }
+    }
+
+    /// Add one operation; returns the previous batch when this operation does not fit in it.
+    pub fn push(&mut self, op: RowOp) -> Option<RowsBatch> {
+        let size = serde_json::to_string(&op).map_or(0, |s| s.len());
+        let full = !self.cur.is_empty()
+            && (self.cur.len() >= self.ops_cap || self.bytes + size > self.bytes_cap);
+        let out = if full { self.take() } else { None };
+        self.bytes += size;
+        self.cur.push(op);
+        out
+    }
+
+    /// The last, incomplete batch (none when nothing is pending).
+    pub fn finish(&mut self) -> Option<RowsBatch> {
+        self.take()
+    }
+
+    /// Batches returned so far.
+    pub fn emitted(&self) -> u64 {
+        self.emitted
+    }
+
+    /// Seq of the last batch returned (0 when none was).
+    pub fn last_seq(&self) -> u64 {
+        if self.emitted == 0 {
+            0
+        } else {
+            self.next_seq - 1
+        }
+    }
+
+    fn take(&mut self) -> Option<RowsBatch> {
+        if self.cur.is_empty() {
+            return None;
+        }
+        let batch = RowsBatch {
+            kind: "rows".into(),
+            seq: self.next_seq,
+            source: self.source.clone(),
+            ops: std::mem::take(&mut self.cur),
+            generation: Some(NATIVE_GENERATION.to_owned()),
+            acked_through: None,
+        };
+        self.next_seq += 1;
+        self.emitted += 1;
+        self.bytes = 0;
+        Some(batch)
+    }
+}
+
 /// Number `ops` into native batches of `source`, seqs from `first_seq`, in order.
 pub fn cut(source: &str, ops: Vec<RowOp>, first_seq: u64, limits: Limits) -> Vec<RowsBatch> {
-    let ops_cap = limits.ops.clamp(1, MAX_OPS);
-    let mut out: Vec<RowsBatch> = Vec::new();
-    let mut cur: Vec<RowOp> = Vec::new();
-    let mut bytes = 0usize;
-    let flush = |cur: &mut Vec<RowOp>, out: &mut Vec<RowsBatch>| {
-        if !cur.is_empty() {
-            out.push(RowsBatch {
-                kind: "rows".into(),
-                seq: first_seq + out.len() as u64,
-                source: source.to_owned(),
-                ops: std::mem::take(cur),
-                generation: Some(NATIVE_GENERATION.to_owned()),
-                acked_through: None,
-            });
-        }
-    };
-    for op in ops {
-        let size = serde_json::to_string(&op).map_or(0, |s| s.len());
-        if !cur.is_empty() && (cur.len() >= ops_cap || bytes + size > limits.bytes) {
-            flush(&mut cur, &mut out);
-            bytes = 0;
-        }
-        bytes += size;
-        cur.push(op);
-    }
-    flush(&mut cur, &mut out);
+    let mut c = Cutter::new(source, first_seq, limits);
+    let mut out: Vec<RowsBatch> = ops.into_iter().filter_map(|op| c.push(op)).collect();
+    out.extend(c.finish());
     out
 }
 
@@ -112,7 +166,7 @@ mod tests {
         assert_eq!(
             b.len(),
             2,
-            "an operation above the byte limit travels alone"
+            "an operation above the byte limit is sent in a batch of its own"
         );
         assert!(cut("kev", vec![], 1, Limits::default()).is_empty());
     }

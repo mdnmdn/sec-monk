@@ -1744,3 +1744,144 @@ async fn native_kev_batches_follow_the_row_contract() {
     assert!(cases.len() >= 8);
     check_contracts(&cases);
 }
+
+fn epss_fixture() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../tests/fixtures/sources/epss/epss_scores-sample.csv")
+}
+
+fn native_epss(
+    limits: Option<secmonk_sources::batch::Limits>,
+) -> impl FnOnce(Arc<SqliteStore>) -> Vec<Arc<dyn Source>> {
+    move |store| {
+        let view = Arc::new(secmonk_engine::StoreMirrorView::new(store));
+        let mut epss = secmonk_sources::epss::EpssSource::new(view);
+        if let Some(l) = limits {
+            epss = epss.with_limits(l);
+        }
+        vec![Arc::new(epss) as Arc<dyn Source>]
+    }
+}
+
+async fn epss_keys(store: &SqliteStore, source: &str) -> Vec<String> {
+    store
+        .row_keys(secmonk_model::MirrorTable::Epss, source)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|k| k["cve_id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+/// `epss` upserts of the EUVD source (`source = 'euvd'`, no percentile), as `py-sources` streams them.
+fn euvd_epss(seq: u64, cves: &[(&str, f64)]) -> RowsBatch {
+    let ops: Vec<Value> = cves
+        .iter()
+        .map(|(c, s)| {
+            json!({"op": "upsert", "table": "epss",
+                   "row": {"cve_id": c, "score": s, "percentile": null, "date": "2026-10-01", "source": "euvd"}})
+        })
+        .collect();
+    batch("euvd", seq, Value::Array(ops))
+}
+
+#[tokio::test]
+async fn native_epss_replaces_euvd_rows_of_its_cves_and_keeps_the_others() {
+    // ownership of the sourceless epss key: a FIRST row replaces a EUVD row of the same CVE, EUVD never replaces a
+    // FIRST row, and a CVE the FIRST file lacks keeps its EUVD row (src/secmonk/sources/{epss,euvd}.py)
+    let h = harness_full(&[], |_| {}, native_epss(None)).await;
+    h.store
+        .apply_rows(&euvd_epss(
+            1,
+            &[("CVE-2021-44228", 0.5), ("CVE-2099-0001", 0.25)],
+        ))
+        .await
+        .unwrap();
+    let path = epss_fixture();
+    let job = run_job(
+        &h.engine,
+        json!({"kind": "sync", "sources": ["epss"], "path": path.display().to_string()}),
+    )
+    .await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert_eq!(job["result"]["sources"][0]["records"], 10);
+    let first = epss_keys(&h.store, "epss").await;
+    assert_eq!(first.len(), 10);
+    assert!(first.contains(&"CVE-2021-44228".to_owned()));
+    assert_eq!(epss_keys(&h.store, "euvd").await, vec!["CVE-2099-0001"]);
+    // a later EUVD score of a FIRST CVE changes nothing; of its own CVE it is applied
+    h.store
+        .apply_rows(&euvd_epss(
+            2,
+            &[("CVE-2021-44228", 0.1), ("CVE-2099-0001", 0.3)],
+        ))
+        .await
+        .unwrap();
+    assert_eq!(epss_keys(&h.store, "epss").await.len(), 10);
+    assert_eq!(epss_keys(&h.store, "euvd").await, vec!["CVE-2099-0001"]);
+    // a smaller FIRST file deletes nothing (the Python source only upserts)
+    let d = tempfile::tempdir().unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    let six: String = text.lines().take(9).map(|l| format!("{l}\n")).collect();
+    let p = d.path().join("six.csv");
+    std::fs::write(&p, six).unwrap();
+    let job = run_job(
+        &h.engine,
+        json!({"kind": "sync", "sources": ["epss"], "path": p.display().to_string()}),
+    )
+    .await;
+    assert_eq!(job["result"]["sources"][0]["records"], 6, "{job:#}");
+    assert_eq!(epss_keys(&h.store, "epss").await.len(), 10);
+    assert_eq!(epss_keys(&h.store, "euvd").await, vec!["CVE-2099-0001"]);
+    let st = h.store.applied_state("epss").await.unwrap().unwrap();
+    assert_eq!(
+        st.generation.as_deref(),
+        Some(secmonk_traits::NATIVE_GENERATION)
+    );
+}
+
+#[tokio::test]
+async fn native_epss_batches_follow_the_row_contract() {
+    // every native epss batch and end validates against rust/contracts (source/rows, source/sync-end)
+    let h = harness(&[]).await;
+    let src = native_epss(Some(secmonk_sources::batch::Limits {
+        ops: 4,
+        bytes: 1 << 20,
+    }))(h.store.clone())
+    .remove(0);
+    let d = tempfile::tempdir().unwrap();
+    let missing = d.path().join("missing.csv");
+    let odd = d.path().join("odd.csv");
+    std::fs::write(
+        &odd,
+        "CVE-0000-0001,0.1,0.2\n#score_date:2026-01-03\n,0.5,0.5\nCVE-0000-0002,1e-5,1\n",
+    )
+    .unwrap();
+    let mut cases: Vec<(&str, Value)> = Vec::new();
+    for (path, options) in [
+        (epss_fixture(), json!({})),
+        (epss_fixture(), json!({"limit": 3})), // partial
+        (odd, json!({"full": true})),          // null date, empty cve_id, exponent
+        (missing, json!({})),                  // error: only the status row
+    ] {
+        let mut o = options;
+        o["path"] = json!(path.display().to_string());
+        let params: SyncParams =
+            serde_json::from_value(json!({"source": "epss", "options": o})).unwrap();
+        let mut stream = src.sync(params, CallCtx::default()).await.unwrap();
+        while let Some(m) = stream.next().await {
+            match m.unwrap() {
+                StreamMsg::Item(b) => {
+                    assert!(!h.store.apply_rows(&b).await.unwrap().skipped);
+                    cases.push(("source/rows.schema.json", serde_json::to_value(&b).unwrap()));
+                }
+                StreamMsg::End(e) => cases.push((
+                    "source/sync-end.schema.json",
+                    serde_json::to_value(&e).unwrap(),
+                )),
+            }
+        }
+    }
+    assert!(cases.len() >= 10);
+    check_contracts(&cases);
+}
