@@ -9,12 +9,13 @@ platform: any
 tags: [plan, rust, migration]
 updated: 2026-11-11
 verified: 2026-11-11
-related: [tech/architecture.md, tech/component-lifecycle.md, decisions/0002-rust-core-python-modules.md]
+related: [plans/roadmap.md, tech/architecture.md, tech/component-lifecycle.md, decisions/0002-rust-core-python-modules.md]
 ---
 
 # Backlog beyond the prototype
 
-Order follows the proposal §15 and [architecture § 9](../tech/architecture.md#9-prototype-boundary-and-migration-order).
+Phases, order, entry/exit criteria and milestones for these items are proposed in the [roadmap](roadmap.md); the
+items themselves stay here. Order follows the proposal §15 and [architecture § 9](../tech/architecture.md#9-prototype-boundary-and-migration-order).
 Every port follows the [standard process](../tech/component-lifecycle.md) (golden → differential → config selects Rust).
 
 ## 1. Engine core to Rust (first)

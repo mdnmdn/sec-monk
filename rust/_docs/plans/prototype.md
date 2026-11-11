@@ -71,6 +71,14 @@ Assumptions (cheap to reverse, confirm or correct):
 | W4.6 | Follow-up: dedupe splitlines in api; docs for W4.1 changes (default modules, instance lock, shutdown order, cancel semantics, L9, assets/match id), contracts README counts, INDEX | follow-up agent | done: splitlines deduped; configuration/architecture/api-contract/plans/backlog/contracts README/INDEX updated |
 | W5.1 | Apply user decisions: CWD config lookup in all builds; ADR-0006 accepted; ADR-0008 note (lookup, instance lock, default modules); backlog: well-known general config | follow-up agent | done: CWD lookup in all builds (SECMONK_DEV removed), ADR-0006 accepted, ADR-0008 amendment, backlog item |
 | W4.5 | Coordinator: combined verification (one target dir), plan reconciliation, report | coordinator | done |
+| W6.1 | First native Rust connector: `kev` source in Rust emitting mirror rows directly (no staging), differential test against py-sources, runtime selection (crates, contracts, golden, tech docs, ADR) | kev agent | in review: crate secmonk-sources, MirrorView, native-rust generation, `[sources.implementation]` (kev = rust default), rust ADR-0011, tech/source-kev.md; differential test vs py-sources green; done: committed 3c64c75 |
+| W6.2 | Possible roadmap after the prototype: `rust/_docs/plans/roadmap.md` (phases, order, criteria, effort), plans README, INDEX | roadmap agent | done (D1 decided: sources next): roadmap.md (R0-R6, M1-M7, decisions D1-D10), linked from plans README, backlog, INDEX |
+| W6.3 | Docs follow-ups: README crate count, lifecycle §6 selection key, INDEX rows, backlog/on-macos/roadmap items | docs agent | done; rust/_docs lint: only L12 + 4 L9 |
+| W6.4 | Independent read-only review of W6.1 | reviewer | done: 1 medium (M1 flip back to Python after a failed/limited sync repairs from stale staging), 7 low (L1 streamed cap untested, L2 native batches not schema-checked, L3 venv skip + extra order, L4/L5 docs, L6 FIFO path, L7 config typo ignored) |
+| W6.5 | Fix W6.4 findings M1, L1-L7 | kev agent | done: M1 (no repair from a non-ok Python run after native syncs), L1-L7 fixed with tests/docs; L7 refuses unknown names |
+| W7.1 | App icon from `rust/assets/logo-orange.png` (transparent corners, Tauri icon set, tauri.conf.json, regeneration script, desktop-app note) | icon agent | done: cargo tauri icon via scripts/make_icons.py, master assets/app-icon.png (corner radius ~253 px, transparent), bundle.icon set, .app bundles with icon.icns; Dock/taskbar look not observed |
+| W7.2 | Logo in the shared web UI (brand mark + favicon) for both the Python and the Rust app | ui agent | done: committed 84d2892 (img/logo-64.png, favicon-32.png, CSS brand mark); not observed in a browser here |
+| W6.6 | Plain technical wording in native importer messages and docs (user decision) | kev agent | done (in 3c64c75) |
 
 ## Log
 
@@ -105,3 +113,10 @@ Assumptions (cheap to reverse, confirm or correct):
   Q1-Q6 and ADR-0006/0010 (proposed); nothing committed (no commit authorization).
 - 2026-11-11 User: Q1 ok (ADR-0006 accepted); Q3 CWD lookup always, well-known general config later. W5.1 dispatched.
 - 2026-11-11 W5.1 done; coordinator re-verified: fmt OK, clippy clean, workspace tests green, docs lint only L12.
+- 2026-11-11 Committed: 06dc31f (Dart/Swift, Python), 0fbd780 (rust/ prototype + AGENTS.md: Python = reference, rust/ = target), 112aac0 (Python git collector, 4 known failing tests). User: first connector = `kev`; write a possible roadmap. W6.1, W6.2 dispatched.
+- 2026-11-11 W6.1 reported done; coordinator verified: fmt OK, clippy clean, cargo test 216 passed 0 failed 1 ignored, real_modules 3/3 ran (incl. native_kev_matches_py_sources), contracts + golden OK. W6.3, W6.4 dispatched.
+- 2026-11-11 W6.4 review done; all findings routed to the kev agent (W6.5).
+- 2026-11-11 W6.5 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 220 passed 0 failed 1 ignored, contracts + golden OK, rust/_docs lint only L12 + 4 L9. W6.1 awaiting user acceptance of rust ADR-0011 (proposed); W6.2 awaiting user review. Not committed.
+- 2026-11-11 User: use rust/assets/logo-orange.png as logo and app icon. W7.1 (app icon) dispatched; in-app logo asked (the UI is shared with the Python reference in src/).
+- 2026-11-11 User: rust ADR-0011 accepted; logo in the shared UI for both apps (W7.2 dispatched; touches src/secmonk/web/static by user request).
+- 2026-11-11 User: commits authorized; D1 = continue with sources; wording rule: technical, no figurative phrases ("native importer"). Desktop .app rebuilt (the earlier bundle predated the logo). Commits: 9289d40 icon, 84d2892 UI logo, 3c64c75 native kev, then the roadmap.
