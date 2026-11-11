@@ -9,7 +9,7 @@ platform: linux
 tags: [plan, linux, docker, podman, ssh, rootfs]
 updated: 2026-11-11
 verified: 2026-11-11
-related: [tech/collectors/docker-engine.md, tech/collectors/docker-image.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, features/inventory-docker.md, features/inventory-ssh.md]
+related: [tech/collectors/docker-engine.md, tech/collectors/docker-image.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, tech/collectors/process.md, decisions/0010-remote-process-snapshot.md, features/inventory-docker.md, features/inventory-ssh.md, features/process-monitor.md]
 ---
 
 # Plan: what to do on a Linux host with Docker/Podman (+ one SSH-reachable Linux server)
@@ -221,20 +221,68 @@ Test targets: Debian/Ubuntu (GNU), Alpine (busybox `find`/`tar`), RHEL-like. Two
 - [ ] **Large servers**: scan a host with 1M files: `-o root=/ -o exclude=/data,/mnt -o xdev=false -o max_mb=1024`; check `truncated` flag, time, and that `/nix/store`, container storage are pruned (NixOS-managed software is a documented gap -> [next-sources.md](next-sources.md) NixOS).
 - [ ] **Windows OpenSSH server from Linux** is covered in [on-windows.md](on-windows.md) section C. **macOS target:** [on-macos.md](on-macos.md) section C.
 
-## F. Process monitor: Linux backend (not implemented; design in tech/collectors/process.md "Porting")
+## F. Process monitor: Linux backend, local and over ssh (implemented 2026-11-11 on fixtures only)
 
-- [ ] **Implement `collectors/process/linux.py`** (`take_snapshot` from `/proc`, `Inspector` subclass) and register it in
-  `backend.BACKENDS["linux"]`. Snapshot: `/proc/<pid>/{stat,status,exe,cmdline,cgroup}`; ` (deleted)` exe suffix ->
-  `exists: false`; kernel threads (no `exe`, ppid 2) -> `kernel`. Launch items: systemd units (`systemctl show -p
-  ExecStart,FragmentPath` or parse unit files), XDG autostart, crontabs. Hints: systemd init, `PlatformHints.gui_launchers`
-  for gnome-shell/plasmashell. Identity: path -> dpkg/rpm/apk owner (index built once from `rootfs.py` parsers), snap/flatpak,
-  Linuxbrew via the existing keg rule, Go/Rust binaries via the shared binary step.
+Implemented in `collectors/process/linux.py` + `remote.py` and tested against a synthetic tree
+(`tests/fixtures/collectors/process/linux/`, the remote script run by macOS `sh` with fake `stat` / `dpkg-query`).
+Design: [tech/collectors/process.md](../tech/collectors/process.md) "Where the data lives (Linux)" and "Remote Linux
+over ssh"; [ADR-0010](../decisions/0010-remote-process-snapshot.md). Each item below is an assumption only a real host
+can confirm; capture a trimmed, anonymized snapshot (`--snapshot-out`) into `tests/fixtures/collectors/process/linux/real/`
+with a README.
+
+- [ ] **Live `/proc` run, root and non-root** on a desktop (GNOME or KDE) and a server:
   ```bash
-  uv run secmonk procs --no-match --snapshot-out /tmp/linux-snap.json; sudo uv run secmonk procs --suspicious
+  uv run secmonk procs --no-match --snapshot-out /tmp/linux-user.json
+  sudo uv run secmonk procs --no-match --snapshot-out /tmp/linux-root.json; sudo uv run secmonk procs --suspicious
   ```
-  Verify on a desktop and a server: systemd services carry their unit as `label`; `docker run` processes appear as
-  children of `containerd-shim` (decide: link to `container:<name>`); process count equals `ps -e`.
+  Verify: process count = `ps -e --no-headers | wc -l` minus kernel threads (`-o kernel_threads=true` for the total);
+  `started` equals `ps -o lstart` (field 22 + `btime` + `CLK_TCK`); non-root shows the warning with the number of
+  unreadable executables and no traceback; `/var/spool/cron/crontabs` denied -> one warning.
+- [ ] **Units and labels**: systemd services carry their unit as `label` on the main pid only (nginx workers are
+  children); `user@<uid>.service` labels `systemd --user`; GNOME/KDE apps appear as `app-*.scope` (`gui-app`) and
+  autostart entries as `app-*@autostart.service` (`login-item`) — confirm the scope / service names on the desktop in
+  use (GNOME 4x, KDE Plasma 6) and on systems without systemd-xdg-autostart-generator; `getty@tty1` resolves to
+  `getty@.service`; a timer-started service is `scheduled`.
+- [ ] **cgroup v1 / hybrid** (CentOS 7, Ubuntu 18.04, or `systemd.unified_cgroup_hierarchy=0`): the `name=systemd`
+  line is used and units are labelled as on v2.
+- [ ] **Containers**: `docker run -d nginx`, `podman run -d nginx`, a k3s/kind pod: the container's processes appear as
+  `child (container)` under `containerd-shim-runc-v2` / `conmon` with the right runtime and id, and are not attributed
+  to host packages; decide whether to link them to the `container:<name>` asset of `docker-engine`.
+- [ ] **Identity on rpm and apk hosts**: Rocky/Alma 9 (live: `rpm -qf`; check the number of subprocesses and time with
+  ~300 executables) and Alpine (apk `installed` `R:` lines, busybox applets via `/bin/busybox`); merged-/usr Debian 12
+  and a non-merged Debian 11 (dpkg `.list` paths); a deleted-on-upgrade daemon (`apt upgrade` without restart) is
+  `exe-missing`; snap (`/snap/<name>/<rev>`) and flatpak apps; Linuxbrew kegs.
+- [ ] **Remote over ssh** to the same hosts: `secmonk procs ssh://user@host`, then `-o sudo=true` (NOPASSWD rule) and
+  without a sudo rule (expect the `sudo -n` hint, exit 1); compare with the local run (same rows, same identities, same
+  launch kinds); a busybox-only host (Alpine) where `stat -c`, `readlink`, `od` are busybox applets; a host without
+  `getconf` (start times empty); `-o transport=paramiko`; output size and run time on a host with ~1000 processes
+  (cap is 32 MiB); a login shell that prints a banner in `.bashrc` (the script must still be found between its
+  markers); `dpkg-query -S --`, `rpm -qf ... --` and busybox `stat -L -c ... --` accept `--` before the path; batched `rpm -qf -- p1 p2 ...` prints exactly one line per path (also "not owned" on stdout), else the per-path fallback runs; `stat -L /proc/<pid>/root` as root tells chroot / nspawn / flatpak processes apart from services with only a private mount namespace (`PrivateTmp=`, `ProtectSystem=`), which must stay host processes.
+- [ ] **dpkg-query fields**: `dpkg-query -W -f='${Source}'` on dpkg >= 1.21 (Debian 12, Ubuntu 24.04) yields the source
+  package as expected (empty when equal to the binary name); the `.list` mtime is a usable install time (it changes on
+  every upgrade of the package).
 
 ## E. Wrap-up
 
 - [ ] Commit real fixtures + tests; set `sample:` in `tech/collectors/docker-engine.md`, `docker-image.md`, `ssh.md`, `rootfs.md`; update [inventory-docker.md](../features/inventory-docker.md) / [inventory-ssh.md](../features/inventory-ssh.md) caveats; regenerate INDEX (`uv run python scripts/docs.py index`).
+
+## K. Kubernetes clusters (k8s collector, synthetic kubectl output only)
+
+- [ ] **kind / k3d / minikube on this host** (2026-11-11: never run against a real cluster).
+  ```bash
+  kind create cluster --name dev && kubectl --context kind-dev apply -f https://k8s.io/examples/application/deployment.yaml
+  uv run secmonk scan k8s k8s://kind-dev --db /tmp/lx.db
+  uv run python -c "from secmonk.discover import discover_host; import json; print(json.dumps(discover_host('k8s://kind-dev'), indent=1))"
+  ```
+  Verify: asset `k8s:kind-dev`, control plane / kubelet / containerd / Debian node OS components; `imageID`s are
+  `repo@sha256:` (assumed for containerd: unverified) so `k8s-images` is pinned; `meta.distro` contains `kind`.
+- [ ] **Restricted RBAC user** (a ServiceAccount with only `list pods` in one namespace): expect a partial
+  inventory, `meta.access.pods = "namespaces: <ns>"`, a clear warning, and no traceback; with no rights at all,
+  "no read access". Check that kubectl's real Forbidden wording is caught by `_DENIED`.
+- [ ] **Managed clusters (EKS, GKE, AKS)** with exec auth plugins: `gitVersion` suffixes, `providerID` hints, and
+  that tokens never appear in messages (`redact`). Large cluster (1000+ pods): time and memory of
+  `get pods --all-namespaces -o json` against the 256 MiB cap.
+- [ ] **Vendor builds in matching**: `meta.vendor_build` (EKS/GKE/k3s control planes) is recorded but the engine
+  does not use it yet; decide how to treat upstream CVEs on vendor builds (confidence, distro triage).
+- [ ] **Private registry images** found in a cluster: scanning the `k8s-images` list needs registry credentials
+  (`-o username=` + `SECMONK_REGISTRY_PASSWORD`); decide on imagePullSecrets (never read today).

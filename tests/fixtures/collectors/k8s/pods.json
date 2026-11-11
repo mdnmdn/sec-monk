@@ -1,0 +1,116 @@
+{
+ "kind": "List",
+ "items": [
+  {
+   "metadata": {
+    "namespace": "shop",
+    "name": "web-1"
+   },
+   "spec": {
+    "containers": [
+     {
+      "name": "web",
+      "image": "nginx:1.25"
+     }
+    ],
+    "initContainers": [
+     {
+      "name": "migrate",
+      "image": "registry.example.test/shop/migrate:3"
+     }
+    ]
+   },
+   "status": {
+    "containerStatuses": [
+     {
+      "name": "web",
+      "image": "docker.io/library/nginx:1.25",
+      "imageID": "docker.io/library/nginx@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+     }
+    ]
+   }
+  },
+  {
+   "metadata": {
+    "namespace": "shop",
+    "name": "web-2"
+   },
+   "spec": {
+    "containers": [
+     {
+      "name": "web",
+      "image": "nginx:1.25"
+     }
+    ],
+    "initContainers": []
+   },
+   "status": {
+    "containerStatuses": [
+     {
+      "name": "web",
+      "image": "docker.io/library/nginx:1.25",
+      "imageID": "docker-pullable://docker.io/library/nginx@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+     }
+    ]
+   }
+  },
+  {
+   "metadata": {
+    "namespace": "kube-system",
+    "name": "kube-proxy-x"
+   },
+   "spec": {
+    "containers": [
+     {
+      "name": "kube-proxy",
+      "image": "registry.example.test/eks/kube-proxy:v1.29.0",
+      "securityContext": {
+       "privileged": true
+      }
+     }
+    ],
+    "initContainers": [],
+    "hostNetwork": true,
+    "volumes": [
+     {
+      "name": "lib",
+      "hostPath": {
+       "path": "/lib/modules"
+      }
+     }
+    ]
+   },
+   "status": {
+    "containerStatuses": [
+     {
+      "name": "kube-proxy",
+      "imageID": "registry.example.test/eks/kube-proxy@sha256:2222222222222222222222222222222222222222222222222222222222222222"
+     }
+    ]
+   }
+  },
+  {
+   "metadata": {
+    "namespace": "default",
+    "name": "debug"
+   },
+   "spec": {
+    "containers": [
+     {
+      "name": "sh",
+      "image": "busybox"
+     }
+    ],
+    "initContainers": []
+   },
+   "status": {
+    "containerStatuses": [
+     {
+      "name": "sh",
+      "imageID": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+     }
+    ]
+   }
+  }
+ ]
+}

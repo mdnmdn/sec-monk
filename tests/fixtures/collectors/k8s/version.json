@@ -1,0 +1,10 @@
+{
+ "major": "1",
+ "minor": "29",
+ "gitVersion": "v1.29.3-eks-adc7111",
+ "gitCommit": "0000000000000000000000000000000000000000",
+ "buildDate": "2024-03-01T00:00:00Z",
+ "goVersion": "go1.21.8",
+ "compiler": "gc",
+ "platform": "linux/amd64"
+}

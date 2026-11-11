@@ -700,7 +700,11 @@ class DockerEngineCollector(Collector):
                 ref = item[len("image:"):]
                 if is_image_pattern(ref):
                     client = client or _client(engine_opts)
-                    images = images if images is not None else list_images(client=client)
+                    if images is None:
+                        try:
+                            images = list_images(client=client)
+                        except RuntimeError as e:
+                            raise RuntimeError(f"cannot list images for selector {item!r}: {e}") from e
                     pairs = select_images(ref, images)
                 else:
                     try:
@@ -717,7 +721,10 @@ class DockerEngineCollector(Collector):
                     add(f"image:{iid}")
             elif is_pattern(item):
                 if rows is None:
-                    rows = list_containers(all=all_, **engine_opts)
+                    try:
+                        rows = list_containers(all=all_, **engine_opts)
+                    except RuntimeError as e:
+                        raise RuntimeError(f"cannot list containers for selector {item!r}: {e}") from e
                 for name in select_containers(item, rows):
                     add(name)
             else:
@@ -775,12 +782,35 @@ class DockerEngineCollector(Collector):
         return inv
 
     def _collect_container(self, client: EngineClient, target: str) -> Inventory:
+        """The live filesystem of one container (`/export`). When the engine refuses the export (authorization
+        plugin, 403/500, Podman limits) its image is scanned by Id instead: a warning, and the inventory is partial
+        (the writable layer is missing). `/containers/{id}/json` refused is an error for this target."""
         info = client.get_json(f"/containers/{quote(target, safe='')}/json")
-        cid = info["Id"]
-        name = (info.get("Name") or cid[:12]).lstrip("/")
-        cfg, st, host = info.get("Config") or {}, info.get("State") or {}, info.get("HostConfig") or {}
+        cid = info.get("Id") if isinstance(info, dict) else None
+        if not cid or not isinstance(cid, str):
+            raise RuntimeError(f"Docker API GET /containers/{target}/json: no container Id in the answer")
+        name = str(info.get("Name") or cid[:12]).lstrip("/")
+        cfg, st, host = (info.get(k) if isinstance(info.get(k), dict) else {} for k in ("Config", "State",
+                                                                                         "HostConfig"))
+        net = info.get("NetworkSettings")
+        ports = net.get("Ports") if isinstance(net, dict) else None
+        published = any(v for v in ports.values()) if isinstance(ports, dict) else False
+        ep = client.endpoint
+        label = getattr(ep, "label", None)
+        asset = Asset(
+            id=f"container:{label}/{name}" if label else f"container:{name}", type="container", name=name,
+            meta={"container_id": cid, "image": cfg.get("Image"), "image_id": info.get("Image"),
+                  "labels": redact_labels(cfg.get("Labels") if isinstance(cfg.get("Labels"), dict) else None),
+                  "state": st.get("Status") if isinstance(st.get("Status"), str) else None,
+                  "privileged": bool(host.get("Privileged")), "published_ports": published,
+                  "user": cfg.get("User") or None, "engine": strip_url_secrets(str(ep))})
+        if getattr(ep, "context", None):
+            asset.meta["engine_context"] = ep.context  # type: ignore[union-attr]
+        try:
+            conn, resp = client.open(f"/containers/{cid}/export")
+        except RuntimeError as e:
+            return self._container_from_image(client, asset, str(e))
         view = LayeredTarView()
-        conn, resp = client.open(f"/containers/{cid}/export")
         warnings: list[str] = []
         partial: str | None = None
         try:
@@ -790,24 +820,29 @@ class DockerEngineCollector(Collector):
             warnings.append(partial)
         finally:
             conn.close()
-        ports = (info.get("NetworkSettings") or {}).get("Ports") or {}
-        published = any(v for v in ports.values())
-        ep = client.endpoint
-        label = getattr(ep, "label", None)
-        asset = Asset(
-            id=f"container:{label}/{name}" if label else f"container:{name}", type="container", name=name,
-            meta={"container_id": cid, "image": cfg.get("Image"), "image_id": info.get("Image"),
-                  "labels": redact_labels(cfg.get("Labels")), "state": st.get("Status"),
-                  "privileged": bool(host.get("Privileged")), "published_ports": published,
-                  "user": cfg.get("User") or None, "engine": strip_url_secrets(str(ep))})
-        if getattr(ep, "context", None):
-            asset.meta["engine_context"] = ep.context  # type: ignore[union-attr]
         comps = collect_from_view(view, asset, warnings)
         inv = Inventory(asset=asset, collector=self.name, components=comps, warnings=warnings)
         if partial:
             inv.mark_partial(partial)
         if view.truncated:
             inv.mark_partial("file/count limits reached while reading the export")
+        return inv
+
+    def _container_from_image(self, client: EngineClient, asset: Asset, reason: str) -> Inventory:
+        iid = _norm_id(asset.meta.get("image_id"))
+        if not iid:
+            raise RuntimeError(f"container filesystem not readable ({reason}) and no image Id to fall back to")
+        try:
+            img = self._collect_image(client, iid)
+        except Exception as e:
+            raise RuntimeError(f"container filesystem not readable ({reason}); its image {iid[7:19]} "
+                               f"neither: {e}") from e
+        msg = f"container filesystem not readable ({reason[:300]}); scanned its image {iid[7:19]} instead"
+        asset.platform = asset.platform or img.asset.platform
+        asset.meta.update({"scanned_image": iid, "image_id_verified": img.asset.meta.get("id_verified"),
+                           "filesystem": "image-only"})
+        inv = Inventory(asset=asset, collector=self.name, components=img.components, warnings=[msg, *img.warnings])
+        inv.mark_partial(msg + (f"; {img.partial_reason}" if img.partial else ""))
         return inv
 
 

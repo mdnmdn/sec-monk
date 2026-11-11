@@ -67,6 +67,8 @@ def discover_host(target: str | None = None, **opts: Any) -> dict:
     (`[ssh://][user@]host[:port]`). See the module docstring and _docs/tech/discover.md for the result shape."""
     if target is None or str(target).strip().lower() in LOCAL_TARGETS:
         return _discover_local(opts)
+    if str(target).strip().startswith("k8s://"):
+        return _discover_k8s(str(target).strip(), opts)
     return _discover_ssh(str(target).strip(), opts)
 
 
@@ -239,27 +241,33 @@ def _docker_probe(engine_opts: dict[str, Any], timeout: float) -> dict:
     client = de.EngineClient(ep, timeout)
     try:
         client.ping()
-        rows = client.get_json("/containers/json?all=0")
     except Exception as e:  # noqa: BLE001
         return {"state": "down", "endpoint": strip_url_secrets(str(ep), keep_user=True), "reason": str(e)[:300],
                 "options": _pin_engine(ep, engine_opts)}
-    containers = []
+    containers: list[dict] | None = []
+    containers_error = None
+    try:
+        rows = client.get_json("/containers/json?all=0")
+    except Exception as e:  # noqa: BLE001 - e.g. an authorization plugin refusing the listing
+        rows, containers, containers_error = [], None, f"cannot list containers: {str(e)[:300]}"
     for r in rows if isinstance(rows, list) else []:
         if not isinstance(r, dict):
             continue
         names = [str(n).lstrip("/") for n in r.get("Names") or [] if isinstance(n, str)]
-        containers.append({"name": (names[0] if names else str(r.get("Id", ""))[:12])[:128],
+        containers.append({"name": (names[0] if names else str(r.get("Id", ""))[:12])[:128],  # type: ignore[union-attr]
                            "image": str(r.get("Image") or "")[:200], "state": str(r.get("State") or "")[:20]})
     images: list[dict] | None = None
+    images_error = None
     try:
         images = []
         for r in client.get_json("/images/json") or []:
             if isinstance(r, dict) and (tags := de.image_tags(r)) and (iid := de._norm_id(r.get("Id"))):
                 images.append({"id": iid.removeprefix("sha256:")[:12], "tags": [t[:200] for t in tags[:20]]})
-    except Exception:  # noqa: BLE001 - containers are still worth proposing
-        images = None
+    except Exception as e:  # noqa: BLE001 - containers are still worth proposing
+        images, images_error = None, f"cannot list images: {str(e)[:300]}"
     return {"state": "ok", "endpoint": strip_url_secrets(str(ep), keep_user=True), "reason": None,
-            "containers": containers, "images": images, "options": _pin_engine(ep, engine_opts)}
+            "containers": containers, "containers_error": containers_error, "images": images,
+            "images_error": images_error, "options": _pin_engine(ep, engine_opts)}
 
 
 def _pin_engine(ep: Any, engine_opts: dict[str, Any]) -> list[str]:
@@ -280,10 +288,11 @@ def _docker_candidate(probe: dict, extra_options: list[str], *, where: str) -> d
     if len(containers) > MAX_CONTAINERS:
         details["more"] = len(containers) - MAX_CONTAINERS
     opts = [*probe.get("options", []), *extra_options]
-    if probe["state"] != "ok":
+    if probe["state"] != "ok" or probe.get("containers") is None:
         return candidate("docker", "docker-engine", "*", label="Docker containers",
                          description=f"Running containers of the Docker engine {where}", options=opts,
-                         available=False, reason=probe.get("reason") or "engine not reachable", details=details)
+                         available=False, details=details,
+                         reason=probe.get("reason") or probe.get("containers_error") or "engine not reachable")
     return candidate("docker", "docker-engine", "*", label="Docker containers",
                      description=f"Running containers of the Docker engine {where} ({len(running)} running)",
                      options=opts, selected=bool(running),
@@ -297,8 +306,8 @@ def _docker_images_candidate(probe: dict, extra_options: list[str], *, where: st
     if probe["state"] != "ok" or images is None:
         return candidate("docker-images", "docker-engine", "image:*", label="Docker images",
                          description=f"Tagged images of the Docker engine {where}, once per image Id", options=opts,
-                         available=False, reason=probe.get("reason") or "cannot list the engine's images",
-                         selected=False)
+                         available=False, selected=False,
+                         reason=probe.get("reason") or probe.get("images_error") or "cannot list the engine's images")
     n_tags = sum(len(i["tags"]) for i in images)
     details = {"tagged_images": n_tags, "unique_ids": len(images), "images": images[:MAX_CONTAINERS]}
     return candidate("docker-images", "docker-engine", "image:*", label="Docker images",
@@ -414,10 +423,20 @@ def _discover_ssh(target: str, opts: dict[str, Any]) -> dict:
             "name": name, "os": os_name, "os_version": version, "arch": arch}
     cands = [_ssh_candidate(shown, os_name, tools, prefixes, ssh_opts)]
     cands += _remote_docker_candidates(shown, tools, opts, warnings, docker_paths)
-    cands.append(candidate("process", "process", None, label="Running processes",
-                           description="Running processes and how they were launched", available=False,
-                           reason="processes are only collected locally"))
+    cands.append(_remote_process_candidate(shown, os_name, ssh_opts, opts))
     return {"host": host, "candidates": cands, "warnings": warnings}
+
+
+def _remote_process_candidate(shown: str, os_name: str, ssh_opts: list[str], opts: dict[str, Any]) -> dict:
+    """Running processes of a remote Linux host: the process collector with an `ssh://` target (one read-only
+    snapshot script over ssh, collectors/process/remote.py); `sudo=true` from the discovery is passed on (sudo -n)."""
+    sudo = str(opts.get("sudo")).lower() in ("true", "yes", "1")
+    ok = os_name == "linux"
+    return candidate("process", "process", f"ssh://{shown}", label="Running processes",
+                     description="Running processes of the remote host: how each was launched, the software behind "
+                                 "it, its version (one read-only snapshot over ssh)",
+                     options=ssh_opts + (["sudo=true"] if sudo else []), available=ok,
+                     reason=None if ok else f"remote process snapshots need a Linux host (this one is {os_name})")
 
 
 def _ssh_candidate(shown: str, os_name: str, tools: list[str], prefixes: list[str], ssh_opts: list[str]) -> dict:
@@ -461,3 +480,97 @@ def _remote_docker_candidates(shown: str, tools: list[str], opts: dict[str, Any]
         warnings.append("docker over ssh uses the system ssh, not paramiko")
     return [_docker_candidate(probe, extra, where=f"on {shown}"),
             _docker_images_candidate(probe, extra, where=f"on {shown}")]
+
+
+# --------------------------------------------------------------------------- kubernetes
+
+K8S_OPTS = ("kubeconfig", "namespace", "timeout", "kubectl")
+MAX_K8S_IMAGES_SELECTED = 50
+MAX_NS_CANDIDATES = 10
+
+
+def _discover_k8s(target: str, opts: dict[str, Any]) -> dict:
+    """`k8s://<context>` (or `k8s://` = current context): one cluster probe through kubectl (k8s collector), then
+    the cluster itself and the images its pods run as candidates. Unreachable / kubectl missing / nothing readable
+    raise (ValueError / RuntimeError); refused parts give `partial access` reasons."""
+    from .collectors import k8s
+
+    kc = k8s.make_kubectl(target, opts)
+    f = k8s.probe_cluster(kc, namespaces=k8s.namespaces_opt(opts.get("namespace")))
+    warnings = list(f.warnings)
+    platforms = k8s.node_platforms(f.nodes)
+    host: dict[str, Any] = {
+        "kind": "k8s", "target": f"k8s://{f.context or ''}", "name": f.name, "os": None, "os_version": None,
+        "arch": platforms[0].split("/", 1)[1] if len(platforms) == 1 else None, "context": f.context,
+        "server": f.server, "kubernetes_version": f.version.get("gitVersion"), "distro": k8s.distro_hints(f),
+        "access": f.access}
+    if not k8s.parse_target(target) and not opts.get("context"):
+        try:
+            others = [c["name"] for c in k8s.list_k8s_contexts(kubeconfig=opts.get("kubeconfig"))
+                      if c["name"] != f.context]
+        except Exception:  # noqa: BLE001 - the listing is a convenience
+            others = []
+        if others:
+            host["other_contexts"] = others[:50]
+            warnings.append(f"using the current context {f.context}; other contexts: {', '.join(others[:10])}"
+                            + (" ..." if len(others) > 10 else "") + " (pick one with k8s://<context>)")
+    k_opts = _opt_strings(opts, K8S_OPTS)
+    partial = ("partial access: not read: " + "; ".join(f.denied)) if f.denied else None
+    cands = [candidate("k8s-cluster", "k8s", f"k8s://{f.context}" if f.context else "k8s://",
+                       label="Kubernetes cluster",
+                       description=f"Control plane, kubelet / runtime / OS of {len(f.nodes)} node(s), images in use",
+                       options=k_opts, reason=partial, selected=True,
+                       details={"nodes": len(f.nodes), "namespaces": len(f.namespaces), "pods": len(f.pods),
+                                "distro": host["distro"]})]
+    images = k8s.pod_images(f.pods, warnings)
+    # registry-only: the docker-image collector never reads these strings as local paths
+    img_opts = ["source=registry", *([f"platform={platforms[0]}"] if len(platforms) == 1 else [])]
+    pods_unread = f.access.get("pods") in ("denied", "error")
+    public = [i for i in images if not i["private"]]
+    private = [i for i in images if i["private"]]
+    cands.append(_k8s_images_candidate("k8s-images", "Cluster images", public, img_opts,
+                                       reason_unavailable="pods not readable" if pods_unread else "no pods found",
+                                       partial=partial if f.access.get("denied_namespaces") else None,
+                                       selected_max=MAX_K8S_IMAGES_SELECTED))
+    if private:
+        cands.append(_k8s_images_candidate(
+            "k8s-images-private", "Images from private / local registries", private, img_opts,
+            reason_unavailable="none", partial="registry is localhost or a private / link-local address: a pull "
+                                               "would reach that address from this machine; tick only if intended",
+            selected_max=0))
+    namespaces = sorted({ns for i in images for ns in i["namespaces"]})
+    if 1 < len(namespaces) <= MAX_NS_CANDIDATES:
+        for ns in namespaces:
+            sub = [i for i in images if ns in i["namespaces"]]
+            cands.append(_k8s_images_candidate(f"k8s-images-{ns}", f"Images in {ns}", sub, img_opts,
+                                               reason_unavailable="no pods", partial=None, selected_max=0))
+    if len(platforms) > 1:
+        warnings.append(f"nodes run several platforms ({', '.join(platforms)}); images are pulled for the default "
+                        "platform unless -o platform= is set")
+    return {"host": host, "candidates": cands, "warnings": warnings}
+
+
+def _k8s_images_candidate(cid: str, label: str, images: list[dict], options: list[str], *,
+                          reason_unavailable: str, partial: str | None, selected_max: int) -> dict:
+    refs: list[str] = []
+    for i in images:
+        for r in i["refs"]:
+            if r not in refs:
+                refs.append(r)
+    unpinned = sum(1 for i in images if not i["pinned"] and not i["invalid"])
+    invalid = sum(1 for i in images if i["invalid"])
+    details = {"count": len(refs), "pinned": sum(len(i["refs"]) for i in images if i["pinned"]),
+               "namespaces": sorted({ns for i in images for ns in i["namespaces"]})[:100],
+               "images": [{"refs": i["refs"][:10], "image": i["image"][:200], "pinned": i["pinned"],
+                           "private": i["private"], "invalid": i["invalid"], "namespaces": i["namespaces"][:10]}
+                          for i in images[:100]]}
+    notes = [n for n in (partial,
+                         f"{unpinned} image(s) without a digest are pulled by tag" if unpinned else None,
+                         f"{invalid} image string(s) are not registry references (skipped)" if invalid else None,
+                         f"{len(refs)} images: not ticked above {selected_max}"
+                         if selected_max and len(refs) > selected_max else None) if n]
+    return candidate(cid, "docker-image", ",".join(refs) or None, label=label,
+                     description=f"{len(refs)} image(s) pulled from their registries (pinned by digest when known)",
+                     options=options, available=bool(refs),
+                     reason=("; ".join(notes) or None) if refs else reason_unavailable,
+                     selected=0 < len(refs) <= selected_max, details=details)

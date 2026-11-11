@@ -42,6 +42,7 @@ secmonk scan docker-engine 'web,db'               # several containers: comma-se
 secmonk scan docker-engine 'shop-*'               # glob on names / 12-char ids (running containers)
 secmonk scan docker-engine 're:^api-[0-9]+$' -o all=true    # regex; all=true includes stopped containers
 secmonk scan docker-engine 'image:*'              # every tagged local image, once per image Id
+secmonk scan docker-image 'nginx:1.25,ghcr.io/o/app@sha256:…' -o source=registry   # never a local path
 secmonk scan docker-engine 'image:nginx:*,image:re:^myreg\.example\.test/'
 
 # another engine: Docker CLI context, remote host over ssh, tcp (+TLS)
@@ -67,6 +68,12 @@ secmonk containers                            # list containers of the local Doc
 - Env variable values from the image config are not stored (names only).
 - Engine: `--socket` / `-o host=` / `-o context=` > `$DOCKER_HOST` > `$DOCKER_CONTEXT` > the Docker CLI's current context > `/var/run/docker.sock`, Docker Desktop/Colima/Rancher/OrbStack/Podman paths. Hosts: `unix://`, `tcp://` (TLS from the context, `$DOCKER_TLS_VERIFY`/`$DOCKER_CERT_PATH` or `tls_ca`/`tls_cert`/`tls_key`/`tls_verify`), `ssh://[user@]host[:port]` (system `ssh`, non-interactive, `-o identity=`). An engine or context that was asked for and cannot be used is an error, never replaced by another one; none found -> clear error. Details: [docker-engine](../tech/collectors/docker-engine.md).
 - Container selectors: comma-separated items; `re:<regex>` and globs (`*`, `?`, `[`) match container names and 12-char ids of running containers (`-o all=true`: also stopped); exact names pass through. Image selectors: `image:<ref>` (tag, digest or Id prefix), `image:<glob>` and `image:re:<regex>` over the tags of local images; `image:*` = every tagged image (untagged ones are skipped); aliases are folded into one scan and named in a warning. A pattern matching nothing is an error listing the available containers. Regexes that could backtrack catastrophically on a hostile name (nested quantifiers such as `(a+)+`, a repeated alternation, more than 3 repeating quantifiers) are refused; names over 128 characters are only reachable by their exact name.
+- `-o source=registry` (docker-image): every target is a registry reference checked against the reference grammar;
+  a string that looks like a path, a list or an option is refused instead of being read from disk (used for image
+  lists that come from a cluster).
+- Missing permissions: a container whose filesystem export is refused is scanned through its image instead
+  (warning, partial inventory); a container or image the engine refuses to describe or export fails on its own while
+  the other targets of the run go on.
 - Remote engines: `-o timeout=N` bounds each wait for data (default 30 s, ssh included); the SSH collector's `identity`, `ssh_option`, `known_hosts`, `insecure_host_key`, `connect_timeout` apply to `ssh://`; paramiko-only options are refused. Same-named containers on two *local* engines (two contexts on unix sockets) share the asset id `container:<name>`.
 
 ## Acceptance criteria

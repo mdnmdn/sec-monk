@@ -95,6 +95,49 @@ class ImageRef:
         return s
 
 
+# Strict image reference grammar (distribution/reference): [domain[:port]/]path[:tag][@digest]. Used for references
+# that come from an untrusted source (a cluster's pod specs) and for `source=registry`.
+_REF_DOMAIN = r"(?:(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])(?:\.(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9]))*|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?"
+_REF_PATH = r"[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*"
+_STRICT_REF = re.compile(rf"^(?:{_REF_DOMAIN}/)?{_REF_PATH}(?:/{_REF_PATH})*(?::[\w][\w.-]{{0,127}})?"
+                         r"(?:@[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[0-9a-fA-F]{32,})?$")
+
+
+def valid_image_ref(ref: Any) -> bool:
+    """True for a registry image reference only: never a path (`/x`, `./x`, `~x`), an option (`-x`), a list
+    (`,`), whitespace or control characters; it must match the reference grammar and `parse_reference`."""
+    if not isinstance(ref, str) or not ref or len(ref) > 512 or ref[0] in "/.~-":
+        return False
+    if any(c in ref for c in ", \t\r\n") or any(ord(c) < 32 or ord(c) == 127 for c in ref):
+        return False
+    if not _STRICT_REF.match(ref):
+        return False
+    try:
+        parse_reference(ref)
+    except ValueError:
+        return False
+    return True
+
+
+def registry_is_private(ref: str) -> bool:
+    """The reference's registry is localhost or a loopback / link-local / private IP literal (a pull would reach
+    a service on the scanning machine or its network)."""
+    import ipaddress
+
+    try:
+        host = parse_reference(ref).host
+    except ValueError:
+        return True
+    h = host.rsplit(":", 1)[0] if not host.startswith("[") else host[1:host.find("]")]
+    if h.lower() in ("localhost", "localhost.localdomain") or h.lower().endswith(".localhost"):
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+    except ValueError:
+        return False
+    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_reserved
+
+
 def parse_reference(ref: str) -> ImageRef:
     """'alpine:3.20' -> docker.io/library/alpine:3.20; 'ghcr.io/o/i:t'; 'img@sha256:...'."""
     ref = ref.strip()
@@ -674,15 +717,41 @@ def inventory_from_archive(path: str | Path, platform: str = DEFAULT_PLATFORM, n
     return inv
 
 
+def _registry_only(opts: dict[str, Any]) -> bool:
+    src = str(opts.get("source") or "auto").lower()
+    if src not in ("auto", "registry"):
+        raise ValueError(f"source must be auto or registry, got {src!r}")
+    return src == "registry"
+
+
 @register
 class DockerImageCollector(Collector):
     name = "docker-image"
     description = "Container image: registry reference, docker-save tarball or OCI layout dir (no daemon)"
 
+    def expand_targets(self, target: str | None, **opts: Any) -> list[str | None]:
+        """A comma-separated list of references / paths -> one target each (stripped, empties and duplicates
+        dropped, order kept; no patterns). Lets a list of images (e.g. a cluster's, pinned by digest) be one item.
+        With `source=registry` every item must be a valid registry reference (ValueError naming the others)."""
+        items: list[str | None] = []
+        for t in (target or "").split(","):
+            t = t.strip()
+            if t and t not in items:
+                items.append(t)
+        if _registry_only(opts):
+            bad = [str(t)[:80] for t in items if not valid_image_ref(t)]
+            if bad:
+                raise ValueError("source=registry: not image references: " + ", ".join(repr(b) for b in bad[:10]))
+        return items or [target]
+
     def collect(self, target: str | None = None, **opts: Any) -> Inventory:
         if not target:
             raise ValueError("docker-image needs a target: image reference, tarball or OCI layout dir")
         platform = opts.get("platform") or DEFAULT_PLATFORM
+        if _registry_only(opts):         # never a local path, whatever exists on disk
+            if not valid_image_ref(target):
+                raise ValueError(f"source=registry: {target[:120]!r} is not an image reference")
+            return self._collect_registry(target, platform, opts)
         p = Path(target)
         note: str | None = None
         if p.is_file():

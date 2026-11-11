@@ -74,6 +74,23 @@ Errors: a failing probe becomes `available=false` + `reason`, or a warning. Only
 `ValueError` for an unparsable target (passwords are never echoed), `RuntimeError` when ssh cannot reach it (exit
 255 / no output, with ssh's stderr) or the probe times out (60 s).
 
+Kubernetes (`k8s://<context>`, `k8s://` = current context; options `kubeconfig`, `namespace`, `timeout`,
+`kubectl`): one `k8s.probe_cluster` through kubectl (see [k8s collector](collectors/k8s.md)). Host: `kind: k8s`,
+`name` = cluster, `os` None, plus `context`, `server` (no credentials), `kubernetes_version`, `distro`, `access`,
+and `other_contexts` (+ a warning) when the current context was used and the kubeconfig has others. Candidates:
+
+| id | collector / target | ticked |
+|---|---|---|
+| `k8s-cluster` | `k8s`, `k8s://<context>`, options kubeconfig/namespace/timeout/kubectl | yes; reason `partial access: could not read …` when RBAC refused something |
+| `k8s-images` | `docker-image`, comma list of refs (one `repo@sha256:` per digest the kubelet reported, else the tag), options `source=registry` (never a local path) and `platform=` when all nodes share one | when 1-50 images; unavailable when pods are not readable |
+| `k8s-images-private` | the same for refs whose registry is localhost or a private / link-local IP | never (a pull would reach that address from this machine) |
+| `k8s-images-<namespace>` | the same, one namespace's images | no; only when 2-10 namespaces have pods |
+
+kubectl missing, the API server unreachable, or nothing readable raise (`ValueError` / `RuntimeError`), as for ssh.
+
+Partial access everywhere: a Docker engine that answers but refuses the container or image listing (authorization
+plugin) gives that one candidate `available=false` with the engine's reason; the other candidates stay.
+
 ## Limitations
 
 - Local Docker probing reads `~/.docker` (contexts) and sockets; on macOS a sandboxed shell may not see them and then

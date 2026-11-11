@@ -247,3 +247,76 @@ def test_folded_groups_are_per_engine_and_never_leak():
     with pytest.raises(RuntimeError):
         c.collect(f"image:{ID_B}", client=Engine([]))                     # inspect fails: still popped
     assert de._FOLDED == {}
+
+
+# --------------------------------------------------------------------------- missing permissions (2026-11-11)
+
+class Restricted(Engine):
+    """Engine behind an authorization plugin: some endpoints answer 403."""
+
+    def __init__(self, images, denied=()):
+        super().__init__(images)
+        self.denied = denied
+        self.container = {"Id": "f" * 64, "Name": "/web", "Image": ID_A, "Config": {"Image": "nginx:1.25"},
+                          "State": {"Status": "running"}, "HostConfig": {}}
+
+    def _deny(self, path):
+        if any(path.startswith(d) for d in self.denied):
+            raise RuntimeError(f"Docker API GET {path} -> HTTP 403: authorization denied by plugin authz")
+
+    def get_json(self, path):
+        self._deny(path)
+        if path == "/containers/web/json":
+            return self.container
+        return super().get_json(path)
+
+    def open(self, path):
+        self._deny(path)
+        return super().open(path)
+
+
+def test_container_export_denied_falls_back_to_its_image():
+    eng = Restricted(IMAGES, denied=("/containers/" + "f" * 64 + "/export",))
+    inv = REGISTRY["docker-engine"]().collect("web", client=eng)
+    a = inv.asset
+    assert a.id == "container:web" and a.type == "container"
+    assert a.meta["scanned_image"] == ID_A and a.meta["filesystem"] == "image-only" and a.meta["image_id_verified"]
+    assert {c.name for c in inv.components if c.category == "os-package"} == {"musl"}
+    assert inv.partial and "container filesystem not readable" in inv.partial_reason
+    assert inv.warnings[0].startswith("container filesystem not readable (Docker API GET")
+    assert f"scanned its image {ID_A[7:19]} instead" in inv.warnings[0]
+
+
+def test_container_and_image_denied_are_target_errors():
+    eng = Restricted(IMAGES, denied=("/containers/web/json",))
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        REGISTRY["docker-engine"]().collect("web", client=eng)
+    eng = Restricted(IMAGES, denied=("/containers/" + "f" * 64 + "/export", f"/images/{ID_A}/get"))
+    with pytest.raises(RuntimeError, match="container filesystem not readable .*its image .* neither: .*HTTP 403"):
+        REGISTRY["docker-engine"]().collect("web", client=eng)
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        REGISTRY["docker-engine"]().collect("image:nginx:1.25", client=Restricted(IMAGES, denied=("/images/",)))
+
+
+def test_listing_denied_names_the_selector():
+    c = REGISTRY["docker-engine"]()
+    with pytest.raises(RuntimeError, match="cannot list images for selector 'image:nginx:\\*'.*HTTP 403"):
+        c.expand_targets("image:nginx:*", client=Restricted(IMAGES, denied=("/images/json",)))
+
+    class NoList(Restricted):
+        def get_json(self, path):
+            if path.startswith("/containers/json"):
+                raise RuntimeError("Docker API GET /containers/json -> HTTP 403: denied")
+            return super().get_json(path)
+
+    with pytest.raises(RuntimeError, match="cannot list containers for selector 'web-\\*'"):
+        c.expand_targets("web-*", client=NoList(IMAGES))
+    assert c.expand_targets("web", client=NoList(IMAGES)) == ["web"]         # exact names need no listing
+
+
+def test_hostile_container_json_is_tolerated():
+    eng = Restricted(IMAGES)
+    eng.container = {**eng.container, "NetworkSettings": ["not", "a", "dict"], "Config": {"Labels": ["x"]},
+                     "State": "weird", "HostConfig": None}
+    inv = REGISTRY["docker-engine"]().collect("web", client=eng)
+    assert inv.asset.meta["published_ports"] is False and inv.asset.meta["labels"] == {}

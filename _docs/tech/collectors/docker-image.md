@@ -6,7 +6,7 @@ type: tech
 context: tech
 status: implemented
 tags: [collector, docker, oci, registry, dpkg, apk, rpm, sbom]
-updated: 2026-11-07
+updated: 2026-11-11
 verified: 2026-11-07
 sample: mixed
 fixtures: tests/fixtures/collectors/docker/
@@ -149,6 +149,12 @@ Tests: `tests/collectors/test_docker.py` (tarball, OCI dir, whiteouts, mocked re
 - Smoke test 2026-11-07 (real registries): `alpine:3.20` -> 15 components (OS + 14 apk); `mirror.gcr.io/library/debian:12-slim` -> 89 (OS + 88 dpkg); `mirror.gcr.io/library/python:3.12-slim` -> OS + 87 dpkg + `pip 25.0.1` (pypi).
 - Not done: layer provenance (`history` -> component), SBOM attestations, credential helpers, `--platform` autodetect from host arch, dedupe of python/npm files owned by OS packages.
 
+
+- Targets: `expand_targets` splits a comma list (stripped, deduplicated, no patterns), so a list of images is one
+  item. Option `source=auto|registry` (default `auto`): `registry` never reads a target as a local file or
+  directory; every target must pass `valid_image_ref` (the distribution reference grammar plus `parse_reference`; no
+  leading `/ . ~ -`, no `,`, whitespace or control characters), else `ValueError`. `registry_is_private(ref)` tells
+  localhost / loopback / private / link-local registries apart (used by host discovery for cluster images).
 
 ## Review fixes (2026-11)
 

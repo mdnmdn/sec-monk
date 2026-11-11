@@ -1,0 +1,65 @@
+{
+ "kind": "List",
+ "items": [
+  {
+   "metadata": {
+    "name": "node-a",
+    "labels": {}
+   },
+   "spec": {
+    "providerID": "aws:///eu-west-1a/i-0000000000000000a"
+   },
+   "status": {
+    "nodeInfo": {
+     "kubeletVersion": "v1.29.0-eks-5e0fdde",
+     "kubeProxyVersion": "v1.29.0-eks-5e0fdde",
+     "containerRuntimeVersion": "containerd://1.7.11",
+     "osImage": "Amazon Linux 2",
+     "kernelVersion": "5.10.210-201.852.amzn2.x86_64",
+     "operatingSystem": "linux",
+     "architecture": "amd64"
+    }
+   }
+  },
+  {
+   "metadata": {
+    "name": "node-b",
+    "labels": {}
+   },
+   "spec": {
+    "providerID": "aws:///eu-west-1b/i-0000000000000000b"
+   },
+   "status": {
+    "nodeInfo": {
+     "kubeletVersion": "v1.29.0-eks-5e0fdde",
+     "kubeProxyVersion": "v1.29.0-eks-5e0fdde",
+     "containerRuntimeVersion": "containerd://1.7.11",
+     "osImage": "Amazon Linux 2",
+     "kernelVersion": "5.10.210-201.852.amzn2.x86_64",
+     "operatingSystem": "linux",
+     "architecture": "amd64"
+    }
+   }
+  },
+  {
+   "metadata": {
+    "name": "node-c",
+    "labels": {}
+   },
+   "spec": {
+    "providerID": "aws:///eu-west-1c/i-0000000000000000c"
+   },
+   "status": {
+    "nodeInfo": {
+     "kubeletVersion": "v1.28.5-eks-5e0fdde",
+     "kubeProxyVersion": "v1.28.5-eks-5e0fdde",
+     "containerRuntimeVersion": "containerd://1.6.28+bottlerocket",
+     "osImage": "Bottlerocket OS 1.19.2 (aws-k8s-1.29)",
+     "kernelVersion": "6.1.77",
+     "operatingSystem": "linux",
+     "architecture": "amd64"
+    }
+   }
+  }
+ ]
+}

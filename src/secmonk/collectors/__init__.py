@@ -4,6 +4,7 @@ from . import (
     docker_image,  # noqa: F401
     fs,  # noqa: F401
     homebrew,  # noqa: F401
+    k8s,  # noqa: F401
     macos,  # noqa: F401
     process,  # noqa: F401
     rootfs,  # noqa: F401

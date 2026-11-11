@@ -1,0 +1,31 @@
+{
+ "kind": "Config",
+ "current-context": "demo",
+ "contexts": [
+  {
+   "name": "demo",
+   "context": {
+    "cluster": "demo-cluster",
+    "user": "demo-user",
+    "namespace": "shop"
+   }
+  }
+ ],
+ "clusters": [
+  {
+   "name": "demo-cluster",
+   "cluster": {
+    "server": "https://k8s.example.test:6443",
+    "certificate-authority-data": "DATA+OMITTED"
+   }
+  }
+ ],
+ "users": [
+  {
+   "name": "demo-user",
+   "user": {
+    "token": "REDACTED"
+   }
+  }
+ ]
+}

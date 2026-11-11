@@ -95,8 +95,8 @@ def test_local_linux(monkeypatch):
     assert list(c) == ["rootfs", "homebrew", "process", "fs-home", "docker", "docker-images"]
     assert c["rootfs"]["target"] == "/" and c["rootfs"]["selected"] and "(dpkg)" in c["rootfs"]["description"]
     assert c["homebrew"]["selected"]                                 # rootfs does not read Linuxbrew
-    assert not c["process"]["available"] and not c["process"]["selected"]
-    assert c["process"]["reason"] == "no linux process backend yet"
+    from secmonk.collectors.process.backend import BACKENDS
+    assert c["process"]["available"] == ("linux" in BACKENDS) == c["process"]["selected"]
     d = c["docker"]
     assert d["collector"] == "docker-engine" and d["target"] == "*" and d["selected"]
     assert d["options"] == ["socket=/var/run/docker.sock"] and d["details"]["containers"][0]["name"] == "web"
@@ -212,7 +212,9 @@ def test_ssh_linux_with_docker(monkeypatch):
     assert d["options"] == ["host=ssh://deploy@srv.example.test:2222", "identity=/keys/id",
                             "insecure_host_key=true", "ssh_option=ProxyJump=bastion.example.test"]
     assert seen["host"] == "ssh://deploy@srv.example.test:2222" and seen["identity"] == "/keys/id"
-    assert not c["process"]["available"] and c["process"]["reason"] == "processes are only collected locally"
+    p = c["process"]                                                              # remote Linux: available
+    assert p["available"] and p["selected"] and p["target"] == "ssh://deploy@srv.example.test:2222"
+    assert p["options"] == s["options"]                                           # the ssh options, no sudo
 
 
 def test_ssh_docker_unreachable_and_podman(monkeypatch):
@@ -317,3 +319,125 @@ def test_remote_mac_docker_off_path(monkeypatch):
     assert ssh_argv(ep)[-1] == "/opt/homebrew/bin/docker system dial-stdio"
     with pytest.raises(ValueError, match="remote_docker must be one of"):
         de.find_endpoint({"host": "ssh://mac.example.test", "remote_docker": "/tmp/evil/docker"})
+
+
+def test_unknown_platform_has_no_process_backend(monkeypatch, no_docker):
+    _local(monkeypatch, "linux", pms=["dpkg"], plat="plan9")
+    c = by_id(dsc.discover_host())
+    assert not c["process"]["available"] and c["process"]["reason"] == "no plan9 process backend yet"
+
+
+def test_docker_listing_denied_keeps_the_rest(monkeypatch):
+    _local(monkeypatch, "macos")
+    monkeypatch.setattr(de, "find_endpoint", lambda opts: de.Endpoint(unix="/s.sock"))
+
+    class Client:
+        def __init__(self, ep, timeout):
+            pass
+
+        def ping(self):
+            return True
+
+        def get_json(self, path):
+            if path.startswith("/containers/json"):
+                raise RuntimeError("Docker API GET /containers/json -> HTTP 403: authorization denied by plugin")
+            return [{"Id": "sha256:" + "a" * 64, "RepoTags": ["nginx:1"]}]
+
+    monkeypatch.setattr(de, "EngineClient", Client)
+    c = by_id(dsc.discover_host())
+    assert not c["docker"]["available"] and "cannot list containers" in c["docker"]["reason"]
+    assert "HTTP 403" in c["docker"]["reason"]
+    assert c["docker-images"]["available"] and c["docker-images"]["details"]["unique_ids"] == 1
+    assert c["macos"]["available"]
+
+
+# --------------------------------------------------------------------------- kubernetes
+
+@pytest.fixture
+def kube(monkeypatch, tmp_path):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).parent / "collectors"))
+    from test_k8s import FX, FakeKubectl
+
+    from secmonk.collectors import k8s
+
+    fake = FakeKubectl()
+    monkeypatch.setattr(k8s, "_run", fake)
+    monkeypatch.setattr(k8s.shutil, "which", lambda name: "/usr/local/bin/kubectl")
+    kc = tmp_path / "config"
+    kc.write_text((FX / "kubeconfig.yaml").read_text())
+    monkeypatch.setenv("KUBECONFIG", str(kc))
+    yield fake
+    sys.path.remove(str(Path(__file__).parent / "collectors"))
+
+
+def test_k8s_discovery(kube):
+    res = dsc.discover_host("k8s://", namespace="", timeout="20")
+    h = res["host"]
+    assert h["kind"] == "k8s" and h["name"] == "demo-cluster" and h["os"] is None and h["context"] == "demo"
+    assert h["target"] == "k8s://demo" and h["arch"] == "amd64" and h["distro"] == ["eks"]
+    assert h["other_contexts"] == ["kind-dev"] and "other contexts: kind-dev" in res["warnings"][-1]
+    c = by_id(res)
+    assert list(c) == ["k8s-cluster", "k8s-images", "k8s-images-default", "k8s-images-kube-system",
+                       "k8s-images-shop"]
+    kc = c["k8s-cluster"]
+    assert kc["collector"] == "k8s" and kc["target"] == "k8s://demo" and kc["selected"] and kc["reason"] is None
+    assert kc["options"] == ["timeout=20"]
+    im = c["k8s-images"]
+    assert im["collector"] == "docker-image" and im["selected"]
+    assert im["options"] == ["source=registry", "platform=linux/amd64"]
+    refs = im["target"].split(",")
+    assert f"docker.io/library/nginx@sha256:{'1' * 64}" in refs and "busybox" in refs and len(refs) == 4
+    assert "2 image(s) without a digest" in im["reason"] and im["details"]["pinned"] == 2
+    assert c["k8s-images-shop"]["target"].split(",") == ["registry.example.test/shop/migrate:3",
+                                                         f"docker.io/library/nginx@sha256:{'1' * 64}"]
+    assert not c["k8s-images-shop"]["selected"]
+
+
+def test_k8s_discovery_partial_access(kube):
+    kube.deny = {"nodes", "pods"}
+    kube.ns_allowed = {"shop"}
+    c = by_id(dsc.discover_host("k8s://demo"))
+    assert c["k8s-cluster"]["available"] and c["k8s-cluster"]["reason"].startswith("partial access: not read")
+    assert "partial access" in c["k8s-images"]["reason"] and c["k8s-images"]["available"]
+    kube.ns_allowed = set()
+    c = by_id(dsc.discover_host("k8s://demo"))
+    assert not c["k8s-images"]["available"] and c["k8s-images"]["reason"] == "pods not readable"
+
+
+def test_k8s_discovery_errors(kube, monkeypatch):
+    from secmonk.collectors import k8s
+
+    kube.fail = {"version": b"Unable to connect to the server: dial tcp: lookup k8s.example.test: no such host"}
+    with pytest.raises(RuntimeError, match="not reachable"):
+        dsc.discover_host("k8s://demo")
+    monkeypatch.setattr(k8s.shutil, "which", lambda name: None)
+    with pytest.raises(RuntimeError, match="kubectl not found"):
+        dsc.discover_host("k8s://demo")
+    with pytest.raises(ValueError):
+        dsc.discover_host("k8s://bad\nname")
+
+
+def test_k8s_private_registries_are_listed_but_not_ticked(kube, monkeypatch):
+    from secmonk.collectors import k8s
+
+    real = k8s.pod_images
+
+    def with_private(pods, warnings=None):
+        out = real(pods, warnings)
+        extra = [{"x": n, "image": img, "type": "c"} for n, img in (("p1", "localhost:5000/dev/app:1"),
+                                                                    ("p2", "/etc/hosts"))]
+        out += real([{"metadata": {"namespace": "dev", "name": e["x"]},
+                      "spec": {"containers": [{"name": "c", "image": e["image"]}]}} for e in extra], warnings)
+        return out
+
+    monkeypatch.setattr(k8s, "pod_images", with_private)
+    res = dsc.discover_host("k8s://demo")
+    c = by_id(res)
+    assert "localhost:5000" not in c["k8s-images"]["target"] and "/etc/hosts" not in c["k8s-images"]["target"]
+    priv = c["k8s-images-private"]
+    assert priv["target"] == "localhost:5000/dev/app:1" and not priv["selected"] and priv["available"]
+    assert "private / link-local" in priv["reason"] and "source=registry" in priv["options"]
+    assert all("/etc/hosts" not in (x["target"] or "") for x in res["candidates"])

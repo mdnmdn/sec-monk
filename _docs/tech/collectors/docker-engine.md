@@ -139,6 +139,13 @@ label `host:port` for tcp, the ssh host (port only when not 22, never the user) 
 
 ## Limitations / gotchas
 
+- **Partial access** (authorization plugins, Podman limits): `/containers/{id}/json` refused is an error for that
+  target (the others of a selector continue); `/containers/{id}/export` refused -> the container's image is scanned
+  by Id instead (`_container_from_image`: same path as `image:<Id>`, Id verification included), with the warning
+  "container filesystem not readable (<reason>); scanned its image <id12> instead", `meta.scanned_image`,
+  `meta.filesystem = image-only`, and a partial inventory (the writable layer is missing). An image export refused is
+  an error for that target. A refused listing in `expand_targets` is an error naming the selector.
+
 *Describes current behaviour. What is still to do (and how to verify it) is tracked in the plan [on-linux-docker.md](../../plans/on-linux-docker.md); measurements and real-data validation are in the [probe log](../../references/probes.md).*
 
 - Docker Desktop (macOS/Windows) engine runs in a VM: socket paths are on the host but the container FS is in the VM; the API hides this (works over the socket). Colima/Podman Machine likewise.
