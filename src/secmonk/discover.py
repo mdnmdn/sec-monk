@@ -63,12 +63,18 @@ TOOLS_SCRIPT = f"{_TOOL_LOOP}\n{_PREFIX_LOOP}\n{_DOCKER_LOOP}\ntrue\n"
 # --------------------------------------------------------------------------- public
 
 def discover_host(target: str | None = None, **opts: Any) -> dict:
-    """What can be scanned on `target`: None / "" / "local" / "localhost" = this machine, else an SSH target
-    (`[ssh://][user@]host[:port]`). See the module docstring and _docs/tech/discover.md for the result shape."""
+    """What can be scanned on `target`: None / "" / "local" / "localhost" = this machine, `k8s://[context]` a cluster,
+    a git repository (`git+…`, `https://…`, `file://…`, `ssh://…/x.git`, `user@host:path`, `git:<local working tree>`;
+    collectors.git.is_git_target), else an SSH target (`[ssh://][user@]host[:port]`). See the module docstring and
+    _docs/tech/discover.md for the result shape."""
     if target is None or str(target).strip().lower() in LOCAL_TARGETS:
         return _discover_local(opts)
     if str(target).strip().startswith("k8s://"):
         return _discover_k8s(str(target).strip(), opts)
+    from .collectors.git import is_git_target
+
+    if is_git_target(str(target)):
+        return _discover_git(str(target).strip(), opts)
     return _discover_ssh(str(target).strip(), opts)
 
 
@@ -574,3 +580,69 @@ def _k8s_images_candidate(cid: str, label: str, images: list[dict], options: lis
                      options=options, available=bool(refs),
                      reason=("; ".join(notes) or None) if refs else reason_unavailable,
                      selected=0 < len(refs) <= selected_max, details=details)
+
+
+# --------------------------------------------------------------------------- git repositories
+
+# git collector options carried into the `repo` candidate (contract with the CLI/API)
+GIT_OPTS = ("ref", "depth", "identity", "known_hosts", "insecure_host_key", "ssh_option", "connect_timeout",
+            "user_config", "timeout", "max_mb", "binaries", "max_files")
+MAX_GIT_PROJECTS_SHOWN = 50
+
+
+def _discover_git(target: str, opts: dict[str, Any]) -> dict:
+    """A git repository: fetched once (collectors.git.acquire_clone, hardened, into the per-user cache) and parked
+    for the scan that follows (reused within collectors.git.CACHE_TTL when URL, ref and depth match), or a local
+    working tree read in place (`git:<path>`). One `repo` candidate (git collector) with the detected projects."""
+    from .collectors import git as g
+    from .collectors.fs import _git_info
+
+    t = g.parse_git_target(target)                 # ValueError on a bad target (passwords never echoed)
+    warnings: list[str] = []
+    if t.kind == "local":
+        path = Path(t.path)
+        if not path.is_dir():
+            raise ValueError(f"{path}: not a directory")
+        if g._is_bare(path):
+            raise ValueError(f"{path} is a bare repository: use file://{path}")
+        wt = g._find_worktree(path)
+        if wt is None:
+            raise ValueError(f"{path} is not inside a git working tree")
+        info = _git_info(wt)
+        facts, warns = g.tree_facts(path)
+        host: dict[str, Any] = {"url": info.get("remote"), "ref": None, "commit": info.get("commit"),
+                                "branch": info.get("branch"), "source": "local"}
+        cand_target, name = str(path), path.name
+    else:
+        ref, is_commit = g.check_ref(opts.get("ref"))
+        depth = g._int_opt(opts, "depth", 1, 0, 1_000_000)
+        clone = g.acquire_clone(t, ref=ref, is_commit=is_commit, depth=depth, opts=opts)
+        try:
+            facts, warns = g.tree_facts(clone.tree)
+        finally:
+            g.release_clone(clone, park=True)
+        if clone.reused:
+            warnings.append("reused a clone fetched less than "
+                            f"{g.CACHE_TTL // 60} minutes ago (-o fresh=true to fetch again)")
+        host = {"url": t.shown, "ref": ref, "commit": clone.commit, "branch": ref if ref and not is_commit else None,
+                "source": "clone"}
+        cand_target, name = t.shown, g.repo_name(t)
+    warnings += warns
+    host = {"kind": "git", "target": t.shown, "name": name, "os": None, "os_version": None, "arch": None, **host}
+    projects = facts["projects"]
+    kinds = facts["project_kinds"]
+    details = {k: facts[k] for k in ("project_kinds", "lockfile_gaps", "vendored_dirs", "submodules") if k in facts}
+    details["projects"] = projects[:MAX_GIT_PROJECTS_SHOWN]
+    details["project_count"] = len(projects)
+    details["monorepo"] = len(projects) > 1
+    reason = None
+    if not projects:
+        reason = "no manifest or lockfile found"
+    elif len(projects) > 1:
+        reason = f"{len(projects)} projects scanned as one asset (per-project scans are not available yet)"
+    desc = (f"Lockfiles and manifests of {len(projects)} project(s) ({', '.join(kinds)})" if projects
+            else "Lockfiles, manifests and installed packages of the repository")
+    cands = [candidate("repo", "git", cand_target, label="Repository dependencies", description=desc,
+                       options=_opt_strings(opts, GIT_OPTS), reason=reason, selected=bool(projects),
+                       details=details)]
+    return {"host": host, "candidates": cands, "warnings": warnings}

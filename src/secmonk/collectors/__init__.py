@@ -3,6 +3,7 @@ from . import (
     docker_engine,  # noqa: F401
     docker_image,  # noqa: F401
     fs,  # noqa: F401
+    git,  # noqa: F401
     homebrew,  # noqa: F401
     k8s,  # noqa: F401
     macos,  # noqa: F401
