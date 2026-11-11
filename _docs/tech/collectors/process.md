@@ -1,17 +1,17 @@
 ---
 title: Process collector (process / executable monitor)
-summary: Process collector and monitor covering platform-neutral core with per-OS backends, launch classification, identity resolution, snapshot format, risk flags, watch mode, porting.
+summary: Process collector and monitor covering platform-neutral core with per-OS backends (macOS, Linux local and over ssh), launch classification, identity resolution, snapshot format, risk flags, watch mode, porting.
 read_when: you change the process monitor, add an OS backend, extend the secmonk-process-snapshot format or the risk flags
 type: tech
 context: tech
 status: implemented
-tags: [collector, process, macos, launchd, provenance]
-updated: 2026-11-08
-verified: 2026-11-08
+tags: [collector, process, macos, launchd, linux, systemd, ssh, provenance]
+updated: 2026-11-11
+verified: 2026-11-11
 sample: mixed
 fixtures: tests/fixtures/collectors/process/
 code: src/secmonk/collectors/process/, src/secmonk/procmon.py
-related: [features/process-monitor.md, decisions/0007-process-monitor.md, tech/collectors/macos.md, tech/collectors/homebrew.md, tech/collectors/dependencies.md, tech/engine/classification.md, plans/on-macos.md]
+related: [features/process-monitor.md, decisions/0007-process-monitor.md, decisions/0010-remote-process-snapshot.md, tech/collectors/macos.md, tech/collectors/homebrew.md, tech/collectors/rootfs.md, tech/collectors/ssh.md, tech/collectors/dependencies.md, tech/engine/classification.md, plans/on-macos.md, plans/on-linux-docker.md]
 ---
 
 # Process collector
@@ -25,14 +25,17 @@ executable:
    `xpc-service`, `interactive`, `remote-session`, `child`, `kernel`) plus the platform mechanism, the launch item label
    and the file that configures it (`/Library/LaunchDaemons/x.plist`).
 2. **What software and version it is**: the same identities the inventory collectors produce (`.app` bundle, Homebrew
-   keg, pkgutil receipt, OS, Go/Rust build info), so the shared engine matches vulnerabilities with no new code.
+   keg, pkgutil receipt, OS, Go/Rust build info; on Linux the dpkg / rpm / apk package owning the executable, snap,
+   flatpak, Linuxbrew), so the shared engine matches vulnerabilities with no new code.
 3. **Where it came from and when**: quarantine xattr and the LaunchServices download event (URL, browser, time),
-   `kMDItemWhereFroms`, code signature, Homebrew/pkgutil install time, file birth time, sha256.
+   `kMDItemWhereFroms`, code signature, Homebrew/pkgutil install time, file birth time, sha256 (Linux: package install
+   time, file mtime / owner / mode, sha256).
 4. **Trust flags**: unsigned, ad-hoc signed, downloaded, translocated, running from a user-writable path (as root,
    or persistently), executable deleted on disk, unidentified.
 
 It is a normal collector (`process`, asset `process:<host>`, type `host-processes`): `collect` / `scan process` work as
-for every target. The monitor view (`secmonk procs`, tree + findings + flags, `--watch`) is built on the same
+for every target. Targets: none (this machine, macOS or Linux), `ssh://[user@]host[:port]` (a remote Linux host, see
+"Remote Linux over ssh"), or a snapshot file. The monitor view (`secmonk procs`, tree + findings + flags, `--watch`) is built on the same
 analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-monitor.md)).
 
 ## Layout: shared core, one backend per OS
@@ -60,10 +63,12 @@ analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-m
 |---|---|---|
 | `model.py` | `ProcessRecord`, `LaunchItem`, `LaunchInfo`, `Snapshot`, launch kinds | no |
 | `snapshot.py` | JSON form of a `Snapshot`; type-checked, capped, command lines re-redacted on load | no |
-| `launch.py` | launch classification over the process tree; `PlatformHints` (init pids, shells, terminals, schedulers, bundle patterns, GUI label pattern) | hints only |
+| `launch.py` | launch classification over the process tree; `PlatformHints` (init pids, shells, terminals, schedulers, bundle patterns, GUI label pattern; Linux: kernel-thread parent, container shims, label kinds, cgroup -> unit) | hints only |
 | `backend.py` | `Backend` registry (`BACKENDS`), base `Inspector` (snapshot-provided identity/facts, otherwise `executable`) | no |
 | `macos.py` | `take_snapshot`, `MacOSInspector`, pure parsers (ps, launchctl, launchd plist, codesign, pkgutil, quarantine, where-froms, QuarantineEventsV2, embedded `__info_plist`) | macOS |
-| `collector.py` | registered `process` collector, `risk_flags`, components, asset meta | no |
+| `linux.py` | `take_snapshot` (local `/proc`), `Capture` (raw contents), `snapshot_from_capture`, `LinuxInspector`, pure parsers (stat, status, cmdline, exe link, cgroup, unit files, desktop entries, crontabs, `dpkg-query -S`, `rpm -qf`, apk file lists), `package_component` (rootfs-identical os-package components) | Linux |
+| `remote.py` | `SCRIPT` (the fixed remote `sh` script), `parse_output`, `remote_executables`, `take_remote_snapshot(target, **opts)` | Linux over ssh |
+| `collector.py` | registered `process` collector (`ssh://` targets -> `remote.py`), `risk_flags`, components, asset meta; processes inside a container are not resolved against the host (`container` resolution) | no |
 | `../../procmon.py` | CLI views: tree rows, findings per process, `Watcher` | no |
 
 ## Where the data lives (macOS)
@@ -85,7 +90,7 @@ analysis in `src/secmonk/procmon.py` (see [the feature](../../features/process-m
 | install time | Homebrew `INSTALL_RECEIPT.json` `time`, pkgutil `install-time`, file `st_birthtime` | |
 | login item / background helper state | opt-in `-o btm=true` (root: `sfltool dumpbtm`) or `-o btm=<file>` (saved dump) -> `parse_btm` | see "Background Task Management" below |
 
-### Identity resolution order (first hit wins)
+### Identity resolution order (macOS, first hit wins)
 
 | # | Method | Rule | Components |
 |---|---|---|---|
@@ -104,15 +109,19 @@ Windows script hands over identities it computed on the target.
 
 | Evidence | Rule | Kind |
 |---|---|---|
-| `pid` | pid 0 / init pid | `kernel` |
+| `pid` | pid 0 / init pid (Linux: also pid 2, `kthreadd`) | `kernel` |
+| `parent` | Linux: child of pid 2 without executable (kernel thread, kept with `-o kernel_threads=true`) | `kernel` (`kernel-thread`) |
 | `pid-label` | service-manager label of the pid is a known launch item (one label can be both a system daemon and a per-user agent, e.g. `com.apple.lsd`: chosen like `exe-match` below; a per-instance `.<UUID>` suffix, `PlatformHints.instance_suffix`, is stripped first) | from mechanism (`launchd-daemon` -> `service`, `launchd-agent` -> `agent`, `run-key` -> `login-item` ...) |
 | `pid-label` | label matches `PlatformHints.gui_label` (`application.<id>.<n>.<n>`, optionally `.<UUID>`: apps relaunched by the system, real on macOS 26.5) | `gui-app` |
 | `exe-match` | label names no plist but the executable is a launch item's program (login-item helpers run as `<TeamID>.<bundle id>`) | from mechanism |
-| `pid-label` | label unknown (job submitted at runtime / unreadable plist) | `service` (uid 0) / `agent` |
+| `pid-label` | Linux, `PlatformHints.label_kinds`: `app-*@autostart.service` (systemd-xdg-autostart-generator) -> `login-item` (`xdg-autostart`); `app-*.scope` (an app started by GNOME / KDE) -> `gui-app` (`desktop`). A template instance `getty@tty1.service` is looked up as `getty@.service` (`instance_suffix`) | |
+| `pid-label` | label unknown (job submitted at runtime / unreadable plist / transient unit) | `service` (uid 0) / `agent` |
 | `exe-match` | executable is a launch item's program (several: the one in the process user's scope, then a plist whose `UserName` is the process user, then a service for root and an agent for anyone else: `cfprefsd` has both a daemon and a per-user agent, the agent also runs as `_locationd`). Never for shells, interpreters and wrappers (`sh`, `bash`, `python3`, `env`, `nohup` ...): a plist running `/bin/bash` must not claim every bash; those are attributed by `pid-label` only | from mechanism |
+| `exe-match` | Linux restrictions (`PlatformHints.cgroup_unit`): a `systemd-*` item claims a process only when the process's cgroup unit is that unit (an sshd session process in `session-3.scope` is not `ssh.service`, a container's `nginx` is not the host's `nginx.service`); a `cron` item only when a scheduler is among the ancestors (the same binary started from a shell is not the cron job) | |
 | `parent` | parent is init: `.xpc` or `.appex` bundle (app extensions are XPC services: widgets started without a label) -> `xpc-service`, `.app` bundle -> `gui-app`, else `service`/`agent` by uid | |
 | `parent` | parent is a scheduler (`cron`, `periodic`, `atrun`) / a GUI launcher (Finder, Dock) | `scheduled` / `gui-app` |
 | `ancestry` | parent is a shell: first ancestor that is `sshd` -> `remote-session`, a scheduler -> `scheduled`, a terminal (Terminal.app, iTerm2, tmux, VS Code helper ...) -> `interactive (terminal)`; else a console `login` / `getty` above it -> `interactive (login)`; else (an `sh -c` run by a daemon, an app, an updater) it falls through to `child` | |
+| `ancestry` | Linux: a container shim (`containerd-shim*`, `conmon`, `lxc-start`, `PlatformHints.container_shims`) above it | `child` (`container`), `label` = the first 12 characters of the container id, `via` = the shim |
 | `parent` | anything else | `child`; `via` = top ancestor below init (the app/service that owns the tree) |
 
 The tree walk is cycle-safe and capped (64 levels).
@@ -142,6 +151,85 @@ of the same Mac: 98 items tagged (legacy daemon 47, legacy agent 41, login item 
 added (the root-only Teams updater plist), missing programs 4 -> 0 (all four were turned off). Captured in the
 snapshot (`launch_items[].meta`), so `secmonk procs <snapshot.json>` keeps it.
 
+## Where the data lives (Linux)
+
+`linux.take_snapshot(root, opts)` reads `<root>/proc` (`/` live; a copied tree in tests) into a `Capture` (raw file
+contents), and `snapshot_from_capture` turns it into a `Snapshot`; the remote script fills the same `Capture`, so both
+paths share every parser. Files are read through `read_within` with size caps (64 KiB per `/proc` file, 128 KiB
+`cmdline`, 1 MiB per unit / desktop / crontab file); the `exe` link is only `readlink`ed, never followed.
+
+| Fact | Source | Notes |
+|---|---|---|
+| processes | `/proc/<pid>/stat` (pid, `comm` up to the *last* `)` since it may contain spaces and parentheses, ppid, flags, field 22 `starttime`), `status` (`Name`, `PPid`, real `Uid`), `/etc/passwd` (uid -> name) | `started` = `btime` (`/proc/stat`) + `starttime` / `CLK_TCK` (`os.sysconf`; the remote `getconf CLK_TCK`), ISO 8601 UTC |
+| executable | `readlink /proc/<pid>/exe`; a ` (deleted)` suffix (file removed or replaced by an upgrade while running) is stripped and recorded as `executables[path].exists = false` (-> `exe-missing`; the identity is kept with the note `version_is_installed_not_running`, see Limitations) | other users' processes as non-root: `EACCES`, counted in one warning; zombies (state `Z`/`X`, no executable) and a root reader never count |
+| root filesystem | `stat /proc/<pid>/root` (device:inode; stat only, nothing is read through it), compared with pid 1's | a different root (chroot, `RootDirectory=`, a sandbox the cgroup does not name) -> `container = {runtime: chroot, id: <unit>}`: not resolved against the host. A private mount namespace with the same root (`PrivateTmp=`, `ProtectSystem=`) is still the host |
+| command lines | `/proc/<pid>/cmdline`, NUL-separated: exact argv boundaries (no over-redaction as with `ps`), redacted, max 64 args; an argument holding whitespace (a `setproctitle()` title such as `worker --api-key=K --queue q`) is redacted again in its string form; `-o args=false` skips | |
+| kernel threads | `PF_KTHREAD` in the stat flags, pid 2 (`kthreadd`) or a child of 2 without executable | omitted unless `-o kernel_threads=true` (then `kernel`, mechanism `kernel-thread`) |
+| pid -> unit (`label`) | `/proc/<pid>/cgroup`: the `name=systemd` hierarchy (cgroup v1), else the unified `0::` path (v2), else the first non-root controller path; unit = innermost `.service` / `.scope` / `.socket` (`user@<uid>.service/init.scope` = the `systemd --user` manager -> `user@<uid>.service`) | only `.service` units and `app-*` scopes become labels, and only on the unit's main process (its parent is outside the unit's cgroup), like `launchctl list` names one pid per job; `session-N.scope` and container scopes are not labels. The path is kept as `processes[].cgroup` |
+| container | the cgroup paths: `docker-<id>.scope`, `/docker/<id>`, `cri-containerd-<id>.scope` + `pod<uid>` (Kubernetes), `crio-<id>.scope`, `libpod-<id>.scope` (podman; `libpod-conmon-` is not the container), LXC `^/lxc.payload.<name>` / `^/lxc/<name>` (not `lxc.monitor.*`, not `lxc.service`), systemd-nspawn `machine-<name>.scope` (`nspawn`), flatpak `app-flatpak-<app id>-<n>.scope` (`flatpak`) | `processes[].container = {runtime, id, pod?}`; such a process is not resolved against the host (its `exe` is a path in the container's filesystem): `container` resolution, an `executable` component, no file facts |
+| launch items | systemd unit files `*.service` / `*.timer` in `/etc/systemd/system`, `/usr/local/lib/systemd/system`, `/lib/systemd/system`, `/usr/lib/systemd/system` (that precedence: the first file of a name wins, an `/etc` override hides the vendor unit) -> `systemd-system`; `/etc/systemd/user`, `/usr/local/lib/systemd/user`, `/usr/lib/systemd/user` and `~/.config/systemd/user` of every `/home/*` and `/root` -> `systemd-user` (scope `user:<name>` for home units). A unit linked to `/dev/null` is masked (`disabled`, `meta.masked`). A `.timer` (`Unit=` or the same name) turns its service into `systemd-timer` (`scheduled`, `meta.timer`) | first effective `ExecStart` (an empty one resets; prefixes `-@:+!` stripped, with `@` argv[0] dropped; continuation lines joined), `User` -> `meta.UserName`, `Type`, `Description`. Drop-ins (`*.service.d/*.conf`) and generated units are not read |
+| | XDG autostart: `/etc/xdg/autostart/*.desktop`, `~/.config/autostart/*.desktop` -> `xdg-autostart` (`login-item`); `Exec` without field codes (`%u`), `Hidden=true` / `X-GNOME-Autostart-enabled=false` -> disabled | |
+| | crontabs: `/etc/crontab`, `/etc/cron.d/*` (with a user field), `/var/spool/cron/crontabs/*` (Debian), `/var/spool/cron/*` (RHEL) -> `cron` (`scheduled`), label `<file>:<line>`, `meta.schedule`, `meta.UserName`; program = first `&&` / `||` / `;` segment starting with an absolute path (Debian's `test -x X && X`), else the first word of the last segment | user crontabs need root to list: one warning |
+| | in every `ExecStart`, `Exec` and cron command, leading `NAME=value` assignments and an `env [-i] NAME=value` wrapper are skipped before the program (`PGPASSWORD=... pg_dump` -> `pg_dump`): they are never stored. A bare program name (`ExecStart=foo`, `Exec=nm-applet`) is resolved locally against `/usr/local/{s,}bin`, `/usr/{s,}bin`, `/{s,}bin` under the root (`meta.command` keeps the redacted name); over ssh it stays unresolved (`program` null) | |
+| | files under a home directory (`~/.config/systemd/user`, `~/.config/autostart`) are read only when they are not symlinks and their directory resolves inside that home (a user cannot point an entry at a root-only file) | |
+| OS | `/etc/os-release` (or `/usr/lib/os-release`), `/etc/debian_version` -> `Snapshot.os` (`name`, `version`, `vendor`, `id`, `id_like`, codenames, `debian_version`) | the OS component is the rootfs one (`rootfs._os_component`, OSV distro ecosystem included) |
+| hostname | `-o hostname=`, else `socket.gethostname()` (live), else `/proc/sys/kernel/hostname`, `/etc/hostname` | |
+
+### Identity resolution order (Linux, first hit wins)
+
+| # | Method | Rule | Components |
+|---|---|---|---|
+| 0 | `container` | the process runs in a container or another root filesystem (`processes[].container`); decided in `collector.build_views` before any inspector, so it wins over everything below, snapshot identities included | `executable` component with `container_runtime` / `container_id` (scan the image with `docker-engine` instead) |
+| 0 | `snapshot` | `executables[path].identity` present (remote snapshots: the package owner resolved on the target) | as given, incl. `ecosystem`, `source_package`, `source_version`, `install_time` |
+| 1 | `brew-keg` | real path under `<prefix>/Cellar/<f>/<v>/` (Linuxbrew `/home/linuxbrew/.linuxbrew`) | `homebrew._keg_component` (path only without a filesystem) |
+| 2 | `snap` | `/snap/<name>/<rev>/...` | `application` named after the snap, version from `meta/snap.yaml` (`version:`) |
+| 3 | `flatpak` | `/var/lib/flatpak/app/<id>/...` or `~/.local/share/flatpak/app/<id>/...` | `application` = app id, path-only (a sandboxed process shows its in-sandbox `/app/...` path instead: unidentified) |
+| 4 | `os-package` | owner of the real path, then of the link itself (`/usr/bin/python3`), each also in its merged-/usr form (`/usr/bin/x` <-> `/bin/x`): dpkg `var/lib/dpkg/info/*.list` (`pkg:arch.list` -> `pkg`), apk `lib/apk/db/installed` (`F:` / `R:` lines); live rpm hosts: `rpm -qf --queryformat ... -- <path>` (not for user-writable paths). The path -> package index of every listed file is built once and rebuilt only when the package databases change (stat of the dpkg info dir and status, apk db, rpmdb dirs: `--watch` after an upgrade) | the component `rootfs.collect_from_view` produces for that package (dpkg status / apk installed / rpmdb.sqlite; same purl, OSV ecosystem, source package): it shares its `component` row with `rootfs:` / `ssh:` inventories. `pkg_install_time` = mtime of the `.list` file / rpm `INSTALLTIME` |
+| 5 | `go-binary` / `rust-binary` | file read (`-o max_binary_mb=128`, `-o binaries=false` skips) | as `fs` binaries |
+| 6 | `none` | nothing matched | `executable` component |
+
+Facts (local): `exists`, `size`, `mtime`, `owner_uid`, `world_writable`, `sha256` (`-o hash=false` skips). `-o
+packages=false` disables the package index. Commands run locally: only `rpm -qf` on live rpm-based hosts.
+
+### Remote Linux over ssh
+
+`ProcessCollector().collect("ssh://[user@]host[:port]", **opts)` (also `analyse`, `snapshot`) calls
+`remote.take_remote_snapshot(target, **opts)` ([ADR-0010](../../decisions/0010-remote-process-snapshot.md)):
+
+1. The ssh target is parsed by `ssh.parse_target` and a transport made by `ssh.make_transport` (or a `Transport`
+   instance passed as `transport=`): same options as `scan ssh`: `transport=openssh|paramiko|auto`, `identity`,
+   `known_hosts`, `insecure_host_key`, `connect_timeout`, `ssh_option`, `ssh_bin`, `ssh_config`, `verbose`. Plus
+   `sudo=true` (runs `sudo -n sh -s`: a NOPASSWD rule is needed), `timeout` (seconds, default 300), `hostname`.
+2. `remote.SCRIPT`, one constant POSIX `sh` script, is sent on stdin to `sh -s`. It reads, in order: `ostype`,
+   hostname, boot id, `btime`, `getconf CLK_TCK`, `id -u`, `name:uid` pairs of `/etc/passwd` (`cut -d: -f1,3`: no GECOS),
+   os-release, `debian_version`; for each `/proc/<pid>`: `stat`, the `Name|PPid|Uid` lines of `status`, `cmdline`,
+   `cgroup`, `stat -L -c '%d:%i'` of `root`, `readlink exe` (`!` only when the link exists but cannot be read; paths
+   containing a newline are kept for the process but not queried further); on dpkg hosts the package table (`dpkg-query -W` with Package,
+   Version, Architecture, Source, Status) and the `.list` mtimes (`stat -c '%Y %n'`); apk's `installed` (8 MiB cap);
+   then for each distinct executable path: `stat -c '%Y %s %u %a'` and the `version:` of a snap's `meta/snap.yaml`;
+   then the owners of all paths and their merged-/usr forms in **one** call (`dpkg-query -S -- "$@"`), or on rpm hosts
+   one `rpm -qf --queryformat ... -- "$@"` whose output is used when it has exactly one line per path (else one call
+   per path); finally the unit files (masked ones by `readlink`), autostart files and crontabs listed above (home-dir
+   files skipped when they are symlinks or their directory resolves outside the home, `pwd -P`). Every value is hex-encoded
+   (`od -An -v -tx1`), one `TAG key hex` record per line between `@@SECMONK-PROCS/1@@ BEGIN` / `END`. Nothing is
+   written; every redirection goes to `/dev/null`.
+3. The output is read up to 32 MiB (`remote.MAX_OUTPUT`), parsed by `parse_output` into a `Capture` (malformed records
+   skipped; a last line without newline, i.e. cut by the cap or a killed stream, dropped with a warning; numbers longer
+   than 20 digits and times `datetime` cannot represent ignored; at most 100 000 processes and executables and 20 000
+   unit / autostart / crontab / masked entries each, with a warning when exceeded) and by `linux.snapshot_from_capture`; `remote_executables` adds the file facts and the package owners as
+   `executables[path].identity` (built by `linux.package_component`, identical to the rootfs components: purl, OSV
+   ecosystem, source package / version, install time from the `.list` mtime or rpm `INSTALLTIME`), and snap versions.
+4. The snapshot has `platform: linux` and `host` = `ssh:<host>` for the default port, `ssh:<host>:<port>` otherwise
+   (`ssh.ssh_asset_id` of the target, IPv6 bracketed), so the asset id is `process:ssh:<host>[:port]`; `-o hostname=`
+   overrides it explicitly. The name the host reports for itself is only recorded (`source.remote_hostname`): many
+   hosts are `localhost` or `ubuntu`, and a hostile host must not be able to overwrite another asset. `source = {kind:
+   ssh, target, transport, sudo, boot_id, remote_hostname}` (also in `asset.meta.source`). It is analysed with `LinuxInspector(root=None)`: nothing on
+   the analyst's machine is read (`-o root=` is refused for `ssh://` targets). `snapshot_out` writes it like a local one.
+
+Errors: no `BEGIN` marker -> `SSHError` with the remote stderr (and the `sudo -n` hint with `sudo=true`); a non-Linux
+`ostype` -> `SSHError`; no process listed -> `SSHError`. Output cut at the cap, a timeout or a missing `END` -> warning,
+snapshot kept (partial). A non-root login -> warning; executables of other users' processes count in one warning.
+
 ## Data format
 
 Inventory: one component per identity, process facts merged under `meta.process`:
@@ -170,17 +258,23 @@ It is the hand-off format for other platforms and future agents, so it is a publ
 | `platform` | `darwin`, `linux`, `windows` | selects the backend (`backend.BACKENDS`); others get the filesystem-free base `Inspector` |
 | `host`, `taken_at` | string | `taken_at` ISO 8601 |
 | `os` | `{name, version, build, vendor?}` | becomes the OS component |
-| `processes[]` | `{pid, ppid, uid?, user?, exe?, started?, args[], name?, label?}` | `pid` (int) required; `exe` absolute path; `label` = service-manager job owning the pid; `args` redacted argv (max 64) |
+| `processes[]` | `{pid, ppid, uid?, user?, exe?, started?, args[], name?, label?, cgroup?, container?}` | `pid` (int) required; `exe` absolute path; `label` = service-manager job owning the pid; `args` redacted argv (max 64); `cgroup` (Linux, max 4096 chars) the systemd cgroup path; `container` (Linux) `{runtime, id, pod?}` |
 | `launch_items[]` | `{mechanism, label, program?, args[], source?, scope?, run_at_load?, keep_alive?, disabled?, meta{}}` | `mechanism` = a key of `launch.MECHANISM_KIND`; `scope` = `system` or `user:<name>` |
 | `executables{path: facts}` | object | precomputed facts, used instead of reading files (keys below) |
 | `warnings[]` | string list | shown with the collector warnings |
+| `source` | `{kind, target?, transport?, sudo?, boot_id?, remote_hostname?}` | optional: how the snapshot was taken (`local`, `ssh`); copied to `asset.meta.source` |
 
 `executables[path]` keys, all optional: `exists`, `size`, `mtime`, `created`, `owner_uid`, `world_writable`, `sha256`;
 `signature` (`signed`, `adhoc`, `identifier`, `team_id`, `timestamp`, `hardened_runtime`, `apple`, `mac_app_store`,
 `developer_id`, `verified`, `error`, `unknown`, `authority[]`, `flags[]`); `quarantine` (`raw_flags`, `time`, `agent`,
 `event_id`, `user_approved`, `on`, `event{time, agent_bundle_id, agent, sender, data_url, origin_url}`);
 `where_froms[]`; `gatekeeper{accepted, source}`; `identity{name, version, category, purl, bundle_id, vendor_hint,
-product_hint, file_version, company, os}`.
+product_hint, file_version, company, os, source_package, source_version, arch, pkg_type, install_time, ecosystem}`
+(the last six for distro packages resolved on a Linux target; `install_time` becomes the provenance
+`pkg_install_time`, `ecosystem` the OSV ecosystem used for matching).
+
+`cgroup`, `container`, `source` and the six identity keys were added on 2026-11-11 (Linux backend); they are optional,
+type-checked on load, and older files load unchanged.
 
 Loading treats the file as untrusted (`snapshot.from_dict`, `snapshot.clean_facts`): unknown keys are dropped, every
 value is type-checked, sizes are capped (64 MB file, 100 000 processes, 64 args), command lines are re-redacted and every
@@ -197,7 +291,8 @@ is known (it is what every system process runs).
 
 Computed by `collector.risk_flags()` from facts, platform-neutral; informational, they do not create findings:
 `exe-missing`, `unsigned`, `adhoc-signed`, `signature-invalid` (only with `-o verify=true`), `downloaded`, `world-writable`, `translocated`,
-`user-writable-path` (macOS: `/Users/`, `/tmp/`, `/private/var/folders/`, `/Volumes/`, AppTranslocation),
+`user-writable-path` (macOS: `/Users/`, `/tmp/`, `/private/var/folders/`, `/Volumes/`, AppTranslocation; Linux:
+`/home/`, `/tmp/`, `/var/tmp/`, `/dev/shm/`, `/run/user/`),
 `root-from-user-path`, `persistent-from-user-path` (service/agent/login item running from there), `unidentified`.
 
 In a copied tree (`-o root=`) a symlink resolving outside the root is never followed: the executable gets the fact
@@ -225,20 +320,23 @@ user-writable paths), one full read for Go/Rust/plist parsing when nothing else 
 ## Porting (Linux, Windows)
 
 A backend = `take_snapshot(root, opts)` + an `Inspector` subclass, registered in `backend.BACKENDS`; launch hints go in
-`launch.PlatformHints`. Nothing else changes (classification, flags, components, CLI, watch). Planned mapping:
+`launch.PlatformHints`. Nothing else changes (classification, flags, components, CLI, watch). macOS and Linux are
+implemented (`BACKENDS = {"darwin", "linux"}`; Linux mapping in "Where the data lives (Linux)"). Planned mapping for
+Windows:
 
-| Concern | Linux | Windows |
-|---|---|---|
-| processes | `/proc/<pid>/{stat,status,exe,cmdline}`, start time from `stat` field 22 + boot time; `exe` ` (deleted)` suffix -> `exists: false` | `Get-CimInstance Win32_Process` (ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate), or the inventory script / osquery `processes` |
-| pid -> job | `/proc/<pid>/cgroup` -> systemd unit (`system.slice/x.service`, `user@1000.service/app.slice/...`) | `Win32_Service.ProcessId` -> service name |
-| launch items | systemd units (`ExecStart`), `/etc/xdg/autostart` + `~/.config/autostart`, crontabs | services (`ImagePath`), Run/RunOnce keys, Startup folders, scheduled tasks (`Get-ScheduledTask` actions) |
-| hints | init pid 1 = systemd, kernel threads (ppid 2, no exe), terminals (gnome-terminal-server, konsole), `sshd` | System (4), `services.exe`, `explorer.exe` as GUI launcher, `svchost.exe -k` groups, `taskeng`/`svchost Schedule` as scheduler, `conhost`/`WindowsTerminal` |
-| identity | dpkg `/var/lib/dpkg/info/*.list` / `rpm -qf` / apk `installed` file -> os-package (reuse `rootfs.py` parsers, build a path index once), snap/flatpak paths, Homebrew (Linuxbrew), Go/Rust binaries | file version resource (`VersionInfo`), Uninstall-key `InstallLocation` prefix -> program component (reuse `windows.py`), Appx package path, `C:\Windows\` -> OS build |
-| provenance | file times, package install time (dpkg `.list` mtime, rpm `INSTALLTIME`), IMA/fs-verity if present | `Zone.Identifier` ADS (`ZoneId`, `ReferrerUrl`, `HostUrl`), Authenticode (`Get-AuthenticodeSignature`), MSI install date |
-| user-writable | `/home/`, `/tmp/`, `/var/tmp/`, `/dev/shm/`, `/run/user/` | `%USERPROFILE%`, `%TEMP%`, `%APPDATA%`, `C:\Users\Public` |
+| Concern | Windows |
+|---|---|
+| processes | `Get-CimInstance Win32_Process` (ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate), or the inventory script / osquery `processes` |
+| pid -> job | `Win32_Service.ProcessId` -> service name |
+| launch items | services (`ImagePath`), Run/RunOnce keys, Startup folders, scheduled tasks (`Get-ScheduledTask` actions) |
+| hints | System (4), `services.exe`, `explorer.exe` as GUI launcher, `svchost.exe -k` groups, `taskeng`/`svchost Schedule` as scheduler, `conhost`/`WindowsTerminal` |
+| identity | file version resource (`VersionInfo`), Uninstall-key `InstallLocation` prefix -> program component (reuse `windows.py`), Appx package path, `C:\Windows\` -> OS build |
+| provenance | `Zone.Identifier` ADS (`ZoneId`, `ReferrerUrl`, `HostUrl`), Authenticode (`Get-AuthenticodeSignature`), MSI install date |
+| user-writable | `%USERPROFILE%`, `%TEMP%`, `%APPDATA%`, `C:\Users\Public` |
 
 The Windows side can ship as an extension of `secmonk-inventory.ps1` that emits a process snapshot (identity and
-`Zone.Identifier` precomputed in `executables`), analysed on any OS with the base `Inspector`.
+`Zone.Identifier` precomputed in `executables`), analysed on any OS with the base `Inspector`, the way the Linux remote
+script hands over package owners.
 
 ## Limitations
 
@@ -293,3 +391,22 @@ The Windows side can ship as an extension of `secmonk-inventory.ps1` that emits 
   not checked on real data (Safari was not running during the capture).
 - Two unidentified binaries with the same file name in different directories are kept apart in the collector
   (`exe:<path>` key) but share one `component` row in the database (paths merged).
+- **Linux** (developed on macOS against a synthetic tree, `process/linux/`; not run on a real Linux host yet, see
+  [plans/on-linux-docker.md](../../plans/on-linux-docker.md) section F):
+  - an executable deleted or replaced while running (` (deleted)`, typically after a package upgrade) is flagged
+    `exe-missing` and identified by the package that owns the path *now*; the running version may be older, so the
+    resolution carries `version_is_installed_not_running` (also in `meta.process`) instead of silently reporting it;
+  - systemd drop-ins, generated and transient units are not read (an `ExecStart` overridden in a drop-in is missed;
+    a transient `run-*.service` is a label without an item: `service` / `agent` by uid); unit enablement
+    (`*.wants/` links) is not recorded, only masking;
+  - rpm file lists are not parsed: on a copied rpm tree executables stay `unidentified`; live and remote rpm hosts use
+    `rpm -qf`. BerkeleyDB / ndb rpm databases (CentOS 7, SLES 12) work only through `rpm -qf`;
+  - processes in a container are not identified (the image is the target of `docker-engine` / `docker-image`), nor
+    are flatpak-sandboxed processes, whose `exe` is an in-sandbox `/app/...` path;
+  - pacman (Arch), xbps, nix and other package databases are not indexed: their executables stay `unidentified`;
+  - over ssh: no sha256 and no Go/Rust build-info parsing (that would read every binary over the wire); bare `Exec` /
+    `ExecStart` names are not resolved; `--watch` would re-run the whole script per tick (not wired in the CLI);
+    `dpkg-query -S` runs once for all executables; `rpm -qf` once too unless a file has several owners (then once per
+    executable); the argument list is not chunked (a few hundred paths stay far below `ARG_MAX`);
+  - the remote script relies on `od`, `dd`, `tr`, `sed`, `grep -E`, `cut`, `sort`, `readlink`, `stat -c` (GNU
+    coreutils or busybox), `getconf`; on a host without one of them the related records are empty (no error).

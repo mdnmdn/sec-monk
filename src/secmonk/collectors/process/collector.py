@@ -1,7 +1,10 @@
 """`process` collector: what is running, how it was started, what software it is, where it came from.
 
 Target:
-  (none)            live snapshot of this machine (macOS today)
+  (none)            live snapshot of this machine (macOS, Linux)
+  ssh://[user@]host[:port]
+                    live snapshot of a remote Linux host over ssh (remote.py; ssh options as for `scan ssh`,
+                    `-o sudo=true`); nothing on this machine is read
   <snapshot.json>   a `secmonk-process-snapshot/1` file taken elsewhere (`-o root=<dir>` to resolve its
                     executables against a copied tree; without it nothing on this machine is read)
 
@@ -37,6 +40,23 @@ from .model import (
 MAX_PROCS_PER_COMPONENT = 50
 MAX_TREE = 5000
 PERSISTENT = (LAUNCH_SERVICE, LAUNCH_AGENT, LAUNCH_LOGIN_ITEM)
+SSH_PREFIX = "ssh://"
+
+
+def is_remote_target(target: str | None) -> bool:
+    """`ssh://...` targets take a live snapshot of a remote host; anything else is a snapshot file."""
+    return bool(target) and str(target).startswith(SSH_PREFIX)
+
+
+def container_resolution(p: ProcessRecord) -> Resolution:
+    """A process inside a container: its executable path is in the container's filesystem, so the host's packages
+    and files say nothing about it (scan the image with `docker-engine` / `docker-image` instead)."""
+    c = p.container or {}
+    exe = p.exe or ""
+    meta = {"identity": "container", "container_runtime": c.get("runtime"), "container_id": c.get("id")}
+    comp = Component(name=exe.rsplit("/", 1)[-1] or exe, version=None, category=CAT_EXECUTABLE, source_path=exe,
+                     meta={k: v for k, v in meta.items() if v})
+    return Resolution("container", [comp], notes={"identity": "container"})
 
 
 @dataclass
@@ -92,7 +112,10 @@ def build_views(snap: Snapshot, inspector: Inspector) -> list[ProcessView]:
     for p in snap.processes:
         launch = classifier.classify(p)
         v = ProcessView(p, launch, script=inspector.script_of(p))
-        if p.exe:
+        if p.exe and p.container:
+            v.resolution = container_resolution(p)
+            v.flags = risk_flags(p, launch, v.resolution, v.facts, inspector)
+        elif p.exe:
             v.resolution = inspector.resolve(p.exe)
             v.facts = inspector.facts(p.exe)
             v.flags = risk_flags(p, launch, v.resolution, v.facts, inspector)
@@ -104,7 +127,8 @@ def _proc_entry(v: ProcessView) -> dict[str, Any]:
     p, li = v.proc, v.launch
     d = {"pid": p.pid, "ppid": p.ppid, "user": p.user, "started": p.started, "exe": p.exe,
          "launch": li.kind, "mechanism": li.mechanism, "label": li.label, "launch_source": li.source,
-         "via": li.via, "parent_exe": li.parent_exe, "script": v.script}
+         "via": li.via, "parent_exe": li.parent_exe, "script": v.script,
+         "container": dict(p.container) if p.container else None}
     return {k: x for k, x in d.items() if x is not None}
 
 
@@ -162,7 +186,7 @@ def to_components(views: list[ProcessView]) -> list[Component]:
             for fl in v.flags:
                 if fl not in pm["flags"]:
                     pm["flags"].append(fl)
-            for nk in ("helper", "os_binary", "identity"):
+            for nk in ("helper", "os_binary", "identity", "version_is_installed_not_running"):
                 if v.resolution.notes.get(nk):
                     pm[nk] = v.resolution.notes[nk]
     comps = [by_key[k] for k in order]
@@ -218,6 +242,8 @@ class ProcessCollector(Collector):
 
     # split so the CLI monitor can reuse the views without re-reading the machine
     def analyse(self, target: str | None = None, **opts: Any) -> tuple[Snapshot, Inspector, list[ProcessView]]:
+        if is_remote_target(target) and opts.get("root"):
+            raise ValueError("process: -o root= does not apply to ssh:// targets (nothing local is read)")
         snap = self.snapshot(target, **opts)
         root = Path(opts["root"]) if opts.get("root") else (Path("/") if not target else None)
         if root is not None and not root.is_dir():
@@ -230,6 +256,13 @@ class ProcessCollector(Collector):
 
     @staticmethod
     def snapshot(target: str | None = None, **opts: Any) -> Snapshot:
+        if is_remote_target(target):
+            from .remote import take_remote_snapshot
+
+            snap = take_remote_snapshot(str(target), **opts)
+            if opts.get("snapshot_out"):
+                snapfile.dump(snap, opts["snapshot_out"])
+            return snap
         if target:
             return snapfile.load(target)
         plat = current_platform()
@@ -261,6 +294,8 @@ class ProcessCollector(Collector):
         }
         if missing:
             meta["launch_items_missing_program"] = missing
+        if snap.source:
+            meta["source"] = dict(snap.source)
         if len(views) > MAX_TREE:
             meta["processes_truncated"] = True
         asset = Asset(id=f"process:{host}", type="host-processes", name=host,

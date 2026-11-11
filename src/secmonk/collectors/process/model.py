@@ -1,6 +1,6 @@
 """Platform-neutral records of the process monitor.
 
-Every platform backend (macOS today; Linux and Windows planned, see
+Every platform backend (macOS and Linux, locally or over ssh; Windows planned, see
 _docs/tech/collectors/process.md) produces a `Snapshot`: running processes, the launch items the OS
 knows about (launchd plists, systemd units, Windows services / Run keys / scheduled tasks) and,
 optionally, precomputed facts about executables. Everything after that (launch classification,
@@ -43,6 +43,8 @@ class ProcessRecord:
     args: list[str] = field(default_factory=list)   # redacted (collectors/base.redact_command)
     name: str | None = None         # short name (comm) when `exe` is unknown
     label: str | None = None        # service manager job label when known (launchctl list, systemd unit, service name)
+    cgroup: str | None = None       # Linux: control group path (systemd hierarchy) of the process
+    container: dict[str, str] | None = None   # Linux: {"runtime": docker|containerd|cri-o|podman|lxc, "id", "pod"?}
 
 
 @dataclass
@@ -84,3 +86,5 @@ class Snapshot:
     # elsewhere; a live backend computes them lazily instead.
     executables: dict[str, dict[str, Any]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    # how the snapshot was taken: {"kind": "local"|"ssh", "target", "transport", "sudo", "boot_id", "remote_hostname"}
+    source: dict[str, Any] = field(default_factory=dict)

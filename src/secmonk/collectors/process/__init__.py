@@ -6,6 +6,8 @@ Layout (see _docs/tech/collectors/process.md):
   launch.py     shared launch classification (service / agent / gui-app / interactive / child ...)
   backend.py    backend interface + registry, filesystem-free base Inspector
   macos.py      macOS backend (ps, launchctl, launchd plists, bundles, Homebrew, codesign, quarantine)
+  linux.py      Linux backend (/proc, cgroups, systemd units, autostart, crontabs, dpkg/apk/rpm owners, snap)
+  remote.py     Linux over ssh: one fixed read-only sh script -> the same parsers (package owners resolved remotely)
   collector.py  the registered `process` collector + risk flags
 """
 

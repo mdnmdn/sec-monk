@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, index]
-updated: 2026-11-08
+updated: 2026-11-11
 verified: 2026-11-07
 related: [_meta/README.md, product/vision.md, decisions/0005-prototype-scope-nov-2026.md]
 ---
@@ -21,13 +21,13 @@ Each gap lives in exactly one file; the others link to it.
 | Plan | Platform | Open items | Purpose |
 |---|---|---|---|
 | [on-macos.md](on-macos.md) | macos | 14 | Run the macOS and Homebrew collectors on a real Mac; Electron/CEF/Sparkle, pkgutil, system_profiler, SSH to a Mac, Docker socket variants, alias growth, `brew_cpe_seed` precision; process monitor live run (launch kinds, identity, provenance, `--watch`) and the web interface. |
-| [on-linux-docker.md](on-linux-docker.md) | linux | 26 | Docker/Podman engine collector against real sockets; `docker save` (Docker >= 25) and whiteouts; zstd; rpm BDB/ndb; registry auth; live-`/` rootfs; Linuxbrew; real SSH servers (OpenSSH, sudo, busybox, ProxyJump); Linux backend of the process monitor. |
+| [on-linux-docker.md](on-linux-docker.md) | linux | 36 | Docker/Podman engine collector against real sockets; `docker save` (Docker >= 25) and whiteouts; zstd; rpm BDB/ndb; registry auth; live-`/` rootfs; Linuxbrew; real SSH servers (OpenSSH, sudo, busybox, ProxyJump); process monitor Linux backend live and over ssh (cgroup v1/v2, containers, rpm/apk, non-root vs sudo). |
 | [on-windows.md](on-windows.md) | windows | 19 | Execute the PowerShell inventory script (5.1 and 7), live `winreg`, osquery, Windows OpenSSH, Appx/winget/choco/scoop, MSRC end-to-end, vendor drift, Office; process snapshot from the script. |
 | [on-open-network.md](on-open-network.md) | open-network | 19 | Validate every blocked source (Debian tracker, EPSS, NVD, EUVD, MSRC, KEV official, OSV API, formulae.brew.sh, cvelist modes, sizes); includes the "first hour" sync script. |
 | [engine-and-quality.md](engine-and-quality.md) | any | 32 | Detection gaps, distro policy, VEX, confidence/priority calibration, test-suite gaps (property tests, golden e2e, CI matrix), performance. |
 | [next-sources.md](next-sources.md) | any (per item) | 14 + 28-row backlog | Prioritized source backlog (other Linux distributions first), reachability probes of 2026-11-07, mapping targets, effort, where to develop/validate. |
 
-Counts are the number of `- [ ]` checkboxes at `updated: 2026-11-08` (on-macos, engine-and-quality; others 2026-11-07); the backlog table in `next-sources.md` has 28 rows.
+Counts are the number of `- [ ]` checkboxes at `updated: 2026-11-11` (on-linux-docker), 2026-11-08 (on-macos, engine-and-quality), 2026-11-07 (others); the backlog table in `next-sources.md` has 28 rows.
 
 ## How to use
 

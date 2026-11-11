@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .model import (
@@ -49,11 +50,13 @@ MECHANISM_KIND = {
     "launchd-app-agent": LAUNCH_AGENT,      # macOS: plist inside an app bundle (SMAppService)
     "launchd-app-daemon": LAUNCH_SERVICE,
     "login-item": LAUNCH_LOGIN_ITEM,
-    # planned backends (see _docs/tech/collectors/process.md)
+    # Linux
     "systemd-system": LAUNCH_SERVICE,
     "systemd-user": LAUNCH_AGENT,
+    "systemd-timer": LAUNCH_SCHEDULED,      # a service started by a .timer unit
     "xdg-autostart": LAUNCH_LOGIN_ITEM,
     "cron": LAUNCH_SCHEDULED,
+    # planned backends (see _docs/tech/collectors/process.md)
     "windows-service": LAUNCH_SERVICE,
     "run-key": LAUNCH_LOGIN_ITEM,
     "startup-folder": LAUNCH_LOGIN_ITEM,
@@ -80,6 +83,15 @@ class PlatformHints:
     generic_programs: frozenset[str] = frozenset({"env", "nohup", "caffeinate", "open", "xargs", "timeout"})
     consoles: frozenset[str] = frozenset({"login", "getty", "agetty"})   # a local console session above a shell
     instance_suffix: re.Pattern[str] | None = None   # per-instance label suffix to strip before the plist lookup
+    kthread_parents: frozenset[int] = frozenset()    # children of these pids without an executable are kernel threads
+    # parents of a container's first process (a process below one of them is attributed to its container)
+    container_shims: frozenset[str] = frozenset()
+    # labels that name no launch item but say how the process started: (pattern, kind, mechanism), first match wins
+    label_kinds: tuple[tuple[re.Pattern[str], str, str], ...] = ()
+    # cgroup path -> service-manager unit the process belongs to (Linux). When known, a process is attributed to a
+    # unit's launch item by executable only if it runs inside that unit (a container's nginx is not the host's
+    # nginx.service, an sshd session process is not ssh.service)
+    cgroup_unit: Callable[[str], str | None] | None = None
 
 
 DARWIN = PlatformHints(
@@ -91,11 +103,47 @@ DARWIN = PlatformHints(
     # launchd instance jobs: com.apple.loginwindow.<UUID>, com.apple.metadata.mds.index.<UUID> (macOS 26.5)
     instance_suffix=re.compile(r"\.[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$"),
 )
+def systemd_unit(cgroup: str) -> str | None:
+    """Innermost `.service` / `.scope` / `.socket` of a cgroup path; the `systemd --user` manager itself sits in
+    `user@<uid>.service/init.scope` and belongs to `user@<uid>.service`."""
+    segs = [s for s in cgroup.split("/") if s]
+    idx = next((i for i in range(len(segs) - 1, -1, -1) if segs[i].endswith((".service", ".scope", ".socket"))),
+               None)
+    if idx is None:
+        return None
+    if segs[idx] == "init.scope" and idx > 0 and segs[idx - 1].endswith(".service"):
+        idx -= 1
+    return segs[idx]
+
+
+LINUX = PlatformHints(
+    kernel_pids=frozenset({0, 2}),                   # 2 = kthreadd
+    kthread_parents=frozenset({2}),
+    terminals=PlatformHints.terminals | frozenset({
+        "gnome-terminal-server", "kgx", "ptyxis-agent", "konsole", "xfce4-terminal", "tilix", "terminator", "foot",
+        "mate-terminal", "lxterminal", "qterminal", "urxvt", "st", "code", "tmux: server"}),
+    gui_launchers=frozenset({"gnome-shell", "plasmashell", "kwin_wayland", "kwin_x11", "xfce4-panel", "xfdesktop",
+                             "lxpanel", "mate-panel", "cinnamon", "budgie-panel"}),
+    generic_programs=PlatformHints.generic_programs | frozenset({"systemd-run", "setsid", "flock", "run-parts",
+                                                                 "ionice", "nice", "chrt", "runuser"}),
+    consoles=frozenset({"login", "getty", "agetty", "mingetty"}),
+    # template instances: getty@tty1.service -> getty@.service
+    instance_suffix=re.compile(r"(?<=@)[^@/]+(?=\.(?:service|socket|timer)$)"),
+    container_shims=frozenset({"containerd-shim", "containerd-shim-runc-v1", "containerd-shim-runc-v2",
+                               "docker-containerd-shim", "conmon", "containerd-shim-kata-v2", "lxc-start"}),
+    label_kinds=(
+        # systemd-xdg-autostart-generator: app-<desktop>-<id>@autostart.service
+        (re.compile(r"^app-.+@autostart\.service$"), LAUNCH_LOGIN_ITEM, "xdg-autostart"),
+        # apps started by the desktop (GNOME, KDE) run in their own transient scope: app-<launcher>-<id>-<n>.scope
+        (re.compile(r"^app-.+\.scope$"), LAUNCH_GUI_APP, "desktop"),
+    ),
+    cgroup_unit=systemd_unit,
+)
 GENERIC = PlatformHints()
 
 
 def hints_for(platform: str) -> PlatformHints:
-    return DARWIN if platform == "darwin" else GENERIC
+    return {"darwin": DARWIN, "linux": LINUX}.get(platform, GENERIC)
 
 
 def _base(p: ProcessRecord | None) -> str:
@@ -129,13 +177,15 @@ class LaunchClassifier:
         parent_exe = parent.exe if parent else None
         if p.pid in self.h.kernel_pids or p.pid in self.h.init_pids:
             return LaunchInfo(LAUNCH_KERNEL, mechanism="init", evidence="pid")
+        if p.ppid in self.h.kthread_parents and not p.exe:
+            return LaunchInfo(LAUNCH_KERNEL, mechanism="kernel-thread", parent_exe=parent_exe, evidence="parent")
 
         if p.label:
             info = self._from_label(p, parent_exe)
             if info:
                 return info
-        items = self.items_by_program.get(p.exe or "")
-        if items and not self._generic_program(p.exe or ""):
+        items = self._exe_items(p)
+        if items:
             it = self._pick(items, p)
             return self._from_item(it, parent_exe, "exe-match")
         return self._from_tree(p, parent)
@@ -152,6 +202,25 @@ class LaunchClassifier:
         return out
 
     # ------------------------------------------------------------------ helpers
+    def _exe_items(self, p: ProcessRecord) -> list[LaunchItem]:
+        """Launch items whose program is the executable of `p` and that can have started it."""
+        if not p.exe or self._generic_program(p.exe):
+            return []
+        return [it for it in self.items_by_program.get(p.exe, []) if self._can_have_started(it, p)]
+
+    def _strip(self, label: str) -> str:
+        return self.h.instance_suffix.sub("", label) if self.h.instance_suffix is not None else label
+
+    def _can_have_started(self, it: LaunchItem, p: ProcessRecord) -> bool:
+        if it.mechanism.startswith("systemd") and self.h.cgroup_unit is not None and p.cgroup:
+            unit = self.h.cgroup_unit(p.cgroup)
+            if unit is not None and self._strip(unit) != self._strip(it.label):
+                return False            # the process runs in another unit / session scope / container
+        if it.mechanism == "cron":
+            # a crontab line runs its program under cron: the same binary started from a shell is not that job
+            return any(_base(a) in self.h.schedulers for a in self.ancestors(p))
+        return True
+
     def _generic_program(self, exe: str) -> bool:
         """Shells, interpreters and `env` run many unrelated things: a plist whose program is `/bin/sh` must not
         claim every shell on the machine (only a pid label can attribute those)."""
@@ -197,11 +266,15 @@ class LaunchClassifier:
             return self._from_item(self._pick(items, p), parent_exe, "pid-label")
         # a label that names no plist (login-item helpers run as `<TeamID>.<bundle id>`) but an executable that is
         # a launch item's program: that item
-        if p.exe and not self._generic_program(p.exe) and p.exe in self.items_by_program:
-            return self._from_item(self._pick(self.items_by_program[p.exe], p), parent_exe, "exe-match")
+        exe_items = self._exe_items(p)
+        if exe_items:
+            return self._from_item(self._pick(exe_items, p), parent_exe, "exe-match")
         if self.h.gui_label and self.h.gui_label.match(label):
             return LaunchInfo(LAUNCH_GUI_APP, mechanism="launchservices", label=label, parent_exe=parent_exe,
                               evidence="pid-label")
+        for pattern, kind, mechanism in self.h.label_kinds:
+            if pattern.match(label):
+                return LaunchInfo(kind, mechanism=mechanism, label=label, parent_exe=parent_exe, evidence="pid-label")
         if self.h.xpc_bundle and p.exe and self.h.xpc_bundle.search(p.exe):
             return LaunchInfo(LAUNCH_XPC, mechanism="xpc", label=label, parent_exe=parent_exe, evidence="pid-label")
         # a job without a plist on disk (submitted at runtime, or a plist we could not read)
@@ -249,6 +322,12 @@ class LaunchClassifier:
             # `sh -c` spawned by a daemon, an app or an updater: not interactive, a child of whatever owns the tree
         if pbase in self.h.gui_launchers:
             return LaunchInfo(LAUNCH_GUI_APP, mechanism=pbase, parent_exe=parent_exe, evidence="parent")
+        if self.h.container_shims:
+            shim = next((a for a in chain if _base(a) in self.h.container_shims), None)
+            if shim is not None:
+                cid = (p.container or {}).get("id")
+                return LaunchInfo(LAUNCH_CHILD, mechanism="container", label=cid[:12] if cid else None,
+                                  parent_exe=parent_exe, via=shim.exe, evidence="ancestry")
         # child of another process: name the top ancestor below init (the app / service that owns the tree)
         top = parent
         for a in chain:

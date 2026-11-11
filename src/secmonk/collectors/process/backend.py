@@ -9,8 +9,8 @@ The base `Inspector` works on any snapshot without touching the filesystem: it h
 precomputed in ``snapshot.executables[path]`` (``identity``: name/version/category/purl/bundle_id/vendor_hint)
 and otherwise reports the executable as unidentified. Platform inspectors add real lookups.
 
-Adding Linux or Windows = a module with `take_snapshot` + an `Inspector` subclass, registered in `BACKENDS`
-(see _docs/tech/collectors/process.md "Porting").
+A backend = a module with `take_snapshot` + an `Inspector` subclass, registered in `BACKENDS`: macOS (`macos.py`),
+Linux (`linux.py`; remote Linux hosts over ssh in `remote.py`). See _docs/tech/collectors/process.md "Porting".
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ class Resolution:
     """Software identity of one executable."""
 
     method: str          # brew-keg | brew-cask | app-bundle | os | pkgutil | info-plist | go-binary | rust-binary
-                         # | snapshot | path-only | none
+                         # | os-package | snap | flatpak | container (Linux) | snapshot | path-only | none
     components: list[Component] = field(default_factory=list)   # primary first
     anchor: str | None = None          # bundle / keg path whose provenance applies (quarantine is on the bundle)
     notes: dict[str, Any] = field(default_factory=dict)
@@ -99,11 +99,16 @@ class Inspector:
         version = ident.get("version") if isinstance(ident.get("version"), str) else None
         cat = ident.get("category") if ident.get("category") in CATEGORIES else CAT_APPLICATION
         purl = ident.get("purl") if isinstance(ident.get("purl"), str) and purls.parse(ident["purl"]) else None
-        meta = {k: ident[k] for k in ("bundle_id", "vendor_hint", "product_hint", "file_version", "company")
+        meta = {k: ident[k] for k in ("bundle_id", "vendor_hint", "product_hint", "file_version", "company",
+                                      "source_package", "source_version", "arch", "pkg_type")
                 if isinstance(ident.get(k), str)}
         meta["evidence"] = "snapshot"
+        notes: dict[str, Any] = {}
+        if isinstance(ident.get("install_time"), str):
+            meta["install_date"] = notes["pkg_install_time"] = ident["install_time"]
+        eco = ident.get("ecosystem") if isinstance(ident.get("ecosystem"), str) else None
         return Resolution("snapshot", [Component(name=ident["name"], version=version, category=cat, purl=purl,
-                                                 source_path=exe, meta=meta)])
+                                                 ecosystem=eco, source_path=exe, meta=meta)], notes=notes)
 
     @staticmethod
     def unidentified(path: str) -> Component:
@@ -166,7 +171,16 @@ def _macos() -> Backend:
     return Backend("darwin", macos.take_snapshot, inspector)
 
 
-BACKENDS: dict[str, Callable[[], Backend]] = {"darwin": _macos}
+def _linux() -> Backend:
+    from . import linux
+
+    def inspector(snap: Snapshot, root: Path | None, opts: dict[str, Any], warnings: list[str]) -> Inspector:
+        return linux.LinuxInspector(snap, root, opts, warnings)
+
+    return Backend("linux", linux.take_snapshot, inspector)
+
+
+BACKENDS: dict[str, Callable[[], Backend]] = {"darwin": _macos, "linux": _linux}
 
 
 def backend_for(platform: str) -> Backend:

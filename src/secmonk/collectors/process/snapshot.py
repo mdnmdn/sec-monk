@@ -14,6 +14,11 @@ unknown keys are ignored, sizes are capped, and command lines are re-redacted on
                         "run_at_load": true, "keep_alive": true, "disabled": null}],
       "executables": {"/usr/local/bin/d": {"sha256": "...", "signature": {...}, "quarantine": {...}}}
     }
+
+Optional, added compatibly (Linux backend, 2026-11-11): `processes[].cgroup` (string), `processes[].container`
+({runtime, id, pod?}), `executables[path].identity` keys `source_package`, `source_version`, `arch`, `pkg_type`,
+`install_time`, `ecosystem` (distro packages resolved on the target), top-level `source` ({kind, target, transport,
+sudo, boot_id, remote_hostname}: how a remote snapshot was taken). Readers that do not know them ignore them.
 """
 
 from __future__ import annotations
@@ -74,7 +79,12 @@ _SIG = {"signed": bool, "adhoc": bool, "identifier": str, "team_id": str, "times
 _QUAR = {"raw_flags": str, "time": str, "agent": str, "event_id": str, "user_approved": bool, "on": str}
 _EVENT = {"time": str, "agent_bundle_id": str, "agent": str, "sender": str}
 _IDENT = {"name": str, "version": str, "category": str, "purl": str, "bundle_id": str, "vendor_hint": str,
-          "product_hint": str, "file_version": str, "company": str, "os": bool}
+          "product_hint": str, "file_version": str, "company": str, "os": bool,
+          # distro package owning the file, resolved on the target (Linux over ssh)
+          "source_package": str, "source_version": str, "arch": str, "pkg_type": str, "install_time": str,
+          "ecosystem": str}
+_CONTAINER = {"runtime": str, "id": str, "pod": str}
+_SOURCE = {"kind": str, "target": str, "transport": str, "sudo": bool, "boot_id": str, "remote_hostname": str}
 _TOP = {"exists": bool, "size": int, "mtime": str, "created": str, "owner_uid": int, "world_writable": bool,
         "sha256": str}
 
@@ -135,7 +145,9 @@ def from_dict(d: dict[str, Any]) -> Snapshot:
         procs.append(ProcessRecord(
             pid=p["pid"], ppid=_int(p.get("ppid")) or 0, exe=_str(p.get("exe")), uid=_int(p.get("uid")),
             user=_str(p.get("user")), started=_str(p.get("started")), args=_args(p.get("args")),
-            name=_str(p.get("name")), label=_str(p.get("label"))))
+            name=_str(p.get("name")), label=_str(p.get("label")),
+            cgroup=_str(p.get("cgroup"))[:4096] if _str(p.get("cgroup")) else None,
+            container=_container(p.get("container"))))
     items: list[LaunchItem] = []
     for i in d.get("launch_items") or []:
         if not isinstance(i, dict) or not _str(i.get("label")) or not _str(i.get("mechanism")):
@@ -152,7 +164,13 @@ def from_dict(d: dict[str, Any]) -> Snapshot:
         os=d["os"] if isinstance(d.get("os"), dict) else {},
         executables={k: clean_facts(v) for k, v in list(exes.items())[:MAX_PROCESSES]
                      if isinstance(k, str) and isinstance(v, dict)},
-        warnings=[w for w in d.get("warnings") or [] if isinstance(w, str)])
+        warnings=[w for w in d.get("warnings") or [] if isinstance(w, str)],
+        source=_scalars(d.get("source"), _SOURCE))
+
+
+def _container(v: Any) -> dict[str, str] | None:
+    c = _scalars(v, _CONTAINER)
+    return c if c.get("runtime") else None
 
 
 def load(path: str | Path) -> Snapshot:
