@@ -16,6 +16,11 @@ related: [decisions/0010-source-staging-adapter.md, tech/source-kev.md, tech/con
 > Status note 2026-11-11: epss is the second native importer. It never deletes rows, so it reads only `applied` and
 > `count_rows`; `MirrorView` is unchanged. `row_keys` measured at about 226 MiB for 400k keys ([source-epss](../tech/source-epss.md)).
 
+> Status note 2026-11-11: [rust ADR-0012](0012-native-importer-row-reads-and-registry.md) extends this decision for
+> euvd, msrc and debian-tracker: `MirrorView` gains `rows_by_id` and `rows_page`, native operations become an async
+> stream, and `NATIVE_SOURCES` / `DEFAULT_RUST_SOURCES` are replaced by the `secmonk_sources::IMPORTERS` table (§1, §6
+> here name the old constants).
+
 ## Context
 
 [rust ADR-0010](0010-source-staging-adapter.md) gives every source the same contract: `source.sync` streams

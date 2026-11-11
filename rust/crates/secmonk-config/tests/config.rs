@@ -325,12 +325,12 @@ fn source_implementations_default_and_override() {
         resolve(raw, ConfigOrigin::Flag, None, &opts(d.path()))
     };
     let c = load("config_version = 1\n").unwrap();
-    assert_eq!(c.source_impl("kev"), SourceImpl::Rust); // DEFAULT_RUST_SOURCES
-    assert_eq!(c.source_impl("epss"), SourceImpl::Rust);
-    assert_eq!(c.source_impl("osv"), SourceImpl::Python);
+    // unset: the default the caller passes (the importer's `default_rust`, secmonk_sources::IMPORTERS)
+    assert_eq!(c.source_impl("kev", SourceImpl::Rust), SourceImpl::Rust);
+    assert_eq!(c.source_impl("osv", SourceImpl::Python), SourceImpl::Python);
     let c = load("[sources.implementation]\nkev = \"python\"\nosv = \"rust\"\n").unwrap();
-    assert_eq!(c.source_impl("kev"), SourceImpl::Python);
-    assert_eq!(c.source_impl("osv"), SourceImpl::Rust); // the host refuses it: no Rust osv
+    assert_eq!(c.source_impl("kev", SourceImpl::Rust), SourceImpl::Python);
+    assert_eq!(c.source_impl("osv", SourceImpl::Python), SourceImpl::Rust); // the host refuses it: no Rust osv
     assert!(parse("[sources.implementation]\nkev = \"go\"\n", &p).is_err());
     assert!(parse("[sources]\nimplementations = {}\n", &p).is_err());
     assert!(load("[sources.implementation]\n\"Bad Name\" = \"rust\"\n").is_err());

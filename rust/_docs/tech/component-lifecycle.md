@@ -1,15 +1,15 @@
 ---
 title: Standard process — build a component in Python first, port it to Rust later
-summary: "The repeatable process for every new probe, source, engine step or tool: freeze the contract, write a Python module, conformance and golden tests, manifest and install, done, then the Rust port; fs example."
-read_when: you build a new collector, source, engine step or tool, or port an existing Python module to Rust
+summary: "The process for every new probe, source, engine step or tool: contract, Python module, conformance and golden tests, manifest, done, then the Rust port; fs example; native importer checklist and shared API."
+read_when: you build a new collector, source, engine step or tool, port an existing Python module to Rust, or port a vulnerability source to a native importer (files to add, registration line, differential test template)
 type: tech
 context: tech
 status: implemented
 tags: [process, modules, python, rust, testing, contracts]
 updated: 2026-11-11
 verified: 2026-11-11
-code: [rust/python/src/secmonk_modules/, rust/python/scripts/, rust/python/modules/]
-related: [tech/contracts.md, tech/architecture.md, decisions/0002-rust-core-python-modules.md, decisions/0003-module-protocol-json-framed.md]
+code: [rust/python/src/secmonk_modules/, rust/python/scripts/, rust/python/modules/, rust/crates/secmonk-sources/src/, rust/crates/secmonk-engine/tests/common/mod.rs, rust/crates/secmonk-sources/tests/common/mod.rs]
+related: [tech/contracts.md, tech/architecture.md, decisions/0002-rust-core-python-modules.md, decisions/0003-module-protocol-json-framed.md, decisions/0012-native-importer-row-reads-and-registry.md, tech/source-euvd.md]
 ---
 
 # Standard process: Python first, Rust later
@@ -151,9 +151,61 @@ rust/golden/                         <method>/<case>.params.json + .out.json, no
 - [ ] Rust manifest (`runtime = "rust"`, `rust.crate`, `rust.factory`); the registry picks it over the Python one when
       both provide the same name and the config enables it. The choice between the two is a per-component
       selection key in `sec-monk.toml`; for sources it is `[sources.implementation]` (`kev = "rust"` or `"python"`).
-      Worked example: `kev`, see [source-kev](source-kev.md) and [ADR-0011](../decisions/0011-native-sources.md).
+      Worked example: `kev`, see [source-kev](source-kev.md) and [ADR-0011](../decisions/0011-native-sources.md); for
+      a source, follow [Porting a source to a native importer](#porting-a-source-to-a-native-importer).
 - [ ] Keep the Python module as the test reference for one release, then retire it, or keep it as the fallback for a
       platform without a Rust build. Never two production bindings longer than that.
+
+## Porting a source to a native importer
+
+Stage 6 for a vulnerability source ([rust ADR-0011](../decisions/0011-native-sources.md),
+[ADR-0012](../decisions/0012-native-importer-row-reads-and-registry.md)). Worked examples: kev (snapshot with deletes),
+epss (upserts only), euvd (records with children replaced against stored rows), msrc (rows of one of several input
+documents, two passes), debian-tracker (a whole table compared page by page, a streamed download). Every item below is a new file except
+the two marked **append**, so importers are ported in parallel without editing the same lines.
+
+| # | What | Where |
+|---|---|---|
+| 1 | The importer: `pub const NAME`, `pub const IMPORTER: crate::Importer { name: NAME, default_rust: false, new: \|view\| Arc::new(XSource::new(view)) }`, a struct implementing `Source` (`native() = true`, `ack` a no-op, `export` = `native::export_refused`), `run` = `native::limit` + load + `Outcome` + `native::first_seq` + `native::stream`. Unit tests of its parsers in the same file. | new `rust/crates/secmonk-sources/src/<module>.rs` (module = the source name with `-` as `_`) |
+| 2 | Registration: one line `<module>,` in the `importers!` list, alphabetical | **append** in `rust/crates/secmonk-sources/src/lib.rs` |
+| 3 | Importer tests over `common::MemView` (in-memory view that applies batches and pages by rowid like the store) and `common::serve_logged` / `serve_headers` (local HTTP server; `serve_headers` adds headers such as a redirect's `Location`): rows of the fixture, a second run, changes, limit, every error message, caps, the API request lines | new `rust/crates/secmonk-sources/tests/<module>.rs` (`mod common;`) |
+| 4 | Differential test against `py-sources` on the `Diff` harness: `py`, `rs`, `switch` mirrors; first sync, no-op, update, limit, guard / errors with Python's wording (`check_entries` + `assert_mirrors_equal`), the switch to the native importer (log `<source>: native importer: applied state of generation`) and back (failed run: `not applied`; ok run: repair, `assert_mirror_equals_staging`); a mirror with another history compares only its own rows (`assert_source_rows_equal`); then `check_row_contract` with deletes among the cases. Run with `SECMONK_REQUIRE_VENV=1`. | new `rust/crates/secmonk-engine/tests/native_<module>.rs` (`mod common; use common::*;`) |
+| 5 | Default: `default_rust: true` in the importer's own `IMPORTER` only once item 4 is green | the file of item 1 |
+| 6 | Doc: selection, one sync (step table), caps with their messages and the worst-case memory, diff strategy (which `MirrorView` reads, how deletes are keyed), differences from Python (table), tests (table), fixtures | new `rust/_docs/tech/source-<name>.md` (copy the layout of [source-euvd](source-euvd.md)) |
+| 7 | INDEX row, plan and README items | report them to the coordinator (not edited by porting agents) |
+
+Rules for the importer:
+
+- **Shared code first** (the API below): an importer does not keep its own copy of a download, a decoder, a guard or a
+  Python rule that a shared module has.
+- **Read**: only through `MirrorView` (`count_rows`, `row_keys` for small keyed tables, `rows_by_id` per chunk of at
+  most 500 records, `rows_page` to compare a whole table); never a database handle.
+- **Write**: the same mirror rows as `py-sources` leaves, as row operations: helpers in `secmonk_sources::rows`
+  (`raw_record`, `vulnerability`, `affected`, `alias_set`, `replace_aliases`, `replace_affected`); Python semantics in
+  `secmonk_sources::py`. Shared modules (`native`, `rows`, `py`, `feed`, `decode`, `batch`) are not changed during a
+  parallel port: a rule only one source needs stays in its file; report a needed shared change instead.
+- **Check before writing**: whatever makes the Python source fail inside its transaction fails the native run before
+  the first operation (status `error`, only the `source_sync` row).
+- **Untrusted input**: caps on download, decompressed and file size, lines or records, bytes per record, and the memory
+  this bounds, stated in the doc; `--path` through `feed::read_bytes` / `open_regular` (a regular file only); URLs and
+  messages through `feed::scrub` / `strip_url_secrets`; Python's exception wording (`py::`, `feed::os_error`) where the
+  differential test compares messages, differences listed otherwise.
+- **Wording**: plain technical text in messages, logs, docs and comments: `<source>: native importer: <operation>`;
+  no figurative phrases.
+
+Shared API of `secmonk-sources` (`rust/crates/secmonk-sources/src/`):
+
+| Module | What an importer uses |
+|---|---|
+| `native` (crate-private) | `limit`, `check_name`, `export_refused`, `first_seq`; `Outcome { status, records, total, cursor, message, ops }` (`records` = the end entry's records, `total` = `source_sync.records` when it differs, as msrc's `SyncResult.total`), `Outcome::error`, `iter_ops`, `stream`; `snapshot_guard(old, new, full)` (the text without prefix: the importer adds `<source>: `); `internal(source, msg)` (`<source>: native importer: <msg>`, an internal `WireError`); `Progress::new(ctx).line(..)` (job log lines, scrubbed) |
+| `feed` | `Get { url, max_bytes, allow_http, timeout, accept, too_large, same_origin_redirects }`; `get(&Get) -> (bytes, Validators { etag, last_modified })`; `get_streamed(&Get, parse)` (the body parsed on the blocking pool while it arrives, through a `BodyReader` fed by a bounded channel of 16 chunks; cap, scrubbed errors and an early parser stop handled there); `download`, `download_json`; `origin`, `same_origin`; `read_bytes`, `read_json`, `open_regular` (`FileError`); `exists_like_python` (`Path.exists()`, Windows codes included), `rglob` (`Path.rglob` with entry and file caps, `TooMany`); `os_error`, `py_exception`, `py_path`, `py_repr`; `json_error(&e, own_prefixes)`; `scrub`, `parse` |
+| `decode` | `open_decoded(reader, cap, &Messages { source, too_large, too_large_gzip }) -> Decoded`: compression from the magic bytes (gzip, plain; bzip2 and xz refused), the cap, a leading BOM skipped; `Decoded` is a `Read` with `take_error` (the first I/O error's text, a cap or a download failure, instead of the parser's), `message(&e)`, `sha256()` (of the decompressed bytes, BOM included); `sniff`, `hex`, `msg_error` / `io_message` |
+| `py` | `strip`, `split_ws`, `is_space`, `float_str`, `truthy`, `type_name`, `float_repr`, `repr`, `repr_str` / `repr_str_into` (with `is_printable`), `str_of`, `iter_items` (a lazy `for x in (v or [])`), `no_attr(type, attr)`, `utf8_error` / `decode_utf8` |
+| `rows` | `raw_record`, `vulnerability`, `affected`, `alias_set`, `replace_aliases`, `replace_affected` (`DeleteKey::Row` / `Record`), `group_by`, `norm_vendor_product`, `severity_from_score`, `normalize_severity` |
+| `batch` | `Limits`, `Cutter`, `cut` (used through `native::stream`) |
+
+Kept in an importer on purpose: epss's gzip reading (gzip chosen by file name, its own messages), its `finite_float`
+(`float_str` without infinities), msrc's two-pass state, debian-tracker's compact rows.
 
 ## Worked example: the `fs` collector
 

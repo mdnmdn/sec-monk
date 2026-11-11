@@ -9,7 +9,7 @@ tags: [engine, jobs, sync, scan, rust]
 updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-engine/src/, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/]
-related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md]
+related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
 
 # Engine service
@@ -53,7 +53,7 @@ What `SecmonkEngine` does behind the 22 `EngineService` methods (`secmonk-engine
 | `payload.rs` | `ops.scan_result`, `sync_status`, `stored_result`, `reports.job_payload`, `job_summary` | job payloads and stored results (findings capped at 500 per target) |
 | `scan.rs` | `ops.scan_items`, `scan_target`, `_reuse_image` | expand -> reuse rule or collect -> classify -> sanitize -> save -> match ([architecture §7](architecture.md#7-data-flow-of-a-scan-job)) |
 | `sync.rs` | `JobRunner._sync`, `ops.sync_source` | per source: `Source.sync` stream -> `MirrorStore.apply_rows` per batch -> `Source.ack(last seq)` after the stream ends -> one entry, or the **export repair** (below); a **native** source takes `sync_native` (below); then `checkpoint` |
-| `view.rs` | (new) | `StoreMirrorView`: the read-only `MirrorView` of native importers over `MirrorStore` (`applied_state`, `count_rows`, `row_keys`) |
+| `view.rs` | (new) | `StoreMirrorView`: the read-only `MirrorView` of native importers over `MirrorStore` (`applied_state`, `count_rows`, `row_keys`, `rows_by_id`, `rows_page`; id and page limits checked) |
 | `opts.rs` | `parse_opts`, `_str_list`, `_opt_str` | option and body helpers |
 | `service.rs`, `params.rs`, `error.rs`, `deps.rs` | `web/data.py` params, `ApiError` | the `EngineService` trait (22 methods), typed query params, `EngineError` / `ErrorKind` with the wire code and `reason`, `EngineDeps` / `EngineConfig` |
 | `skeleton.rs` | (new) | `SkeletonEngine`: the wave-2 stand-in (`no-db` reads, 501 `not-implemented`), kept for the API's HTTP tests and the gate's tests; the `Gate` takes only `FEATURES` and `current_platform` from it. The real engine never answers 501 |
@@ -115,9 +115,11 @@ the payloads the engine builds (meta, sources, collectors, jobs, match result) a
 venv's `jsonschema` (skipped without `rust/python/.venv`). `tests/real_modules.rs` starts the real `py-sources` and
 `py-engine` from `rust/python/.venv` (skipped without it): a `kev` sync from the repo fixture applied and
 acknowledged, a second sync, `sources` read by py-engine, a persisted match written by the host; the repair scenarios of
-W4.4; `native_kev_matches_py_sources` and `native_epss_matches_py_sources`, the differential tests of the native
-sources against `py-sources` ([source-kev](source-kev.md#tests), [source-epss](source-epss.md#tests); both on the
-`Diff` harness of that file); and the ignored `epss_volume_*` measurements ([source-epss](source-epss.md#volume-measured)).
+W4.4. The differential tests of the native importers against `py-sources` are one file each,
+`tests/native_<source>.rs` (`native_kev.rs`, `native_epss.rs` with the ignored `epss_volume_*` measurements,
+`native_euvd.rs` with its row-contract check; [source-kev](source-kev.md#tests), [source-epss](source-epss.md#tests),
+[source-euvd](source-euvd.md#tests)), on the shared harness `tests/common/` (`Diff`, mirror comparisons,
+`check_row_contract`).
 `tests/engine.rs` `native_kev_*`, `native_epss_*` and
 `a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back` drive the native sources over the
 real store without Python. The venv-gated tests skip without `rust/python/.venv`; with `SECMONK_REQUIRE_VENV=1` in the

@@ -196,6 +196,49 @@ pub trait MirrorView: Send + Sync {
     /// Primary keys (column -> value) of the rows of `table` whose `source` column is `source`. Tables with a natural
     /// key only (not `affected`).
     async fn row_keys(&self, table: MirrorTable, source: &str) -> StepResult<Vec<JsonMap>>;
+
+    /// The rows of `table` whose `source` column is `source` and whose id column ([`MirrorTable::id_column`]) is one
+    /// of `ids` (at most [`MAX_VIEW_IDS`]; more is `invalid-params`), in storage order (rust ADR-0012). Each row has
+    /// every column of the table's upsert row (not `affected.rowid_`): text as strings, numbers as numbers, JSON
+    /// columns parsed. Given back unchanged as an `affected` delete key, a row deletes one row equal to it.
+    /// `source_sync` has no id column: `invalid-params`.
+    async fn rows_by_id(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        ids: &[String],
+    ) -> StepResult<Vec<JsonMap>>;
+
+    /// One page of the rows of `table` whose `source` column is `source`, in storage order, after the cursor
+    /// `after` (`None`: from the start), at most `limit` rows (1..=[`MAX_VIEW_PAGE`]); rows as in
+    /// [`MirrorView::rows_by_id`]. [`RowPage::next`] is the cursor of the following page, `None` after the last one.
+    /// A cursor is valid within one sync only (jobs are serialized; the rows do not change between pages unless the
+    /// source's own batches change them). Pages follow storage order, not a snapshot: a row inserted while paging
+    /// (by the source's own batches applied in between) gets a higher position and can appear in a later page, also an
+    /// `affected` row that was deleted and inserted again (it gets a new position); a deleted row not yet reached does
+    /// not appear. An importer that pages while its batches are applied must skip the rows it wrote itself.
+    async fn rows_page(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        after: Option<u64>,
+        limit: usize,
+    ) -> StepResult<RowPage>;
+}
+
+/// Most ids per [`MirrorView::rows_by_id`] call.
+pub const MAX_VIEW_IDS: usize = 500;
+
+/// Most rows per [`MirrorView::rows_page`] call.
+pub const MAX_VIEW_PAGE: usize = 5_000;
+
+/// One page of [`MirrorView::rows_page`].
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct RowPage {
+    /// The rows of this page.
+    pub rows: Vec<JsonMap>,
+    /// The cursor of the next page; `None` when this page is the last.
+    pub next: Option<u64>,
 }
 
 /// `engine.classify`: identity (CPE, vendor, product, ecosystem) for unclassified components.

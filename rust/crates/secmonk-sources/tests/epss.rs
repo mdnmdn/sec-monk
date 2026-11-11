@@ -49,6 +49,18 @@ impl MirrorView for FakeView {
     async fn row_keys(&self, _: MirrorTable, _: &str) -> StepResult<Vec<JsonMap>> {
         panic!("epss never deletes, so it never reads the stored keys")
     }
+    async fn rows_by_id(&self, _: MirrorTable, _: &str, _: &[String]) -> StepResult<Vec<JsonMap>> {
+        panic!("epss never reads stored rows")
+    }
+    async fn rows_page(
+        &self,
+        _: MirrorTable,
+        _: &str,
+        _: Option<u64>,
+        _: usize,
+    ) -> StepResult<secmonk_traits::RowPage> {
+        panic!("epss never reads stored rows")
+    }
 }
 
 fn src(v: FakeView) -> EpssSource {

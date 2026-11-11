@@ -61,12 +61,10 @@ pub(crate) fn native_sources(
     use secmonk_config::{ConfigError, SourceImpl};
     for (name, imp) in &config.source_impls {
         let problem = match imp {
-            SourceImpl::Rust if !secmonk_sources::NATIVE_SOURCES.contains(&name.as_str()) => {
-                Some(format!(
-                    "sources.implementation.{name} = \"rust\": there is no Rust implementation of {name} (Rust: {})",
-                    secmonk_sources::NATIVE_SOURCES.join(", ")
-                ))
-            }
+            SourceImpl::Rust if secmonk_sources::importer(name).is_none() => Some(format!(
+                "sources.implementation.{name} = \"rust\": there is no Rust implementation of {name} (Rust: {})",
+                secmonk_sources::native_names().join(", ")
+            )),
             SourceImpl::Python if !python_served.contains(name) => Some(format!(
                 "sources.implementation.{name} = \"python\": no enabled module serves {name} (Python: {})",
                 if python_served.is_empty() {
@@ -84,12 +82,15 @@ pub(crate) fn native_sources(
     let view: Arc<dyn secmonk_traits::MirrorView> =
         Arc::new(StoreMirrorView::new(Arc::new(store.clone())));
     let mut out = Vec::new();
-    for name in secmonk_sources::NATIVE_SOURCES {
-        if config.source_impl(name) == SourceImpl::Rust
-            && let Some(src) = secmonk_sources::native_source(name, view.clone())
-        {
-            tracing::info!(source = name, "source implementation: rust (native)");
-            out.push(src);
+    for imp in secmonk_sources::IMPORTERS {
+        let default = if imp.default_rust {
+            SourceImpl::Rust
+        } else {
+            SourceImpl::Python
+        };
+        if config.source_impl(imp.name, default) == SourceImpl::Rust {
+            tracing::info!(source = imp.name, "source implementation: rust (native)");
+            out.push((imp.new)(view.clone()));
         }
     }
     Ok(out)
@@ -207,22 +208,38 @@ mod tests {
         let names = |v: &[Arc<dyn Source>]| -> Vec<String> {
             v.iter().flat_map(|s| s.sources()).map(|i| i.name).collect()
         };
-        // default: epss and kev are native
-        let served: Vec<String> = ["epss", "kev", "osv"]
+        // default: the importers with `default_rust` (secmonk_sources::IMPORTERS), in that order
+        let mut served: Vec<String> = secmonk_sources::native_names()
             .iter()
             .map(|n| (*n).to_owned())
             .collect();
+        served.push("osv".into());
+        let defaults: Vec<&str> = secmonk_sources::IMPORTERS
+            .iter()
+            .filter(|i| i.default_rust)
+            .map(|i| i.name)
+            .collect();
+        assert!(defaults.contains(&"kev") && defaults.contains(&"epss"));
         let native = native_sources(&config_with(d.path(), ""), &store, &served).unwrap();
-        assert_eq!(names(&native), vec!["epss", "kev"]);
+        assert_eq!(names(&native), defaults);
         assert!(native.iter().all(|s| s.native()));
-        // python: nothing native (py-sources serves both)
-        let c = config_with(
-            d.path(),
-            "[sources.implementation]\nkev = \"python\"\nepss = \"python\"\n",
-        );
+        // python for every importer: nothing native (py-sources serves them)
+        let all_python: String = secmonk_sources::native_names()
+            .iter()
+            .map(|n| format!("\"{n}\" = \"python\"\n"))
+            .collect();
+        let c = config_with(d.path(), &format!("[sources.implementation]\n{all_python}"));
         assert!(native_sources(&c, &store, &served).unwrap().is_empty());
         // one of them only
-        let only_kev = config_with(d.path(), "[sources.implementation]\nepss = \"python\"\n");
+        let only_kev: String = secmonk_sources::native_names()
+            .iter()
+            .filter(|n| **n != "kev")
+            .map(|n| format!("\"{n}\" = \"python\"\n"))
+            .collect();
+        let only_kev = config_with(
+            d.path(),
+            &format!("[sources.implementation]\nkev = \"rust\"\n{only_kev}"),
+        );
         assert_eq!(
             names(&native_sources(&only_kev, &store, &served).unwrap()),
             vec!["kev"]

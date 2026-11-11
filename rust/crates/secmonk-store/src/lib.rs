@@ -29,6 +29,12 @@ pub use sqlite::{SqliteStore, StoreOptions};
 /// `_sqlx_migrations` table is the source of truth).
 pub const SCHEMA_VERSION: i64 = 3;
 
+/// Most ids per [`MirrorStore::rows_by_id`] call (`secmonk_traits::MAX_VIEW_IDS`).
+pub const MAX_ROWS_IDS: usize = 500;
+
+/// Most rows per [`MirrorStore::rows_page`] call (`secmonk_traits::MAX_VIEW_PAGE`).
+pub const MAX_ROWS_PAGE: usize = 5_000;
+
 /// Store errors.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -247,6 +253,32 @@ pub trait MirrorStore: Send + Sync {
         table: MirrorTable,
         source: &str,
     ) -> StoreResult<Vec<Map<String, Value>>>;
+
+    /// The rows of `table` whose `source` column is `source` and whose id column (`MirrorTable::id_column`) is one of
+    /// `ids` (at most [`MAX_ROWS_IDS`]), in storage order: every writable column (`mirror_schema::spec`), text as
+    /// strings, integers and reals as numbers, JSON columns parsed. `source_sync` (no id column) and too many ids are
+    /// `Invalid`. Native sources read the stored rows of the records they rewrite through it (rust ADR-0012).
+    async fn rows_by_id(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        ids: &[String],
+    ) -> StoreResult<Vec<Map<String, Value>>>;
+
+    /// One page of the rows of `table` whose `source` column is `source`, in rowid order after the rowid `after`
+    /// (`None`: from the start), at most `limit` (1..=[`MAX_ROWS_PAGE`]) rows as in [`MirrorStore::rows_by_id`];
+    /// returns the rows and the rowid to continue after (`None` when fewer than `limit` rows were left). Native
+    /// sources that replace a whole source compare the stored rows page by page through it (rust ADR-0012). Each
+    /// page is a range scan of the rowid after the cursor (no sort of the source's rows), so all pages together read
+    /// each row once. Not a snapshot: rows inserted between pages (also deleted and re-inserted `affected` rows) get
+    /// higher rowids and appear in later pages.
+    async fn rows_page(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        after: Option<u64>,
+        limit: usize,
+    ) -> StoreResult<(Vec<Map<String, Value>>, Option<u64>)>;
 
     /// Whether any row was ever written.
     async fn is_initialized(&self) -> StoreResult<bool>;

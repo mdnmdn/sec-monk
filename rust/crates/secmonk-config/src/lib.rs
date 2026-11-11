@@ -265,9 +265,6 @@ pub enum SourceImpl {
     Python,
 }
 
-/// Sources whose default implementation is `rust` (their differential test against `py-sources` is green).
-pub const DEFAULT_RUST_SOURCES: [&str; 2] = ["epss", "kev"];
-
 /// `[log]`.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -551,16 +548,11 @@ impl Config {
         Layout::new(&self.data_dir)
     }
 
-    /// The implementation chosen for `source`: the `[sources.implementation]` entry, else `rust` for
-    /// [`DEFAULT_RUST_SOURCES`], else `python`. Whether a Rust implementation exists is the host's check.
-    pub fn source_impl(&self, source: &str) -> SourceImpl {
-        self.source_impls.get(source).copied().unwrap_or(
-            if DEFAULT_RUST_SOURCES.contains(&source) {
-                SourceImpl::Rust
-            } else {
-                SourceImpl::Python
-            },
-        )
+    /// The implementation chosen for `source`: the `[sources.implementation]` entry, else `default`. The default of
+    /// a source with a native importer is that importer's `default_rust` (`secmonk_sources::IMPORTERS`, rust
+    /// ADR-0012), `python` otherwise; whether a Rust implementation exists is the host's check.
+    pub fn source_impl(&self, source: &str, default: SourceImpl) -> SourceImpl {
+        self.source_impls.get(source).copied().unwrap_or(default)
     }
 
     /// File path of a `sqlite://` URL (`None` for other schemes).

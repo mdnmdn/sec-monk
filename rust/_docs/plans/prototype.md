@@ -79,9 +79,16 @@ Assumptions (cheap to reverse, confirm or correct):
 | W7.1 | App icon from `rust/assets/logo-orange.png` (transparent corners, Tauri icon set, tauri.conf.json, regeneration script, desktop-app note) | icon agent | done: cargo tauri icon via scripts/make_icons.py, master assets/app-icon.png (corner radius ~253 px, transparent), bundle.icon set, .app bundles with icon.icns; Dock/taskbar look not observed |
 | W7.2 | Logo in the shared web UI (brand mark + favicon) for both the Python and the Rust app | ui agent | done: committed 84d2892 (img/logo-64.png, favicon-32.png, CSS brand mark); not observed in a browser here |
 | W6.6 | Plain technical wording in native importer messages and docs (user decision) | kev agent | done (in 3c64c75) |
-| W8.1 | Native epss importer (R1 step 2): diff strategy for ~400k rows, gzip caps, EUVD coexistence, differential test, measured apply time | epss agent | in review: epss native by default; 400k rows 5.3 s native vs 16-18 s py-sources (M2); no new crate; differential + contract tests green; review fixes W8.3 done; awaiting commit approval |
+| W8.1 | Native epss importer (R1 step 2): diff strategy for ~400k rows, gzip caps, EUVD coexistence, differential test, measured apply time | epss agent | in review: epss native by default; 400k rows 5.3 s native vs 16-18 s py-sources (M2); no new crate; differential + contract tests green; done: committed f1db0af |
 | W8.2 | Independent read-only review of W8.1 | reviewer | done: 0 high, 1 medium (M1 parser memory unbounded on repeated date lines / long CVE fields), 5 low (Unicode digits, limit vs row cap, wording, seconds doc, line width) |
 | W8.3 | Fix W8.2 findings | epss agent | done: M1 (rows 48 B, dates inline, CVE-bytes cap 64 MiB, worst case ~250 MiB), L1 Unicode digits as Python, L2 documented, L3-L5 fixed |
+| W9.1 | Shared groundwork for full-row sources (MirrorView extension, rust ADR-0012, per-source test files, registration by new files, porting checklist) + native euvd | euvd agent | done (committed with W9.6) |
+| W9.2a | Native msrc | msrc agent | done (committed with W9.6) |
+| W9.2b | Native debian-tracker | debian agent | done (committed with W9.6) |
+| W9.5 | Independent review of msrc + debian-tracker, list of local copies to move into shared modules | reviewer | done: 0 high, 2 medium (msrc per-character Value expansion ~3 GiB; non-list Vulnerability parsed whole), lows (redirects, Windows errno, doc memory, wording); flaky debian first sync not reproduced (likely hello timeout under load) |
+| W9.6 | Fix W9.5 findings + move local copies into shared modules (feed get/get_streamed/decode, native Outcome.total/guard, py helpers) + MemView rowid paging | consolidation agent | done: M1/M2 + lows fixed, local copies moved to feed/decode/native/py, MemView rowid paging (euvd test 12 s -> 0.47 s), hello_timeout_s 120 in tests |
+| W9.3 | Independent read-only review of W9.1 (groundwork + euvd) | reviewer | done: 0 high, 2 medium (M1 rows_page temp B-tree sort -> quadratic paging; M2 euvd memory bound incomplete), 7 low |
+| W9.4 | Fix W9.3 findings except L4 (MemView, frozen until ports end) | euvd agent | done: M1 rowid-range paging + EXPLAIN test, M2 hashed ids + stored-row caps + worst case 0.85 GiB (estimate), L1-L3, L5, L6; store/sources/engine 109 passed; workspace clippy blocked by in-progress debian_tracker.rs |
 
 ## Log
 
@@ -127,3 +134,9 @@ Assumptions (cheap to reverse, confirm or correct):
 - 2026-11-11 W8.1 reported done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 234 passed 0 failed 5 ignored (4 volume measurements + network). W8.2 review dispatched; INDEX/roadmap/backlog/README/ADR-0011 note updated.
 - 2026-11-11 W8.2 review done; findings routed to the epss agent (W8.3).
 - 2026-11-11 W8.3 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 235 passed 0 failed 5 ignored; rust/_docs lint only L12; wording grep clean (ADR-0010 "win over" reworded).
+- 2026-11-11 epss committed (f1db0af, no attribution trailer per user). W9.1 dispatched: msrc/debian-tracker write affected/vulnerability/distro_triage and need deletes computed from full rows, so the shared MirrorView contract is settled first; W9.2 runs in parallel after it.
+- 2026-11-11 W9.1 reported done; coordinator verified fmt/clippy/tests (250/0/5); ADR-0012 set back to proposed (needs user acceptance). W9.2a, W9.2b, W9.3 dispatched (3 agents). Shared modules frozen during W9.2; review fixes to shared code after the ports.
+- 2026-11-11 W9.3 done; W9.4 dispatched with a scope that avoids the shared modules being used by W9.2a/b; debian agent warned about MemView paging (L4).
+- 2026-11-11 W9.2a done. Found: the Python feature doc vuln-sync.md says msrc is not in `sync all`, the Python code includes it; native msrc keeps the code's behaviour.
+- 2026-11-11 W9.2b done. Coordinator verified the workspace: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 288 passed 0 failed 8 ignored (4.6 min). debian-tracker is also in Python `sync all` (doc says otherwise; asked user). W9.5 review dispatched.
+- 2026-11-11 W9.6 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 295 passed 0 failed 8 ignored; figurative words reworded in tech docs (older code comments with "wins" left as is). Committing euvd, msrc, debian-tracker and the shared importer code.

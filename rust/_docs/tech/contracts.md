@@ -10,7 +10,7 @@ updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-proto/src/, rust/crates/secmonk-modhost/src/, rust/python/src/secmonk_modules/wire.py]
 fixtures: rust/contracts/examples/
-related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/component-lifecycle.md, decisions/0003-module-protocol-json-framed.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, decisions/0011-native-sources.md, tech/source-kev.md, tech/source-epss.md]
+related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/component-lifecycle.md, decisions/0003-module-protocol-json-framed.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, decisions/0011-native-sources.md, tech/source-kev.md, tech/source-epss.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
 
 # Contracts
@@ -195,7 +195,7 @@ row operations** (`secmonk-mirror-rows/1`, `source/rows.schema.json`) and ends w
 
 Tables are the mirror tables only (`source_sync`, `raw_record`, `vulnerability`, `alias`, `affected`, `kev`, `epss`,
 `distro_triage`); columns are the v2 columns; JSON columns (`extra`, `events`, `versions`, `cwes`, `raw_record.data`)
-travel as JSON values. Anything else (inventory, findings, jobs, an unknown column) is refused with `invalid-params`
+are sent as JSON values. Anything else (inventory, findings, jobs, an unknown column) is refused with `invalid-params`
 and the sync fails. Each batch has a `seq`; after `end` the host calls `source.ack {source, through_seq}`.
 `source.export {source}` streams every staging row of a source, to rebuild the mirror.
 
@@ -227,9 +227,12 @@ raised from the source's progress callback. The staging directory comes from `se
 `{data_dir}/modules/py-sources`), else `$SECMONK_MODULE_DIR`, else under `$SECMONK_HOME`. Decision and alternatives: [rust ADR-0010](../decisions/0010-source-staging-adapter.md).
 
 **Native importers (no staging).** A source implemented in Rust (`secmonk-sources`; `kev`, [source-kev](source-kev.md); `epss`,
-[source-epss](source-epss.md)) emits the same batches in-process, computed against the mirror through a read-only
-`MirrorView` (`applied`, `count_rows`, `row_keys`): deletes for stored keys that left its snapshot (kev; epss never
-deletes, as its Python source), upserts, the `source_sync` row last. Its
+[source-epss](source-epss.md); `euvd`, [source-euvd](source-euvd.md)) emits the same batches in-process, computed against
+the mirror through a read-only `MirrorView` (`applied`, `count_rows`, `row_keys`, and per record or by page the stored
+rows, `rows_by_id` / `rows_page`, [rust ADR-0012](../decisions/0012-native-importer-row-reads-and-registry.md)): deletes
+for stored keys that left its snapshot (kev; epss never deletes, as its Python source), the children of a record
+replaced against its stored rows (euvd: `affected` deletes keyed `{source, vuln_id}`), upserts, the `source_sync` row
+last. Its
 batches carry `generation = "native-rust"` and no `acked_through`; seqs continue the applied seq of that generation,
 else start at 1 (the host forgets another generation's applied state first). It keeps no log: `source.ack` is a no-op,
 `source.export` answers `unknown-method`, and the next sync is its repair. The wire format is unchanged. Decision:

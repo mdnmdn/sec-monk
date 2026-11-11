@@ -8,9 +8,9 @@ status: implemented
 tags: [config, uv, python, data-dir, rust]
 updated: 2026-11-11
 verified: 2026-11-11
-code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs]
+code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/lib.rs]
 fixtures: rust/crates/secmonk-runtime/tests/fixtures/
-related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, decisions/0011-native-sources.md, tech/architecture.md, tech/data-model.md]
+related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, decisions/0011-native-sources.md, tech/architecture.md, tech/data-model.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
 
 # Configuration
@@ -27,7 +27,7 @@ The dev config is [`rust/sec-monk.toml`](../../sec-monk.toml). Decisions: config
    `$XDG_CONFIG_HOME/sec-monk/sec-monk.toml` (`~/.config/…`), Windows `%APPDATA%\sec-monk\sec-monk.toml`;
 5. none: built-in defaults.
 
-The first file found wins; files are not merged. The app logs which file it uses. A config file decides which code
+The first file found is used; files are not merged. The app logs which file it uses. A config file decides which code
 runs (modules, uv URL) and where state goes, so a file found in steps 2–4 is opened **once**, without following a
 final symlink and without blocking (`O_NOFOLLOW | O_NONBLOCK`), checked on that handle (`fstat`) and read from the
 same handle (`secmonk_config::read_config`; no check-then-reopen window). It is refused when it is a symlink, not a
@@ -95,9 +95,9 @@ the host then fails the start ("py-engine is not enabled").
 | `[ui] http_listen` | `"host:port"`, unset | Optional dev HTTP binding of the same router (off by default; loopback; Host check, actions only on loopback). |
 | `[ui] devtools` | bool, `false` | Webview developer tools; only honoured in debug builds. |
 | `[engine] min_confidence` | float, `0.5` | As `secmonk ui`. |
-| `[sources] nvd_api_key_env` | string, `"NVD_API_KEY"` | Environment variable the host reads; the key travels in `source.sync` `secrets`, never in a module's environment or a log. |
-| `[sources.implementation]` | table source → `"rust"` \| `"python"`; `epss = "rust"`, `kev = "rust"`, others `"python"` | Which implementation syncs a source ([rust ADR-0011](../decisions/0011-native-sources.md)). `rust`: the native importer in `secmonk-sources`, listed ahead of `py-sources`; `python`: `py-sources`. A source defaults to `rust` once its differential test against `py-sources` is green (`secmonk_config::DEFAULT_RUST_SOURCES`: kev and epss since 2026-11-11). Every listed name must be servable as configured, else the start is refused (`ConfigError::Invalid`, as for an unknown key): `rust` needs a Rust implementation, `python` an enabled module whose manifest provides the source, so a misspelled name (`kve`) is refused. An unknown value is a parse error. |
-| `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` wins); log files older than `keep_days` are deleted at start. |
+| `[sources] nvd_api_key_env` | string, `"NVD_API_KEY"` | Environment variable the host reads; the key is sent in `source.sync` `secrets`, never in a module's environment or a log. |
+| `[sources.implementation]` | table source → `"rust"` \| `"python"`; unset: the importer's default (`rust` for the native importers with `default_rust`, see each `source-<name>.md`), `"python"` for every other source | Which implementation syncs a source ([rust ADR-0011](../decisions/0011-native-sources.md)). `rust`: the native importer in `secmonk-sources`, listed ahead of `py-sources`; `python`: `py-sources`. A source defaults to `rust` once its differential test against `py-sources` is green: `default_rust` in the importer's `IMPORTER` (`secmonk_sources::IMPORTERS`, [rust ADR-0012](../decisions/0012-native-importer-row-reads-and-registry.md); `Config::source_impl(source, default)` takes the default from the host). Every listed name must be servable as configured, else the start is refused (`ConfigError::Invalid`, as for an unknown key): `rust` needs a Rust implementation, `python` an enabled module whose manifest provides the source, so a misspelled name (`kve`) is refused. An unknown value is a parse error. |
+| `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` takes precedence); log files older than `keep_days` are deleted at start. |
 
 ## Data directory layout
 

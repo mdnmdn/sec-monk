@@ -446,6 +446,77 @@ impl MirrorStore for SqliteStore {
             .collect()
     }
 
+    async fn rows_by_id(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        ids: &[String],
+    ) -> StoreResult<Vec<Map<String, Value>>> {
+        let id = table
+            .id_column()
+            .ok_or_else(|| StoreError::Invalid(format!("{}: no id column", table.as_str())))?;
+        if ids.len() > crate::MAX_ROWS_IDS {
+            return Err(StoreError::Invalid(format!(
+                "rows_by_id: {} ids (at most {})",
+                ids.len(),
+                crate::MAX_ROWS_IDS
+            )));
+        }
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let t = spec(table);
+        // table and column names come from the closed enum and the allowlist, never from input
+        let marks = vec!["?"; ids.len()].join(", ");
+        let sql = format!(
+            "SELECT rowid, {} FROM {} WHERE source = ? AND \"{id}\" IN ({marks}) ORDER BY rowid",
+            select_list(&t),
+            table.as_str()
+        );
+        let mut q = sqlx::query(sqlx::AssertSqlSafe(sql)).bind(source);
+        for i in ids {
+            q = q.bind(i);
+        }
+        let rows = q.fetch_all(&self.mirror.read).await?;
+        rows.iter()
+            .map(|r| decode_row(&t, r).map(|(_, m)| m))
+            .collect()
+    }
+
+    async fn rows_page(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        after: Option<u64>,
+        limit: usize,
+    ) -> StoreResult<(Vec<Map<String, Value>>, Option<u64>)> {
+        if limit == 0 || limit > crate::MAX_ROWS_PAGE {
+            return Err(StoreError::Invalid(format!(
+                "rows_page: limit {limit} (1..={})",
+                crate::MAX_ROWS_PAGE
+            )));
+        }
+        let t = spec(table);
+        let sql = rows_page_sql(table);
+        let after = i64::try_from(after.unwrap_or(0))
+            .map_err(|_| StoreError::Invalid("rows_page: cursor out of range".into()))?;
+        let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(source)
+            .bind(after)
+            .bind(i64::try_from(limit).unwrap_or(i64::MAX))
+            .fetch_all(&self.mirror.read)
+            .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        let mut last = None;
+        for r in &rows {
+            let (rowid, m) = decode_row(&t, r)?;
+            last = Some(rowid);
+            out.push(m);
+        }
+        let next = if out.len() == limit { last } else { None };
+        Ok((out, next))
+    }
+
     async fn is_initialized(&self) -> StoreResult<bool> {
         is_initialized(&self.mirror.read).await
     }
@@ -459,6 +530,70 @@ impl MirrorStore for SqliteStore {
             .await?;
         Ok(())
     }
+}
+
+/// The statement of `rows_page`: a scan of the rowid range after the cursor, the source filtered per row. `+source`
+/// keeps SQLite from choosing a `source` index, which would sort all of the source's rows into a temporary B-tree for
+/// `ORDER BY rowid` on every page (paging quadratic in the size of the source); the rowid range scan reads each row
+/// once over all pages and stops after `limit` matches. Public for the store's query-plan test.
+#[doc(hidden)]
+pub fn rows_page_sql(table: MirrorTable) -> String {
+    format!(
+        "SELECT rowid, {} FROM {} WHERE +source = ? AND rowid > ? ORDER BY rowid LIMIT ?",
+        select_list(&spec(table)),
+        table.as_str()
+    )
+}
+
+/// The quoted writable columns of a table, in spec order.
+fn select_list(t: &TableSpec) -> String {
+    t.columns
+        .iter()
+        .map(|c| format!("\"{c}\""))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// A row of `SELECT rowid, <writable columns>`: its rowid and its columns as JSON (text as strings, integers and
+/// reals as numbers, JSON columns parsed). A JSON column whose text does not parse is `Invalid` (the store only
+/// writes JSON it serialized itself).
+fn decode_row(
+    t: &TableSpec,
+    r: &sqlx::sqlite::SqliteRow,
+) -> StoreResult<(u64, Map<String, Value>)> {
+    use sqlx::{TypeInfo, ValueRef};
+    let rowid: i64 = r.try_get(0)?;
+    let mut m = Map::with_capacity(t.columns.len());
+    for (i, c) in t.columns.iter().enumerate() {
+        let raw = r.try_get_raw(i + 1)?;
+        let v = if raw.is_null() {
+            Value::Null
+        } else {
+            let kind = raw.type_info().name().to_owned();
+            match kind.as_str() {
+                "INTEGER" => Value::from(r.try_get::<i64, _>(i + 1)?),
+                "REAL" => {
+                    let f: f64 = r.try_get(i + 1)?;
+                    serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number)
+                }
+                _ => {
+                    let s: String = r.try_get(i + 1)?;
+                    if t.is_json(c) {
+                        serde_json::from_str(&s).map_err(|e| {
+                            StoreError::Invalid(format!(
+                                "{}.{c}: stored JSON does not parse: {e}",
+                                t.table.as_str()
+                            ))
+                        })?
+                    } else {
+                        Value::String(s)
+                    }
+                }
+            }
+        };
+        m.insert((*c).to_owned(), v);
+    }
+    Ok((u64::try_from(rowid).unwrap_or(0), m))
 }
 
 /// The export repair of one source: one open transaction on the mirror's write connection.

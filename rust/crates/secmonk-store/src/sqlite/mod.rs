@@ -14,6 +14,8 @@ use crate::{SCHEMA_VERSION, StoreError, StoreResult, migrations};
 
 mod bind;
 mod mirror;
+#[doc(hidden)]
+pub use mirror::rows_page_sql;
 mod state;
 
 /// Options of [`SqliteStore::open`].

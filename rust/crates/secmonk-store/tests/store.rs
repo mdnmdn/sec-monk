@@ -866,3 +866,150 @@ async fn export_repair_never_loses_or_duplicates_rows() {
     assert_eq!(affected_rows(&reset_pool).await, expected(&staging));
     assert!(MirrorStore::is_initialized(&reset).await.unwrap());
 }
+
+#[tokio::test]
+async fn stored_rows_read_back_by_id_and_by_page() {
+    // rust ADR-0012: rows_by_id / rows_page return every column as written (JSON columns parsed), and a row read back
+    // and given as an `affected` delete key deletes exactly that row, also with floats that need exact parsing
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let pool = mirror_pool(&store).await;
+    let row = |vuln: &str, n: Value| {
+        json!({"source": "osv", "vuln_id": vuln, "ecosystem": "npm", "package": "p", "purl": null,
+               "vendor": null, "product": null, "cpe": null, "range_type": "SEMVER", "version_type": null,
+               "events": [{"introduced": "0"}], "versions": ["1.0"], "status": "affected",
+               "extra": {"n": n, "s": "ü"}})
+    };
+    // floats whose shortest form parses back only with exact parsing; integers above i64; nested order kept
+    let rows_in = [
+        row("V1", json!(0.1)),
+        row("V1", json!(2.2250738585072014e-308)),
+        row("V2", json!(1.7976931348623157e308)),
+        row("V2", json!(18446744073709551615u64)),
+        row("V3", json!(-0.0)),
+    ];
+    let ops: Vec<Value> = rows_in.iter().map(up_aff).collect();
+    let mut ops = ops;
+    ops.push(json!({"op": "upsert", "table": "vulnerability", "row":
+        {"source": "osv", "id": "V1", "cvss_score": 9.8, "cwes": [], "extra": null}}));
+    store
+        .apply_rows(&batch_of("osv", 1, Value::Array(ops)))
+        .await
+        .unwrap();
+    store
+        .apply_rows(&batch_of(
+            "nvd",
+            1,
+            json!([{"op": "upsert", "table": "vulnerability",
+            "row": {"source": "nvd", "id": "V1"}}]),
+        ))
+        .await
+        .unwrap();
+
+    let ids = |v: &[&str]| v.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+    let got = store
+        .rows_by_id(MirrorTable::Affected, "osv", &ids(&["V1", "V3"]))
+        .await
+        .unwrap();
+    assert_eq!(got.len(), 3);
+    assert_eq!(Value::Object(got[0].clone()), rows_in[0]);
+    assert_eq!(
+        got[0].keys().next().map(String::as_str),
+        Some("source"),
+        "spec column order"
+    );
+    let v = store
+        .rows_by_id(MirrorTable::Vulnerability, "osv", &ids(&["V1"]))
+        .await
+        .unwrap();
+    assert_eq!(v.len(), 1, "another source's row is not returned");
+    assert_eq!(v[0]["cvss_score"], json!(9.8));
+    assert_eq!(v[0]["cwes"], json!([]));
+    assert_eq!(v[0]["summary"], Value::Null);
+    assert!(
+        store
+            .rows_by_id(MirrorTable::Affected, "osv", &[])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(matches!(
+        store
+            .rows_by_id(MirrorTable::SourceSync, "osv", &ids(&["x"]))
+            .await,
+        Err(StoreError::Invalid(_))
+    ));
+    let too_many: Vec<String> = (0..=MAX_ROWS_IDS).map(|i| i.to_string()).collect();
+    assert!(matches!(
+        store
+            .rows_by_id(MirrorTable::Affected, "osv", &too_many)
+            .await,
+        Err(StoreError::Invalid(_))
+    ));
+
+    // pages of 2: 2 + 2 + 1, then the end
+    let mut all = Vec::new();
+    let mut after = None;
+    let mut pages = 0;
+    loop {
+        let (rows, next) = store
+            .rows_page(MirrorTable::Affected, "osv", after, 2)
+            .await
+            .unwrap();
+        pages += 1;
+        all.extend(rows);
+        match next {
+            Some(n) => after = Some(n),
+            None => break,
+        }
+    }
+    assert_eq!((pages, all.len()), (3, 5));
+    assert!(matches!(
+        store.rows_page(MirrorTable::Affected, "osv", None, 0).await,
+        Err(StoreError::Invalid(_))
+    ));
+
+    // every row read back deletes exactly itself
+    let dels: Vec<Value> = all
+        .iter()
+        .map(|r| del_aff(&Value::Object(r.clone())))
+        .collect();
+    let stats = store
+        .apply_rows(&batch_of("osv", 2, Value::Array(dels)))
+        .await
+        .unwrap();
+    assert_eq!(stats.deleted, 5);
+    assert!(affected_rows(&pool).await.is_empty());
+}
+
+#[tokio::test]
+async fn rows_page_scans_the_rowid_range_without_a_sort() {
+    // review W9.1 M1: with the source index chosen, SQLite sorted every row of the source into a temporary B-tree
+    // on every page; the plan must be a rowid range scan for every table a native importer may page
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let pool = mirror_pool(&store).await;
+    for t in MirrorTable::ALL {
+        let sql = format!(
+            "EXPLAIN QUERY PLAN {}",
+            secmonk_store::sqlite::rows_page_sql(t)
+        );
+        let plan: Vec<String> = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind("osv")
+            .bind(0i64)
+            .bind(10i64)
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+            .iter()
+            .map(|r| r.try_get::<String, _>("detail").unwrap())
+            .collect();
+        let text = plan.join(" | ");
+        assert!(!text.contains("TEMP B-TREE"), "{}: {text}", t.as_str());
+        assert!(
+            text.contains("rowid>?") || text.contains("INTEGER PRIMARY KEY (rowid>?)"),
+            "{}: not a rowid range scan: {text}",
+            t.as_str()
+        );
+    }
+}

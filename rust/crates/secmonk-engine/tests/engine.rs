@@ -1563,6 +1563,23 @@ impl secmonk_traits::MirrorView for ForgetfulView {
     ) -> StepResult<Vec<Map<String, Value>>> {
         self.0.row_keys(t, s).await
     }
+    async fn rows_by_id(
+        &self,
+        t: secmonk_model::MirrorTable,
+        s: &str,
+        ids: &[String],
+    ) -> StepResult<Vec<Map<String, Value>>> {
+        self.0.rows_by_id(t, s, ids).await
+    }
+    async fn rows_page(
+        &self,
+        t: secmonk_model::MirrorTable,
+        s: &str,
+        after: Option<u64>,
+        limit: usize,
+    ) -> StepResult<secmonk_traits::RowPage> {
+        self.0.rows_page(t, s, after, limit).await
+    }
 }
 
 #[tokio::test]

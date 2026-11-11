@@ -48,7 +48,9 @@ secmonk-sources = { path = "crates/secmonk-sources" }
 
 # serialization; preserve_order keeps JSON key order identical to Python's json.dumps of a dict
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.145", features = ["preserve_order"] }
+# float_roundtrip parses every float exactly, so a row read back from the mirror re-serializes to the stored text
+# (rust ADR-0012); raw_value lets a native source split a large feed into records without one tree (euvd)
+serde_json = { version = "1.0.145", features = ["preserve_order", "float_roundtrip", "raw_value"] }
 toml = "1.2.1"
 
 # async

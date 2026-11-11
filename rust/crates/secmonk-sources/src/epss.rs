@@ -27,11 +27,17 @@ use secmonk_traits::{
 use serde_json::{Value, json};
 
 use crate::batch::Limits;
-use crate::feed;
 use crate::native::{self, Outcome};
+use crate::{feed, py};
 
 /// Source name.
 pub const NAME: &str = "epss";
+/// Registration (`crate::IMPORTERS`): rust by default since 2026-11-11 (differential test green).
+pub const IMPORTER: crate::Importer = crate::Importer {
+    name: NAME,
+    default_rust: true,
+    new: |view| Arc::new(EpssSource::new(view)),
+};
 /// Description (as the Python source's).
 pub const DESCRIPTION: &str =
     "FIRST EPSS exploitation probability scores (daily bulk or API lookup)";
@@ -153,7 +159,7 @@ impl EpssSource {
             .ids
             .iter()
             .flatten()
-            .map(|i| py_strip(i))
+            .map(|i| py::strip(i))
             .filter(|i| !i.is_empty())
             .map(str::to_uppercase)
             .collect();
@@ -231,9 +237,10 @@ impl EpssSource {
         Ok(Outcome {
             status: if limit.is_some() { "partial" } else { "ok" }.into(),
             records: count,
+            total: None,
             cursor,
             message: Some(format!("{count} scores from {origin}")),
-            ops: Box::new(parsed.into_ops()),
+            ops: native::iter_ops(parsed.into_ops()),
         })
     }
 
@@ -272,9 +279,10 @@ impl EpssSource {
         Outcome {
             status: if limit.is_some() { "partial" } else { "ok" }.into(),
             records: count,
+            total: None,
             cursor: if limit.is_some() { None } else { cursor },
             message: Some(format!("{count} scores from FIRST API ({} ids)", ids.len())),
-            ops: Box::new(rows.into_iter().map(|row| RowOp::Upsert {
+            ops: native::iter_ops(rows.into_iter().map(|row| RowOp::Upsert {
                 table: MirrorTable::Epss,
                 row,
             })),
@@ -503,7 +511,7 @@ enum Line<'a> {
 /// `score_date:YYYY-MM-DD`, the `cve,` header skipped, then `cve,epss,percentile[,...]` with both numbers parsed by
 /// Python's `float` rules; anything else is skipped.
 fn parse_line(raw: &str) -> Line<'_> {
-    let line = py_strip(raw);
+    let line = py::strip(raw);
     if line.is_empty() {
         return Line::Skip;
     }
@@ -517,8 +525,8 @@ fn parse_line(raw: &str) -> Line<'_> {
     let (Some(cve), Some(score), Some(pct)) = (parts.next(), parts.next(), parts.next()) else {
         return Line::Skip;
     };
-    match (py_float(score), py_float(pct)) {
-        (Some(s), Some(p)) => Line::Row(py_strip(cve).to_uppercase(), s, p),
+    match (finite_float(score), finite_float(pct)) {
+        (Some(s), Some(p)) => Line::Row(py::strip(cve).to_uppercase(), s, p),
         _ => Line::Skip,
     }
 }
@@ -537,62 +545,11 @@ fn score_date(line: &str) -> Option<&str> {
     })
 }
 
-/// Python's `str.strip()`: Unicode whitespace plus the ASCII separators `\x1c`-`\x1f`.
-fn py_strip(s: &str) -> &str {
-    s.trim_matches(|c: char| c.is_whitespace() || ('\x1c'..='\x1f').contains(&c))
-}
-
-/// Python's `float(str)`: surrounding whitespace, a sign, `_` between digits, exponents, `nan` (SQLite stores a NaN
-/// as NULL, and so does the row: `json!(NaN)` is null). Infinities are refused: SQLite would keep them, but they have
-/// no JSON form, so `py-sources` cannot carry them either (see source-epss.md).
-fn py_float(s: &str) -> Option<f64> {
-    let t = ascii_digits(py_strip(s));
-    let t = t.as_ref();
-    if t.is_empty() {
-        return None;
-    }
-    let v = if t.contains('_') {
-        let b = t.as_bytes();
-        let between_digits = b.iter().enumerate().all(|(i, c)| {
-            *c != b'_'
-                || (i > 0
-                    && b[i - 1].is_ascii_digit()
-                    && b.get(i + 1).is_some_and(u8::is_ascii_digit))
-        });
-        if !between_digits {
-            return None;
-        }
-        t.replace('_', "").parse::<f64>().ok()?
-    } else {
-        t.parse::<f64>().ok()?
-    };
-    (!v.is_infinite()).then_some(v)
-}
-
-/// The first code point of every run of ten Unicode decimal digits (category Nd), from Python 3.13's `unicodedata`
-/// (Unicode 15.1): `float()` reads them as `0`-`9`.
-const DECIMAL_ZEROS: [u32; 68] = [
-    0x30, 0x660, 0x6F0, 0x7C0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66,
-    0xDE6, 0xE50, 0xED0, 0xF20, 0x1040, 0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90,
-    0x1B50, 0x1BB0, 0x1C40, 0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0, 0xFF10,
-    0x104A0, 0x10D30, 0x11066, 0x110F0, 0x11136, 0x111D0, 0x112F0, 0x11450, 0x114D0, 0x11650,
-    0x116C0, 0x11730, 0x118E0, 0x11950, 0x11C50, 0x11D50, 0x11DA0, 0x11F50, 0x16A60, 0x16AC0,
-    0x16B50, 0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6, 0x1E140, 0x1E2F0, 0x1E4F0, 0x1E950,
-    0x1FBF0,
-];
-
-/// Unicode decimal digits replaced by ASCII ones, as Python's `float()` does before parsing; other characters kept.
-fn ascii_digits(s: &str) -> std::borrow::Cow<'_, str> {
-    if s.is_ascii() {
-        return std::borrow::Cow::Borrowed(s);
-    }
-    let digit = |c: char| -> Option<char> {
-        let u = u32::from(c);
-        let i = DECIMAL_ZEROS.partition_point(|z| *z <= u).checked_sub(1)?;
-        let d = u - DECIMAL_ZEROS[i];
-        (d < 10).then(|| char::from(b'0' + d as u8))
-    };
-    std::borrow::Cow::Owned(s.chars().map(|c| digit(c).unwrap_or(c)).collect())
+/// [`py::float_str`] (Python's `float(str)`) without infinities: SQLite would keep them, but they have no JSON form,
+/// so `py-sources` cannot carry them either (see source-epss.md). `nan` is kept (SQLite stores a NaN as NULL, and so
+/// does the row: `json!(NaN)` is null). An epss rule, not a copy of `py`.
+fn finite_float(s: &str) -> Option<f64> {
+    py::float_str(s).filter(|v| !v.is_infinite())
 }
 
 /// A query value as `httpx` encodes `params` (everything but the unreserved characters percent-encoded).
@@ -632,7 +589,7 @@ fn api_rows(doc: &Value) -> Result<Vec<JsonMap>, String> {
         let number = |k: &str| -> Result<f64, String> {
             let v = match d.get(k) {
                 None => return Err(format!("KeyError: '{k}'")),
-                Some(Value::String(s)) => py_float(s).ok_or_else(|| {
+                Some(Value::String(s)) => finite_float(s).ok_or_else(|| {
                     format!(
                         "ValueError: could not convert string to float: {}",
                         feed::py_repr(s)
@@ -882,15 +839,15 @@ mod tests {
             matches!(parse_line("CVE-1,0.5,Infinity"), Line::Skip),
             "infinite"
         );
-        assert_eq!(py_float("\t0.00043\u{a0}"), Some(0.00043));
-        assert_eq!(py_float("_1"), None);
+        assert_eq!(finite_float("\t0.00043\u{a0}"), Some(0.00043));
+        assert_eq!(finite_float("_1"), None);
         // Unicode decimal digits, as Python: float('０.５') == 0.5, float('٣') == 3.0, float('𝟗') == 9.0
-        assert_eq!(py_float("０.５"), Some(0.5));
-        assert_eq!(py_float("\u{663}"), Some(3.0));
-        assert_eq!(py_float("\u{1D7D7}"), Some(9.0));
-        assert_eq!(py_float("1\u{FF10}_\u{FF10}"), Some(100.0));
-        assert_eq!(py_float("½"), None, "No, not Nd");
-        assert_eq!(py_float("\u{2160}"), None, "Nl, not Nd");
+        assert_eq!(finite_float("０.５"), Some(0.5));
+        assert_eq!(finite_float("\u{663}"), Some(3.0));
+        assert_eq!(finite_float("\u{1D7D7}"), Some(9.0));
+        assert_eq!(finite_float("1\u{FF10}_\u{FF10}"), Some(100.0));
+        assert_eq!(finite_float("½"), None, "No, not Nd");
+        assert_eq!(finite_float("\u{2160}"), None, "Nl, not Nd");
         assert_eq!(query_value("CVE-1,CVE 2"), "CVE-1%2CCVE%202");
     }
 }

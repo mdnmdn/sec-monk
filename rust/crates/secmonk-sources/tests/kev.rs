@@ -46,6 +46,18 @@ impl MirrorView for FakeView {
             .map(|k| json!({"cve_id": k}).as_object().cloned().unwrap())
             .collect())
     }
+    async fn rows_by_id(&self, _: MirrorTable, _: &str, _: &[String]) -> StepResult<Vec<JsonMap>> {
+        panic!("kev reads keys only")
+    }
+    async fn rows_page(
+        &self,
+        _: MirrorTable,
+        _: &str,
+        _: Option<u64>,
+        _: usize,
+    ) -> StepResult<secmonk_traits::RowPage> {
+        panic!("kev reads keys only")
+    }
 }
 
 fn params(options: Value) -> SyncParams {

@@ -23,11 +23,17 @@ use secmonk_traits::{
 use serde_json::{Value, json};
 
 use crate::batch::Limits;
-use crate::feed;
+use crate::{feed, py};
 use crate::native::{self, Outcome};
 
 /// Source name.
 pub const NAME: &str = "kev";
+/// Registration (`crate::IMPORTERS`): rust by default since 2026-11-11 (differential test green).
+pub const IMPORTER: crate::Importer = crate::Importer {
+    name: NAME,
+    default_rust: true,
+    new: |view| Arc::new(KevSource::new(view)),
+};
 /// Description (as the Python source's).
 pub const DESCRIPTION: &str = "CISA Known Exploited Vulnerabilities catalog (full snapshot)";
 /// The official feed.
@@ -176,7 +182,7 @@ impl KevSource {
             Some(c) => ctx.report(ProgressUpdate {
                 message: Some(format!(
                     "kev: feed count {} != {} entries; using entries",
-                    py_str(c),
+                    py::str_of(c),
                     all.len()
                 )),
                 ..Default::default()
@@ -187,8 +193,11 @@ impl KevSource {
             None => all,
         };
         let limited = limit.is_some();
-        if !limited && let Some(refusal) = self.snapshot_guard(entries.len() as u64, full).await? {
-            return Ok(Outcome::error(format!("kev: {refusal}")));
+        if !limited && !full {
+            let old = self.view.count_rows(MirrorTable::Kev, NAME).await?;
+            if let Some(refusal) = native::snapshot_guard(old, entries.len() as u64, full) {
+                return Ok(Outcome::error(format!("kev: {refusal}")));
+            }
         }
         let now = secmonk_model::time::now_iso();
         let mut upserts: Vec<RowOp> = Vec::with_capacity(entries.len() * 2);
@@ -223,33 +232,15 @@ impl KevSource {
         Ok(Outcome {
             status: if limited { "partial" } else { "ok" }.into(),
             records: entries.len() as u64,
+            total: None,
             cursor: if limited {
                 None
             } else {
                 doc.get("catalogVersion").and_then(cursor_text)
             },
             message: Some(format!("{} entries {origin}", entries.len())),
-            ops: Box::new(ops.into_iter()),
+            ops: native::iter_ops(ops),
         })
-    }
-
-    /// `base.snapshot_guard` on the `kev` table.
-    async fn snapshot_guard(&self, new_count: u64, full: bool) -> StepResult<Option<String>> {
-        if full {
-            return Ok(None);
-        }
-        let old = self.view.count_rows(MirrorTable::Kev, NAME).await?;
-        if new_count == 0 {
-            return Ok(Some(
-                "refusing to replace the data with an empty snapshot (use --full to force)".into(),
-            ));
-        }
-        if old > 0 && new_count * 2 < old {
-            return Ok(Some(format!(
-                "refusing to replace {old} rows with a snapshot of only {new_count} (< 50%; use --full to force)"
-            )));
-        }
-        Ok(None)
     }
 }
 
@@ -266,14 +257,6 @@ fn cursor_text(v: &Value) -> Option<String> {
         Value::String(s) => Some(s.clone()),
         Value::Number(n) => Some(n.to_string()),
         _ => None,
-    }
-}
-
-/// `str(value)` for the count log line.
-fn py_str(v: &Value) -> String {
-    match v {
-        Value::String(s) => s.clone(),
-        other => other.to_string(),
     }
 }
 

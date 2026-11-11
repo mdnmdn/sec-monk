@@ -56,6 +56,19 @@ impl MirrorTable {
             MirrorTable::DistroTriage => "distro_triage",
         }
     }
+
+    /// The column that names the record a row belongs to (`MirrorView::rows_by_id`, rust ADR-0012):
+    /// `raw_record.record_id`, `vulnerability.id`, `alias.vuln_id`, `affected.vuln_id`, `kev` / `epss` /
+    /// `distro_triage` `cve_id`. `source_sync` has none.
+    pub fn id_column(self) -> Option<&'static str> {
+        match self {
+            MirrorTable::SourceSync => None,
+            MirrorTable::RawRecord => Some("record_id"),
+            MirrorTable::Vulnerability => Some("id"),
+            MirrorTable::Alias | MirrorTable::Affected => Some("vuln_id"),
+            MirrorTable::Kev | MirrorTable::Epss | MirrorTable::DistroTriage => Some("cve_id"),
+        }
+    }
 }
 
 /// One row operation.

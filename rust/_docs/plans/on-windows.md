@@ -53,3 +53,6 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
 - [ ] **SmartScreen / Defender.** The unsigned `uv.exe` extracted into `tools\uv-0.13.7\` and the downloaded Python may be
       flagged; record what the user sees and whether the extraction path or a Mark-of-the-Web matters.
 - [ ] Headless server on Windows: `secmonk-headless` binds loopback, Ctrl-C stops the modules (SIGTERM does not exist there).
+- [ ] Native importers: `feed::exists_like_python` maps Windows error codes 2, 3, 21, 123 and 1921 to "path not found" like
+      Python's `Path.exists()`; check `--path` with a missing, invalid and looping path on a real Windows machine
+      ([source-msrc](../tech/source-msrc.md)).

@@ -1,12 +1,15 @@
 //! [`StoreMirrorView`]: the read-only [`MirrorView`] a native source gets (rust ADR-0011), over the engine's
-//! `MirrorStore`. Reads only; a native source still writes nothing itself: its batches are applied by the sync job.
+//! `MirrorStore` (the row reads: rust ADR-0012). Reads only; a native source still writes nothing itself: its
+//! batches are applied by the sync job.
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use secmonk_model::{JsonMap, MirrorTable};
 use secmonk_store::{MirrorStore, StoreError};
-use secmonk_traits::{AppliedMark, ErrorCode, MirrorView, StepResult, WireError};
+use secmonk_traits::{
+    AppliedMark, ErrorCode, MAX_VIEW_IDS, MAX_VIEW_PAGE, MirrorView, RowPage, StepResult, WireError,
+};
 
 /// A [`MirrorView`] over a [`MirrorStore`]. The composition root builds it from the store it gives the engine.
 #[derive(Clone)]
@@ -54,5 +57,44 @@ impl MirrorView for StoreMirrorView {
 
     async fn row_keys(&self, table: MirrorTable, source: &str) -> StepResult<Vec<JsonMap>> {
         self.mirror.row_keys(table, source).await.map_err(wire)
+    }
+
+    async fn rows_by_id(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        ids: &[String],
+    ) -> StepResult<Vec<JsonMap>> {
+        if ids.len() > MAX_VIEW_IDS {
+            return Err(WireError::new(
+                ErrorCode::InvalidParams,
+                format!("rows_by_id: {} ids (at most {MAX_VIEW_IDS})", ids.len()),
+            ));
+        }
+        self.mirror
+            .rows_by_id(table, source, ids)
+            .await
+            .map_err(wire)
+    }
+
+    async fn rows_page(
+        &self,
+        table: MirrorTable,
+        source: &str,
+        after: Option<u64>,
+        limit: usize,
+    ) -> StepResult<RowPage> {
+        if limit == 0 || limit > MAX_VIEW_PAGE {
+            return Err(WireError::new(
+                ErrorCode::InvalidParams,
+                format!("rows_page: limit {limit} (1..={MAX_VIEW_PAGE})"),
+            ));
+        }
+        let (rows, next) = self
+            .mirror
+            .rows_page(table, source, after, limit)
+            .await
+            .map_err(wire)?;
+        Ok(RowPage { rows, next })
     }
 }

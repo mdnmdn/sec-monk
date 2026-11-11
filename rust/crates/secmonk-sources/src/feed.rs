@@ -1,9 +1,11 @@
 //! Reading a feed document: a download over the workspace's `reqwest` client (rustls) or a local file (`--path`),
-//! both size-capped, then parsed as JSON (kev) or returned as bytes or an open file (epss). Feeds are untrusted
-//! input: the cap is checked while reading (and against `Content-Length` first), JSON nesting is bounded by
-//! `serde_json`'s recursion limit, and every message that leaves here is free of URL credentials.
+//! both size-capped, then parsed as JSON (kev), returned as bytes or an open file (epss, euvd, msrc), or parsed while
+//! it arrives ([`get_streamed`], debian-tracker). Feeds are untrusted input: the cap is checked while reading (and
+//! against `Content-Length` first), JSON nesting is bounded by `serde_json`'s recursion limit, and every message that
+//! leaves here is free of URL credentials. Also the file-system helpers with Python's semantics the `--path` loaders
+//! share ([`exists_like_python`], [`rglob`], [`os_error`]) and [`json_error`].
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use futures_util::StreamExt;
@@ -27,43 +29,370 @@ pub async fn download_json(url: &str, max_bytes: u64, allow_http: bool) -> Resul
 }
 
 /// Download `url` into memory: at most `max_bytes` (checked against `Content-Length` first, then while the body
-/// streams), connect and read timeout `timeout`. Errors carry no URL credentials.
+/// streams), connect and read timeout `timeout`. Errors carry no URL credentials. [`get`] without its options.
 pub async fn download(
     url: &str,
     max_bytes: u64,
     allow_http: bool,
     timeout: Duration,
 ) -> Result<Vec<u8>, String> {
-    let shown = secmonk_safeio::strip_url_secrets(url, false);
-    let client = reqwest::Client::builder()
+    let g = Get {
+        url,
+        max_bytes,
+        allow_http,
+        timeout,
+        accept: None,
+        too_large: None,
+        same_origin_redirects: false,
+    };
+    Ok(get(&g).await?.0)
+}
+
+/// One GET of a feed document.
+#[derive(Debug, Clone)]
+pub struct Get<'a> {
+    /// The URL (credentials in it never reach a message).
+    pub url: &'a str,
+    /// Body bytes accepted (`Content-Length` checked first, then the body as it arrives).
+    pub max_bytes: u64,
+    /// Plain `http://` allowed (tests against a local server); else `https_only`.
+    pub allow_http: bool,
+    /// Connect and read timeout (per operation, as httpx's `timeout`).
+    pub timeout: Duration,
+    /// An `Accept` header (none by default; the MSRC API answers XML without `application/json`).
+    pub accept: Option<&'static str>,
+    /// The message of a body over `max_bytes`; default `<url>: larger than <max_bytes> bytes`.
+    pub too_large: Option<String>,
+    /// Follow redirects only to the origin of `url` (else up to 10 redirects to any origin, as httpx). A redirect
+    /// elsewhere fails: `<url>: redirect to <target> is not on <origin>; refusing`.
+    pub same_origin_redirects: bool,
+}
+
+impl Get<'_> {
+    fn too_large(&self, shown: &str) -> String {
+        self.too_large
+            .clone()
+            .unwrap_or_else(|| format!("{shown}: larger than {} bytes", self.max_bytes))
+    }
+}
+
+/// The cache validators of an answer (`ETag`, `Last-Modified`); empty or non-ASCII values are dropped.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Validators {
+    /// `ETag`.
+    pub etag: Option<String>,
+    /// `Last-Modified`.
+    pub last_modified: Option<String>,
+}
+
+impl Validators {
+    fn of(resp: &reqwest::Response) -> Validators {
+        let header = |h: reqwest::header::HeaderName| {
+            resp.headers()
+                .get(h)
+                .and_then(|v| v.to_str().ok())
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned)
+        };
+        Validators {
+            etag: header(reqwest::header::ETAG),
+            last_modified: header(reqwest::header::LAST_MODIFIED),
+        }
+    }
+}
+
+/// A redirect refused by the same-origin policy (its text is the message).
+#[derive(Debug)]
+struct OffOrigin(String);
+
+impl std::fmt::Display for OffOrigin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for OffOrigin {}
+
+/// The workspace's `reqwest` client for one download: `User-Agent`, `https_only` unless `allow_http`, connect and
+/// read timeout; redirects only within `origin` when given (else reqwest's default: up to 10).
+fn client(
+    timeout: Duration,
+    allow_http: bool,
+    origin: Option<String>,
+) -> Result<reqwest::Client, String> {
+    let mut b = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .https_only(!allow_http)
         .connect_timeout(timeout)
-        .read_timeout(timeout)
-        .build()
-        .map_err(|e| scrub(&e.to_string()))?;
-    let resp = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| scrub(&e.to_string()))?;
+        .read_timeout(timeout);
+    if let Some(home) = origin {
+        b = b.redirect(reqwest::redirect::Policy::custom(move |attempt| {
+            if attempt.previous().len() >= 10 {
+                return attempt.error("too many redirects");
+            }
+            if same_origin(attempt.url().as_str(), &home) {
+                attempt.follow()
+            } else {
+                let to = scrub(attempt.url().as_str());
+                attempt.error(OffOrigin(format!(
+                    "redirect to {to} is not on {}; refusing",
+                    scrub(&home)
+                )))
+            }
+        }));
+    }
+    b.build().map_err(|e| scrub(&e.to_string()))
+}
+
+/// The text of a request error: scrubbed; a redirect the same-origin policy refused as `<url>: <refusal>`.
+fn request_error(e: &reqwest::Error, shown: &str) -> String {
+    let mut src: Option<&(dyn std::error::Error + 'static)> = std::error::Error::source(e);
+    while let Some(s) = src {
+        if let Some(o) = s.downcast_ref::<OffOrigin>() {
+            return scrub(&format!("{shown}: {o}"));
+        }
+        src = s.source();
+    }
+    scrub(&e.to_string())
+}
+
+/// Send the request of `g` and check the status and `Content-Length`.
+async fn send(g: &Get<'_>, shown: &str) -> Result<reqwest::Response, String> {
+    let origin = if g.same_origin_redirects {
+        Some(origin(g.url).unwrap_or_default().to_owned())
+    } else {
+        None
+    };
+    let client = client(g.timeout, g.allow_http, origin)?;
+    let mut req = client.get(g.url);
+    if let Some(a) = g.accept {
+        req = req.header(reqwest::header::ACCEPT, a);
+    }
+    let resp = req.send().await.map_err(|e| request_error(&e, shown))?;
     let status = resp.status();
     if !status.is_success() {
         return Err(format!("HTTP {} for {shown}", status.as_u16()));
     }
-    if resp.content_length().is_some_and(|n| n > max_bytes) {
-        return Err(format!("{shown}: larger than {max_bytes} bytes"));
+    if resp.content_length().is_some_and(|n| n > g.max_bytes) {
+        return Err(g.too_large(shown));
     }
+    Ok(resp)
+}
+
+/// Download `g.url` into memory with its validators. Proxies come from the environment (`HTTPS_PROXY`, as `httpx`
+/// with `trust_env`). Errors carry no URL credentials.
+pub async fn get(g: &Get<'_>) -> Result<(Vec<u8>, Validators), String> {
+    let shown = secmonk_safeio::strip_url_secrets(g.url, false);
+    let resp = send(g, &shown).await?;
+    let validators = Validators::of(&resp);
     let mut body: Vec<u8> = Vec::new();
     let mut stream = resp.bytes_stream();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|e| scrub(&e.to_string()))?;
-        if body.len() as u64 + chunk.len() as u64 > max_bytes {
-            return Err(format!("{shown}: larger than {max_bytes} bytes"));
+        if body.len() as u64 + chunk.len() as u64 > g.max_bytes {
+            return Err(g.too_large(&shown));
         }
         body.extend_from_slice(&chunk);
     }
-    Ok(body)
+    Ok((body, validators))
+}
+
+/// The reading half of a streamed download ([`get_streamed`]): the body as it arrives. A failed download or a body
+/// over the cap is a read error whose text is the message ([`crate::decode::io_message`] returns it as is).
+#[derive(Debug)]
+pub struct BodyReader {
+    rx: tokio::sync::mpsc::Receiver<Result<Vec<u8>, String>>,
+    cur: Vec<u8>,
+    pos: usize,
+}
+
+impl std::io::Read for BodyReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        while self.pos >= self.cur.len() {
+            match self.rx.blocking_recv() {
+                Some(Ok(b)) => {
+                    self.cur = b;
+                    self.pos = 0;
+                }
+                Some(Err(m)) => return Err(crate::decode::msg_error(m)),
+                None => return Ok(0),
+            }
+        }
+        let n = (self.cur.len() - self.pos).min(buf.len());
+        buf[..n].copy_from_slice(&self.cur[self.pos..self.pos + n]);
+        self.pos += n;
+        Ok(n)
+    }
+}
+
+/// Download `g.url` and parse the body while it arrives: `parse` runs on the blocking pool over a [`BodyReader`]
+/// fed through a bounded channel of 16 chunks, so the body is never held whole. The cap and the download errors
+/// reach the parser as read errors (scrubbed); when the parser stops early the download stops too, and the
+/// parser's result is the answer.
+pub async fn get_streamed<T: Send + 'static>(
+    g: &Get<'_>,
+    parse: impl FnOnce(BodyReader) -> Result<T, String> + Send + 'static,
+) -> Result<(T, Validators), String> {
+    let shown = secmonk_safeio::strip_url_secrets(g.url, false);
+    let resp = send(g, &shown).await?;
+    let validators = Validators::of(&resp);
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Vec<u8>, String>>(16);
+    let parser = tokio::task::spawn_blocking(move || {
+        parse(BodyReader {
+            rx,
+            cur: Vec::new(),
+            pos: 0,
+        })
+    });
+    let mut body = resp.bytes_stream();
+    let mut total = 0u64;
+    while let Some(chunk) = body.next().await {
+        let item = match chunk {
+            Ok(c) => {
+                total += c.len() as u64;
+                if total > g.max_bytes {
+                    Err(g.too_large(&shown))
+                } else {
+                    Ok(c.to_vec())
+                }
+            }
+            Err(e) => Err(scrub(&e.to_string())),
+        };
+        let stop = item.is_err();
+        if tx.send(item).await.is_err() || stop {
+            break; // the parser stopped (its result is the answer), or this was the error
+        }
+    }
+    drop(tx);
+    let out = parser
+        .await
+        .map_err(|e| format!("native importer: parse task failed: {e}"))??;
+    Ok((out, validators))
+}
+
+/// `scheme://authority` of a URL (as written: no case folding, no default port removed).
+pub fn origin(url: &str) -> Option<&str> {
+    let start = url.find("://")? + 3;
+    let end = url[start..]
+        .find(['/', '?', '#'])
+        .map_or(url.len(), |i| start + i);
+    Some(&url[..end])
+}
+
+/// Whether `url` is on the origin of `base` (`scheme://authority`, ASCII case-insensitive).
+pub fn same_origin(url: &str, base: &str) -> bool {
+    match (origin(url), origin(base)) {
+        (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+        _ => false,
+    }
+}
+
+/// `Path.exists()` of Python 3.13 with the metadata: `Ok(None)` for the errors it treats as "does not exist"
+/// (`ENOENT`, `ENOTDIR`, `EBADF`, `ELOOP`; on Windows also `ERROR_PATH_NOT_FOUND`, `ERROR_NOT_READY`,
+/// `ERROR_INVALID_NAME`, `ERROR_CANT_RESOLVE_FILENAME`), `Err` with the `OSError` text for any other error (raised
+/// there).
+pub fn exists_like_python(path: &Path) -> Result<Option<std::fs::Metadata>, String> {
+    match std::fs::metadata(path) {
+        Ok(m) => Ok(Some(m)),
+        Err(e) if not_found_like(&e) => Ok(None),
+        Err(e) => Err(os_error(&e, path)),
+    }
+}
+
+/// The errors `pathlib`'s `_ignore_error` ignores (`_IGNORED_ERRNOS`, `_IGNORED_WINERRORS`).
+fn not_found_like(e: &std::io::Error) -> bool {
+    let Some(code) = e.raw_os_error() else {
+        return false;
+    };
+    if cfg!(windows) {
+        // Win32 codes: FILE_NOT_FOUND and PATH_NOT_FOUND (errno ENOENT there), NOT_READY, INVALID_NAME,
+        // CANT_RESOLVE_FILENAME (`_IGNORED_WINERRORS`)
+        matches!(code, 2 | 3 | 21 | 123 | 1921)
+    } else {
+        // ENOENT, ENOTDIR, EBADF, ELOOP (40 on Linux, 62 on macOS and the BSDs)
+        let eloop = if cfg!(target_os = "linux") { 40 } else { 62 };
+        matches!(code, 2 | 20 | 9) || code == eloop
+    }
+}
+
+/// One file [`rglob`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Found {
+    /// The path to open.
+    pub path: PathBuf,
+    /// `str(path)` as Python shows it (the root as given, then the names).
+    pub shown: String,
+    /// The file name.
+    pub name: String,
+}
+
+/// Which cap of [`rglob`] was passed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TooMany {
+    /// More than `max_entries` directory entries visited.
+    Entries,
+    /// More than `max_files` matches.
+    Files,
+}
+
+/// The entries whose name ends in `suffix` under `root` (`Path.rglob("*<suffix>")` of Python 3.13: hidden names
+/// included, directories so named included, symlinked directories matched but not entered), each with its
+/// `str(path)` (from `shown`, the root's) and name; unreadable directories are skipped. At most `max_entries`
+/// entries visited and `max_files` matches.
+pub fn rglob(
+    root: &Path,
+    shown: &str,
+    suffix: &str,
+    max_entries: usize,
+    max_files: usize,
+) -> Result<Vec<Found>, TooMany> {
+    let prefix = match shown {
+        "." => String::new(),
+        s if s.ends_with('/') => s.to_owned(),
+        s => format!("{s}/"),
+    };
+    let mut out = Vec::new();
+    let mut entries = 0usize;
+    let mut stack = vec![(root.to_path_buf(), prefix)];
+    while let Some((dir, disp)) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for e in rd.flatten() {
+            entries += 1;
+            if entries > max_entries {
+                return Err(TooMany::Entries);
+            }
+            let name = e.file_name().to_string_lossy().into_owned();
+            let d = format!("{disp}{name}");
+            if name.ends_with(suffix) {
+                out.push(Found {
+                    path: e.path(),
+                    shown: d.clone(),
+                    name,
+                });
+                if out.len() > max_files {
+                    return Err(TooMany::Files);
+                }
+            }
+            if e.file_type().is_ok_and(|t| t.is_dir()) {
+                stack.push((e.path(), format!("{d}/")));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// A `serde_json` error as a message: an importer's own refusal (a custom error starting with one of `own`, raised
+/// by its visitors) without the position serde appends, anything else as `invalid JSON: <serde_json text>`.
+pub fn json_error(e: &serde_json::Error, own: &[&str]) -> String {
+    let m = e.to_string();
+    let head = m.split(" at line ").next().unwrap_or(&m);
+    if own.iter().any(|p| head.starts_with(p)) {
+        head.to_owned()
+    } else {
+        format!("invalid JSON: {e}")
+    }
 }
 
 /// Read a local feed file (at most `max_bytes`) and parse it as JSON. I/O errors read like Python's `OSError`
@@ -72,6 +401,11 @@ pub async fn download(
 /// Only a regular file is opened (symlinks followed): a directory answers Python's `[Errno 21] Is a directory`, anything
 /// else (a FIFO, a device, a socket) is refused before `open`, which would block on a FIFO with no writer.
 pub async fn read_json(path: &Path, max_bytes: u64) -> Result<Value, String> {
+    parse(&read_bytes(path, max_bytes).await?)
+}
+
+/// Read a local feed file into memory (at most `max_bytes`), with the checks and messages of [`read_json`].
+pub async fn read_bytes(path: &Path, max_bytes: u64) -> Result<Vec<u8>, String> {
     let owned = path.to_path_buf();
     let f = tokio::task::spawn_blocking(move || open_regular(&owned))
         .await
@@ -86,7 +420,7 @@ pub async fn read_json(path: &Path, max_bytes: u64) -> Result<Value, String> {
     if body.len() as u64 > max_bytes {
         return Err(format!("{}: larger than {max_bytes} bytes", py_path(path)));
     }
-    parse(&body)
+    Ok(body)
 }
 
 /// A local file that could not be opened: Python's exception class and `str(exception)`.
@@ -168,23 +502,9 @@ pub fn os_error(e: &std::io::Error, path: &Path) -> String {
     }
 }
 
-/// Python's `repr(str)` for the common case (single quotes unless the text has one and no double quote).
+/// Python's `repr(str)` ([`crate::py::repr_str`]).
 pub fn py_repr(s: &str) -> String {
-    let body: String = s
-        .chars()
-        .flat_map(|c| match c {
-            '\\' => vec!['\\', '\\'],
-            '\n' => vec!['\\', 'n'],
-            '\t' => vec!['\\', 't'],
-            '\r' => vec!['\\', 'r'],
-            c => vec![c],
-        })
-        .collect();
-    if body.contains('\'') && !body.contains('"') {
-        format!("\"{body}\"")
-    } else {
-        format!("'{}'", body.replace('\'', "\\'"))
-    }
+    crate::py::repr_str(s)
 }
 
 /// `str(pathlib.Path(p))` on POSIX: repeated and trailing slashes and `.` components removed (two leading slashes
@@ -266,6 +586,62 @@ mod tests {
         assert_eq!(
             e,
             format!("{}/big.json: larger than 100 bytes", py_path(d.path()))
+        );
+    }
+
+    #[test]
+    fn origins_and_json_errors() {
+        assert_eq!(
+            origin("https://api.msrc.microsoft.com/cvrf/v3.0"),
+            Some("https://api.msrc.microsoft.com")
+        );
+        assert_eq!(
+            origin("http://127.0.0.1:8080"),
+            Some("http://127.0.0.1:8080")
+        );
+        assert_eq!(origin("https://a@b/x?y"), Some("https://a@b"));
+        assert_eq!(origin("nope"), None);
+        assert!(same_origin("HTTPS://Example.org/a", "https://example.org"));
+        assert!(!same_origin(
+            "https://example.org:8443/a",
+            "https://example.org"
+        ));
+        assert!(!same_origin("nope", "nope"));
+        let e = serde_json::from_str::<Value>("{").unwrap_err();
+        assert!(json_error(&e, &["x: "]).starts_with("invalid JSON: EOF while parsing"));
+        let e: serde_json::Error = serde::de::Error::custom("x: too many; refusing");
+        assert_eq!(json_error(&e, &["y: ", "x: "]), "x: too many; refusing");
+    }
+
+    #[test]
+    fn paths_exist_and_walk_like_python() {
+        let d = tempfile::tempdir().unwrap();
+        assert!(
+            exists_like_python(&d.path().join("missing"))
+                .unwrap()
+                .is_none()
+        );
+        let f = d.path().join("f.json");
+        std::fs::write(&f, "{}").unwrap();
+        // ENOTDIR: a path below a file does not exist for `Path.exists()`
+        assert!(exists_like_python(&f.join("x")).unwrap().is_none());
+        assert!(exists_like_python(&f).unwrap().is_some_and(|m| m.is_file()));
+        std::fs::create_dir_all(d.path().join("sub/.hidden.json")).unwrap();
+        std::fs::write(d.path().join("sub/b.json"), "{}").unwrap();
+        std::fs::write(d.path().join("sub/c.txt"), "").unwrap();
+        let shown = py_path(d.path());
+        let mut found = rglob(d.path(), &shown, ".json", 100, 100).unwrap();
+        found.sort_by(|a, b| a.shown.cmp(&b.shown));
+        let names: Vec<&str> = found.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, vec!["f.json", ".hidden.json", "b.json"]);
+        assert_eq!(found[2].shown, format!("{shown}/sub/b.json"));
+        assert_eq!(
+            rglob(d.path(), &shown, ".json", 2, 100),
+            Err(TooMany::Entries)
+        );
+        assert_eq!(
+            rglob(d.path(), &shown, ".json", 100, 2),
+            Err(TooMany::Files)
         );
     }
 
