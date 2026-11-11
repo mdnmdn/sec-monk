@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/inventory/collect-params.schema.json",
+  "title": "collector.collect / collector.expand_targets params",
+  "type": "object",
+  "properties": {
+    "collector": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "target": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^=]+=",
+        "maxLength": 4096
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "collector",
+    "target",
+    "options"
+  ],
+  "additionalProperties": false
+}

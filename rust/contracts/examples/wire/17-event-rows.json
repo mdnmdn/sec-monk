@@ -1,0 +1,83 @@
+{
+  "type": "event",
+  "id": 3,
+  "seq": 1,
+  "data": {
+    "kind": "rows",
+    "seq": 1,
+    "source": "kev",
+    "ops": [
+      {
+        "op": "upsert",
+        "table": "raw_record",
+        "row": {
+          "source": "kev",
+          "record_id": "CVE-2021-44228",
+          "modified": null,
+          "fetched_at": "2026-11-11T08:00:00+00:00",
+          "data": {
+            "cveID": "CVE-2021-44228",
+            "vendorProject": "Apache",
+            "product": "Log4j2"
+          }
+        }
+      },
+      {
+        "op": "delete",
+        "table": "kev",
+        "key": {
+          "cve_id": "CVE-2014-0001"
+        }
+      },
+      {
+        "op": "upsert",
+        "table": "kev",
+        "row": {
+          "cve_id": "CVE-2021-44228",
+          "vendor": "Apache",
+          "product": "Log4j2",
+          "name": "Apache Log4j2 Remote Code Execution Vulnerability",
+          "date_added": "2021-12-10",
+          "due_date": "2021-12-24",
+          "ransomware": "Known",
+          "source": "kev",
+          "extra": null
+        }
+      },
+      {
+        "op": "delete",
+        "table": "affected",
+        "key": {
+          "source": "kev",
+          "vuln_id": "CVE-2014-0001",
+          "ecosystem": null,
+          "package": null,
+          "purl": null,
+          "vendor": "Example",
+          "product": "Widget Server",
+          "cpe": null,
+          "range_type": null,
+          "version_type": null,
+          "events": null,
+          "versions": null,
+          "status": "affected",
+          "extra": null
+        }
+      },
+      {
+        "op": "upsert",
+        "table": "source_sync",
+        "row": {
+          "source": "kev",
+          "last_sync": "2026-11-11T08:00:05+00:00",
+          "cursor": null,
+          "records": 1450,
+          "status": "ok",
+          "message": null
+        }
+      }
+    ],
+    "generation": "3f2a9c0d4b1e47a8a6d5c2b190e7f364",
+    "acked_through": 0
+  }
+}

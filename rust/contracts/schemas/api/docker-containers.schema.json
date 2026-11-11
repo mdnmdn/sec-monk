@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/docker-containers.schema.json",
+  "title": "GET /api/docker/containers (ops.docker_containers)",
+  "type": "object",
+  "properties": {
+    "containers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "matched": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "image",
+          "state",
+          "status",
+          "matched"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "engine": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "containers",
+    "engine"
+  ],
+  "additionalProperties": false
+}

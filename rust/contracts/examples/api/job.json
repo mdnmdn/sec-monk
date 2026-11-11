@@ -1,0 +1,128 @@
+{
+  "id": 6,
+  "kind": "scan",
+  "origin": "ui",
+  "title": "scan host local: docker, docker-images",
+  "params": {
+    "mode": "host",
+    "host": "local",
+    "items": [
+      {
+        "id": "docker",
+        "collector": "docker-engine",
+        "target": "web",
+        "options": [
+          "socket=/var/run/docker.sock"
+        ]
+      },
+      {
+        "id": "docker-images",
+        "collector": "docker-engine",
+        "target": "image:*",
+        "options": [
+          "socket=/var/run/docker.sock"
+        ]
+      }
+    ],
+    "save": true,
+    "min_confidence": 0.5
+  },
+  "started": "2026-11-11T00:33:16+00:00",
+  "finished": "2026-11-11T00:33:16+00:00",
+  "status": "ok",
+  "error": null,
+  "result": {
+    "saved": true,
+    "targets": [
+      {
+        "collector": "docker-engine",
+        "target": "web",
+        "asset": "container:web",
+        "scan_id": 12,
+        "stats": {
+          "components": 16,
+          "matches": 1,
+          "findings": 1,
+          "withdrawn": 0,
+          "patched": 0
+        },
+        "warnings": [],
+        "partial": false,
+        "findings": [
+          {
+            "asset_id": "container:web",
+            "priority": "P3",
+            "vuln_id": "CVE-2024-3094",
+            "component": "xz-libs",
+            "version": "5.6.0-r0",
+            "category": "os-package",
+            "fixed_version": "5.6.1-r2",
+            "severity": "CRITICAL",
+            "cvss_score": 10.0,
+            "epss": null,
+            "kev": false,
+            "triage": null,
+            "matched_by": "osv-package",
+            "confidence": 1.0,
+            "status": "open",
+            "component_id": 105,
+            "advisory_ids": [
+              "ALPINE-CVE-2024-3094",
+              "CVE-2024-3094"
+            ],
+            "triage_source": null,
+            "first_seen": "2026-11-11T00:33:16+00:00",
+            "last_seen": "2026-11-11T00:33:16+00:00",
+            "fixed_at": null,
+            "ecosystem": "Alpine:v3.20",
+            "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+          }
+        ],
+        "counts": {
+          "P1": 0,
+          "P2": 0,
+          "P3": 1,
+          "P4": 0,
+          "kev": 0,
+          "total": 1
+        },
+        "error": null,
+        "reused": false,
+        "reused_scan_id": null,
+        "tags": []
+      }
+    ],
+    "stats": {
+      "components": 28,
+      "matches": 1,
+      "findings": 1,
+      "withdrawn": 0,
+      "patched": 0
+    },
+    "counts": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0,
+      "total": 1
+    }
+  },
+  "summary": {
+    "targets": 3,
+    "errors": 0,
+    "components": 28,
+    "P1": 0,
+    "P2": 0,
+    "P3": 1,
+    "P4": 0,
+    "kev": 0,
+    "total": 1
+  },
+  "log_lines": 12,
+  "log": [
+    "docker-engine: 1 target(s): web",
+    "collecting with docker-engine on web…",
+    "container:web: 16 components"
+  ]
+}

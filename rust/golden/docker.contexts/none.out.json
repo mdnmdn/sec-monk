@@ -1,0 +1,10 @@
+{
+ "result": [
+  {
+   "current": true,
+   "description": "Local engine (well-known socket)",
+   "host": "unix:///var/run/docker.sock",
+   "name": "default"
+  }
+ ]
+}

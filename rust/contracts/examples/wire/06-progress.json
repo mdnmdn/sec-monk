@@ -1,0 +1,8 @@
+{
+  "type": "progress",
+  "id": 7,
+  "message": "parsed package-lock.json",
+  "done": 1,
+  "total": null,
+  "unit": "files"
+}

@@ -1,0 +1,27 @@
+{
+  "type": "hello",
+  "protocol": "secmonk-wire/1.0",
+  "role": "host",
+  "name": "secmonk-desktop",
+  "version": "0.1.0",
+  "codecs": [
+    "json"
+  ],
+  "codec": "json",
+  "limits": {
+    "max_frame": 16777216
+  },
+  "session": {
+    "module": "py-engine",
+    "grants": {
+      "db_read": {
+        "state": "/data/sec-monk/db/state.sqlite3",
+        "mirror": "/data/sec-monk/db/mirror.sqlite3",
+        "uri_flags": "mode=ro"
+      }
+    },
+    "settings": {
+      "min_confidence": 0.5
+    }
+  }
+}

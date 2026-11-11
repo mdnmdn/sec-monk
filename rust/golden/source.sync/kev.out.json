@@ -1,0 +1,473 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "9 entries from file <fixtures>/sources/kev/known_exploited_vulnerabilities.json",
+   "records": 9,
+   "seconds": 0,
+   "source": "kev",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 19
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2021-44228",
+     "cwes": [
+      "CWE-20",
+      "CWE-400",
+      "CWE-502"
+     ],
+     "dateAdded": "2021-12-10",
+     "dueDate": "2021-12-24",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Known",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+     "product": "Log4j2",
+     "requiredAction": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+     "shortDescription": "Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution.",
+     "vendorProject": "Apache",
+     "vulnerabilityName": "Apache Log4j2 Remote Code Execution Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2021-12-10",
+    "record_id": "CVE-2021-44228",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2021-44228",
+    "date_added": "2021-12-10",
+    "due_date": "2021-12-24",
+    "extra": {
+     "cwes": [
+      "CWE-20",
+      "CWE-400",
+      "CWE-502"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+     "requiredAction": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+     "shortDescription": "Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution."
+    },
+    "name": "Apache Log4j2 Remote Code Execution Vulnerability",
+    "product": "Log4j2",
+    "ransomware": "1",
+    "source": "kev",
+    "vendor": "Apache"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2026-59310",
+     "cwes": [
+      "CWE-22"
+     ],
+     "dateAdded": "2026-08-18",
+     "dueDate": "2026-08-21",
+     "forensicTriage": "Yes",
+     "knownRansomwareCampaignUse": "Known",
+     "notes": "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/38017 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-59310",
+     "product": "VMware vCenter",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "Broadcom VMware vCenter contains a path traversal vulnerability which could allow a threat actor with network access to vCenter to execute arbitrary code.",
+     "vendorProject": "Broadcom",
+     "vulnerabilityName": "Broadcom VMware vCenter Path Traversal Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-08-18",
+    "record_id": "CVE-2026-59310",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2026-59310",
+    "date_added": "2026-08-18",
+    "due_date": "2026-08-21",
+    "extra": {
+     "cwes": [
+      "CWE-22"
+     ],
+     "forensicTriage": "Yes",
+     "notes": "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/38017 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-59310",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "Broadcom VMware vCenter contains a path traversal vulnerability which could allow a threat actor with network access to vCenter to execute arbitrary code."
+    },
+    "name": "Broadcom VMware vCenter Path Traversal Vulnerability",
+    "product": "VMware vCenter",
+    "ransomware": "1",
+    "source": "kev",
+    "vendor": "Broadcom"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2026-63077",
+     "cwes": [
+      "CWE-502"
+     ],
+     "dateAdded": "2026-08-05",
+     "dueDate": "2026-08-08",
+     "forensicTriage": "Yes",
+     "knownRansomwareCampaignUse": "Known",
+     "notes": "https://blog.jetbrains.com/teamcity/2026/07/cve-2026-63077/; https://www.jetbrains.com/privacy-security/issues-fixed/ ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-63077",
+     "product": "TeamCity",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "JetBrains TeamCity contains a deserialization of untrusted data vulnerability that could allow unauthenticated remote code execution via the agent polling protocol.",
+     "vendorProject": "JetBrains",
+     "vulnerabilityName": "JetBrains TeamCity Deserialization of Untrusted Data Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-08-05",
+    "record_id": "CVE-2026-63077",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2026-63077",
+    "date_added": "2026-08-05",
+    "due_date": "2026-08-08",
+    "extra": {
+     "cwes": [
+      "CWE-502"
+     ],
+     "forensicTriage": "Yes",
+     "notes": "https://blog.jetbrains.com/teamcity/2026/07/cve-2026-63077/; https://www.jetbrains.com/privacy-security/issues-fixed/ ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-63077",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "JetBrains TeamCity contains a deserialization of untrusted data vulnerability that could allow unauthenticated remote code execution via the agent polling protocol."
+    },
+    "name": "JetBrains TeamCity Deserialization of Untrusted Data Vulnerability",
+    "product": "TeamCity",
+    "ransomware": "1",
+    "source": "kev",
+    "vendor": "JetBrains"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2026-19868",
+     "cwes": [
+      "CWE-308"
+     ],
+     "dateAdded": "2026-11-06",
+     "dueDate": "2026-11-20",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2026-0014 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-19868",
+     "product": "SonicOS SSLVPN",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "SonicWall SonicOS SSLVPN contains a use of single-factor authentication vulnerability that may allow a user with valid credentials for an alternate authentication method to bypass SAML authentication controls. Successful exploitation may also bypass SAML-enforced multi-factor authentication (MFA).",
+     "vendorProject": "SonicWall",
+     "vulnerabilityName": "SonicWall SonicOS SSLVPN Use of Single-factor Authentication Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-11-06",
+    "record_id": "CVE-2026-19868",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2026-19868",
+    "date_added": "2026-11-06",
+    "due_date": "2026-11-20",
+    "extra": {
+     "cwes": [
+      "CWE-308"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2026-0014 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-19868",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "SonicWall SonicOS SSLVPN contains a use of single-factor authentication vulnerability that may allow a user with valid credentials for an alternate authentication method to bypass SAML authentication controls. Successful exploitation may also bypass SAML-enforced multi-factor authentication (MFA)."
+    },
+    "name": "SonicWall SonicOS SSLVPN Use of Single-factor Authentication Vulnerability",
+    "product": "SonicOS SSLVPN",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "SonicWall"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2024-27834",
+     "cwes": [
+      "CWE-287"
+     ],
+     "dateAdded": "2026-11-04",
+     "dueDate": "2026-11-18",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://support.apple.com/en-us/120896 ; https://support.apple.com/en-us/120898 ; https://support.apple.com/en-us/120901 ; https://support.apple.com/en-us/120902 ; https://support.apple.com/en-us/120903 ; https://support.apple.com/en-us/120905 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2024-27834",
+     "product": "Multiple Products",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "Apple iOS, iPadOS, macOS, Safari, tvOS and watchOS 10.5 contain an improper authentication vulnerability which could allow an attacker with arbitrary read and write capability to bypass pointer authentication.",
+     "vendorProject": "Apple",
+     "vulnerabilityName": "Apple Multiple Products Improper Authentication Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-11-04",
+    "record_id": "CVE-2024-27834",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2024-27834",
+    "date_added": "2026-11-04",
+    "due_date": "2026-11-18",
+    "extra": {
+     "cwes": [
+      "CWE-287"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://support.apple.com/en-us/120896 ; https://support.apple.com/en-us/120898 ; https://support.apple.com/en-us/120901 ; https://support.apple.com/en-us/120902 ; https://support.apple.com/en-us/120903 ; https://support.apple.com/en-us/120905 ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2024-27834",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "Apple iOS, iPadOS, macOS, Safari, tvOS and watchOS 10.5 contain an improper authentication vulnerability which could allow an attacker with arbitrary read and write capability to bypass pointer authentication."
+    },
+    "name": "Apple Multiple Products Improper Authentication Vulnerability",
+    "product": "Multiple Products",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "Apple"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2026-119977",
+     "cwes": [
+      "CWE-367"
+     ],
+     "dateAdded": "2026-11-03",
+     "dueDate": "2026-11-06",
+     "forensicTriage": "Yes",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://wordpress.org/news/2026/10/wordpress-7-1-4 ; https://www.wordfence.com/threat-intel/vulnerabilities/wordpress-core/wordpress-core-470-713-unauthenticated-upgrade-window-staged-installer-remote-code-execution ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-119977",
+     "product": "WordPress Core",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "WordPress WordPress Core contains a time-of-check time-of-use (TOCTOU) race condition vulnerability that could allow unauthenticated attackers to execute code on the server during the upgrade window. This is due to predictable, web-accessible staging paths used during full-package core upgrades.",
+     "vendorProject": "WordPress",
+     "vulnerabilityName": "WordPress WordPress Core Time-of-check Time-of-use (TOCTOU) Race Condition Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-11-03",
+    "record_id": "CVE-2026-119977",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2026-119977",
+    "date_added": "2026-11-03",
+    "due_date": "2026-11-06",
+    "extra": {
+     "cwes": [
+      "CWE-367"
+     ],
+     "forensicTriage": "Yes",
+     "notes": "https://wordpress.org/news/2026/10/wordpress-7-1-4 ; https://www.wordfence.com/threat-intel/vulnerabilities/wordpress-core/wordpress-core-470-713-unauthenticated-upgrade-window-staged-installer-remote-code-execution ; BOD 26-04: https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk ; Forensics Triage Requirements: https://www.cisa.gov/news-events/directives/bod-26-04-implementation-guidance-prioritizing-security-updates-based-risk ; https://nvd.nist.gov/vuln/detail/CVE-2026-119977",
+     "requiredAction": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see URL in Notes). Follow applicable BOD 26-04 guidance for cloud services or discontinue use of the product if mitigations are unavailable. Stakeholders are responsible for evaluating each asset's internet exposure and ensuring adherence to BOD 26-04 patching guidelines.",
+     "shortDescription": "WordPress WordPress Core contains a time-of-check time-of-use (TOCTOU) race condition vulnerability that could allow unauthenticated attackers to execute code on the server during the upgrade window. This is due to predictable, web-accessible staging paths used during full-package core upgrades."
+    },
+    "name": "WordPress WordPress Core Time-of-check Time-of-use (TOCTOU) Race Condition Vulnerability",
+    "product": "WordPress Core",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "WordPress"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2020-10189",
+     "cwes": [
+      "CWE-502"
+     ],
+     "dateAdded": "2021-11-03",
+     "dueDate": "2022-05-03",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2020-10189",
+     "product": "ManageEngine",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zoho ManageEngine Desktop Central contains a file upload vulnerability that allows for unauthenticated remote code execution.",
+     "vendorProject": "Zoho",
+     "vulnerabilityName": "Zoho ManageEngine Desktop Central File Upload Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2021-11-03",
+    "record_id": "CVE-2020-10189",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2020-10189",
+    "date_added": "2021-11-03",
+    "due_date": "2022-05-03",
+    "extra": {
+     "cwes": [
+      "CWE-502"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2020-10189",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zoho ManageEngine Desktop Central contains a file upload vulnerability that allows for unauthenticated remote code execution."
+    },
+    "name": "Zoho ManageEngine Desktop Central File Upload Vulnerability",
+    "product": "ManageEngine",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "Zoho"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2019-8394",
+     "cwes": [
+      "CWE-434"
+     ],
+     "dateAdded": "2021-11-03",
+     "dueDate": "2022-05-03",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2019-8394",
+     "product": "ManageEngine",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zoho ManageEngine ServiceDesk Plus (SDP) contains an unspecified vulnerability that allows remote users to upload files via login page customization.",
+     "vendorProject": "Zoho",
+     "vulnerabilityName": "Zoho ManageEngine ServiceDesk Plus (SDP) File Upload Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2021-11-03",
+    "record_id": "CVE-2019-8394",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2019-8394",
+    "date_added": "2021-11-03",
+    "due_date": "2022-05-03",
+    "extra": {
+     "cwes": [
+      "CWE-434"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2019-8394",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zoho ManageEngine ServiceDesk Plus (SDP) contains an unspecified vulnerability that allows remote users to upload files via login page customization."
+    },
+    "name": "Zoho ManageEngine ServiceDesk Plus (SDP) File Upload Vulnerability",
+    "product": "ManageEngine",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "Zoho"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "cveID": "CVE-2020-29583",
+     "cwes": [
+      "CWE-522"
+     ],
+     "dateAdded": "2021-11-03",
+     "dueDate": "2022-05-03",
+     "forensicTriage": "No",
+     "knownRansomwareCampaignUse": "Unknown",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2020-29583",
+     "product": "Multiple Products",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zyxel firewalls (ATP, USG, VM) and AP Controllers (NXC2500 and NXC5500) contain a use of hard-coded credentials vulnerability in an undocumented account (\"zyfwp\") with an unchangeable password.",
+     "vendorProject": "Zyxel",
+     "vulnerabilityName": "Zyxel Multiple Products Use of Hard-Coded Credentials Vulnerability"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2021-11-03",
+    "record_id": "CVE-2020-29583",
+    "source": "kev"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2020-29583",
+    "date_added": "2021-11-03",
+    "due_date": "2022-05-03",
+    "extra": {
+     "cwes": [
+      "CWE-522"
+     ],
+     "forensicTriage": "No",
+     "notes": "https://nvd.nist.gov/vuln/detail/CVE-2020-29583",
+     "requiredAction": "Apply updates per vendor instructions.",
+     "shortDescription": "Zyxel firewalls (ATP, USG, VM) and AP Controllers (NXC2500 and NXC5500) contain a use of hard-coded credentials vulnerability in an undocumented account (\"zyfwp\") with an unchangeable password."
+    },
+    "name": "Zyxel Multiple Products Use of Hard-Coded Credentials Vulnerability",
+    "product": "Multiple Products",
+    "ransomware": "0",
+    "source": "kev",
+    "vendor": "Zyxel"
+   },
+   "table": "kev"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": "2026.11.06",
+    "last_sync": "<ts>",
+    "message": "9 entries from file <fixtures>/sources/kev/known_exploited_vulnerabilities.json",
+    "records": 9,
+    "source": "kev",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

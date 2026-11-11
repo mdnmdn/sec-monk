@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/vuln-detail.schema.json",
+  "title": "GET /api/vulns/show (reports.vuln_detail)",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "query": {
+      "type": "string"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "severity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cvss_score": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "details": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modified": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "withdrawn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cvss_score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "cvss_vector": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cvss_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cwes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "source",
+          "id"
+        ]
+      }
+    },
+    "kev": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "epss": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "percentile": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "affected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "vuln_id": {
+            "type": "string"
+          },
+          "ecosystem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "package": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "purl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vendor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cpe": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "range_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "vuln_id",
+          "range_type"
+        ]
+      }
+    },
+    "affected_limit_reached": {
+      "type": "boolean"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding-row.schema.json"
+      }
+    },
+    "raw": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "data": {}
+        },
+        "required": [
+          "source",
+          "data"
+        ]
+      }
+    }
+  },
+  "required": [
+    "id",
+    "query",
+    "aliases",
+    "records",
+    "kev",
+    "epss",
+    "affected",
+    "affected_limit_reached",
+    "findings"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "asset": {
+    "id": "dir:/srv/payments-api",
+    "type": "directory",
+    "name": "payments-api",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "first_seen": "2026-11-11T00:33:16+00:00",
+    "last_seen": "2026-11-11T00:33:16+00:00",
+    "meta": {
+      "path": "/srv/payments-api",
+      "files_parsed": 5
+    }
+  },
+  "scans": [
+    {
+      "id": 2,
+      "collector": "fs",
+      "started_at": "2026-11-11T00:33:16+00:00",
+      "finished_at": "2026-11-11T00:33:16+00:00",
+      "components": 44,
+      "partial": false,
+      "partial_reason": null,
+      "warnings": []
+    }
+  ],
+  "components": [
+    {
+      "category": "library",
+      "name": "ch.qos.logback:logback-classic",
+      "version": "1.5.15",
+      "ecosystem": "Maven",
+      "vendor": null,
+      "purl": "pkg:maven/ch.qos.logback/logback-classic@1.5.15",
+      "cpe": null,
+      "path": "gradle.lockfile",
+      "id": 15,
+      "meta": {},
+      "findings": {
+        "P1": 0,
+        "P2": 0,
+        "P3": 0,
+        "P4": 0,
+        "kev": 0,
+        "total": 0
+      }
+    },
+    {
+      "category": "library",
+      "name": "ch.qos.logback:logback-core",
+      "version": "1.5.15",
+      "ecosystem": "Maven",
+      "vendor": null,
+      "purl": "pkg:maven/ch.qos.logback/logback-core@1.5.15",
+      "cpe": null,
+      "path": "gradle.lockfile",
+      "id": 16,
+      "meta": {},
+      "findings": {
+        "P1": 0,
+        "P2": 0,
+        "P3": 0,
+        "P4": 0,
+        "kev": 0,
+        "total": 0
+      }
+    }
+  ],
+  "findings": [
+    {
+      "asset_id": "dir:/srv/payments-api",
+      "priority": "P1",
+      "vuln_id": "CVE-2021-44228",
+      "component": "org.apache.logging.log4j:log4j-core",
+      "version": "2.14.1",
+      "category": "library",
+      "fixed_version": "2.15.0",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": 0.97431,
+      "kev": true,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 51,
+      "advisory_ids": [
+        "CVE-2021-44228",
+        "EUVD-2021-30001",
+        "GHSA-jfh8-c2jp-5v3q"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Maven",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    }
+  ],
+  "summary": {
+    "components": 44,
+    "open": {
+      "P1": 1,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 1,
+      "total": 1
+    },
+    "closed": 0,
+    "limit_reached": false
+  },
+  "partial": false,
+  "warnings": []
+}

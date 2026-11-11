@@ -1,0 +1,71 @@
+{
+  "schema": "secmonk-process-snapshot/1",
+  "platform": "linux",
+  "host": "build-01",
+  "taken_at": "2026-11-11T10:00:00+00:00",
+  "os": {
+    "name": "Debian GNU/Linux",
+    "version": "12"
+  },
+  "processes": [
+    {
+      "pid": 1,
+      "ppid": 0,
+      "uid": 0,
+      "user": "root",
+      "exe": "/usr/lib/systemd/systemd",
+      "started": "2026-11-01T07:00:00+00:00",
+      "args": [
+        "/sbin/init"
+      ],
+      "label": null
+    },
+    {
+      "pid": 812,
+      "ppid": 1,
+      "uid": 33,
+      "user": "www-data",
+      "exe": "/usr/sbin/nginx",
+      "started": "2026-11-01T07:00:05+00:00",
+      "args": [
+        "nginx: worker process"
+      ],
+      "label": "nginx.service",
+      "cgroup": "/system.slice/nginx.service"
+    }
+  ],
+  "launch_items": [
+    {
+      "mechanism": "systemd-service",
+      "label": "nginx.service",
+      "program": "/usr/sbin/nginx",
+      "args": [],
+      "source": "/lib/systemd/system/nginx.service",
+      "scope": "system",
+      "run_at_load": true,
+      "keep_alive": null,
+      "disabled": false
+    }
+  ],
+  "executables": {
+    "/usr/sbin/nginx": {
+      "exists": true,
+      "size": 1209344,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "identity": {
+        "name": "nginx",
+        "version": "1.22.1-9",
+        "source_package": "nginx",
+        "pkg_type": "deb",
+        "ecosystem": "Debian:12"
+      }
+    }
+  },
+  "warnings": [],
+  "source": {
+    "kind": "ssh",
+    "target": "ssh://build-01",
+    "transport": "openssh",
+    "sudo": false
+  }
+}

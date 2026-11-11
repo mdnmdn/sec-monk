@@ -1,0 +1,167 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "from file <fixtures>/sources/nvd/cve-2021-44228.json",
+   "records": 1,
+   "seconds": 0,
+   "source": "nvd",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 4
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "configurations": [
+      {
+       "nodes": [
+        {
+         "cpeMatch": [
+          {
+           "criteria": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+           "matchCriteriaId": "00000000-0000-0000-0000-000000000000",
+           "versionEndExcluding": "2.15.0",
+           "versionStartIncluding": "2.0",
+           "vulnerable": true
+          }
+         ],
+         "negate": false,
+         "operator": "OR"
+        }
+       ]
+      }
+     ],
+     "cveTags": [],
+     "descriptions": [
+      {
+       "lang": "en",
+       "value": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints."
+      }
+     ],
+     "id": "CVE-2021-44228",
+     "lastModified": "2026-11-06T00:00:00.000",
+     "metrics": {
+      "cvssMetricV31": [
+       {
+        "cvssData": {
+         "attackComplexity": "LOW",
+         "attackVector": "NETWORK",
+         "availabilityImpact": "HIGH",
+         "baseScore": 10.0,
+         "baseSeverity": "CRITICAL",
+         "confidentialityImpact": "HIGH",
+         "integrityImpact": "HIGH",
+         "privilegesRequired": "NONE",
+         "scope": "CHANGED",
+         "userInteraction": "NONE",
+         "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+         "version": "3.1"
+        },
+        "exploitabilityScore": 3.9,
+        "impactScore": 6.0,
+        "source": "nvd@nist.gov",
+        "type": "Primary"
+       }
+      ]
+     },
+     "published": "2021-12-10T10:15:09.143",
+     "references": [
+      {
+       "source": "psirt@apache.org",
+       "url": "https://logging.apache.org/log4j/2.x/security.html"
+      }
+     ],
+     "sourceIdentifier": "psirt@apache.org",
+     "vulnStatus": "Analyzed",
+     "weaknesses": [
+      {
+       "description": [
+        {
+         "lang": "en",
+         "value": "CWE-917"
+        }
+       ],
+       "source": "nvd@nist.gov",
+       "type": "Primary"
+      }
+     ]
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-11-06T00:00:00.000",
+    "record_id": "CVE-2021-44228",
+    "source": "nvd"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cvss_score": 10.0,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+    "cvss_version": "3.1",
+    "cwes": [
+     "CWE-917"
+    ],
+    "details": null,
+    "extra": {
+     "cveTags": [],
+     "sourceIdentifier": "psirt@apache.org"
+    },
+    "id": "CVE-2021-44228",
+    "modified": "2026-11-06T00:00:00.000",
+    "published": "2021-12-10T10:15:09.143",
+    "severity": "CRITICAL",
+    "source": "nvd",
+    "state": "Analyzed",
+    "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+    "withdrawn": null
+   },
+   "table": "vulnerability"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cpe": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+    "ecosystem": null,
+    "events": [
+     {
+      "introduced": "2.0"
+     },
+     {
+      "fixed": "2.15.0"
+     }
+    ],
+    "extra": {
+     "matchCriteriaId": "00000000-0000-0000-0000-000000000000"
+    },
+    "package": null,
+    "product": "log4j",
+    "purl": null,
+    "range_type": "CPE",
+    "source": "nvd",
+    "status": "affected",
+    "vendor": "apache",
+    "version_type": null,
+    "versions": null,
+    "vuln_id": "CVE-2021-44228"
+   },
+   "table": "affected"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": null,
+    "last_sync": "<ts>",
+    "message": "from file <fixtures>/sources/nvd/cve-2021-44228.json",
+    "records": 1,
+    "source": "nvd",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

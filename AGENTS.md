@@ -3,6 +3,28 @@
 Guide for coding agents (and humans) changing this repository. Read it before editing; it is short on purpose and
 points to the docs that hold the details.
 
+## Two projects: Python reference, Rust target
+
+The repository holds two projects:
+
+| Project | Where | Role |
+|---|---|---|
+| **Python** (`secmonk` CLI, web UI, collectors, sources, engine) | root: `src/`, `tests/`, `_docs/` | **reference**: the behaviour, payloads and outputs the Rust project must reproduce; kept working and green |
+| **Rust** (Tauri desktop app, Rust host, Python modules over stdio) | [`rust/`](rust/README.md), docs in [`rust/_docs/`](rust/_docs/INDEX.md) | **target**: new work goes here |
+
+- New features and ports land in `rust/`. Read [`rust/README.md`](rust/README.md) and
+  [`rust/_docs/plans/prototype.md`](rust/_docs/plans/prototype.md) first; components follow the Python-first →
+  golden → differential → port process in [`rust/_docs/tech/component-lifecycle.md`](rust/_docs/tech/component-lifecycle.md).
+- Treat the Python project as the reference: read it for behaviour, test against it (golden and differential tests),
+  and change it only when asked or to fix a bug there. `rust/` work never edits `src/` or `_docs/`. The Rust modules in
+  `rust/python/` import `secmonk` through a uv path dependency.
+- Checks for `rust/`: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace` (in `rust/`); `uv run pytest -q` and `uv run ruff check` in `rust/python/`. Docs in
+  `rust/_docs/` follow the same [authoring rules](_docs/_meta/authoring.md); their `INDEX.md` is kept by hand until
+  `scripts/docs.py` supports a second root.
+
+The rest of this file describes the Python reference project.
+
 ## What this is
 
 A prototype **holistic vulnerability scanner** in Python: one local vulnerability mirror (SQLite), many inventory

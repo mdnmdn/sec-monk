@@ -1,0 +1,21 @@
+{
+  "containers": [
+    {
+      "id": "8dfafdbc3a40",
+      "name": "web",
+      "image": "nginx:1.25.3",
+      "state": "running",
+      "status": "Up 3 days",
+      "matched": true
+    },
+    {
+      "id": "1b2c3d4e5f60",
+      "name": "db",
+      "image": "postgres:16-alpine",
+      "state": "running",
+      "status": "Up 3 days (healthy)",
+      "matched": true
+    }
+  ],
+  "engine": "local"
+}

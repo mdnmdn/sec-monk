@@ -110,7 +110,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 
 | Doc | Summary | Read when | Status | Verified |
 |---|---|---|---|---|
-| [Proposal — port sec-monk to a compiled stack (Rust), multi-database, desktop app](inbox/2026-11-08-port-to-compiled-stack.md) | Effort and risks of rewriting sec-monk in Rust (crate split, SQLite/PostgreSQL/MySQL, Tauri desktop app), compared with Go, .NET and JVM, with a phased recommendation. | you decide whether or how to port sec-monk to a compiled language, add database backends or build a desktop app | proposed | 2026-11-08 |
+| [Proposal — probe / engine / ui architecture on a compiled stack (Rust), standalone or distributed](inbox/2026-11-08-port-to-compiled-stack.md) | Probe/engine/ui split, standalone or across hosts (topologies, protocol, transports, security); Rust host with Python modules over stdio (strangler); databases, Tauri; versus Go, .NET, JVM; effort, path. | you decide whether or how to split sec-monk into probe, engine and ui, run it across hosts, choose a wire protocol or transport, decide what stays in Python, port it to a compiled language, add database backends or build a desktop app | proposed | 2026-11-11 |
 
 ## meta
 
@@ -157,6 +157,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **design**: [web-ui](features/web-ui.md)
 - **desktop**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
 - **discover**: [discover](tech/discover.md)
+- **distributed**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
 - **distro**: [next-sources](plans/next-sources.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [on-linux-docker](plans/on-linux-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [discover](tech/discover.md)
 - **docs**: [README](_meta/README.md), [authoring](_meta/authoring.md), [feedback](_meta/feedback.md), [frontmatter](_meta/frontmatter.md), [guidelines](_meta/guidelines.md), [librarian](_meta/librarian.md), [review-log](_meta/review-log.md), [tools](_meta/tools.md)
@@ -210,13 +211,14 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **podman**: [on-linux-docker](plans/on-linux-docker.md), [docker-engine](tech/collectors/docker-engine.md)
 - **powershell**: [on-windows](plans/on-windows.md)
 - **prioritization**: [scan-and-findings](features/scan-and-findings.md), [engine-and-quality](plans/engine-and-quality.md), [epss](references/vuln-sources/epss.md), [kev](references/vuln-sources/kev.md), [matching](tech/engine/matching.md)
+- **probe**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
 - **probes**: [probes](references/probes.md)
 - **process**: [0007-process-monitor](decisions/0007-process-monitor.md), [0010-remote-process-snapshot](decisions/0010-remote-process-snapshot.md), [process-monitor](features/process-monitor.md), [web-ui](features/web-ui.md), [process](tech/collectors/process.md)
 - **provenance**: [process-monitor](features/process-monitor.md), [process](tech/collectors/process.md)
 - **pub**: [dart](references/package-formats/dart.md)
 - **purl**: [osv](references/vuln-sources/osv.md), [classification](tech/engine/classification.md)
 - **pypi**: [python](references/package-formats/python.md)
-- **python**: [inventory-dependencies](features/inventory-dependencies.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
+- **python**: [inventory-dependencies](features/inventory-dependencies.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
 - **rbac**: [k8s](tech/collectors/k8s.md)
 - **registry**: [inventory-windows](features/inventory-windows.md), [on-windows](plans/on-windows.md), [windows-inventory](references/windows-inventory.md), [docker-image](tech/collectors/docker-image.md), [windows](tech/collectors/windows.md)
 - **roadmap**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
@@ -225,7 +227,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **rust**: [inventory-dependencies](features/inventory-dependencies.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [sbom](features/sbom.md), [docker-image](tech/collectors/docker-image.md), [sbom](tech/sbom.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
-- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [0010-remote-process-snapshot](decisions/0010-remote-process-snapshot.md), [web-ui](tech/web-ui.md)
+- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [0010-remote-process-snapshot](decisions/0010-remote-process-snapshot.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [web-ui](tech/web-ui.md)
 - **server**: [windows](tech/collectors/windows.md)
 - **spdx**: [sbom](features/sbom.md), [sbom](tech/sbom.md)
 - **sqlite**: [data-model](tech/data-model.md)
@@ -239,6 +241,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **tests**: [engine-and-quality](plans/engine-and-quality.md)
 - **tls**: [docker-engine](tech/collectors/docker-engine.md)
 - **tooling**: [tools](_meta/tools.md), [0001-language-python-uv-mise](decisions/0001-language-python-uv-mise.md)
+- **transport**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
 - **triage**: [next-sources](plans/next-sources.md)
 - **validation**: [probes](references/probes.md), [README](references/vuln-sources/README.md)
 - **versions**: [engine-and-quality](plans/engine-and-quality.md), [matching](tech/engine/matching.md)

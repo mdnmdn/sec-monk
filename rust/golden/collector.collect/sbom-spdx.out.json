@@ -1,0 +1,62 @@
+{
+ "asset": {
+  "id": "sbom:example-service@0.9.0",
+  "meta": {
+   "file": "<fixtures>/sbom/synthetic.spdx.json",
+   "format": "spdx",
+   "serial_number": "https://example.invalid/spdx/example-service-1",
+   "source": "sbom",
+   "spec_version": "SPDX-2.3",
+   "tools": [
+    "example-spdx-tool-1.2"
+   ]
+  },
+  "name": "example-service",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "repo"
+ },
+ "components": [
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "example-service",
+   "purl": null,
+   "source_path": null,
+   "vendor": null,
+   "version": "0.9.0"
+  },
+  {
+   "category": "os-package",
+   "cpe": "cpe:2.3:a:zlib:zlib:1.2.13:*:*:*:*:*:*:*",
+   "ecosystem": null,
+   "meta": {},
+   "name": "zlib",
+   "purl": "pkg:apk/alpine/zlib@1.2.13-r1?distro=alpine-3.18",
+   "source_path": null,
+   "vendor": null,
+   "version": "1.2.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "lodash",
+   "purl": "pkg:npm/lodash@4.17.20",
+   "source_path": null,
+   "vendor": "OpenJS",
+   "version": "4.17.20"
+  }
+ ],
+ "end": {
+  "components": 3,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

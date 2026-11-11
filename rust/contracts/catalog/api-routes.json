@@ -1,0 +1,602 @@
+{
+  "catalog": "secmonk-api-routes/1",
+  "routes": [
+    {
+      "n": 1,
+      "method": "GET",
+      "path": "/api/meta",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/meta.schema.json",
+      "content_type": "application/json",
+      "builder": "web/server.py Handler._meta",
+      "prototype": "rust (config + registry)",
+      "gate": [],
+      "errors": []
+    },
+    {
+      "n": 2,
+      "method": "GET",
+      "path": "/api/processes",
+      "query": {
+        "refresh": "1 = new snapshot"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/processes.schema.json",
+      "content_type": "application/json",
+      "builder": "web/api.py ProcessMonitor.payload -> procmon.snapshot_payload",
+      "prototype": "py-procmon procmon.payload",
+      "gate": [],
+      "errors": [
+        {
+          "status": 503,
+          "code": "unsupported-platform",
+          "when": "no live snapshot on this OS"
+        },
+        {
+          "status": 503,
+          "code": "collect-error",
+          "when": "collector error"
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "method": "GET",
+      "path": "/api/processes/watch",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/watch.schema.json",
+      "content_type": "application/json",
+      "builder": "ProcessMonitor.watch -> procmon.event_dict",
+      "prototype": "py-procmon procmon.watch",
+      "gate": [],
+      "errors": [
+        {
+          "status": 503,
+          "code": "collect-error",
+          "when": "collector error"
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "method": "POST",
+      "path": "/api/processes/save",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/process-save.schema.json",
+      "content_type": "application/json",
+      "builder": "ProcessMonitor.save (save_inventory + match_asset)",
+      "prototype": "py-procmon procmon.inventory -> Store.save_inventory -> engine.match",
+      "gate": [
+        "busy"
+      ],
+      "errors": [
+        {
+          "status": 409,
+          "code": null,
+          "when": "a job is running (one writer at a time)"
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "method": "GET",
+      "path": "/api/overview",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/overview.schema.json",
+      "content_type": "application/json",
+      "builder": "web/data.py DataApi.overview -> reports.overview",
+      "prototype": "py-engine reports.overview",
+      "gate": [],
+      "errors": [
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "method": "GET",
+      "path": "/api/assets",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/assets.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.assets -> reports.asset_rows",
+      "prototype": "py-engine reports.assets",
+      "gate": [],
+      "errors": [
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "method": "GET",
+      "path": "/api/assets/detail",
+      "query": {
+        "id": "required",
+        "limit": "1..5000, default 5000"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/asset-detail.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.asset -> reports.asset_detail",
+      "prototype": "py-engine reports.asset_detail",
+      "gate": [],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "id missing, bad limit"
+        },
+        {
+          "status": 404,
+          "code": "unknown-asset",
+          "when": "the asset id is not stored"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "method": "GET",
+      "path": "/api/assets/{id}/sbom",
+      "query": {
+        "vulns": "1 = with open findings"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/sbom.schema.json",
+      "content_type": "application/vnd.cyclonedx+json",
+      "builder": "Handler._sbom -> DataApi.sbom -> sbom.export_asset",
+      "prototype": "py-engine reports.sbom",
+      "gate": [],
+      "errors": [
+        {
+          "status": 404,
+          "code": "unknown-asset",
+          "when": "the asset id is not stored"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ],
+      "notes": "Content-Disposition: attachment; filename=\"<id, unsafe -> _, max 80>.cdx.json\""
+    },
+    {
+      "n": 9,
+      "method": "POST",
+      "path": "/api/assets/match",
+      "query": {
+        "id": "required"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/match-result.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.match -> engine.match.match_asset",
+      "prototype": "rust: engine.match(persisted) -> Store.replace_findings",
+      "gate": [
+        "busy"
+      ],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "id missing"
+        },
+        {
+          "status": 404,
+          "code": "unknown-asset",
+          "when": "the asset id is not stored"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        },
+        {
+          "status": 409,
+          "code": null,
+          "when": "a job is running (one writer at a time)"
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "method": "GET",
+      "path": "/api/unmatched",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/unmatched.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.unmatched -> reports.unmatched_rows",
+      "prototype": "py-engine reports.unmatched",
+      "gate": [],
+      "errors": [
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "method": "GET",
+      "path": "/api/findings",
+      "query": {
+        "priority": "P1..P4",
+        "asset": "asset id",
+        "all": "1 = include closed",
+        "fixable": "1",
+        "hide_minor": "1",
+        "hide_deferred": "1",
+        "limit": "1..5000, default 200"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/findings-page.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.findings -> reports.findings",
+      "prototype": "py-engine reports.findings",
+      "gate": [],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "bad priority or limit"
+        },
+        {
+          "status": 404,
+          "code": "unknown-asset",
+          "when": "the asset id is not stored"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 12,
+      "method": "GET",
+      "path": "/api/vulns/show",
+      "query": {
+        "id": "required",
+        "raw": "1 = raw records"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/vuln-detail.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.vuln -> reports.vuln_detail",
+      "prototype": "py-engine reports.vuln_detail",
+      "gate": [],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "id missing"
+        },
+        {
+          "status": 404,
+          "code": "unknown-vuln",
+          "when": "not in the mirror"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 13,
+      "method": "GET",
+      "path": "/api/vulns/search",
+      "query": {
+        "package": "",
+        "ecosystem": "",
+        "product": "",
+        "version": "",
+        "limit": "1..1000, default 50"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/vuln-search-page.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.vuln_search -> reports.vuln_search",
+      "prototype": "py-engine reports.vuln_search",
+      "gate": [],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "no package/ecosystem/product, bad limit"
+        },
+        {
+          "status": 404,
+          "code": "no-db",
+          "when": "the store is not initialized (no sync, scan or save yet)"
+        }
+      ]
+    },
+    {
+      "n": 14,
+      "method": "GET",
+      "path": "/api/sources",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/sources.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.sources (registry_rows, SYNC_ALL_ORDER, status_payload)",
+      "prototype": "rust: py-sources hello.provides + py-engine reports.status",
+      "gate": [],
+      "errors": [],
+      "notes": "answers without a database (status null)"
+    },
+    {
+      "n": 15,
+      "method": "GET",
+      "path": "/api/collectors",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/collectors.schema.json",
+      "content_type": "application/json",
+      "builder": "DataApi.collectors -> registry_rows",
+      "prototype": "rust: py-probe hello.provides.collectors",
+      "gate": [],
+      "errors": []
+    },
+    {
+      "n": 16,
+      "method": "GET",
+      "path": "/api/jobs",
+      "query": {
+        "kind": "scan|sync",
+        "limit": "1..200, default 50"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/job-list.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.list (job_rows + live jobs, job_dict)",
+      "prototype": "rust: Store job rows + live jobs",
+      "gate": [],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "bad kind or limit"
+        }
+      ]
+    },
+    {
+      "n": 17,
+      "method": "GET",
+      "path": "/api/jobs/{id}",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/job.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.get (live job or job_dict of the row)",
+      "prototype": "rust: live job or Store job row",
+      "gate": [],
+      "errors": [
+        {
+          "status": 404,
+          "code": null,
+          "when": "unknown id, or id not all digits"
+        }
+      ]
+    },
+    {
+      "n": 18,
+      "method": "POST",
+      "path": "/api/jobs",
+      "query": {},
+      "body": "api/job-start.schema.json",
+      "status": 202,
+      "response": "api/job.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.start (_prepare_sync / _prepare_scan / _prepare_batch)",
+      "prototype": "rust: JobRunner -> sync: py-sources source.sync; scan: py-probe + py-engine",
+      "gate": [
+        "actions",
+        "busy"
+      ],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "invalid body, forbidden browser option"
+        },
+        {
+          "status": 403,
+          "code": null,
+          "when": "actions disabled (HTTP binding on a non-loopback address)"
+        },
+        {
+          "status": 409,
+          "code": null,
+          "when": "a job is running; scan without save and no database"
+        },
+        {
+          "status": 413,
+          "code": null,
+          "when": "body over 64 KiB"
+        },
+        {
+          "status": 415,
+          "code": null,
+          "when": "Content-Type not application/json"
+        }
+      ]
+    },
+    {
+      "n": 19,
+      "method": "GET",
+      "path": "/api/discover",
+      "query": {
+        "target": "blank = this machine, [ssh://]user@host[:port], k8s://ctx",
+        "opt": "repeatable k=v, DISCOVER_WEB_OPTS only"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/discover.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.discover -> ops.discover_host",
+      "prototype": "py-probe discover.host",
+      "gate": [
+        "actions"
+      ],
+      "errors": [
+        {
+          "status": 400,
+          "code": null,
+          "when": "bad target or option"
+        },
+        {
+          "status": 403,
+          "code": null,
+          "when": "actions disabled (HTTP binding on a non-loopback address)"
+        },
+        {
+          "status": 409,
+          "code": null,
+          "when": "a discovery is running"
+        },
+        {
+          "status": 502,
+          "code": null,
+          "when": "cannot explore the host (generic message)"
+        }
+      ]
+    },
+    {
+      "n": 20,
+      "method": "GET",
+      "path": "/api/k8s/kubeconfigs",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/kubeconfigs.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.k8s_kubeconfigs -> ops.k8s_kubeconfigs",
+      "prototype": "py-probe k8s.kubeconfigs",
+      "gate": [
+        "actions"
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": null,
+          "when": "actions disabled (HTTP binding on a non-loopback address)"
+        },
+        {
+          "status": 500,
+          "code": null,
+          "when": "cannot list kubeconfigs"
+        }
+      ]
+    },
+    {
+      "n": 21,
+      "method": "GET",
+      "path": "/api/docker/contexts",
+      "query": {},
+      "body": null,
+      "status": 200,
+      "response": "api/docker-contexts.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.docker_contexts -> ops.docker_contexts",
+      "prototype": "py-probe docker.contexts",
+      "gate": [
+        "actions"
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": null,
+          "when": "actions disabled (HTTP binding on a non-loopback address)"
+        },
+        {
+          "status": 400,
+          "code": null,
+          "when": "bad input"
+        },
+        {
+          "status": 502,
+          "code": null,
+          "when": "engine unreachable (generic message)"
+        }
+      ]
+    },
+    {
+      "n": 22,
+      "method": "GET",
+      "path": "/api/docker/containers",
+      "query": {
+        "host": "unix:// tcp:// ssh://",
+        "context": "",
+        "all": "0|1",
+        "match": "selector",
+        "opt": "repeatable k=v, DOCKER_LIST_OPTS only"
+      },
+      "body": null,
+      "status": 200,
+      "response": "api/docker-containers.schema.json",
+      "content_type": "application/json",
+      "builder": "JobRunner.docker_containers -> ops.docker_containers",
+      "prototype": "py-probe docker.containers",
+      "gate": [
+        "actions"
+      ],
+      "errors": [
+        {
+          "status": 403,
+          "code": null,
+          "when": "actions disabled (HTTP binding on a non-loopback address)"
+        },
+        {
+          "status": 400,
+          "code": null,
+          "when": "bad selector, host or option"
+        },
+        {
+          "status": 502,
+          "code": null,
+          "when": "engine unreachable (generic message)"
+        }
+      ]
+    }
+  ]
+}

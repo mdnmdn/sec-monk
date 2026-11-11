@@ -1,0 +1,6 @@
+{
+ "error": {
+  "code": "invalid-params",
+  "error": "give a package, an ecosystem and/or a product"
+ }
+}

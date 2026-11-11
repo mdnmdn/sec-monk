@@ -1,0 +1,7 @@
+{
+  "type": "err",
+  "id": 8,
+  "code": "unknown-method",
+  "error": "unknown method 'collector.colect'",
+  "hint": "methods: see hello.provides.methods"
+}

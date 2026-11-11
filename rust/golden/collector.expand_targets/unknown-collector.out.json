@@ -1,0 +1,6 @@
+{
+ "error": {
+  "code": "unknown-collector",
+  "error": "unknown collector 'nope' (known: docker-engine, docker-image, fs, git, homebrew, k8s, macos, process, rootfs, sbom, ssh, windows)"
+ }
+}

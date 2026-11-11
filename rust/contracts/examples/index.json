@@ -1,0 +1,321 @@
+{
+  "index": [
+    {
+      "example": "../catalog/module-methods.json",
+      "schema": "catalog/module-methods.schema.json"
+    },
+    {
+      "example": "../catalog/api-routes.json",
+      "schema": "catalog/api-routes.schema.json"
+    },
+    {
+      "example": "wire/01-hello-module.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: synthetic"
+    },
+    {
+      "example": "wire/02-hello-host.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: synthetic; db_read only for db-read modules"
+    },
+    {
+      "example": "wire/03-req-collect.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/03-req-collect.json",
+      "schema": "inventory/collect-params.schema.json",
+      "pointer": "/params"
+    },
+    {
+      "example": "wire/04-event-asset.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: real (fs collector on tests/fixtures/lang/javascript/npm-v3, path anonymized)"
+    },
+    {
+      "example": "wire/04-event-asset.json",
+      "schema": "inventory/collect-item.schema.json",
+      "pointer": "/data"
+    },
+    {
+      "example": "wire/05-event-components.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: real, trimmed to 3 components"
+    },
+    {
+      "example": "wire/05-event-components.json",
+      "schema": "inventory/collect-item.schema.json",
+      "pointer": "/data"
+    },
+    {
+      "example": "wire/06-progress.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/07-end-collect.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/07-end-collect.json",
+      "schema": "inventory/collect-end.schema.json",
+      "pointer": "/result"
+    },
+    {
+      "example": "wire/08-cancel.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/09-err-cancelled.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/10-err-unknown-method.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/11-notify-log.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/11-notify-log.json",
+      "schema": "wire/notify-log.schema.json",
+      "pointer": "/params"
+    },
+    {
+      "example": "wire/12-req-classify.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: real input of engine/classify.classify"
+    },
+    {
+      "example": "wire/12-req-classify.json",
+      "schema": "engine/classify.schema.json#/$defs/params",
+      "pointer": "/params"
+    },
+    {
+      "example": "wire/13-res-classify.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: real output of engine/classify.classify"
+    },
+    {
+      "example": "wire/13-res-classify.json",
+      "schema": "engine/classify.schema.json#/$defs/result",
+      "pointer": "/result"
+    },
+    {
+      "example": "wire/14-req-match.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/14-req-match.json",
+      "schema": "engine/match.schema.json#/$defs/params",
+      "pointer": "/params"
+    },
+    {
+      "example": "wire/15-res-match.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "finding row from the design mock"
+    },
+    {
+      "example": "wire/15-res-match.json",
+      "schema": "engine/match.schema.json#/$defs/result",
+      "pointer": "/result"
+    },
+    {
+      "example": "wire/16-req-sync.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/16-req-sync.json",
+      "schema": "source/sync-params.schema.json",
+      "pointer": "/params"
+    },
+    {
+      "example": "wire/17-event-rows.json",
+      "schema": "wire/envelope.schema.json",
+      "note": "sample: synthetic (values from the KEV and OSV fixtures)"
+    },
+    {
+      "example": "wire/17-event-rows.json",
+      "schema": "source/rows.schema.json",
+      "pointer": "/data"
+    },
+    {
+      "example": "wire/18-end-sync.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/18-end-sync.json",
+      "schema": "source/sync-end.schema.json",
+      "pointer": "/result"
+    },
+    {
+      "example": "wire/19-req-in-range.json",
+      "schema": "wire/envelope.schema.json"
+    },
+    {
+      "example": "wire/19-req-in-range.json",
+      "schema": "engine/versions.schema.json#/$defs/range_params",
+      "pointer": "/params"
+    },
+    {
+      "example": "module/py-probe.json",
+      "schema": "module/manifest.schema.json"
+    },
+    {
+      "example": "module/py-sources.json",
+      "schema": "module/manifest.schema.json"
+    },
+    {
+      "example": "module/py-engine.json",
+      "schema": "module/manifest.schema.json"
+    },
+    {
+      "example": "module/py-procmon.json",
+      "schema": "module/manifest.schema.json"
+    },
+    {
+      "example": "module/rs-collect-fs.json",
+      "schema": "module/manifest.schema.json",
+      "note": "sample: synthetic, a later phase"
+    },
+    {
+      "example": "inventory/fs-npm-v3.json",
+      "schema": "inventory/inventory.schema.json",
+      "note": "sample: real (fs on tests/fixtures/lang/javascript/npm-v3, binaries=false), trimmed, anonymized"
+    },
+    {
+      "example": "inventory/legacy-collect-O.json",
+      "schema": "inventory/inventory.schema.json",
+      "note": "what `secmonk collect fs ... -O` writes today (no schema key)"
+    },
+    {
+      "example": "process/snapshot-linux.json",
+      "schema": "process/snapshot-1.schema.json",
+      "note": "sample: synthetic"
+    },
+    {
+      "example": "api/meta.json",
+      "schema": "api/meta.schema.json",
+      "note": "design mock"
+    },
+    {
+      "example": "api/meta-desktop.json",
+      "schema": "api/meta.schema.json",
+      "note": "the desktop app's answer: additive `engine` block, bind = the scheme origin"
+    },
+    {
+      "example": "api/processes.json",
+      "schema": "api/processes.schema.json",
+      "note": "design mock, lists trimmed"
+    },
+    {
+      "example": "api/processes-watch.json",
+      "schema": "api/watch.schema.json"
+    },
+    {
+      "example": "api/processes-save.json",
+      "schema": "api/process-save.schema.json",
+      "note": "sample: synthetic"
+    },
+    {
+      "example": "api/overview.json",
+      "schema": "api/overview.schema.json",
+      "note": "design mock, lists trimmed"
+    },
+    {
+      "example": "api/assets.json",
+      "schema": "api/assets.schema.json"
+    },
+    {
+      "example": "api/asset-detail.json",
+      "schema": "api/asset-detail.schema.json",
+      "note": "design mock (mock-only match_stats removed), lists trimmed"
+    },
+    {
+      "example": "api/sbom.json",
+      "schema": "api/sbom.schema.json",
+      "note": "design mock, trimmed"
+    },
+    {
+      "example": "api/assets-match.json",
+      "schema": "api/match-result.schema.json",
+      "note": "sample: synthetic"
+    },
+    {
+      "example": "api/unmatched.json",
+      "schema": "api/unmatched.schema.json"
+    },
+    {
+      "example": "api/findings.json",
+      "schema": "api/findings-page.schema.json"
+    },
+    {
+      "example": "api/vulns-show.json",
+      "schema": "api/vuln-detail.schema.json",
+      "note": "design mock, trimmed, without raw"
+    },
+    {
+      "example": "api/vulns-search.json",
+      "schema": "api/vuln-search-page.schema.json"
+    },
+    {
+      "example": "api/sources.json",
+      "schema": "api/sources.schema.json",
+      "note": "design mock, registry trimmed"
+    },
+    {
+      "example": "api/sources-no-db.json",
+      "schema": "api/sources.schema.json"
+    },
+    {
+      "example": "api/collectors.json",
+      "schema": "api/collectors.schema.json"
+    },
+    {
+      "example": "api/jobs.json",
+      "schema": "api/job-list.schema.json",
+      "note": "design mock, trimmed"
+    },
+    {
+      "example": "api/job.json",
+      "schema": "api/job.schema.json",
+      "note": "design mock, trimmed"
+    },
+    {
+      "example": "api/job-start-sync.json",
+      "schema": "api/job-start.schema.json"
+    },
+    {
+      "example": "api/job-start-scan.json",
+      "schema": "api/job-start.schema.json"
+    },
+    {
+      "example": "api/job-start-host.json",
+      "schema": "api/job-start.schema.json"
+    },
+    {
+      "example": "api/discover.json",
+      "schema": "api/discover.schema.json"
+    },
+    {
+      "example": "api/k8s-kubeconfigs.json",
+      "schema": "api/kubeconfigs.schema.json"
+    },
+    {
+      "example": "api/docker-contexts.json",
+      "schema": "api/docker-contexts.schema.json"
+    },
+    {
+      "example": "api/docker-containers.json",
+      "schema": "api/docker-containers.schema.json"
+    },
+    {
+      "example": "api/error-unknown-asset.json",
+      "schema": "api/error.schema.json"
+    },
+    {
+      "example": "api/error-no-db.json",
+      "schema": "api/error.schema.json"
+    }
+  ]
+}

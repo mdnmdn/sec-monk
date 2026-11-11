@@ -1,0 +1,6 @@
+{
+ "asset_id": "dir:/srv/payments-api",
+ "min_confidence": 0.5,
+ "mode": "persisted",
+ "view_limit": 50
+}

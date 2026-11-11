@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/findings-page.schema.json",
+  "title": "GET /api/findings",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding-row.schema.json"
+      }
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+    },
+    "limit_reached": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "findings",
+    "limit",
+    "limit_reached"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,22 @@
+# Rust prototype: everything the app, uv and the Python modules write (data_dir in dev) and build output.
+_data/
+target/
+**/target/
+
+# Python modules project (rust/python)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Tauri generated files
+apps/desktop/src-tauri/gen/schemas/
+
+# never commit databases
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+
+_data/

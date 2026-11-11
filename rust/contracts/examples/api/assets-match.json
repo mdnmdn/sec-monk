@@ -1,0 +1,10 @@
+{
+  "asset": "dir:/srv/payments-api",
+  "stats": {
+    "components": 12,
+    "matches": 5,
+    "findings": 3,
+    "withdrawn": 0,
+    "patched": 0
+  }
+}

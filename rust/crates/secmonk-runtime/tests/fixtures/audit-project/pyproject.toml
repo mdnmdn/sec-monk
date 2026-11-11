@@ -1,0 +1,10 @@
+[project]
+name = "secmonk-audit-fixture"
+version = "0.1.0"
+description = "Stand-in uv project for the uv_audit test of secmonk-runtime (synthetic)."
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.8,<0.14"]
+build-backend = "uv_build"

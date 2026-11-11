@@ -1,0 +1,155 @@
+{
+ "asset": {
+  "id": "windows:WS-BOB02",
+  "meta": {
+   "edition": "Professional",
+   "installation_type": "Client"
+  },
+  "name": "WS-BOB02",
+  "os_name": "Windows 11 Pro",
+  "os_version": "23H2 (build 22631.3880)",
+  "platform": "windows/amd64",
+  "type": "desktop"
+ },
+ "components": [
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Google Chrome",
+    "install_date": "20240702",
+    "product_hint": "google chrome",
+    "publisher": "Google LLC",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "google"
+   },
+   "name": "Google Chrome",
+   "purl": "pkg:generic/google/Google%20Chrome@126.0.6478.127",
+   "source_path": "HKLM\\...\\Uninstall\\",
+   "vendor": null,
+   "version": "126.0.6478.127"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "7-Zip 23.01 (x64)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\7-Zip\\",
+    "product_hint": "7-zip",
+    "publisher": "Igor Pavlov",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "igor-pavlov"
+   },
+   "name": "7-Zip",
+   "purl": "pkg:generic/igor-pavlov/7-Zip@23.01",
+   "source_path": "HKLM\\...\\Uninstall\\",
+   "vendor": null,
+   "version": "23.01"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft Edge",
+    "install_date": "20240705",
+    "product_hint": "microsoft edge",
+    "publisher": "Microsoft Corporation",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Edge",
+   "purl": "pkg:generic/microsoft/Microsoft%20Edge@126.0.2592.87",
+   "source_path": "HKLM\\...\\Uninstall\\",
+   "vendor": null,
+   "version": "126.0.2592.87"
+  },
+  {
+   "category": "os",
+   "cpe": "cpe:2.3:o:microsoft:windows_11_23h2:10.0.22631.3880:*:*:*:*:*:amd64:*",
+   "ecosystem": null,
+   "meta": {
+    "build": 22631,
+    "display_version": "23H2",
+    "edition": "Professional",
+    "family": "client",
+    "hotfixes": [
+     "KB5040442"
+    ],
+    "installation_type": "Client",
+    "last_hotfix_on": "7/17/2024",
+    "marketing_name": "Windows 11 Pro",
+    "product": "windows 11 version 22h3",
+    "product_source": "alias-table",
+    "release": "23H2",
+    "server_core": false,
+    "ubr": 3880
+   },
+   "name": "Windows 11 Version 23H2",
+   "purl": "pkg:generic/microsoft/windows@10.0.22631.3880?release=11-23H2",
+   "source_path": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+   "vendor": "microsoft",
+   "version": "10.0.22631.3880"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Notepad++ (64-bit x64)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Notepad++\\",
+    "product_hint": "notepad++",
+    "publisher": "Notepad++ Team",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "notepad-team"
+   },
+   "name": "Notepad++",
+   "purl": "pkg:generic/notepad-team/Notepad%2B%2B@8.6.4",
+   "source_path": "HKLM\\...\\Uninstall\\",
+   "vendor": null,
+   "version": "8.6.4"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Python 3.12.4 (64-bit)",
+    "install_date": "20240620",
+    "install_location": "C:\\Program Files\\Python312\\",
+    "msi_product_code": "{7D1C0A52-9A1F-4A5E-A1C8-6B4A6A3F2C33}",
+    "product_hint": "python",
+    "publisher": "Python Software Foundation",
+    "registry_key": "{7D1C0A52-9A1F-4A5E-A1C8-6B4A6A3F2C33}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "python"
+   },
+   "name": "Python",
+   "purl": "pkg:generic/python/Python@3.12.4",
+   "source_path": "HKLM\\...\\Uninstall\\{7D1C0A52-9A1F-4A5E-A1C8-6B4A6A3F2C33}",
+   "vendor": null,
+   "version": "3.12.4"
+  }
+ ],
+ "end": {
+  "components": 6,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 1
+ },
+ "warnings": [
+  "osquery input: no Appx/Chocolatey/Scoop/.NET data, per-user installs depend on osquery config"
+ ]
+}

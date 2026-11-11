@@ -1,0 +1,73 @@
+{
+ "result": {
+  "asset_id": "dir:/srv/payments-api",
+  "based_on": {
+   "latest_scan_id": 1,
+   "mirror_synced_at": "<ts>"
+  },
+  "finding_set": [
+   {
+    "advisory_ids": [
+     "CVE-2021-44228",
+     "EUVD-2021-30001",
+     "GHSA-jfh8-c2jp-5v3q"
+    ],
+    "component_id": 1,
+    "confidence": 1.0,
+    "cvss_score": 10.0,
+    "epss": 0.97431,
+    "first_seen": "<ts>",
+    "fixed_at": null,
+    "fixed_version": "2.15.0",
+    "kev": true,
+    "last_seen": "<ts>",
+    "matched_by": "osv-package",
+    "priority": "P1",
+    "severity": "CRITICAL",
+    "status": "open",
+    "triage": null,
+    "triage_source": "osv",
+    "vuln_id": "CVE-2021-44228"
+   }
+  ],
+  "mode": "persisted",
+  "stats": {
+   "components": 2,
+   "findings": 1,
+   "matches": 1,
+   "patched": 0,
+   "withdrawn": 0
+  },
+  "view": [
+   {
+    "advisory_ids": [
+     "CVE-2021-44228",
+     "EUVD-2021-30001",
+     "GHSA-jfh8-c2jp-5v3q"
+    ],
+    "asset_id": "dir:/srv/payments-api",
+    "category": "library",
+    "component": "org.apache.logging.log4j:log4j-core",
+    "component_id": 1,
+    "confidence": 1.0,
+    "cvss_score": 10.0,
+    "ecosystem": "Maven",
+    "epss": 0.97431,
+    "first_seen": "<ts>",
+    "fixed_at": null,
+    "fixed_version": "2.15.0",
+    "kev": true,
+    "last_seen": "<ts>",
+    "matched_by": "osv-package",
+    "priority": "P1",
+    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+    "severity": "CRITICAL",
+    "status": "open",
+    "triage": null,
+    "triage_source": "osv",
+    "version": "2.14.1",
+    "vuln_id": "CVE-2021-44228"
+   }
+  ]
+ }
+}

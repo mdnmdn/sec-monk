@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/engine/procmon.schema.json",
+  "title": "procmon.* params/results",
+  "$defs": {
+    "payload_params": {
+      "type": "object",
+      "properties": {
+        "refresh": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "inventory_result": {
+      "type": "object",
+      "properties": {
+        "inventory": {
+          "$ref": "../inventory/inventory.schema.json"
+        }
+      },
+      "required": [
+        "inventory"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

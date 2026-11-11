@@ -1,0 +1,112 @@
+{
+  "host": {
+    "kind": "ssh",
+    "target": "deploy@build-01.example.internal",
+    "name": "build-01",
+    "os": "linux",
+    "os_version": "Ubuntu 24.04.1 LTS",
+    "arch": "x86_64"
+  },
+  "candidates": [
+    {
+      "id": "ssh",
+      "collector": "ssh",
+      "target": "deploy@build-01.example.internal",
+      "options": [
+        "identity=~/.ssh/id_ed25519"
+      ],
+      "label": "Remote host software",
+      "description": "OS packages (dpkg), language packages of the remote host, read-only over ssh",
+      "available": true,
+      "reason": null,
+      "selected": true,
+      "details": {
+        "package_managers": [
+          "dpkg"
+        ],
+        "brew_prefixes": [],
+        "tools": [
+          "dpkg",
+          "docker"
+        ]
+      }
+    },
+    {
+      "id": "docker",
+      "collector": "docker-engine",
+      "target": "*",
+      "options": [
+        "host=ssh://deploy@build-01.example.internal",
+        "identity=~/.ssh/id_ed25519"
+      ],
+      "label": "Docker containers",
+      "description": "Running containers of the Docker engine on deploy@build-01.example.internal (2 running)",
+      "available": true,
+      "reason": null,
+      "selected": true,
+      "details": {
+        "engine": "ssh://deploy@build-01.example.internal",
+        "containers": [
+          {
+            "name": "web",
+            "image": "nginx:1.25.3",
+            "state": "running"
+          },
+          {
+            "name": "db",
+            "image": "postgres:16-alpine",
+            "state": "running"
+          }
+        ]
+      }
+    },
+    {
+      "id": "docker-images",
+      "collector": "docker-engine",
+      "target": "image:*",
+      "options": [
+        "host=ssh://deploy@build-01.example.internal",
+        "identity=~/.ssh/id_ed25519"
+      ],
+      "label": "Docker images",
+      "description": "Tagged images of the Docker engine on deploy@build-01.example.internal: 2 unique (3 tags), each scanned once per image Id",
+      "available": true,
+      "reason": null,
+      "selected": false,
+      "details": {
+        "tagged_images": 3,
+        "unique_ids": 2,
+        "images": [
+          {
+            "id": "a6bd71f48f68",
+            "tags": [
+              "nginx:1.25.3",
+              "nginx:latest"
+            ]
+          },
+          {
+            "id": "0123456789ab",
+            "tags": [
+              "postgres:16-alpine"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "process",
+      "collector": "process",
+      "target": "ssh://deploy@build-01.example.internal",
+      "options": [
+        "identity=~/.ssh/id_ed25519"
+      ],
+      "label": "Running processes",
+      "description": "Running processes of the remote host: how each was launched, the software behind it, its version (one read-only snapshot over ssh)",
+      "available": true,
+      "reason": null,
+      "selected": true,
+      "details": {}
+    }
+  ],
+  "warnings": []
+}

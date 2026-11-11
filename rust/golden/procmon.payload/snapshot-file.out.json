@@ -1,0 +1,913 @@
+{
+ "result": {
+  "asset": "process:fixture-mac",
+  "host": "fixture-mac",
+  "launch_items": [
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": true,
+    "kind": "service",
+    "label": "com.example.updater",
+    "mechanism": "launchd-daemon",
+    "missing_program": false,
+    "program": "/Library/PrivilegedHelperTools/com.example.updater",
+    "run_at_load": true,
+    "running_pids": [
+     120
+    ],
+    "scope": "system",
+    "source": "/Library/LaunchDaemons/com.example.updater.plist"
+   },
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": null,
+    "kind": "service",
+    "label": "com.apple.syslogd",
+    "mechanism": "launchd-system-daemon",
+    "missing_program": false,
+    "program": "/usr/sbin/syslogd",
+    "run_at_load": null,
+    "running_pids": [
+     95
+    ],
+    "scope": "system",
+    "source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist"
+   },
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": null,
+    "kind": "service",
+    "label": "com.openssh.sshd",
+    "mechanism": "launchd-system-daemon",
+    "missing_program": false,
+    "program": "/usr/libexec/sshd-keygen-wrapper",
+    "run_at_load": null,
+    "running_pids": [
+     500
+    ],
+    "scope": "system",
+    "source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist"
+   },
+   {
+    "args": [
+     "--api-key=<redacted>"
+    ],
+    "disabled": null,
+    "keep_alive": true,
+    "kind": "agent",
+    "label": "com.sync.agent",
+    "mechanism": "launchd-agent",
+    "missing_program": false,
+    "program": "/Users/alice/Library/Application Support/Sync/syncd",
+    "run_at_load": true,
+    "running_pids": [
+     320
+    ],
+    "scope": "user:alice",
+    "source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist"
+   }
+  ],
+  "matched": true,
+  "os": {
+   "build": "23F79",
+   "name": "macOS",
+   "version": "14.5"
+  },
+  "platform": "darwin",
+  "processes": [
+   {
+    "category": null,
+    "depth": 0,
+    "evidence": "pid",
+    "exe": null,
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "",
+    "identity_method": null,
+    "label": null,
+    "launch": "kernel",
+    "launch_detail": "kernel",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 0,
+    "process": "kernel_task",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 1,
+    "evidence": "pid",
+    "exe": "/sbin/launchd",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "kernel",
+    "launch_detail": "kernel",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 0,
+    "process": "launchd",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 2,
+    "evidence": "pid-label",
+    "exe": "/usr/sbin/syslogd",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": "com.apple.syslogd",
+    "launch": "service",
+    "launch_detail": "service (com.apple.syslogd)",
+    "launch_source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+    "pid": 0,
+    "ppid": 1,
+    "process": "syslogd",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "executable",
+    "depth": 2,
+    "evidence": "exe-match",
+    "exe": "/Library/PrivilegedHelperTools/com.example.updater",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "identity": "com.example.updater",
+    "identity_method": "none",
+    "label": "com.example.updater",
+    "launch": "service",
+    "launch_detail": "service (com.example.updater)",
+    "launch_source": "/Library/LaunchDaemons/com.example.updater.plist",
+    "pid": 0,
+    "ppid": 1,
+    "process": "com.example.updater",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "application",
+    "depth": 2,
+    "evidence": "pid-label",
+    "exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "Slack",
+    "identity_method": "path-only",
+    "label": "application.com.tinyspeck.slackmacgap.1234.5678",
+    "launch": "gui-app",
+    "launch_detail": "gui-app",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 1,
+    "process": "Slack",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "application",
+    "depth": 3,
+    "evidence": "parent",
+    "exe": "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "Slack",
+    "identity_method": "path-only",
+    "label": null,
+    "launch": "child",
+    "launch_detail": "child",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 300,
+    "process": "Slack Helper",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "application",
+    "depth": 2,
+    "evidence": "parent",
+    "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "downloaded"
+    ],
+    "identity": "Google Chrome",
+    "identity_method": "path-only",
+    "label": null,
+    "launch": "gui-app",
+    "launch_detail": "gui-app",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 1,
+    "process": "Google Chrome",
+    "provenance": {
+     "quarantine": {
+      "agent": "Safari",
+      "event": {
+       "agent_bundle_id": "com.apple.Safari",
+       "data_url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+       "origin_url": "https://www.google.com/chrome/",
+       "time": "2026-10-01T08:29:58+00:00"
+      },
+      "event_id": "9F0C1E52-6D3B-4E0B-9C59-1B2A3C4D5E6F",
+      "on": "/Applications/Google Chrome.app",
+      "raw_flags": "0083",
+      "time": "2026-10-01T08:30:00+00:00",
+      "user_approved": true
+     },
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "signature": {
+      "authority": [
+       "Developer ID Application: Google LLC (EQHXZ8M8AV)",
+       "Developer ID Certification Authority",
+       "Apple Root CA"
+      ],
+      "developer_id": true,
+      "signed": true,
+      "team_id": "EQHXZ8M8AV"
+     },
+     "where_froms": [
+      "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+      "https://www.google.com/"
+     ]
+    },
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "executable",
+    "depth": 2,
+    "evidence": "pid-label",
+    "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "user-writable-path",
+     "persistent-from-user-path",
+     "unidentified"
+    ],
+    "identity": "syncd",
+    "identity_method": "none",
+    "label": "com.sync.agent",
+    "launch": "agent",
+    "launch_detail": "agent (com.sync.agent)",
+    "launch_source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist",
+    "pid": 0,
+    "ppid": 1,
+    "process": "syncd",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "system-app",
+    "depth": 2,
+    "evidence": "pid-label",
+    "exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "Terminal",
+    "identity_method": "path-only",
+    "label": "application.com.apple.Terminal.111.222",
+    "launch": "gui-app",
+    "launch_detail": "gui-app",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 1,
+    "process": "Terminal",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 3,
+    "evidence": "parent",
+    "exe": "/usr/bin/login",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "child",
+    "launch_detail": "child",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 400,
+    "process": "login",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 4,
+    "evidence": "ancestry",
+    "exe": "/bin/zsh",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "interactive",
+    "launch_detail": "interactive (terminal)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 401,
+    "process": "zsh",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+   },
+   {
+    "category": "executable",
+    "depth": 5,
+    "evidence": "ancestry",
+    "exe": "/opt/homebrew/bin/curl",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "identity": "curl",
+    "identity_method": "none",
+    "label": null,
+    "launch": "interactive",
+    "launch_detail": "interactive (terminal)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 402,
+    "process": "curl",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+   },
+   {
+    "category": "executable",
+    "depth": 5,
+    "evidence": "ancestry",
+    "exe": "/usr/local/bin/hello",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "identity": "hello",
+    "identity_method": "none",
+    "label": null,
+    "launch": "interactive",
+    "launch_detail": "interactive (terminal)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 402,
+    "process": "hello",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+   },
+   {
+    "category": "os",
+    "depth": 5,
+    "evidence": "ancestry",
+    "exe": "/usr/bin/python3",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "interactive",
+    "launch_detail": "interactive (terminal)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 402,
+    "process": "python3",
+    "provenance": {},
+    "script": "/Users/alice/tool.py",
+    "started": "<ts>",
+    "user": "alice",
+    "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+   },
+   {
+    "category": "os",
+    "depth": 2,
+    "evidence": "pid-label",
+    "exe": "/usr/sbin/sshd",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": "com.openssh.sshd",
+    "launch": "service",
+    "launch_detail": "service (com.openssh.sshd)",
+    "launch_source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist",
+    "pid": 0,
+    "ppid": 1,
+    "process": "sshd",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 3,
+    "evidence": "parent",
+    "exe": "/usr/sbin/sshd",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "child",
+    "launch_detail": "child",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 500,
+    "process": "sshd",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 4,
+    "evidence": "parent",
+    "exe": "/bin/zsh",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "child",
+    "launch_detail": "child",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 501,
+    "process": "zsh",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "alice",
+    "via": "/usr/sbin/sshd"
+   },
+   {
+    "category": "executable",
+    "depth": 5,
+    "evidence": "ancestry",
+    "exe": "/tmp/x",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "exe-missing",
+     "user-writable-path",
+     "root-from-user-path",
+     "unidentified"
+    ],
+    "identity": "x",
+    "identity_method": "none",
+    "label": null,
+    "launch": "remote-session",
+    "launch_detail": "remote-session (sshd)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 502,
+    "process": "x",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": "/usr/sbin/sshd"
+   },
+   {
+    "category": "os",
+    "depth": 2,
+    "evidence": "parent",
+    "exe": "/usr/sbin/cron",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "service",
+    "launch_detail": "service",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 1,
+    "process": "cron",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": null
+   },
+   {
+    "category": "os",
+    "depth": 3,
+    "evidence": "parent",
+    "exe": "/bin/sh",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "scheduled",
+    "launch_detail": "scheduled (cron)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 600,
+    "process": "sh",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": "/usr/sbin/cron"
+   },
+   {
+    "category": "os",
+    "depth": 4,
+    "evidence": "ancestry",
+    "exe": "/bin/bash",
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "identity": "macOS 14.5",
+    "identity_method": "os",
+    "label": null,
+    "launch": "scheduled",
+    "launch_detail": "scheduled (cron)",
+    "launch_source": null,
+    "pid": 0,
+    "ppid": 601,
+    "process": "bash",
+    "provenance": {},
+    "script": null,
+    "started": "<ts>",
+    "user": "root",
+    "via": "/usr/sbin/cron"
+   }
+  ],
+  "software": [
+   {
+    "category": "os",
+    "count": 11,
+    "executables": [
+     "/sbin/launchd",
+     "/usr/sbin/syslogd",
+     "/usr/bin/login",
+     "/bin/zsh",
+     "/usr/bin/python3",
+     "/usr/sbin/sshd",
+     "/usr/sbin/cron",
+     "/bin/sh",
+     "/bin/bash"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "launch": [
+     "kernel",
+     "service",
+     "child",
+     "interactive",
+     "scheduled"
+    ],
+    "name": "macOS",
+    "pids": [
+     1,
+     95,
+     401,
+     402,
+     405,
+     500,
+     501,
+     502,
+     600,
+     601,
+     602
+    ],
+    "product": "macos",
+    "purl": null,
+    "resolution": "os",
+    "users": [
+     "root",
+     "alice"
+    ],
+    "vendor": "apple",
+    "version": "14.5",
+    "via_executable": null
+   },
+   {
+    "category": "executable",
+    "count": 1,
+    "executables": [
+     "/Library/PrivilegedHelperTools/com.example.updater"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "launch": [
+     "service"
+    ],
+    "name": "com.example.updater",
+    "pids": [
+     120
+    ],
+    "product": "com.example.updater",
+    "purl": null,
+    "resolution": "none",
+    "users": [
+     "root"
+    ],
+    "vendor": null,
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "application",
+    "count": 2,
+    "executables": [
+     "/Applications/Slack.app/Contents/MacOS/Slack",
+     "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "launch": [
+     "gui-app",
+     "child"
+    ],
+    "name": "Slack",
+    "pids": [
+     300,
+     301
+    ],
+    "product": "slack",
+    "purl": null,
+    "resolution": "path-only",
+    "users": [
+     "alice"
+    ],
+    "vendor": "slack",
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "application",
+    "count": 1,
+    "executables": [
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "downloaded"
+    ],
+    "launch": [
+     "gui-app"
+    ],
+    "name": "Google Chrome",
+    "pids": [
+     310
+    ],
+    "product": "chrome",
+    "purl": null,
+    "resolution": "path-only",
+    "users": [
+     "alice"
+    ],
+    "vendor": "google",
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "executable",
+    "count": 1,
+    "executables": [
+     "/Users/alice/Library/Application Support/Sync/syncd"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "user-writable-path",
+     "persistent-from-user-path",
+     "unidentified"
+    ],
+    "launch": [
+     "agent"
+    ],
+    "name": "syncd",
+    "pids": [
+     320
+    ],
+    "product": "syncd",
+    "purl": null,
+    "resolution": "none",
+    "users": [
+     "alice"
+    ],
+    "vendor": null,
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "system-app",
+    "count": 1,
+    "executables": [
+     "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [],
+    "launch": [
+     "gui-app"
+    ],
+    "name": "Terminal",
+    "pids": [
+     400
+    ],
+    "product": "terminal",
+    "purl": null,
+    "resolution": "path-only",
+    "users": [
+     "alice"
+    ],
+    "vendor": null,
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "executable",
+    "count": 1,
+    "executables": [
+     "/opt/homebrew/bin/curl"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "launch": [
+     "interactive"
+    ],
+    "name": "curl",
+    "pids": [
+     403
+    ],
+    "product": "curl",
+    "purl": null,
+    "resolution": "none",
+    "users": [
+     "alice"
+    ],
+    "vendor": "haxx",
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "executable",
+    "count": 1,
+    "executables": [
+     "/usr/local/bin/hello"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "unidentified"
+    ],
+    "launch": [
+     "interactive"
+    ],
+    "name": "hello",
+    "pids": [
+     404
+    ],
+    "product": "hello",
+    "purl": null,
+    "resolution": "none",
+    "users": [
+     "alice"
+    ],
+    "vendor": null,
+    "version": null,
+    "via_executable": null
+   },
+   {
+    "category": "executable",
+    "count": 1,
+    "executables": [
+     "/tmp/x"
+    ],
+    "findings": "",
+    "findings_detail": [],
+    "flags": [
+     "exe-missing",
+     "user-writable-path",
+     "root-from-user-path",
+     "unidentified"
+    ],
+    "launch": [
+     "remote-session"
+    ],
+    "name": "x",
+    "pids": [
+     503
+    ],
+    "product": "x",
+    "purl": null,
+    "resolution": "none",
+    "users": [
+     "root"
+    ],
+    "vendor": null,
+    "version": null,
+    "via_executable": null
+   }
+  ],
+  "source": "snapshot",
+  "summary": {
+   "components": 9,
+   "flagged": 6,
+   "launch_items": 4,
+   "launch_kinds": {
+    "agent": 1,
+    "child": 4,
+    "gui-app": 3,
+    "interactive": 4,
+    "kernel": 2,
+    "remote-session": 1,
+    "scheduled": 2,
+    "service": 4
+   },
+   "missing_programs": 0,
+   "processes": 21,
+   "with_findings": 0
+  },
+  "taken_at": "<ts>",
+  "warnings": []
+ }
+}

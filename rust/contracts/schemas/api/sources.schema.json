@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/sources.schema.json",
+  "title": "GET /api/sources",
+  "type": "object",
+  "properties": {
+    "db": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "exists": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "exists"
+      ]
+    },
+    "registry": {
+      "type": "array",
+      "items": {
+        "$ref": "registry-row.schema.json"
+      }
+    },
+    "sync_all_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "status.schema.json"
+        }
+      ]
+    }
+  },
+  "required": [
+    "db",
+    "registry",
+    "sync_all_order",
+    "status"
+  ]
+}

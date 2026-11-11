@@ -1,0 +1,280 @@
+{
+  "catalog": "secmonk-module-methods/1",
+  "methods": [
+    {
+      "name": "collector.expand_targets",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "inventory/collect-params.schema.json",
+      "result": "inventory/expand-result.schema.json",
+      "python_today": "ops.expand_targets"
+    },
+    {
+      "name": "collector.collect",
+      "module_kind": "probe",
+      "call": "stream",
+      "effect": "read-target",
+      "params": "inventory/collect-params.schema.json",
+      "result": "inventory/collect-item.schema.json",
+      "python_today": "ops.collect without engine.classify (collector.collect)",
+      "end": "inventory/collect-end.schema.json"
+    },
+    {
+      "name": "discover.host",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "probe/docker.schema.json#/$defs/discover_params",
+      "result": "api/discover.schema.json",
+      "python_today": "ops.discover_host (reports.discover_payload)"
+    },
+    {
+      "name": "docker.contexts",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/docker-contexts.schema.json",
+      "python_today": "ops.docker_contexts"
+    },
+    {
+      "name": "docker.containers",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "probe/docker.schema.json#/$defs/containers_params",
+      "result": "api/docker-containers.schema.json",
+      "python_today": "ops.docker_containers"
+    },
+    {
+      "name": "docker.image_check",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "probe/docker.schema.json#/$defs/image_check_params",
+      "result": "probe/docker.schema.json#/$defs/image_check_result",
+      "python_today": "docker_engine.image_identity + find_endpoint + image_meta (the probe half of ops._reuse_image)"
+    },
+    {
+      "name": "k8s.kubeconfigs",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/kubeconfigs.schema.json",
+      "python_today": "ops.k8s_kubeconfigs"
+    },
+    {
+      "name": "process.snapshot",
+      "module_kind": "probe",
+      "call": "unary",
+      "effect": "read-target",
+      "params": "inventory/collect-params.schema.json",
+      "result": "process/snapshot-1.schema.json",
+      "python_today": "ProcessCollector.snapshot + snapshot.to_dict",
+      "notes": "not used by the prototype UI; the future split point of the process monitor"
+    },
+    {
+      "name": "source.sync",
+      "module_kind": "source",
+      "call": "stream",
+      "effect": "network",
+      "params": "source/sync-params.schema.json",
+      "result": "source/rows.schema.json",
+      "python_today": "ops.sync_source on the staging database, changes captured as row operations",
+      "end": "source/sync-end.schema.json"
+    },
+    {
+      "name": "source.ack",
+      "module_kind": "source",
+      "call": "unary",
+      "effect": "staging",
+      "params": "source/ack-params.schema.json",
+      "result": "engine/reports.schema.json#/$defs/empty",
+      "python_today": "(new) drop acknowledged change-log rows"
+    },
+    {
+      "name": "source.export",
+      "module_kind": "source",
+      "call": "stream",
+      "effect": "staging",
+      "params": "source/ack-params.schema.json",
+      "result": "source/rows.schema.json",
+      "python_today": "(new) every staging row of a source, to rebuild the mirror",
+      "end": "source/sync-end.schema.json"
+    },
+    {
+      "name": "engine.classify",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/classify.schema.json#/$defs/params",
+      "result": "engine/classify.schema.json#/$defs/result",
+      "python_today": "engine/classify.classify per component"
+    },
+    {
+      "name": "engine.match",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/match.schema.json#/$defs/params",
+      "result": "engine/match.schema.json#/$defs/result",
+      "python_today": "engine/match.match_asset on a read-only connection with the finding table (persisted) or the inventory tables (ephemeral) shadowed by TEMP copies"
+    },
+    {
+      "name": "versions.compare",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/versions.schema.json#/$defs/compare_params",
+      "result": "engine/versions.schema.json#/$defs/compare_result",
+      "python_today": "engine/versions.compare"
+    },
+    {
+      "name": "versions.in_range",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/versions.schema.json#/$defs/range_params",
+      "result": "engine/versions.schema.json#/$defs/in_range_result",
+      "python_today": "engine/versions.in_osv_range"
+    },
+    {
+      "name": "versions.first_fixed",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/versions.schema.json#/$defs/range_params",
+      "result": "engine/versions.schema.json#/$defs/first_fixed_result",
+      "python_today": "engine/versions.first_fixed_after"
+    },
+    {
+      "name": "versions.scheme",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/versions.schema.json#/$defs/scheme_params",
+      "result": "engine/versions.schema.json#/$defs/scheme_result",
+      "python_today": "engine/versions.scheme_for_ecosystem"
+    },
+    {
+      "name": "scoring.priority",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/versions.schema.json#/$defs/priority_params",
+      "result": "engine/versions.schema.json#/$defs/priority_result",
+      "python_today": "engine/scoring.priority"
+    },
+    {
+      "name": "reports.overview",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/overview.schema.json",
+      "python_today": "reports.overview"
+    },
+    {
+      "name": "reports.assets",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/assets.schema.json",
+      "python_today": "reports.asset_rows"
+    },
+    {
+      "name": "reports.asset_detail",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/asset_detail",
+      "result": "api/asset-detail.schema.json",
+      "python_today": "reports.asset_detail (None -> err unknown-asset)"
+    },
+    {
+      "name": "reports.unmatched",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/unmatched.schema.json",
+      "python_today": "reports.unmatched_rows"
+    },
+    {
+      "name": "reports.findings",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/findings",
+      "result": "engine/reports.schema.json#/$defs/findings_result",
+      "python_today": "queries.asset_exists + reports.findings (unknown asset -> err unknown-asset)"
+    },
+    {
+      "name": "reports.vuln_detail",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/vuln_detail",
+      "result": "api/vuln-detail.schema.json",
+      "python_today": "reports.vuln_detail (None -> err unknown-vuln)"
+    },
+    {
+      "name": "reports.vuln_search",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/vuln_search",
+      "result": "engine/reports.schema.json#/$defs/vuln_search_result",
+      "python_today": "reports.vuln_search (ValueError -> invalid-params)"
+    },
+    {
+      "name": "reports.status",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/status.schema.json",
+      "python_today": "reports.status_payload"
+    },
+    {
+      "name": "reports.sbom",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "read",
+      "params": "engine/reports.schema.json#/$defs/sbom",
+      "result": "api/sbom.schema.json",
+      "python_today": "sbom.export_asset (None -> err unknown-asset)"
+    },
+    {
+      "name": "procmon.payload",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "stateful",
+      "params": "engine/procmon.schema.json#/$defs/payload_params",
+      "result": "api/processes.schema.json",
+      "python_today": "web/api.py ProcessMonitor.payload",
+      "notes": "py-procmon module: reads this machine (live) or a snapshot file, matches read-only"
+    },
+    {
+      "name": "procmon.watch",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "stateful",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "api/watch.schema.json",
+      "python_today": "web/api.py ProcessMonitor.watch"
+    },
+    {
+      "name": "procmon.inventory",
+      "module_kind": "engine",
+      "call": "unary",
+      "effect": "stateful",
+      "params": "engine/reports.schema.json#/$defs/empty",
+      "result": "engine/procmon.schema.json#/$defs/inventory_result",
+      "python_today": "ProcessMonitor._inventory (classified) for save: the host writes it"
+    }
+  ]
+}

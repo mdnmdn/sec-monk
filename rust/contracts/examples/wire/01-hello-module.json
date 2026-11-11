@@ -1,0 +1,45 @@
+{
+  "type": "hello",
+  "protocol": "secmonk-wire/1.0",
+  "role": "module",
+  "name": "py-probe",
+  "version": "0.1.0",
+  "runtime": "python",
+  "runtime_version": "3.13.9",
+  "pid": 41872,
+  "codecs": [
+    "json"
+  ],
+  "limits": {
+    "max_frame": 16777216,
+    "max_inflight": 4,
+    "chunk_items": 1000
+  },
+  "provides": {
+    "collectors": [
+      {
+        "name": "fs",
+        "description": "Language dependencies in a folder/repo: lockfiles, manifests, installed packages, binaries"
+      },
+      {
+        "name": "process",
+        "description": "Running processes"
+      }
+    ],
+    "methods": [
+      "collector.collect",
+      "collector.expand_targets",
+      "discover.host",
+      "docker.contexts",
+      "docker.containers",
+      "docker.image_check",
+      "k8s.kubeconfigs",
+      "process.snapshot"
+    ]
+  },
+  "capabilities": [
+    "read-target",
+    "run-commands",
+    "network"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/unmatched.schema.json",
+  "title": "GET /api/unmatched (reports.unmatched_rows)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "category": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "version": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "product": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "bundle_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "category",
+      "name",
+      "version",
+      "product",
+      "bundle_id"
+    ]
+  }
+}

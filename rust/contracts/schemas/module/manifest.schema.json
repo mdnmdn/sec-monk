@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/module/manifest.schema.json",
+  "title": "Module manifest (secmonk-module/1)",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "secmonk-module/1"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "probe",
+        "source",
+        "engine",
+        "tool"
+      ]
+    },
+    "runtime": {
+      "enum": [
+        "python",
+        "rust"
+      ]
+    },
+    "protocol": {
+      "type": "string",
+      "pattern": "^secmonk-wire/[0-9]+$"
+    },
+    "provides": {
+      "type": "object",
+      "properties": {
+        "collectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+              },
+              "description": {
+                "type": "string"
+              },
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ]
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+              },
+              "description": {
+                "type": "string"
+              },
+              "in_all": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "in_all"
+            ]
+          }
+        },
+        "sync_all_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "read-target",
+          "run-commands",
+          "network",
+          "db-read",
+          "local-system",
+          "stateful",
+          "writes-staging"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "macos",
+          "linux",
+          "windows"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "python": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "env": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+        },
+        "entry": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "requires_python": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "project",
+        "env",
+        "entry"
+      ],
+      "additionalProperties": false
+    },
+    "rust": {
+      "type": "object",
+      "properties": {
+        "crate": {
+          "type": "string"
+        },
+        "factory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "crate",
+        "factory"
+      ],
+      "additionalProperties": false
+    },
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "enum": [
+            "lazy",
+            "eager"
+          ]
+        },
+        "idle_timeout_s": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_restarts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "restart_window_s": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "hello_timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "request_timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cancel_grace_s": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_frame": {
+          "type": "integer",
+          "minimum": 65536,
+          "maximum": 67108864
+        },
+        "max_inflight": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 64
+        }
+      },
+      "additionalProperties": false
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "lock_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "tree_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "name",
+    "version",
+    "kind",
+    "runtime",
+    "protocol",
+    "provides",
+    "capabilities",
+    "platforms"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "const": "python"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "python"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "const": "rust"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "rust"
+        ]
+      }
+    }
+  ]
+}

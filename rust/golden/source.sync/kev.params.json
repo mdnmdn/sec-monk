@@ -1,0 +1,11 @@
+{
+ "options": {
+  "ecosystems": [],
+  "full": false,
+  "ids": [],
+  "limit": null,
+  "path": "<fixtures>/sources/kev/known_exploited_vulnerabilities.json",
+  "since": null
+ },
+ "source": "kev"
+}

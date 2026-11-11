@@ -1,0 +1,108 @@
+{
+  "schema": "secmonk-module/1",
+  "name": "py-probe",
+  "version": "0.1.0",
+  "kind": "probe",
+  "runtime": "python",
+  "protocol": "secmonk-wire/1",
+  "description": "Today's collectors, discovery, docker and kubernetes listings (secmonk package)",
+  "provides": {
+    "collectors": [
+      {
+        "name": "docker-engine",
+        "description": "Live container (or local image) via a local or remote Docker/Podman engine"
+      },
+      {
+        "name": "docker-image",
+        "description": "Container image: registry reference, docker-save tarball or OCI layout dir (no daemon)"
+      },
+      {
+        "name": "fs",
+        "description": "Language dependencies in a folder/repo: lockfiles, manifests, installed packages, binaries"
+      },
+      {
+        "name": "git",
+        "description": "Git repository (https, ssh, local): project kinds + lockfiles/manifests of every ecosystem"
+      },
+      {
+        "name": "homebrew",
+        "description": "Homebrew/Linuxbrew formulae (active kegs), casks and vendored language dependencies"
+      },
+      {
+        "name": "k8s",
+        "description": "Kubernetes cluster via kubectl: control plane, kubelet/runtime/OS per node, images in use"
+      },
+      {
+        "name": "macos",
+        "description": "macOS apps (.app bundles), Homebrew formulae/casks, pkgutil receipts and OS version"
+      },
+      {
+        "name": "process",
+        "description": "Running processes: launch origin (service/agent/app/shell...), software identity + version, provenance"
+      },
+      {
+        "name": "rootfs",
+        "description": "Linux root filesystem directory (dpkg/apk/rpm + python/npm packages)"
+      },
+      {
+        "name": "sbom",
+        "description": "Import a CycloneDX (1.4-1.6) or SPDX 2.x JSON bill of materials"
+      },
+      {
+        "name": "ssh",
+        "description": "Remote Linux/macOS host over SSH (agentless, read-only): `secmonk scan ssh user@host[:port]`"
+      },
+      {
+        "name": "windows",
+        "description": "Windows host: JSON from the PowerShell script (`secmonk windows-script`) (target), osquery results (-o osquery=<file>) or live on Windows"
+      }
+    ],
+    "methods": [
+      "collector.expand_targets",
+      "collector.collect",
+      "discover.host",
+      "docker.contexts",
+      "docker.containers",
+      "docker.image_check",
+      "k8s.kubeconfigs",
+      "process.snapshot"
+    ]
+  },
+  "capabilities": [
+    "read-target",
+    "run-commands",
+    "network"
+  ],
+  "platforms": [
+    "macos",
+    "linux",
+    "windows"
+  ],
+  "python": {
+    "project": "python",
+    "env": "secmonk-modules",
+    "requires_python": ">=3.12,<3.14",
+    "entry": [
+      "-I",
+      "-m",
+      "secmonk_modules",
+      "serve",
+      "--stdio",
+      "--module",
+      "py-probe"
+    ]
+  },
+  "lifecycle": {
+    "start": "lazy",
+    "idle_timeout_s": 600,
+    "max_restarts": 3,
+    "restart_window_s": 60
+  },
+  "limits": {
+    "hello_timeout_s": 20,
+    "request_timeout_s": 3600,
+    "cancel_grace_s": 5,
+    "max_frame": 16777216,
+    "max_inflight": 4
+  }
+}

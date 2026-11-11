@@ -1,0 +1,7 @@
+{
+ "collector": "windows",
+ "options": [
+  "osquery=<fixtures>/collectors/windows/osquery-win11.json"
+ ],
+ "target": null
+}

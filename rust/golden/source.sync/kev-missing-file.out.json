@@ -1,0 +1,28 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "[Errno 2] No such file or directory: '<fixtures>/sources/kev/absent.json'",
+   "records": 0,
+   "seconds": 0,
+   "source": "kev",
+   "status": "error"
+  },
+  "last_seq": 1,
+  "ops": 1
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": null,
+    "last_sync": null,
+    "message": "[Errno 2] No such file or directory: '<fixtures>/sources/kev/absent.json'",
+    "records": 0,
+    "source": "kev",
+    "status": "error"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

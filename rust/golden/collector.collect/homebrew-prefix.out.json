@@ -1,0 +1,581 @@
+{
+ "asset": {
+  "id": "homebrew:prefix:<fixtures>/collectors/homebrew/prefix",
+  "meta": {},
+  "name": "prefix",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "server"
+ },
+ "components": [
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "active": true,
+    "brew_kind": "formula",
+    "brew_name": "curl",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "8.23.0",
+    "desc": "Get a file from an HTTP, HTTPS or FTP server",
+    "homebrew_version": "7.0.9-94-g92b8ea8",
+    "homepage": "https://curl.se",
+    "installed_at": 1791000000,
+    "installed_on_request": true,
+    "keg_only": true,
+    "license": "curl",
+    "linked": false,
+    "poured_from_bottle": true,
+    "runtime_dependencies": 11,
+    "runtime_deps": [
+     "brotli@1.2.0",
+     "libnghttp2@1.70.0",
+     "libnghttp3@1.18.0",
+     "ca-certificates@2026-09-25",
+     "openssl@4@4.0.3",
+     "libngtcp2@1.25.0_1",
+     "libpsl@0.23.3",
+     "libssh2@1.11.1_7",
+     "lz4@1.10.0",
+     "xz@5.8.4",
+     "zstd@1.5.7_1"
+    ],
+    "source_url": "https://curl.se/download/curl-8.23.0.tar.bz2",
+    "tap": "homebrew/core",
+    "upstream_repo": "github.com/curl/curl",
+    "upstream_version": "8.23.0"
+   },
+   "name": "curl",
+   "purl": "pkg:brew/curl@8.23.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/curl/8.23.0",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "brew_kind": "cask",
+    "brew_name": "autodesk-fusion",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "latest",
+    "cask_bundle_ids": [
+     "com.autodesk.dls.streamer.scriptapp.Autodesk-Fusion",
+     "com.autodesk.fusion"
+    ],
+    "homepage": "https://www.autodesk.com/products/fusion-360/overview",
+    "version_latest": true
+   },
+   "name": "Autodesk Fusion 360",
+   "purl": "pkg:brew/homebrew/cask/autodesk-fusion",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Caskroom/autodesk-fusion",
+   "vendor": null,
+   "version": null
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "brew_kind": "cask",
+    "brew_name": "boop",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "1.4.0",
+    "cask_apps": [
+     "Boop.app"
+    ],
+    "homepage": "https://boop.okat.best/"
+   },
+   "name": "Boop",
+   "purl": "pkg:brew/homebrew/cask/boop@1.4.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Caskroom/boop",
+   "vendor": null,
+   "version": "1.4.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "auto_updates": true,
+    "brew_kind": "cask",
+    "brew_name": "google-chrome",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "157.0.8103.39",
+    "cask_apps": [
+     "Google Chrome.app"
+    ],
+    "homepage": "https://www.google.com/chrome/",
+    "version_stale_possible": true
+   },
+   "name": "Google Chrome",
+   "purl": "pkg:brew/homebrew/cask/google-chrome@157.0.8103.39",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Caskroom/google-chrome",
+   "vendor": null,
+   "version": "157.0.8103.39"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "active": true,
+    "brew_kind": "formula",
+    "brew_name": "httpie",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "3.2.4_13",
+    "desc": "User-friendly cURL replacement (command-line HTTP client)",
+    "homebrew_version": "7.0.10-90-g7c5b605",
+    "homepage": "https://httpie.io/",
+    "installed_at": 1792000000,
+    "installed_on_request": true,
+    "keg_only": false,
+    "license": "BSD-3-Clause",
+    "linked": true,
+    "poured_from_bottle": true,
+    "runtime_dependencies": 10,
+    "runtime_deps": [
+     "ca-certificates@2026-10-20",
+     "certifi@2026.10.19",
+     "mpdecimal@4.0.1",
+     "openssl@4@4.0.3",
+     "readline@8.3.6",
+     "sqlite@3.54.1",
+     "xz@5.8.4",
+     "lz4@1.10.0",
+     "zstd@1.5.7_1",
+     "python@3.15@3.15.0_1"
+    ],
+    "source_url": "https://github.com/httpie/cli/archive/refs/tags/3.2.4.tar.gz",
+    "tap": "homebrew/core",
+    "upstream_repo": "github.com/httpie/cli",
+    "upstream_tag": "3.2.4",
+    "upstream_version": "3.2.4"
+   },
+   "name": "httpie",
+   "purl": "pkg:brew/httpie@3.2.4_13",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13",
+   "vendor": null,
+   "version": "3.2.4"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "active": true,
+    "brew_kind": "formula",
+    "brew_name": "jq",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "1.8.2",
+    "desc": "Lightweight and flexible command-line JSON processor",
+    "homebrew_version": "6.0.18-9-gac983be",
+    "homepage": "https://jqlang.github.io/jq/",
+    "installed_at": 1787000000,
+    "installed_on_request": true,
+    "keg_only": false,
+    "license": "MIT",
+    "linked": true,
+    "poured_from_bottle": true,
+    "runtime_dependencies": 1,
+    "runtime_deps": [
+     "oniguruma@6.9.10"
+    ],
+    "source_url": "https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-1.8.2.tar.gz",
+    "tap": "homebrew/core",
+    "upstream_repo": "github.com/jqlang/jq",
+    "upstream_tag": "jq-1.8.2",
+    "upstream_version": "1.8.2"
+   },
+   "name": "jq",
+   "purl": "pkg:brew/jq@1.8.2",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/jq/1.8.2",
+   "vendor": null,
+   "version": "1.8.2"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "active": true,
+    "brew_kind": "formula",
+    "brew_name": "openssl@3",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "3.6.4_1",
+    "desc": "Cryptography and SSL/TLS Toolkit",
+    "homebrew_version": "7.0.6-70-gce46735",
+    "homepage": "https://openssl-library.org",
+    "installed_at": 1790000000,
+    "installed_on_request": false,
+    "keg_only": true,
+    "license": "Apache-2.0",
+    "linked": false,
+    "poured_from_bottle": true,
+    "runtime_dependencies": 1,
+    "runtime_deps": [
+     "ca-certificates@2026-09-25"
+    ],
+    "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz",
+    "tap": "homebrew/core",
+    "upstream_repo": "github.com/openssl/openssl",
+    "upstream_tag": "openssl-3.6.4",
+    "upstream_version": "3.6.4"
+   },
+   "name": "openssl@3",
+   "purl": "pkg:brew/openssl%403@3.6.4_1",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/openssl@3/3.6.4_1",
+   "vendor": null,
+   "version": "3.6.4"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "active": true,
+    "brew_kind": "formula",
+    "brew_name": "xz",
+    "brew_prefix": "<fixtures>/collectors/homebrew/prefix",
+    "brew_version": "5.8.4",
+    "desc": "General-purpose data compression with high compression ratio",
+    "homebrew_version": "6.0.22-323-gde1ac14",
+    "homepage": "https://tukaani.org/xz/",
+    "installed_at": 1790500000,
+    "installed_on_request": false,
+    "keg_only": false,
+    "license": "0BSD AND GPL-2.0-or-later",
+    "linked": true,
+    "pinned": true,
+    "poured_from_bottle": true,
+    "runtime_dependencies": 0,
+    "source_url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.gz",
+    "tap": "homebrew/core",
+    "upstream_repo": "github.com/tukaani-project/xz",
+    "upstream_tag": "v5.8.4",
+    "upstream_version": "5.8.4"
+   },
+   "name": "xz",
+   "purl": "pkg:brew/xz@5.8.4",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/xz/5.8.4",
+   "vendor": null,
+   "version": "5.8.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "MIT",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/charset_normalizer-3.5.2.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "charset-normalizer",
+   "purl": "pkg:pypi/charset-normalizer@3.5.2",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/charset_normalizer-3.5.2.dist-info/METADATA",
+   "vendor": null,
+   "version": "3.5.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "PSFL",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/defusedxml-0.7.1.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "defusedxml",
+   "purl": "pkg:pypi/defusedxml@0.7.1",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/defusedxml-0.7.1.dist-info/METADATA",
+   "vendor": null,
+   "version": "0.7.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "BSD",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/httpie-3.2.4.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "httpie",
+   "purl": "pkg:pypi/httpie@3.2.4",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/httpie-3.2.4.dist-info/METADATA",
+   "vendor": null,
+   "version": "3.2.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "BSD-3-Clause",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/idna-3.20.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "idna",
+   "purl": "pkg:pypi/idna@3.20",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/idna-3.20.dist-info/METADATA",
+   "vendor": null,
+   "version": "3.20"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/markdown_it_py-4.2.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "markdown-it-py",
+   "purl": "pkg:pypi/markdown-it-py@4.2.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/markdown_it_py-4.2.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "4.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/mdurl-0.1.2.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "mdurl",
+   "purl": "pkg:pypi/mdurl@0.1.2",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/mdurl-0.1.2.dist-info/METADATA",
+   "vendor": null,
+   "version": "0.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "Apache-2.0",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/multidict-7.1.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "multidict",
+   "purl": "pkg:pypi/multidict@7.1.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/multidict-7.1.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "7.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "BSD-2-Clause",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/pygments-2.21.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "Pygments",
+   "purl": "pkg:pypi/pygments@2.21.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/pygments-2.21.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "2.21.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "BSD",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/PySocks-1.7.1.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "PySocks",
+   "purl": "pkg:pypi/pysocks@1.7.1",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/PySocks-1.7.1.dist-info/METADATA",
+   "vendor": null,
+   "version": "1.7.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "Apache 2.0",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/requests_toolbelt-1.0.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "requests-toolbelt",
+   "purl": "pkg:pypi/requests-toolbelt@1.0.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/requests_toolbelt-1.0.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "1.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "Apache-2.0",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/requests-2.34.2.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "requests",
+   "purl": "pkg:pypi/requests@2.34.2",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/requests-2.34.2.dist-info/METADATA",
+   "vendor": null,
+   "version": "2.34.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "MIT",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/rich-15.0.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "rich",
+   "purl": "pkg:pypi/rich@15.0.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/rich-15.0.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "15.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "MIT",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/setuptools-84.2.1.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "setuptools",
+   "purl": "pkg:pypi/setuptools@84.2.1",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/setuptools-84.2.1.dist-info/METADATA",
+   "vendor": null,
+   "version": "84.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "brew_keg_version": "3.2.4_13",
+    "evidence": "installed",
+    "layout": "dist-info",
+    "license": "MIT",
+    "parser": "python-dist-info",
+    "paths": [
+     "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/urllib3-2.8.0.dist-info/METADATA"
+    ],
+    "venv_root": "libexec",
+    "via_brew": "httpie"
+   },
+   "name": "urllib3",
+   "purl": "pkg:pypi/urllib3@2.8.0",
+   "source_path": "<fixtures>/collectors/homebrew/prefix/Cellar/httpie/3.2.4_13/libexec/lib/python3.15/site-packages/urllib3-2.8.0.dist-info/METADATA",
+   "vendor": null,
+   "version": "2.8.0"
+  }
+ ],
+ "end": {
+  "components": 22,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

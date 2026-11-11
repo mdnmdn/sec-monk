@@ -1,0 +1,6 @@
+{
+ "error": {
+  "code": "unknown-asset",
+  "error": "unknown asset 'dir:/nope'"
+ }
+}

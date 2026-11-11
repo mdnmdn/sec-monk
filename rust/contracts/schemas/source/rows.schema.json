@@ -1,0 +1,899 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/source/rows.schema.json",
+  "title": "source.sync stream item: a batch of mirror row operations",
+  "description": "secmonk-mirror-rows/1. Applied by the host, in order, one transaction per batch. Tables are the mirror tables only; JSON columns carry JSON values. `delete` on `affected` matches every column given and removes one row. `generation` and `acked_through` (optional, additive) bind the seqs to the module's staging database (rust ADR-0010).",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "const": "rows"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "ops": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "source_sync"
+              },
+              "row": {
+                "$ref": "#/$defs/source_sync"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "source_sync"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "raw_record"
+              },
+              "row": {
+                "$ref": "#/$defs/raw_record"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "raw_record"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "record_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "record_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "vulnerability"
+              },
+              "row": {
+                "$ref": "#/$defs/vulnerability"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "vulnerability"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "source",
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "alias"
+              },
+              "row": {
+                "$ref": "#/$defs/alias"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "alias"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "vuln_id": {
+                    "type": "string"
+                  },
+                  "alias": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "vuln_id",
+                  "alias",
+                  "source"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "affected"
+              },
+              "row": {
+                "$ref": "#/$defs/affected"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "affected"
+              },
+              "key": {
+                "$ref": "#/$defs/affected"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "kev"
+              },
+              "row": {
+                "$ref": "#/$defs/kev"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "kev"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "cve_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cve_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "epss"
+              },
+              "row": {
+                "$ref": "#/$defs/epss"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "epss"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "cve_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cve_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "upsert"
+              },
+              "table": {
+                "const": "distro_triage"
+              },
+              "row": {
+                "$ref": "#/$defs/distro_triage"
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "row"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "table": {
+                "const": "distro_triage"
+              },
+              "key": {
+                "type": "object",
+                "properties": {
+                  "ecosystem": {
+                    "type": "string"
+                  },
+                  "package": {
+                    "type": "string"
+                  },
+                  "cve_id": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ecosystem",
+                  "package",
+                  "cve_id",
+                  "source"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "op",
+              "table",
+              "key"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 5000
+    },
+    "generation": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,64}$",
+      "description": "Identity of the module's staging database (random, persisted; new when the file is recreated). Seqs compare only within one generation: the host never skips a batch of another generation and repairs from source.export instead. Optional: a module without staging omits it."
+    },
+    "acked_through": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The highest seq the module had acknowledged for this source when it streamed the batch. Above the host's applied seq (or with no applied seq at all), the mirror lost rows the module already dropped from its log: the host repairs from source.export."
+    }
+  },
+  "required": [
+    "kind",
+    "seq",
+    "source",
+    "ops"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "source_sync": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "last_sync": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "records": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "raw_record": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "record_id": {
+          "type": "string"
+        },
+        "modified": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fetched_at": {
+          "type": "string"
+        },
+        "data": {}
+      },
+      "required": [
+        "source",
+        "record_id",
+        "fetched_at",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "vulnerability": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "details": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "published": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "withdrawn": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cvss_score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cvss_vector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cvss_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cwes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "extra": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "alias": {
+      "type": "object",
+      "properties": {
+        "vuln_id": {
+          "type": "string"
+        },
+        "alias": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "alias",
+            "upstream",
+            "related"
+          ]
+        }
+      },
+      "required": [
+        "vuln_id",
+        "alias",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "affected": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "vuln_id": {
+          "type": "string"
+        },
+        "ecosystem": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vendor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cpe": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "events": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          }
+        },
+        "versions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "enum": [
+            "affected",
+            "unaffected",
+            "unknown",
+            null
+          ]
+        },
+        "extra": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "vuln_id"
+      ],
+      "additionalProperties": false
+    },
+    "kev": {
+      "type": "object",
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "date_added": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ransomware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extra": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cve_id"
+      ],
+      "additionalProperties": false
+    },
+    "epss": {
+      "type": "object",
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "percentile": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cve_id"
+      ],
+      "additionalProperties": false
+    },
+    "distro_triage": {
+      "type": "object",
+      "properties": {
+        "ecosystem": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "cve_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "urgency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fixed_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nodsa": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "advisory": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ecosystem",
+        "package",
+        "cve_id",
+        "source"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

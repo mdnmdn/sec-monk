@@ -1,0 +1,461 @@
+{
+ "inventories": [
+  {
+   "schema": "secmonk-inventory/1",
+   "classified": true,
+   "asset": {
+    "id": "dir:/work/npm-v3",
+    "type": "directory",
+    "name": "npm-v3",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "meta": {
+     "path": "/work/npm-v3",
+     "files_parsed": 1
+    }
+   },
+   "collector": "fs",
+   "components": [
+    {
+     "name": "@babel/code-frame",
+     "version": "7.12.13",
+     "category": "library",
+     "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+     "cpe": null,
+     "vendor": null,
+     "ecosystem": "npm",
+     "source_path": "package-lock.json",
+     "meta": {
+      "evidence": "lockfile",
+      "parser": "npm-package-lock",
+      "resolved_host": "registry.npmjs.org",
+      "lockfile_version": 3,
+      "paths": [
+       "package-lock.json"
+      ]
+     }
+    },
+    {
+     "name": "@babel/helper-validator-identifier",
+     "version": "7.29.7",
+     "category": "library",
+     "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+     "cpe": null,
+     "vendor": null,
+     "ecosystem": "npm",
+     "source_path": "package-lock.json",
+     "meta": {
+      "evidence": "lockfile",
+      "parser": "npm-package-lock",
+      "resolved_host": "registry.npmjs.org",
+      "lockfile_version": 3,
+      "paths": [
+       "package-lock.json"
+      ]
+     }
+    },
+    {
+     "name": "@babel/highlight",
+     "version": "7.25.9",
+     "category": "library",
+     "purl": "pkg:npm/%40babel/highlight@7.25.9",
+     "cpe": null,
+     "vendor": null,
+     "ecosystem": "npm",
+     "source_path": "package-lock.json",
+     "meta": {
+      "evidence": "lockfile",
+      "parser": "npm-package-lock",
+      "resolved_host": "registry.npmjs.org",
+      "lockfile_version": 3,
+      "paths": [
+       "package-lock.json"
+      ]
+     }
+    },
+    {
+     "name": "Google Chrome",
+     "version": "131.0.6778.86",
+     "category": "application",
+     "purl": null,
+     "cpe": "cpe:2.3:a:google:chrome:131.0.6778.86:*:*:*:*:*:*:*",
+     "vendor": "google",
+     "ecosystem": null,
+     "source_path": "/Applications/Google Chrome.app",
+     "meta": {
+      "bundle_id": "com.google.Chrome",
+      "users": [
+       "alice"
+      ],
+      "product": "chrome",
+      "product_source": "alias-table"
+     }
+    },
+    {
+     "name": "openssl",
+     "version": "3.4.0",
+     "category": "package",
+     "purl": "pkg:brew/openssl@3.4.0",
+     "cpe": "cpe:2.3:a:openssl:openssl:3.4.0:*:*:*:*:*:*:*",
+     "vendor": "openssl",
+     "ecosystem": null,
+     "source_path": null,
+     "meta": {
+      "formula": "openssl@3",
+      "product": "openssl",
+      "product_source": "alias-table"
+     }
+    },
+    {
+     "name": "Tool",
+     "version": null,
+     "category": "executable",
+     "purl": null,
+     "cpe": null,
+     "vendor": "Ünïcode Ltd",
+     "ecosystem": null,
+     "source_path": "/opt/tool",
+     "meta": {
+      "paths": [
+       "/opt/tool",
+       "/usr/local/bin/tool",
+       ""
+      ],
+      "product": "tool",
+      "product_source": "normalized-name"
+     }
+    },
+    {
+     "name": "tool",
+     "version": null,
+     "category": "executable",
+     "purl": null,
+     "cpe": null,
+     "vendor": "ünïcode ltd",
+     "ecosystem": null,
+     "source_path": "/opt/tool2",
+     "meta": {
+      "paths": [
+       "/usr/local/bin/tool",
+       "/opt/tool3"
+      ],
+      "product": "tool",
+      "product_source": "normalized-name"
+     }
+    }
+   ],
+   "warnings": [
+    "one warning",
+    "ünïcode \"quoted\""
+   ],
+   "partial": false,
+   "partial_reason": null
+  },
+  {
+   "schema": "secmonk-inventory/1",
+   "classified": true,
+   "asset": {
+    "id": "dir:/work/npm-v3",
+    "type": "directory",
+    "name": "npm-v3",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "meta": {
+     "path": "/work/npm-v3",
+     "files_parsed": 1
+    }
+   },
+   "collector": "fs",
+   "components": [
+    {
+     "name": "@babel/highlight",
+     "version": "9.9.9",
+     "category": "library",
+     "purl": "pkg:npm/%40babel/highlight@7.25.9",
+     "cpe": null,
+     "vendor": null,
+     "ecosystem": "npm",
+     "source_path": "package-lock.json",
+     "meta": {
+      "evidence": "lockfile",
+      "parser": "npm-package-lock",
+      "resolved_host": "registry.npmjs.org",
+      "lockfile_version": 3,
+      "paths": [
+       "package-lock.json"
+      ]
+     }
+    },
+    {
+     "name": "Google Chrome",
+     "version": "131.0.6778.86",
+     "category": "application",
+     "purl": null,
+     "cpe": "cpe:2.3:a:google:chrome:131.0.6778.86:*:*:*:*:*:*:*",
+     "vendor": "google",
+     "ecosystem": null,
+     "source_path": "/Applications/Google Chrome.app",
+     "meta": {
+      "bundle_id": "com.google.Chrome",
+      "users": [
+       "alice"
+      ],
+      "product": "chrome",
+      "product_source": "alias-table"
+     }
+    },
+    {
+     "name": "openssl",
+     "version": "3.4.0",
+     "category": "package",
+     "purl": "pkg:brew/openssl@3.4.0",
+     "cpe": "cpe:2.3:a:openssl:openssl:3.4.0:*:*:*:*:*:*:*",
+     "vendor": "openssl",
+     "ecosystem": null,
+     "source_path": null,
+     "meta": {
+      "formula": "openssl@3",
+      "product": "openssl",
+      "product_source": "alias-table"
+     }
+    },
+    {
+     "name": "Tool",
+     "version": null,
+     "category": "executable",
+     "purl": null,
+     "cpe": null,
+     "vendor": "Ünïcode Ltd",
+     "ecosystem": null,
+     "source_path": "/opt/tool",
+     "meta": {
+      "paths": [
+       "/opt/tool",
+       "/usr/local/bin/tool",
+       ""
+      ],
+      "product": "tool",
+      "product_source": "normalized-name"
+     }
+    },
+    {
+     "name": "tool",
+     "version": null,
+     "category": "executable",
+     "purl": null,
+     "cpe": null,
+     "vendor": "ünïcode ltd",
+     "ecosystem": null,
+     "source_path": "/opt/tool2",
+     "meta": {
+      "paths": [
+       "/usr/local/bin/tool",
+       "/opt/tool3"
+      ],
+      "product": "tool",
+      "product_source": "normalized-name"
+     }
+    },
+    {
+     "name": "Google Chrome",
+     "version": "131.0.6778.86",
+     "category": "application",
+     "purl": null,
+     "cpe": "cpe:2.3:a:google:chrome:131.0.6778.86:*:*:*:*:*:*:*",
+     "vendor": "google",
+     "ecosystem": null,
+     "source_path": "dup/package-lock.json",
+     "meta": {
+      "bundle_id": "com.google.Chrome",
+      "users": [
+       "alice"
+      ],
+      "product": "chrome",
+      "product_source": "alias-table"
+     }
+    }
+   ],
+   "warnings": [
+    "one warning",
+    "ünïcode \"quoted\""
+   ],
+   "partial": true,
+   "partial_reason": "layer skipped"
+  }
+ ],
+ "scan_ids": [
+  1,
+  2
+ ],
+ "asset": [
+  {
+   "id": "dir:/work/npm-v3",
+   "type": "directory",
+   "name": "npm-v3",
+   "os_name": null,
+   "os_version": null,
+   "platform": null,
+   "meta": "{\"path\":\"/work/npm-v3\",\"files_parsed\":1}",
+   "first_seen": "TS",
+   "last_seen": "TS"
+  }
+ ],
+ "scan": [
+  {
+   "id": 1,
+   "asset_id": "dir:/work/npm-v3",
+   "collector": "fs",
+   "started_at": "TS",
+   "finished_at": "TS",
+   "components": 7,
+   "meta": "{\"warnings\":[\"one warning\",\"ünïcode \\\"quoted\\\"\"]}"
+  },
+  {
+   "id": 2,
+   "asset_id": "dir:/work/npm-v3",
+   "collector": "fs",
+   "started_at": "TS",
+   "finished_at": "TS",
+   "components": 6,
+   "meta": "{\"warnings\":[\"one warning\",\"ünïcode \\\"quoted\\\"\"],\"partial\":true,\"partial_reason\":\"layer skipped\"}"
+  }
+ ],
+ "component": [
+  {
+   "id": 1,
+   "key": "pkg:npm/%40babel/code-frame@7.12.13",
+   "name": "@babel/code-frame",
+   "version": "7.12.13",
+   "category": "library",
+   "ecosystem": "npm",
+   "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+   "cpe": null,
+   "vendor": null,
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "id": 2,
+   "key": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+   "name": "@babel/helper-validator-identifier",
+   "version": "7.29.7",
+   "category": "library",
+   "ecosystem": "npm",
+   "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+   "cpe": null,
+   "vendor": null,
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "id": 3,
+   "key": "pkg:npm/%40babel/highlight@7.25.9",
+   "name": "@babel/highlight",
+   "version": "7.25.9",
+   "category": "library",
+   "ecosystem": "npm",
+   "purl": "pkg:npm/%40babel/highlight@7.25.9",
+   "cpe": null,
+   "vendor": null,
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "id": 4,
+   "key": "name:application/google/google chrome@131.0.6778.86",
+   "name": "Google Chrome",
+   "version": "131.0.6778.86",
+   "category": "application",
+   "ecosystem": null,
+   "purl": null,
+   "cpe": "cpe:2.3:a:google:chrome:131.0.6778.86:*:*:*:*:*:*:*",
+   "vendor": "google",
+   "meta": "{\"bundle_id\":\"com.google.Chrome\",\"users\":[\"alice\"],\"product\":\"chrome\",\"product_source\":\"alias-table\"}"
+  },
+  {
+   "id": 5,
+   "key": "pkg:brew/openssl@3.4.0",
+   "name": "openssl",
+   "version": "3.4.0",
+   "category": "package",
+   "ecosystem": null,
+   "purl": "pkg:brew/openssl@3.4.0",
+   "cpe": "cpe:2.3:a:openssl:openssl:3.4.0:*:*:*:*:*:*:*",
+   "vendor": "openssl",
+   "meta": "{\"formula\":\"openssl@3\",\"product\":\"openssl\",\"product_source\":\"alias-table\"}"
+  },
+  {
+   "id": 6,
+   "key": "name:executable/ünïcode ltd/tool@",
+   "name": "Tool",
+   "version": null,
+   "category": "executable",
+   "ecosystem": null,
+   "purl": null,
+   "cpe": null,
+   "vendor": "Ünïcode Ltd",
+   "meta": "{\"paths\":[\"/opt/tool\",\"/usr/local/bin/tool\",\"\"],\"product\":\"tool\",\"product_source\":\"normalized-name\"}"
+  }
+ ],
+ "asset_component": [
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 1,
+   "source_path": "package-lock.json",
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 1,
+   "paths": "[\"package-lock.json\"]",
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 2,
+   "source_path": "package-lock.json",
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 1,
+   "paths": "[\"package-lock.json\"]",
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 3,
+   "source_path": "package-lock.json",
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 2,
+   "paths": "[\"package-lock.json\"]",
+   "meta": "{\"evidence\":\"lockfile\",\"parser\":\"npm-package-lock\",\"resolved_host\":\"registry.npmjs.org\",\"lockfile_version\":3,\"paths\":[\"package-lock.json\"]}"
+  },
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 4,
+   "source_path": "/Applications/Google Chrome.app",
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 2,
+   "paths": "[\"/Applications/Google Chrome.app\",\"dup/package-lock.json\"]",
+   "meta": "{\"bundle_id\":\"com.google.Chrome\",\"users\":[\"alice\"],\"product\":\"chrome\",\"product_source\":\"alias-table\"}"
+  },
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 5,
+   "source_path": null,
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 2,
+   "paths": "[]",
+   "meta": "{\"formula\":\"openssl@3\",\"product\":\"openssl\",\"product_source\":\"alias-table\"}"
+  },
+  {
+   "asset_id": "dir:/work/npm-v3",
+   "component_id": 6,
+   "source_path": "/opt/tool",
+   "first_seen": "TS",
+   "last_seen": "TS",
+   "last_scan_id": 2,
+   "paths": "[\"/opt/tool\",\"/usr/local/bin/tool\",\"/opt/tool2\",\"/opt/tool3\"]",
+   "meta": "{\"paths\":[\"/opt/tool\",\"/usr/local/bin/tool\",\"\"],\"product\":\"tool\",\"product_source\":\"normalized-name\"}"
+  }
+ ]
+}

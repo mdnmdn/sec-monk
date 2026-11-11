@@ -1,0 +1,5 @@
+{
+  "type": "cancel",
+  "id": 7,
+  "reason": "job cancelled by the user"
+}

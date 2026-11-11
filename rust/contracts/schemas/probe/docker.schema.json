@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/probe/docker.schema.json",
+  "title": "docker.* and discover.host params",
+  "$defs": {
+    "containers_params": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "context": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "all": {
+          "type": "boolean"
+        },
+        "match": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "image_check_params": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "target",
+        "options"
+      ],
+      "additionalProperties": false
+    },
+    "image_check_result": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inventory_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "engine": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "meta": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "asset_id",
+        "inventory_version",
+        "engine",
+        "meta",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "discover_params": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+ "collector": "homebrew",
+ "options": [],
+ "target": "<fixtures>/collectors/homebrew/prefix"
+}

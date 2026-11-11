@@ -1,0 +1,13 @@
+{
+  "kind": "scan",
+  "host": "deploy@build-01.example.internal",
+  "items": [
+    {
+      "id": "rootfs",
+      "collector": "ssh",
+      "target": "deploy@build-01.example.internal",
+      "options": []
+    }
+  ],
+  "save": true
+}

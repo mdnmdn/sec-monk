@@ -1,0 +1,413 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "2 vulnerabilities",
+   "records": 2,
+   "seconds": 0,
+   "source": "msrc",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 9
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "cvss_score": 9.8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/E:P/RL:O/RC:C",
+    "cvss_version": "3.1",
+    "cwes": [],
+    "details": "Windows TCP/IP Remote Code Execution Vulnerability",
+    "extra": {
+     "document": "2024-Aug",
+     "kbs": [
+      "KB5041160",
+      "KB5041573",
+      "KB5041580",
+      "KB5041585"
+     ]
+    },
+    "id": "CVE-2024-38063",
+    "modified": "2024-08-14T07:00:00Z",
+    "published": "2024-08-13T07:00:00Z",
+    "severity": "CRITICAL",
+    "source": "msrc",
+    "state": null,
+    "summary": "Windows TCP/IP Remote Code Execution Vulnerability",
+    "withdrawn": null
+   },
+   "table": "vulnerability"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "CVE": "CVE-2024-38063",
+     "CVSSScoreSets": [
+      {
+       "BaseScore": 9.8,
+       "ProductID": [
+        "12086",
+        "11923",
+        "12000"
+       ],
+       "TemporalScore": 8.5,
+       "Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/E:P/RL:O/RC:C"
+      }
+     ],
+     "Notes": [
+      {
+       "Ordinal": "0",
+       "Title": "Description",
+       "Type": 1,
+       "Value": "Windows TCP/IP Remote Code Execution Vulnerability"
+      }
+     ],
+     "Ordinal": "1",
+     "Remediations": [
+      {
+       "Description": {
+        "Value": "5041585"
+       },
+       "FixedBuild": "10.0.22631.4037",
+       "ProductID": [
+        "12086",
+        "12087"
+       ],
+       "RestartRequired": {
+        "Value": "Yes"
+       },
+       "SubType": "Security Update",
+       "Supercedence": "5040442",
+       "Type": 2,
+       "URL": "https://support.microsoft.com/help/5041585"
+      },
+      {
+       "Description": {
+        "Value": "5041580"
+       },
+       "FixedBuild": "10.0.19045.4780",
+       "ProductID": [
+        "11923",
+        "11924"
+       ],
+       "RestartRequired": {
+        "Value": "Yes"
+       },
+       "SubType": "Security Update",
+       "Supercedence": "5040427",
+       "Type": 2,
+       "URL": "https://support.microsoft.com/help/5041580"
+      },
+      {
+       "Description": {
+        "Value": "5041160"
+       },
+       "FixedBuild": "10.0.20348.2700",
+       "ProductID": [
+        "12000",
+        "12001"
+       ],
+       "RestartRequired": {
+        "Value": "Yes"
+       },
+       "SubType": "Security Update",
+       "Supercedence": "5040437",
+       "Type": 2,
+       "URL": "https://support.microsoft.com/help/5041160"
+      },
+      {
+       "Description": {
+        "Value": "5041573"
+       },
+       "FixedBuild": "10.0.25398.1085",
+       "ProductID": [
+        "12100"
+       ],
+       "RestartRequired": {
+        "Value": "Yes"
+       },
+       "SubType": "Security Update",
+       "Supercedence": "5040438",
+       "Type": 2,
+       "URL": "https://support.microsoft.com/help/5041573"
+      }
+     ],
+     "Threats": [
+      {
+       "Description": {
+        "Value": "Publicly Disclosed:No;Exploited:No;Latest Software Release:Exploitation Less Likely"
+       },
+       "ProductID": [
+        "12086"
+       ],
+       "Type": 1
+      }
+     ],
+     "Title": {
+      "Value": "Windows TCP/IP Remote Code Execution Vulnerability"
+     }
+    },
+    "fetched_at": "<ts>",
+    "modified": "2024-08-14T07:00:00Z",
+    "record_id": "CVE-2024-38063",
+    "source": "msrc"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cpe": null,
+    "ecosystem": null,
+    "events": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "10.0.19045.4780"
+     }
+    ],
+    "extra": {
+     "document": "2024-Aug",
+     "full_names": [
+      "Windows 10 Version 22H2 for 32-bit Systems",
+      "Windows 10 Version 22H2 for x64-based Systems"
+     ],
+     "kb": [
+      "KB5041580"
+     ],
+     "product_ids": [
+      "11923",
+      "11924"
+     ],
+     "supersedes": [
+      "5040427"
+     ]
+    },
+    "package": null,
+    "product": "windows 10 version 22h2",
+    "purl": null,
+    "range_type": "CVE",
+    "source": "msrc",
+    "status": "affected",
+    "vendor": "microsoft",
+    "version_type": "custom",
+    "versions": null,
+    "vuln_id": "CVE-2024-38063"
+   },
+   "table": "affected"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cpe": null,
+    "ecosystem": null,
+    "events": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "10.0.22631.4037"
+     }
+    ],
+    "extra": {
+     "document": "2024-Aug",
+     "full_names": [
+      "Windows 11 Version 23H2 for ARM64-based Systems",
+      "Windows 11 Version 23H2 for x64-based Systems"
+     ],
+     "kb": [
+      "KB5041585"
+     ],
+     "product_ids": [
+      "12086",
+      "12087"
+     ],
+     "supersedes": [
+      "5040442"
+     ]
+    },
+    "package": null,
+    "product": "windows 11 version 23h2",
+    "purl": null,
+    "range_type": "CVE",
+    "source": "msrc",
+    "status": "affected",
+    "vendor": "microsoft",
+    "version_type": "custom",
+    "versions": null,
+    "vuln_id": "CVE-2024-38063"
+   },
+   "table": "affected"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cpe": null,
+    "ecosystem": null,
+    "events": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "10.0.20348.2700"
+     }
+    ],
+    "extra": {
+     "document": "2024-Aug",
+     "full_names": [
+      "Windows Server 2022",
+      "Windows Server 2022 (Server Core installation)"
+     ],
+     "kb": [
+      "KB5041160"
+     ],
+     "product_ids": [
+      "12000",
+      "12001"
+     ],
+     "supersedes": [
+      "5040437"
+     ]
+    },
+    "package": null,
+    "product": "windows server 2022",
+    "purl": null,
+    "range_type": "CVE",
+    "source": "msrc",
+    "status": "affected",
+    "vendor": "microsoft",
+    "version_type": "custom",
+    "versions": null,
+    "vuln_id": "CVE-2024-38063"
+   },
+   "table": "affected"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cpe": null,
+    "ecosystem": null,
+    "events": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "10.0.25398.1085"
+     }
+    ],
+    "extra": {
+     "document": "2024-Aug",
+     "full_names": [
+      "Windows Server, version 23H2 (Server Core installation)"
+     ],
+     "kb": [
+      "KB5041573"
+     ],
+     "product_ids": [
+      "12100"
+     ],
+     "supersedes": [
+      "5040438"
+     ]
+    },
+    "package": null,
+    "product": "windows server 2022, 23h2 edition (server core installation)",
+    "purl": null,
+    "range_type": "CVE",
+    "source": "msrc",
+    "status": "affected",
+    "vendor": "microsoft",
+    "version_type": "custom",
+    "versions": null,
+    "vuln_id": "CVE-2024-38063"
+   },
+   "table": "affected"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cvss_score": 7.8,
+    "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+    "cvss_version": "3.1",
+    "cwes": [],
+    "details": "Microsoft Excel RCE",
+    "extra": {
+     "document": "2024-Aug",
+     "kbs": []
+    },
+    "id": "CVE-2024-38172",
+    "modified": "2024-08-14T07:00:00Z",
+    "published": "2024-08-13T07:00:00Z",
+    "severity": "HIGH",
+    "source": "msrc",
+    "state": null,
+    "summary": "Microsoft Excel Remote Code Execution Vulnerability",
+    "withdrawn": null
+   },
+   "table": "vulnerability"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "CVE": "CVE-2024-38172",
+     "CVSSScoreSets": [
+      {
+       "BaseScore": 7.8,
+       "ProductID": [
+        "11000"
+       ],
+       "TemporalScore": 6.8,
+       "Vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"
+      }
+     ],
+     "Notes": [
+      {
+       "Ordinal": "0",
+       "Title": "Description",
+       "Type": 1,
+       "Value": "Microsoft Excel RCE"
+      }
+     ],
+     "Ordinal": "2",
+     "Remediations": [
+      {
+       "Description": {
+        "Value": "Click to Run"
+       },
+       "ProductID": [
+        "11000"
+       ],
+       "SubType": "Security Update",
+       "Type": 2
+      }
+     ],
+     "Title": {
+      "Value": "Microsoft Excel Remote Code Execution Vulnerability"
+     }
+    },
+    "fetched_at": "<ts>",
+    "modified": "2024-08-14T07:00:00Z",
+    "record_id": "CVE-2024-38172",
+    "source": "msrc"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": "2024-08-14T07:00:00Z",
+    "last_sync": "<ts>",
+    "message": "2 vulnerabilities",
+    "records": 2,
+    "source": "msrc",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

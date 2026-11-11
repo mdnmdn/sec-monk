@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/inventory/inventory.schema.json",
+  "title": "Inventory document (secmonk-inventory/1)",
+  "description": "What `secmonk collect -O` writes (dataclasses.asdict(Inventory)) plus `schema` and `classified`. A file without `schema` is a legacy collect -O file and is read as classified=true.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "secmonk-inventory/1"
+    },
+    "classified": {
+      "type": "boolean"
+    },
+    "asset": {
+      "$ref": "asset.schema.json"
+    },
+    "collector": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "component.schema.json"
+      },
+      "maxItems": 500000
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2000
+      },
+      "maxItems": 1000
+    },
+    "partial": {
+      "type": "boolean"
+    },
+    "partial_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "asset",
+    "collector",
+    "components",
+    "warnings",
+    "partial",
+    "partial_reason"
+  ],
+  "additionalProperties": false
+}

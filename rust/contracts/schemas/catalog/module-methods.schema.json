@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/catalog/module-methods.schema.json",
+  "title": "Module method catalog",
+  "type": "object",
+  "properties": {
+    "catalog": {
+      "const": "secmonk-module-methods/1"
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+          },
+          "module_kind": {
+            "enum": [
+              "probe",
+              "source",
+              "engine",
+              "tool"
+            ]
+          },
+          "call": {
+            "enum": [
+              "unary",
+              "stream"
+            ]
+          },
+          "effect": {
+            "enum": [
+              "read",
+              "read-target",
+              "network",
+              "stateful",
+              "staging"
+            ]
+          },
+          "params": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "python_today": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "module_kind",
+          "call",
+          "effect",
+          "params",
+          "result",
+          "python_today"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "catalog",
+    "methods"
+  ],
+  "additionalProperties": false
+}

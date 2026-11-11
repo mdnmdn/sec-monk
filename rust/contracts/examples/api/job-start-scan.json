@@ -1,0 +1,10 @@
+{
+  "kind": "scan",
+  "collector": "fs",
+  "target": "/srv/payments-api",
+  "options": [
+    "binaries=false"
+  ],
+  "save": true,
+  "min_confidence": 0.5
+}

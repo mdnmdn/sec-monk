@@ -1,0 +1,34 @@
+{
+  "db": {
+    "path": "/data/sec-monk/db/state.sqlite3",
+    "exists": false
+  },
+  "registry": [
+    {
+      "name": "cvelist",
+      "description": "CVE List v5 (CVEProject/cvelistV5) with CISA Vulnrichment ADP data",
+      "in_all": true
+    },
+    {
+      "name": "debian-tracker",
+      "description": "Debian Security Tracker: per-release status, urgency, no-dsa and DSA/DLA ids",
+      "in_all": true
+    },
+    {
+      "name": "epss",
+      "description": "FIRST EPSS exploitation probability scores (daily bulk or API lookup)",
+      "in_all": true
+    }
+  ],
+  "sync_all_order": [
+    "kev",
+    "epss",
+    "osv",
+    "cvelist",
+    "nvd",
+    "euvd",
+    "msrc",
+    "debian-tracker"
+  ],
+  "status": null
+}

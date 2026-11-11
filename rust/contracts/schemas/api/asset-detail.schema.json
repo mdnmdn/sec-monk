@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/asset-detail.schema.json",
+  "title": "GET /api/assets/detail (reports.asset_detail)",
+  "type": "object",
+  "properties": {
+    "asset": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "os_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "os_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "platform": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "first_seen": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_seen": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "meta": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "meta"
+      ]
+    },
+    "scans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "collector": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "components": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "partial": {
+            "type": "boolean"
+          },
+          "partial_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "collector",
+          "partial"
+        ]
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ecosystem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vendor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "purl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cpe": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "findings": {
+            "$ref": "priority-counts.schema.json"
+          }
+        },
+        "required": [
+          "category",
+          "name",
+          "version",
+          "id",
+          "findings"
+        ]
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding-row.schema.json"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "components": {
+          "type": "integer"
+        },
+        "open": {
+          "$ref": "priority-counts.schema.json"
+        },
+        "closed": {
+          "type": "integer"
+        },
+        "limit_reached": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "components",
+        "open",
+        "closed",
+        "limit_reached"
+      ]
+    },
+    "partial": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "asset",
+    "scans",
+    "components",
+    "findings",
+    "summary",
+    "partial",
+    "warnings"
+  ]
+}

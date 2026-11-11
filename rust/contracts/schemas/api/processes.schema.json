@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/processes.schema.json",
+  "title": "GET /api/processes (procmon.snapshot_payload)",
+  "type": "object",
+  "properties": {
+    "asset": {
+      "type": "string"
+    },
+    "host": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "platform": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "os": {
+      "type": "object"
+    },
+    "taken_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source": {
+      "enum": [
+        "live",
+        "snapshot"
+      ]
+    },
+    "matched": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "processes": {
+          "type": "integer"
+        },
+        "components": {
+          "type": "integer"
+        },
+        "launch_kinds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "with_findings": {
+          "type": "integer"
+        },
+        "flagged": {
+          "type": "integer"
+        },
+        "launch_items": {
+          "type": "integer"
+        },
+        "missing_programs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "processes",
+        "components"
+      ]
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "$ref": "process-row.schema.json"
+      }
+    },
+    "software": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "purl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vendor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolution": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "integer"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "launch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "executables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "via_executable": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "findings": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "findings_detail": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "pids",
+          "flags"
+        ]
+      }
+    },
+    "launch_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "mechanism": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "program": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_at_load": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "keep_alive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "disabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "running_pids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "missing_program": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "label",
+          "mechanism",
+          "kind"
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "asset",
+    "platform",
+    "taken_at",
+    "source",
+    "matched",
+    "summary",
+    "processes",
+    "software",
+    "launch_items",
+    "warnings"
+  ]
+}

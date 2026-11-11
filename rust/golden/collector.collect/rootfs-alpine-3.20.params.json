@@ -1,0 +1,5 @@
+{
+ "collector": "rootfs",
+ "options": [],
+ "target": "<fixtures>/collectors/docker/alpine-3.20/rootfs"
+}

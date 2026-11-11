@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/match-stats.schema.json",
+  "title": "engine.match_asset stats",
+  "type": "object",
+  "properties": {
+    "components": {
+      "type": "integer"
+    },
+    "matches": {
+      "type": "integer"
+    },
+    "findings": {
+      "type": "integer"
+    },
+    "withdrawn": {
+      "type": "integer"
+    },
+    "patched": {
+      "type": "integer"
+    },
+    "not_affected": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "components",
+    "matches",
+    "findings"
+  ]
+}

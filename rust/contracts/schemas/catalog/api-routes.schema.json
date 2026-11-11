@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/catalog/api-routes.schema.json",
+  "title": "Engine<->ui API route catalog",
+  "type": "object",
+  "properties": {
+    "catalog": {
+      "const": "secmonk-api-routes/1"
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "integer"
+          },
+          "method": {
+            "enum": [
+              "GET",
+              "POST"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object"
+          },
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "integer"
+          },
+          "response": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "builder": {
+            "type": "string"
+          },
+          "prototype": {
+            "type": "string"
+          },
+          "gate": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer"
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "when": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "when"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "n",
+          "method",
+          "path",
+          "status",
+          "response",
+          "builder",
+          "prototype",
+          "gate",
+          "errors"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "catalog",
+    "routes"
+  ],
+  "additionalProperties": false
+}

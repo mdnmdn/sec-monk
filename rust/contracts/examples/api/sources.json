@@ -1,0 +1,96 @@
+{
+  "db": {
+    "path": "~/.local/share/secmonk/secmonk.db",
+    "exists": true
+  },
+  "registry": [
+    {
+      "name": "cvelist",
+      "description": "CVE List v5 (CVEProject/cvelistV5) with CISA Vulnrichment ADP data",
+      "in_all": true
+    },
+    {
+      "name": "debian-tracker",
+      "description": "Debian Security Tracker: per-release status, urgency, no-dsa and DSA/DLA ids",
+      "in_all": true
+    },
+    {
+      "name": "epss",
+      "description": "FIRST EPSS exploitation probability scores (daily bulk or API lookup)",
+      "in_all": true
+    }
+  ],
+  "sync_all_order": [
+    "kev",
+    "epss",
+    "osv",
+    "cvelist",
+    "nvd",
+    "euvd",
+    "msrc",
+    "debian-tracker"
+  ],
+  "status": {
+    "db": "~/.local/share/secmonk/secmonk.db",
+    "sources": [
+      {
+        "source": "cvelist",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": null,
+        "records": 1,
+        "status": "ok",
+        "message": "imported 1 from /files/cvelist/CVE-2021-44228.json"
+      },
+      {
+        "source": "epss",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": "2026-11-06",
+        "records": 10,
+        "status": "ok",
+        "message": "10 scores from file /files/epss/epss_scores-sample.csv"
+      },
+      {
+        "source": "euvd",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": null,
+        "records": 2,
+        "status": "ok",
+        "message": "2 records from file /files/euvd/exploited-sample.json"
+      },
+      {
+        "source": "kev",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": "2026.11.06",
+        "records": 9,
+        "status": "ok",
+        "message": "9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+      },
+      {
+        "source": "nvd",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": null,
+        "records": 1,
+        "status": "ok",
+        "message": "from file /files/nvd/cve-2021-44228.json"
+      },
+      {
+        "source": "osv",
+        "last_sync": "2026-11-11T00:33:16+00:00",
+        "cursor": "2026-11-02T11:17:50.087142138Z",
+        "records": 2,
+        "status": "ok",
+        "message": "from /files/osv/alpine-ALPINE-CVE-2024-3094.json"
+      }
+    ],
+    "tables": {
+      "vulnerability": 13,
+      "alias": 6,
+      "affected": 31,
+      "kev": 9,
+      "epss": 10,
+      "asset": 11,
+      "component": 125,
+      "finding": 13
+    }
+  }
+}

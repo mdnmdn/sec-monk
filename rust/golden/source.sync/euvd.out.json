@@ -1,0 +1,167 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "2 records from file <fixtures>/sources/euvd/exploited-sample.json",
+   "records": 2,
+   "seconds": 0,
+   "source": "euvd",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 8
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "aliases": "CVE-2021-44228",
+     "assigner": "psirt@apache.org",
+     "baseScore": 10,
+     "baseScoreVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+     "baseScoreVersion": "3.1",
+     "datePublished": "2021-12-10T00:00:00.000Z",
+     "dateUpdated": "2026-11-06T00:00:00.000Z",
+     "description": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+     "enisaIdProduct": [],
+     "enisaIdVendor": [],
+     "enisaIdVulnerability": [],
+     "enisaUuid": "00000000-0000-4000-8000-000000000001",
+     "epss": 0.97431,
+     "exploited": true,
+     "id": "EUVD-2021-30001",
+     "references": "https://logging.apache.org/log4j/2.x/security.html\nhttps://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-11-06T00:00:00.000Z",
+    "record_id": "EUVD-2021-30001",
+    "source": "euvd"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cvss_score": 10.0,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+    "cvss_version": "3.1",
+    "cwes": [],
+    "details": null,
+    "extra": {
+     "assigner": "psirt@apache.org",
+     "epss": 0.97431,
+     "exploited": true,
+     "products": [],
+     "vendors": []
+    },
+    "id": "EUVD-2021-30001",
+    "modified": "2026-11-06T00:00:00.000Z",
+    "published": "2021-12-10T00:00:00.000Z",
+    "severity": "CRITICAL",
+    "source": "euvd",
+    "state": null,
+    "summary": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+    "withdrawn": null
+   },
+   "table": "vulnerability"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "alias": "CVE-2021-44228",
+    "kind": "alias",
+    "source": "euvd",
+    "vuln_id": "EUVD-2021-30001"
+   },
+   "table": "alias"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "alias": "CVE-2021-44228",
+    "kind": "alias",
+    "source": "euvd",
+    "vuln_id": "EUVD-2021-30001"
+   },
+   "table": "alias"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2021-44228",
+    "date": "2026-11-06",
+    "percentile": null,
+    "score": 0.97431,
+    "source": "euvd"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "data": {
+     "aliases": "",
+     "assigner": "cna@example.invalid",
+     "baseScore": 7.5,
+     "baseScoreVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+     "baseScoreVersion": "3.1",
+     "datePublished": "2026-10-01T00:00:00.000Z",
+     "dateUpdated": "2026-10-02T00:00:00.000Z",
+     "description": "Synthetic placeholder entry for an exploited vulnerability with no CVE alias.",
+     "enisaIdProduct": [],
+     "enisaIdVendor": [],
+     "enisaIdVulnerability": [],
+     "enisaUuid": "00000000-0000-4000-8000-000000000002",
+     "epss": null,
+     "exploited": true,
+     "id": "EUVD-2026-00002",
+     "references": ""
+    },
+    "fetched_at": "<ts>",
+    "modified": "2026-10-02T00:00:00.000Z",
+    "record_id": "EUVD-2026-00002",
+    "source": "euvd"
+   },
+   "table": "raw_record"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cvss_score": 7.5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "cvss_version": "3.1",
+    "cwes": [],
+    "details": null,
+    "extra": {
+     "assigner": "cna@example.invalid",
+     "epss": null,
+     "exploited": true,
+     "products": [],
+     "vendors": []
+    },
+    "id": "EUVD-2026-00002",
+    "modified": "2026-10-02T00:00:00.000Z",
+    "published": "2026-10-01T00:00:00.000Z",
+    "severity": "HIGH",
+    "source": "euvd",
+    "state": null,
+    "summary": "Synthetic placeholder entry for an exploited vulnerability with no CVE alias.",
+    "withdrawn": null
+   },
+   "table": "vulnerability"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": null,
+    "last_sync": "<ts>",
+    "message": "2 records from file <fixtures>/sources/euvd/exploited-sample.json",
+    "records": 2,
+    "source": "euvd",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

@@ -1,0 +1,140 @@
+{
+ "result": {
+  "bomFormat": "CycloneDX",
+  "components": [
+   {
+    "bom-ref": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+    "name": "org.apache.logging.log4j:log4j-core",
+    "properties": [
+     {
+      "name": "secmonk:category",
+      "value": "library"
+     },
+     {
+      "name": "secmonk:ecosystem",
+      "value": "Maven"
+     }
+    ],
+    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+    "type": "library",
+    "version": "2.14.1"
+   },
+   {
+    "bom-ref": "pkg:npm/left-pad@1.3.0",
+    "name": "left-pad",
+    "properties": [
+     {
+      "name": "secmonk:category",
+      "value": "library"
+     },
+     {
+      "name": "secmonk:ecosystem",
+      "value": "npm"
+     }
+    ],
+    "purl": "pkg:npm/left-pad@1.3.0",
+    "type": "library",
+    "version": "1.3.0"
+   }
+  ],
+  "dependencies": [
+   {
+    "dependsOn": [
+     "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+     "pkg:npm/left-pad@1.3.0"
+    ],
+    "ref": "asset:dir:/srv/payments-api"
+   }
+  ],
+  "metadata": {
+   "component": {
+    "bom-ref": "asset:dir:/srv/payments-api",
+    "name": "payments-api",
+    "properties": [
+     {
+      "name": "secmonk:asset_id",
+      "value": "dir:/srv/payments-api"
+     },
+     {
+      "name": "secmonk:asset_type",
+      "value": "directory"
+     }
+    ],
+    "type": "application"
+   },
+   "timestamp": "<ts>",
+   "tools": {
+    "components": [
+     {
+      "name": "secmonk",
+      "type": "application",
+      "version": "0.1.0"
+     }
+    ]
+   }
+  },
+  "serialNumber": "urn:uuid:c983f304-9226-5c10-861f-f5a5cb55a5bc",
+  "specVersion": "1.6",
+  "version": 1,
+  "vulnerabilities": [
+   {
+    "affects": [
+     {
+      "ref": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+     }
+    ],
+    "bom-ref": "vuln:CVE-2021-44228",
+    "id": "CVE-2021-44228",
+    "properties": [
+     {
+      "name": "secmonk:epss",
+      "value": "0.97431"
+     },
+     {
+      "name": "secmonk:kev",
+      "value": "true"
+     },
+     {
+      "name": "secmonk:matched_by",
+      "value": "osv-package"
+     },
+     {
+      "name": "secmonk:priority",
+      "value": "P1"
+     }
+    ],
+    "ratings": [
+     {
+      "score": 10.0,
+      "severity": "critical",
+      "source": {
+       "name": "NVD",
+       "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+      }
+     }
+    ],
+    "recommendation": "Upgrade to 2.15.0",
+    "references": [
+     {
+      "id": "EUVD-2021-30001",
+      "source": {
+       "name": "OSV",
+       "url": "https://osv.dev/vulnerability/EUVD-2021-30001"
+      }
+     },
+     {
+      "id": "GHSA-jfh8-c2jp-5v3q",
+      "source": {
+       "name": "GitHub",
+       "url": "https://github.com/advisories/GHSA-jfh8-c2jp-5v3q"
+      }
+     }
+    ],
+    "source": {
+     "name": "NVD",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+    }
+   }
+  ]
+ }
+}

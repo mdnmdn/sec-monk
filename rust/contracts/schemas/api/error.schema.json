@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/error.schema.json",
+  "title": "API error ({error, hint, code}: web/api.py ApiError)",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string"
+    },
+    "hint": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "error"
+  ],
+  "additionalProperties": false
+}

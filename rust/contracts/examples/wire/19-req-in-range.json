@@ -1,0 +1,17 @@
+{
+  "type": "req",
+  "id": 21,
+  "method": "versions.in_range",
+  "params": {
+    "version": "2.14.1",
+    "events": [
+      {
+        "introduced": "2.0-beta9"
+      },
+      {
+        "fixed": "2.15.0"
+      }
+    ],
+    "scheme": "maven"
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/finding-row.schema.json",
+  "title": "Finding row (reports.finding_dict)",
+  "type": "object",
+  "properties": {
+    "asset_id": {
+      "type": "string"
+    },
+    "priority": {
+      "enum": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        null
+      ]
+    },
+    "vuln_id": {
+      "type": "string"
+    },
+    "component": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "category": {
+      "type": "string"
+    },
+    "fixed_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "severity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cvss_score": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "epss": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "kev": {
+      "type": "boolean"
+    },
+    "triage": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "matched_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "open",
+        "fixed",
+        "suppressed"
+      ]
+    },
+    "component_id": {
+      "type": "integer"
+    },
+    "advisory_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "triage_source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "first_seen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_seen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fixed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ecosystem": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "purl": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "asset_id",
+    "priority",
+    "vuln_id",
+    "component",
+    "version",
+    "category",
+    "kev",
+    "status",
+    "component_id",
+    "advisory_ids"
+  ]
+}

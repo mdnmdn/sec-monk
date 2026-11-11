@@ -1,0 +1,7 @@
+{
+ "collector": "fs",
+ "options": [
+  "binaries=true"
+ ],
+ "target": "<fixtures>/lang/go"
+}

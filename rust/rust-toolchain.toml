@@ -1,0 +1,5 @@
+# Pinned toolchain of the Rust prototype (sqlx 0.9 needs >= 1.94).
+[toolchain]
+channel = "1.98.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

@@ -1,0 +1,5 @@
+{
+  "error": "no database at /data/sec-monk/db/state.sqlite3",
+  "hint": "Create the local vulnerability mirror first (Sources & sync, or `secmonk sync kev epss osv`), then scan assets.",
+  "code": "no-db"
+}

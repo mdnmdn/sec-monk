@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/overview.schema.json",
+  "title": "GET /api/overview (reports.overview)",
+  "type": "object",
+  "properties": {
+    "db": {
+      "type": "string"
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "assets": {
+          "type": "integer"
+        },
+        "components": {
+          "type": "integer"
+        },
+        "open_findings": {
+          "type": "integer"
+        },
+        "fixable": {
+          "type": "integer"
+        },
+        "P1": {
+          "type": "integer"
+        },
+        "P2": {
+          "type": "integer"
+        },
+        "P3": {
+          "type": "integer"
+        },
+        "P4": {
+          "type": "integer"
+        },
+        "kev": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "assets",
+        "components",
+        "open_findings",
+        "fixable"
+      ]
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "asset-row.schema.json"
+      }
+    },
+    "top_findings": {
+      "type": "array",
+      "items": {
+        "$ref": "finding-row.schema.json"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "last_sync": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "records": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "source"
+        ]
+      }
+    },
+    "tables": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    }
+  },
+  "required": [
+    "db",
+    "totals",
+    "assets",
+    "top_findings",
+    "sources",
+    "tables"
+  ]
+}

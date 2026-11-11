@@ -1,0 +1,11 @@
+{
+  "asset": "process:fixture-mac",
+  "scan_id": 57,
+  "stats": {
+    "components": 41,
+    "matches": 9,
+    "findings": 4,
+    "withdrawn": 0,
+    "patched": 0
+  }
+}

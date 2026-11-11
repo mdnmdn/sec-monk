@@ -1,0 +1,12 @@
+{
+ "events": [
+  {
+   "introduced": "2.0"
+  },
+  {
+   "fixed": "2.15.0"
+  }
+ ],
+ "scheme": "maven",
+ "version": "2.15.0"
+}

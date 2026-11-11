@@ -1,0 +1,6 @@
+{
+ "error": {
+  "code": "unknown-vuln",
+  "error": "unknown vulnerability id 'CVE-1999-0000'"
+ }
+}

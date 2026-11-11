@@ -1,0 +1,35 @@
+[package]
+name = "secmonk-engine"
+description = "Engine service of the sec-monk desktop app: jobs, sync, scan orchestration, image reuse, run history, payload facade"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "time", "macros"] }
+secmonk-model.workspace = true
+secmonk-proto.workspace = true
+secmonk-safeio.workspace = true
+secmonk-store.workspace = true
+secmonk-traits.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "time"] }
+tempfile.workspace = true
+regex.workspace = true
+# Only for the gated real-module test (tests/real_modules.rs): the engine itself receives trait objects and never
+# names the module host (architecture.md §2). rust/deny.toml needs `secmonk-engine` as a dev-only wrapper.
+secmonk-modhost.workspace = true
+secmonk-runtime.workspace = true
+secmonk-config.workspace = true
+
+[lints]
+workspace = true

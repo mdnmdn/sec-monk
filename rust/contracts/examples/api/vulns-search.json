@@ -1,0 +1,48 @@
+{
+  "results": [
+    {
+      "vuln_id": "ALPINE-CVE-2024-3094",
+      "source": "osv",
+      "ecosystem": "Alpine:v3.15",
+      "vendor": null,
+      "package": "lighttpd",
+      "product": null,
+      "range_type": "ECOSYSTEM",
+      "events": [
+        {
+          "introduced": "0"
+        },
+        {
+          "fixed": "1.4.76-r0"
+        }
+      ],
+      "versions": [],
+      "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0
+    },
+    {
+      "vuln_id": "ALPINE-CVE-2024-3094",
+      "source": "osv",
+      "ecosystem": "Alpine:v3.16",
+      "vendor": null,
+      "package": "lighttpd",
+      "product": null,
+      "range_type": "ECOSYSTEM",
+      "events": [
+        {
+          "introduced": "0"
+        },
+        {
+          "fixed": "1.4.76-r0"
+        }
+      ],
+      "versions": [],
+      "summary": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. \r",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0
+    }
+  ],
+  "limit": 50,
+  "limit_reached": false
+}

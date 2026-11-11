@@ -1,0 +1,13 @@
+{
+  "kind": "sync",
+  "sources": [
+    "kev",
+    "epss",
+    "osv"
+  ],
+  "ecosystems": [
+    "PyPI",
+    "npm"
+  ],
+  "full": false
+}

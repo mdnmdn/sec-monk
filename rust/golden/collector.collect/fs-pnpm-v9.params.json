@@ -1,0 +1,5 @@
+{
+ "collector": "fs",
+ "options": [],
+ "target": "<fixtures>/lang/javascript/pnpm-v9"
+}

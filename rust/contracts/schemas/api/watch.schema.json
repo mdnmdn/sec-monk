@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/watch.schema.json",
+  "title": "GET /api/processes/watch",
+  "type": "object",
+  "properties": {
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "enum": [
+              "new-executable",
+              "changed-executable",
+              "new-launch-item",
+              "changed-launch-item",
+              "removed-launch-item"
+            ]
+          }
+        },
+        "required": [
+          "event"
+        ]
+      }
+    },
+    "taken_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "baseline": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "events",
+    "taken_at",
+    "baseline"
+  ],
+  "additionalProperties": false
+}

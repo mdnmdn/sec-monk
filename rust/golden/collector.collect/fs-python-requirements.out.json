@@ -1,0 +1,96 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/python/requirements",
+  "meta": {
+   "files_parsed": 1,
+   "path": "<fixtures>/lang/python/requirements"
+  },
+  "name": "requirements",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "manifest",
+    "extras": [
+     "argon2",
+     "bcrypt"
+    ],
+    "marker": "python_version >= \"3.6\"",
+    "parser": "requirements-txt",
+    "paths": [
+     "requirements.txt"
+    ]
+   },
+   "name": "Django",
+   "purl": "pkg:pypi/django@3.2.4",
+   "source_path": "requirements.txt",
+   "vendor": null,
+   "version": "3.2.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "manifest",
+    "parser": "requirements-txt",
+    "paths": [
+     "requirements.txt"
+    ]
+   },
+   "name": "Flask_Login",
+   "purl": "pkg:pypi/flask-login@0.5.0",
+   "source_path": "requirements.txt",
+   "vendor": null,
+   "version": "0.5.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "manifest",
+    "parser": "requirements-txt",
+    "paths": [
+     "requirements.txt"
+    ]
+   },
+   "name": "PyYAML",
+   "purl": "pkg:pypi/pyyaml@5.3",
+   "source_path": "requirements.txt",
+   "vendor": null,
+   "version": "5.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "manifest",
+    "parser": "requirements-txt",
+    "paths": [
+     "requirements.txt"
+    ]
+   },
+   "name": "requests",
+   "purl": "pkg:pypi/requests@2.25.0",
+   "source_path": "requirements.txt",
+   "vendor": null,
+   "version": "2.25.0"
+  }
+ ],
+ "end": {
+  "components": 4,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

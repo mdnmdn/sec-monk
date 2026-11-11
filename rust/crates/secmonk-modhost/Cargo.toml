@@ -1,0 +1,38 @@
+[package]
+name = "secmonk-modhost"
+description = "Module host: manifest registry, child-stdio and in-proc transports, sessions, supervisor, trait adapters."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+secmonk-model.workspace = true
+secmonk-proto.workspace = true
+secmonk-traits.workspace = true
+secmonk-runtime.workspace = true
+secmonk-config.workspace = true
+secmonk-safeio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures-core.workspace = true
+futures-util.workspace = true
+bytes.workspace = true
+tokio = { workspace = true, features = ["process", "io-util", "sync", "time", "rt", "macros"] }
+tokio-util.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true
+
+[target.'cfg(unix)'.dependencies]
+# killpg of a module's process group (safe wrapper; the crate forbids unsafe) and the pid liveness probe of tests
+rustix.workspace = true

@@ -1,0 +1,132 @@
+{
+ "asset": {
+  "id": "sbom:example/shop@1.4.2",
+  "meta": {
+   "file": "<fixtures>/sbom/synthetic.cdx.json",
+   "format": "cyclonedx",
+   "serial_number": "urn:uuid:00000000-0000-4000-8000-000000000001",
+   "source": "sbom",
+   "spec_version": "1.5",
+   "tools": [
+    "example-sbom-tool 2.0"
+   ]
+  },
+  "name": "example/shop",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "container-image"
+ },
+ "components": [
+  {
+   "category": "application",
+   "cpe": "cpe:2.3:a:f5:nginx:1.25.3:*:*:*:*:*:*:*",
+   "ecosystem": null,
+   "meta": {},
+   "name": "nginx",
+   "purl": null,
+   "source_path": null,
+   "vendor": "F5",
+   "version": "1.25.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "bad-cpe",
+   "purl": null,
+   "source_path": null,
+   "vendor": null,
+   "version": "1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "broken-purl",
+   "purl": null,
+   "source_path": null,
+   "vendor": null,
+   "version": "1.0"
+  },
+  {
+   "category": "os",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "debian",
+   "purl": null,
+   "source_path": null,
+   "vendor": null,
+   "version": "12.5"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "openjdk",
+   "purl": null,
+   "source_path": null,
+   "vendor": null,
+   "version": "17.0.9"
+  },
+  {
+   "category": "os-package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "openssl",
+   "purl": "pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&distro=debian-12",
+   "source_path": null,
+   "vendor": null,
+   "version": "3.0.11-1~deb12u2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "asgiref",
+   "purl": "pkg:pypi/asgiref@3.7.2",
+   "source_path": null,
+   "vendor": null,
+   "version": "3.7.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "django",
+   "purl": "pkg:pypi/django@4.2.1",
+   "source_path": null,
+   "vendor": null,
+   "version": "4.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {},
+   "name": "typing-extensions",
+   "purl": "pkg:pypi/typing-extensions@4.8.0",
+   "source_path": null,
+   "vendor": null,
+   "version": "4.8.0"
+  }
+ ],
+ "end": {
+  "components": 9,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 3
+ },
+ "warnings": [
+  "1 component(s) without a usable name skipped",
+  "1 invalid cpe(s) dropped",
+  "1 invalid or over-long purl(s) dropped (components kept by name)"
+ ]
+}

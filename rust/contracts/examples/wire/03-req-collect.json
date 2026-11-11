@@ -1,0 +1,13 @@
+{
+  "type": "req",
+  "id": 7,
+  "method": "collector.collect",
+  "deadline_ms": 600000,
+  "params": {
+    "collector": "fs",
+    "target": "/work/npm-v3",
+    "options": [
+      "binaries=false"
+    ]
+  }
+}

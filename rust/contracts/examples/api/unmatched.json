@@ -1,0 +1,23 @@
+[
+  {
+    "category": "application",
+    "name": "Disk Utility",
+    "version": "22.6",
+    "product": "disk utility",
+    "bundle_id": "com.apple.DiskUtility"
+  },
+  {
+    "category": "application",
+    "name": "ExampleUpdater",
+    "version": "2.4.1",
+    "product": "exampleupdater",
+    "bundle_id": "com.example.updater"
+  },
+  {
+    "category": "application",
+    "name": "Something",
+    "version": "2.1",
+    "product": "something",
+    "bundle_id": "com.example.something"
+  }
+]

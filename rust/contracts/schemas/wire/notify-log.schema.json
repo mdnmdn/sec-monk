@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/wire/notify-log.schema.json",
+  "title": "notify log params",
+  "type": "object",
+  "properties": {
+    "level": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "logger": {
+      "type": "string"
+    },
+    "request": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "level",
+    "message"
+  ],
+  "additionalProperties": false
+}

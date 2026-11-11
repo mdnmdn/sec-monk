@@ -1,0 +1,33 @@
+{
+  "schema": "secmonk-module/1",
+  "name": "rs-collect-fs",
+  "version": "0.2.0",
+  "kind": "probe",
+  "runtime": "rust",
+  "protocol": "secmonk-wire/1",
+  "description": "fs collector ported to Rust (later phase, illustration)",
+  "provides": {
+    "collectors": [
+      {
+        "name": "fs",
+        "description": "Language dependencies in a folder/repo"
+      }
+    ],
+    "methods": [
+      "collector.expand_targets",
+      "collector.collect"
+    ]
+  },
+  "capabilities": [
+    "read-target"
+  ],
+  "platforms": [
+    "macos",
+    "linux",
+    "windows"
+  ],
+  "rust": {
+    "crate": "secmonk-collect-fs",
+    "factory": "secmonk_collect_fs::module"
+  }
+}

@@ -1,0 +1,437 @@
+{
+ "result": {
+  "executables": {
+   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome": {
+    "exists": true,
+    "quarantine": {
+     "agent": "Safari",
+     "event": {
+      "agent_bundle_id": "com.apple.Safari",
+      "data_url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+      "origin_url": "https://www.google.com/chrome/",
+      "time": "2026-10-01T08:29:58+00:00"
+     },
+     "event_id": "9F0C1E52-6D3B-4E0B-9C59-1B2A3C4D5E6F",
+     "on": "/Applications/Google Chrome.app",
+     "raw_flags": "0083",
+     "time": "2026-10-01T08:30:00+00:00",
+     "user_approved": true
+    },
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signature": {
+     "authority": [
+      "Developer ID Application: Google LLC (EQHXZ8M8AV)",
+      "Developer ID Certification Authority",
+      "Apple Root CA"
+     ],
+     "developer_id": true,
+     "signed": true,
+     "team_id": "EQHXZ8M8AV"
+    },
+    "where_froms": [
+     "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+     "https://www.google.com/"
+    ]
+   },
+   "/tmp/x": {
+    "exists": false
+   },
+   "/usr/local/bin/tool-from-agent": {
+    "identity": {
+     "bundle_id": "com.example.tool",
+     "category": "application",
+     "name": "Tool",
+     "version": "1.2.3"
+    }
+   }
+  },
+  "host": "fixture-mac",
+  "launch_items": [
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": true,
+    "label": "com.example.updater",
+    "mechanism": "launchd-daemon",
+    "meta": {},
+    "program": "/Library/PrivilegedHelperTools/com.example.updater",
+    "run_at_load": true,
+    "scope": "system",
+    "source": "/Library/LaunchDaemons/com.example.updater.plist"
+   },
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": null,
+    "label": "com.apple.syslogd",
+    "mechanism": "launchd-system-daemon",
+    "meta": {},
+    "program": "/usr/sbin/syslogd",
+    "run_at_load": null,
+    "scope": "system",
+    "source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist"
+   },
+   {
+    "args": [],
+    "disabled": null,
+    "keep_alive": null,
+    "label": "com.openssh.sshd",
+    "mechanism": "launchd-system-daemon",
+    "meta": {},
+    "program": "/usr/libexec/sshd-keygen-wrapper",
+    "run_at_load": null,
+    "scope": "system",
+    "source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist"
+   },
+   {
+    "args": [
+     "--api-key=<redacted>"
+    ],
+    "disabled": null,
+    "keep_alive": true,
+    "label": "com.sync.agent",
+    "mechanism": "launchd-agent",
+    "meta": {},
+    "program": "/Users/alice/Library/Application Support/Sync/syncd",
+    "run_at_load": true,
+    "scope": "user:alice",
+    "source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist"
+   }
+  ],
+  "os": {
+   "build": "23F79",
+   "name": "macOS",
+   "version": "14.5"
+  },
+  "platform": "darwin",
+  "processes": [
+   {
+    "args": [],
+    "cgroup": null,
+    "container": null,
+    "exe": null,
+    "label": null,
+    "name": "kernel_task",
+    "pid": 0,
+    "ppid": 0,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/sbin/launchd"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/sbin/launchd",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 0,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/usr/sbin/syslogd"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/sbin/syslogd",
+    "label": "com.apple.syslogd",
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/Library/PrivilegedHelperTools/com.example.updater"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/Library/PrivilegedHelperTools/com.example.updater",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/Applications/Slack.app/Contents/MacOS/Slack"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+    "label": "application.com.tinyspeck.slackmacgap.1234.5678",
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+     "--type=utility"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 300,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/Users/alice/Library/Application Support/Sync/syncd"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+    "label": "com.sync.agent",
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+    "label": "application.com.apple.Terminal.111.222",
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "login",
+     "-pf",
+     "alice"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/bin/login",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 400,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "-zsh"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/bin/zsh",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 401,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "curl",
+     "https://example.com/x"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/opt/homebrew/bin/curl",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 402,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/usr/local/bin/hello"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/local/bin/hello",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 402,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "python3",
+     "/Users/alice/tool.py",
+     "--token",
+     "<redacted>"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/bin/python3",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 402,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/usr/sbin/sshd"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/sbin/sshd",
+    "label": "com.openssh.sshd",
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "sshd: alice@ttys001"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/sbin/sshd",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 500,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/bin/zsh"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/bin/zsh",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 501,
+    "started": "<ts>",
+    "uid": 501,
+    "user": "alice"
+   },
+   {
+    "args": [
+     "/tmp/x"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/tmp/x",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 502,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/usr/sbin/cron"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/usr/sbin/cron",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 1,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/bin/sh",
+     "-c",
+     "/usr/local/bin/backup.sh"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/bin/sh",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 600,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   },
+   {
+    "args": [
+     "/bin/bash",
+     "/usr/local/bin/backup.sh"
+    ],
+    "cgroup": null,
+    "container": null,
+    "exe": "/bin/bash",
+    "label": null,
+    "name": null,
+    "pid": 0,
+    "ppid": 601,
+    "started": "<ts>",
+    "uid": 0,
+    "user": "root"
+   }
+  ],
+  "schema": "secmonk-process-snapshot/1",
+  "source": {},
+  "taken_at": "<ts>",
+  "warnings": []
+ }
+}

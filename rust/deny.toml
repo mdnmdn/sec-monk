@@ -1,0 +1,50 @@
+# cargo-deny policy of the Rust prototype (architecture.md §2, dependency rules).
+# Run: cargo deny check bans   (cargo-deny is not vendored; CI installs it)
+
+[graph]
+all-features = true
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+# Only secmonk-store speaks SQL: these crates may be direct dependencies of secmonk-store alone.
+# (`wrappers` = the crates allowed to depend on the banned crate directly; transitive paths through
+# secmonk-store are fine.)
+[[bans.deny]]
+name = "sqlx"
+wrappers = ["secmonk-store"]
+
+[[bans.deny]]
+name = "sea-query"
+wrappers = ["secmonk-store"]
+
+# sqlx and rusqlite cannot be linked together (links = "sqlite3"); the fallback replaces sqlx entirely.
+[[bans.deny]]
+name = "rusqlite"
+
+# Probes never reach the store: secmonk-store may only be wrapped by the engine and the composition root.
+[[bans.deny]]
+name = "secmonk-store"
+wrappers = ["secmonk-engine", "secmonk-host", "secmonk-desktop"]
+
+# The module host and runtime are injected by the composition root only (the engine sees traits).
+[[bans.deny]]
+name = "secmonk-modhost"
+# secmonk-host is the composition root; secmonk-engine only as a dev-dependency (gated real-module test)
+wrappers = ["secmonk-host", "secmonk-desktop", "secmonk-engine"]
+
+[licenses]
+# The prototype is unpublished; license review happens before the first release build (verify).
+allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC",
+         "Unicode-3.0", "Zlib", "CDLA-Permissive-2.0", "MPL-2.0", "BSL-1.0", "0BSD", "OpenSSL", "CC0-1.0"]
+confidence-threshold = 0.9
+private = { ignore = true }
+
+[advisories]
+yanked = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

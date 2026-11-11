@@ -1,0 +1,22 @@
+{
+ "result": [
+  {
+   "components": 2,
+   "findings_by_priority": {
+    "P1": 1,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 1
+   },
+   "first_seen": "<ts>",
+   "id": "dir:/srv/payments-api",
+   "last_seen": "<ts>",
+   "name": "payments-api",
+   "open_findings": 1,
+   "os": "",
+   "platform": null,
+   "type": "directory"
+  }
+ ]
+}

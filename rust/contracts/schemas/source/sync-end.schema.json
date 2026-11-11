@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/source/sync-end.schema.json",
+  "title": "source.sync end.result",
+  "type": "object",
+  "properties": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error"
+          ]
+        },
+        "records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seconds": {
+          "type": "number"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "status",
+        "records",
+        "seconds",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "batches": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "last_seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ops": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "generation": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,64}$",
+      "description": "source.export: the staging generation the export was read from (the host stores it with high_water)."
+    },
+    "high_water": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "source.export: the highest seq the module ever assigned (every un-acknowledged batch of the source is at or below it). The host records it as the applied seq of the repaired source and acknowledges through it."
+    }
+  },
+  "required": [
+    "entry",
+    "batches",
+    "last_seq",
+    "ops"
+  ],
+  "additionalProperties": false
+}

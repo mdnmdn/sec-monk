@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/registry-row.schema.json",
+  "title": "Registry row (reports.registry_rows)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "in_all": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "in_all"
+  ]
+}

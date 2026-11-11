@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/asset-row.schema.json",
+  "title": "Asset row (reports.asset_rows)",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "os": {
+      "type": "string"
+    },
+    "platform": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_seen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "components": {
+      "type": "integer"
+    },
+    "open_findings": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "first_seen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "findings_by_priority": {
+      "type": "object",
+      "properties": {
+        "P1": {
+          "type": "integer"
+        },
+        "P2": {
+          "type": "integer"
+        },
+        "P3": {
+          "type": "integer"
+        },
+        "P4": {
+          "type": "integer"
+        },
+        "kev": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "os",
+    "platform",
+    "last_seen",
+    "components",
+    "open_findings",
+    "name",
+    "findings_by_priority"
+  ]
+}

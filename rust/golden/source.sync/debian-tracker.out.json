@@ -1,0 +1,524 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "31 triage rows from repo checkout <fixtures>/sources/debian-tracker/repo; skipped 1 TEMP ids, 14 sid entries, 0 unknown-release entries",
+   "records": 31,
+   "seconds": 0,
+   "source": "debian-tracker",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 32
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": "DSA-5724-1",
+    "cve_id": "CVE-2024-6387",
+    "ecosystem": "Debian:12",
+    "fixed_version": "1:9.2p1-2+deb12u3",
+    "nodsa": null,
+    "note": null,
+    "package": "openssh",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "high"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": "DLA-3901-1",
+    "cve_id": "CVE-2024-6387",
+    "ecosystem": "Debian:11",
+    "fixed_version": "1:8.4p1-5+deb11u4",
+    "nodsa": null,
+    "note": null,
+    "package": "openssh",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "high"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-5535",
+    "ecosystem": "Debian:12",
+    "fixed_version": "3.0.14-1~deb12u2",
+    "nodsa": null,
+    "note": null,
+    "package": "openssl",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": "DLA-3896-1",
+    "cve_id": "CVE-2024-5535",
+    "ecosystem": "Debian:11",
+    "fixed_version": "1.1.1w-0+deb11u1",
+    "nodsa": null,
+    "note": null,
+    "package": "openssl",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-2199",
+    "ecosystem": "Debian:12",
+    "fixed_version": "2.3.1+dfsg1-1+deb12u1",
+    "nodsa": null,
+    "note": null,
+    "package": "389-ds-base",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-38545",
+    "ecosystem": "Debian:12",
+    "fixed_version": "7.88.1-10+deb12u4",
+    "nodsa": null,
+    "note": null,
+    "package": "curl",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-38545",
+    "ecosystem": "Debian:11",
+    "fixed_version": "0",
+    "nodsa": null,
+    "note": "Vulnerable code introduced later",
+    "package": "curl",
+    "source": "debian-tracker",
+    "status": "not-affected",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-34152",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": "no-dsa",
+    "note": "Minor issue",
+    "package": "imagemagick",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-34152",
+    "ecosystem": "Debian:11",
+    "fixed_version": null,
+    "nodsa": "no-dsa",
+    "note": "Minor issue",
+    "package": "imagemagick",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-34152",
+    "ecosystem": "Debian:13",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "imagemagick",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-34152",
+    "ecosystem": "Debian:14",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "imagemagick",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-23672",
+    "ecosystem": "Debian:11",
+    "fixed_version": null,
+    "nodsa": "postponed",
+    "note": "Fix along with next DSA",
+    "package": "tomcat9",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "medium"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-23672",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "tomcat9",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "medium"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-23672",
+    "ecosystem": "Debian:13",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "tomcat9",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "medium"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-23672",
+    "ecosystem": "Debian:14",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "tomcat9",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "medium"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-28755",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": "ignored",
+    "note": "Minor issue; too intrusive to backport",
+    "package": "ruby3.1",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-28755",
+    "ecosystem": "Debian:11",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "ruby3.1",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-28755",
+    "ecosystem": "Debian:13",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "ruby3.1",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-28755",
+    "ecosystem": "Debian:14",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "ruby3.1",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "low"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-1086",
+    "ecosystem": "Debian:12",
+    "fixed_version": "6.1.76-1",
+    "nodsa": null,
+    "note": null,
+    "package": "linux",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "high"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2024-1086",
+    "ecosystem": "Debian:10",
+    "fixed_version": null,
+    "nodsa": "ignored",
+    "note": "Not supported in buster LTS",
+    "package": "linux",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "end-of-life"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": "DSA-5562-1",
+    "cve_id": "CVE-2023-99001",
+    "ecosystem": "Debian:12",
+    "fixed_version": "0.4.7.16-1",
+    "nodsa": null,
+    "note": null,
+    "package": "tor",
+    "source": "debian-tracker",
+    "status": "resolved",
+    "urgency": "medium"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2023-4091",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "samba",
+    "source": "debian-tracker",
+    "status": "undetermined",
+    "urgency": "not yet assigned"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2019-1010022",
+    "ecosystem": "Debian:11",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "glibc",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2019-1010022",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "glibc",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2019-1010022",
+    "ecosystem": "Debian:13",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "glibc",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2019-1010022",
+    "ecosystem": "Debian:14",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "glibc",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2001-1534",
+    "ecosystem": "Debian:11",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "apache2",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2001-1534",
+    "ecosystem": "Debian:12",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "apache2",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2001-1534",
+    "ecosystem": "Debian:13",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "apache2",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "advisory": null,
+    "cve_id": "CVE-2001-1534",
+    "ecosystem": "Debian:14",
+    "fixed_version": null,
+    "nodsa": null,
+    "note": null,
+    "package": "apache2",
+    "source": "debian-tracker",
+    "status": "open",
+    "urgency": "unimportant"
+   },
+   "table": "distro_triage"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": "d9a7a13b163471401b8b67da13c3816e231831ccd3b45d1a869025b67e089f5a",
+    "last_sync": "<ts>",
+    "message": "31 triage rows from repo checkout <fixtures>/sources/debian-tracker/repo; skipped 1 TEMP ids, 14 sid entries, 0 unknown-release entries",
+    "records": 31,
+    "source": "debian-tracker",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

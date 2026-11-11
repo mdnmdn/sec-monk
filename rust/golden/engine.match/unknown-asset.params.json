@@ -1,0 +1,6 @@
+{
+ "asset_id": "dir:/nope",
+ "min_confidence": 0.5,
+ "mode": "persisted",
+ "view_limit": 50
+}

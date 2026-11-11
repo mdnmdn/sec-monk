@@ -1,0 +1,176 @@
+{
+  "id": "CVE-2021-44228",
+  "query": "CVE-2021-44228",
+  "aliases": [
+    "EUVD-2021-30001",
+    "GHSA-jfh8-c2jp-5v3q"
+  ],
+  "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+  "severity": "CRITICAL",
+  "cvss_score": 10.0,
+  "records": [
+    {
+      "source": "cvelist",
+      "id": "CVE-2021-44228",
+      "summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
+      "details": null,
+      "published": "2021-12-10T00:00:00.000Z",
+      "modified": "2025-10-21T23:25:23.121Z",
+      "withdrawn": null,
+      "state": "PUBLISHED",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "cvss_version": "3.1",
+      "cwes": [
+        "CWE-502",
+        "CWE-400",
+        "CWE-20"
+      ],
+      "references": [
+        "https://logging.apache.org/log4j/2.x/security.html",
+        "http://www.openwall.com/lists/oss-security/2021/12/10/1",
+        "http://www.openwall.com/lists/oss-security/2021/12/10/2",
+        "https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-apache-log4j-qRuKNEbd",
+        "http://www.openwall.com/lists/oss-security/2021/12/10/3",
+        "https://security.netapp.com/advisory/ntap-20211210-0007/",
+        "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
+        "https://psirt.global.sonicwall.com/vuln-detail/SNWLID-2021-0032",
+        "https://www.oracle.com/security-alerts/alert-cve-2021-44228.html",
+        "https://www.debian.org/security/2021/dsa-5020",
+        "https://lists.debian.org/debian-lts-announce/2021/12/msg00007.html",
+        "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/VU57UJDCFIASIO35GC55JMKSRXJMCDFM/",
+        "https://msrc-blog.microsoft.com/2021/12/11/microsofts-response-to-cve-2021-44228-apache-log4j2/",
+        "http://www.openwall.com/lists/oss-security/2021/12/13/2",
+        "http://www.openwall.com/lists/oss-security/2021/12/13/1",
+        "http://www.openwall.com/lists/oss-security/2021/12/14/4",
+        "https://www.kb.cert.org/vuls/id/930724",
+        "https://twitter.com/kurtseifried/status/1469345530182455296",
+        "https://cert-portal.siemens.com/productcert/pdf/ssa-661247.pdf",
+        "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html"
+      ]
+    },
+    {
+      "source": "euvd",
+      "id": "EUVD-2021-30001",
+      "summary": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+      "details": null,
+      "published": "2021-12-10T00:00:00.000Z",
+      "modified": "2026-11-06T00:00:00.000Z",
+      "withdrawn": null,
+      "state": null,
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "cvss_version": "3.1",
+      "cwes": [],
+      "references": []
+    }
+  ],
+  "kev": {
+    "cve_id": "CVE-2021-44228",
+    "vendor": "Apache",
+    "product": "Log4j2",
+    "name": "Apache Log4j2 Remote Code Execution Vulnerability",
+    "date_added": "2021-12-10",
+    "due_date": "2021-12-24",
+    "ransomware": "1",
+    "source": "kev",
+    "extra": "{\"shortDescription\":\"Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution.\",\"requiredAction\":\"For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.\",\"forensicTriage\":\"No\",\"notes\":\"https://nvd.nist.gov/vuln/detail/CVE-2021-44228\",\"cwes\":[\"CWE-20\",\"CWE-400\",\"CWE-502\"]}"
+  },
+  "epss": {
+    "score": 0.97431,
+    "percentile": 0.99986,
+    "date": "2026-11-06"
+  },
+  "affected": [
+    {
+      "source": "cvelist",
+      "vuln_id": "CVE-2021-44228",
+      "ecosystem": null,
+      "package": null,
+      "purl": null,
+      "vendor": "apache software foundation",
+      "product": "apache log4j2",
+      "cpe": null,
+      "range_type": "CVE",
+      "version_type": "custom",
+      "events": [
+        {
+          "introduced": "2.0-beta9"
+        },
+        {
+          "fixed": "2.3.1"
+        },
+        {
+          "introduced": "2.4"
+        },
+        {
+          "fixed": "2.12.2"
+        },
+        {
+          "introduced": "2.13.0"
+        },
+        {
+          "fixed": "2.15.0"
+        }
+      ],
+      "versions": [],
+      "status": "affected"
+    },
+    {
+      "source": "nvd",
+      "vuln_id": "CVE-2021-44228",
+      "ecosystem": null,
+      "package": null,
+      "purl": null,
+      "vendor": "apache",
+      "product": "log4j",
+      "cpe": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+      "range_type": "CPE",
+      "version_type": null,
+      "events": [
+        {
+          "introduced": "2.0"
+        },
+        {
+          "fixed": "2.15.0"
+        }
+      ],
+      "versions": [],
+      "status": "affected"
+    }
+  ],
+  "affected_limit_reached": false,
+  "findings": [
+    {
+      "asset_id": "dir:/srv/payments-api",
+      "priority": "P1",
+      "vuln_id": "CVE-2021-44228",
+      "component": "org.apache.logging.log4j:log4j-core",
+      "version": "2.14.1",
+      "category": "library",
+      "fixed_version": "2.15.0",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": 0.97431,
+      "kev": true,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 51,
+      "advisory_ids": [
+        "CVE-2021-44228",
+        "EUVD-2021-30001",
+        "GHSA-jfh8-c2jp-5v3q"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Maven",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    }
+  ]
+}

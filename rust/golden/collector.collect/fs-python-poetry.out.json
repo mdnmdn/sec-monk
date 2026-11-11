@@ -1,0 +1,144 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/python/poetry",
+  "meta": {
+   "files_parsed": 1,
+   "path": "<fixtures>/lang/python/poetry"
+  },
+  "name": "poetry",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "lockfile",
+    "groups": [
+     "main"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "certifi",
+   "purl": "pkg:pypi/certifi@2026.10.23",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "2026.10.23"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "lockfile",
+    "groups": [
+     "main"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "chardet",
+   "purl": "pkg:pypi/chardet@3.0.4",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "3.0.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "lockfile",
+    "groups": [
+     "main"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "idna",
+   "purl": "pkg:pypi/idna@2.10",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "2.10"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "dev": true,
+    "evidence": "lockfile",
+    "groups": [
+     "dev"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "iniconfig",
+   "purl": "pkg:pypi/iniconfig@2.0.0",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "2.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "lockfile",
+    "groups": [
+     "main"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "requests",
+   "purl": "pkg:pypi/requests@2.25.0",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "2.25.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "PyPI",
+   "meta": {
+    "evidence": "lockfile",
+    "groups": [
+     "main"
+    ],
+    "parser": "poetry-lock",
+    "paths": [
+     "poetry.lock"
+    ]
+   },
+   "name": "urllib3",
+   "purl": "pkg:pypi/urllib3@1.26.20",
+   "source_path": "poetry.lock",
+   "vendor": null,
+   "version": "1.26.20"
+  }
+ ],
+ "end": {
+  "components": 6,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

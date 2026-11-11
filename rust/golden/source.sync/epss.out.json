@@ -1,0 +1,138 @@
+{
+ "end": {
+  "batches": 1,
+  "entry": {
+   "message": "10 scores from file <fixtures>/sources/epss/epss_scores-sample.csv",
+   "records": 10,
+   "seconds": 0,
+   "source": "epss",
+   "status": "ok"
+  },
+  "last_seq": 1,
+  "ops": 11
+ },
+ "ops": [
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2021-44228",
+    "date": "2026-11-06",
+    "percentile": 0.99986,
+    "score": 0.97431,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2021-45046",
+    "date": "2026-11-06",
+    "percentile": 0.99592,
+    "score": 0.94273,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2022-22965",
+    "date": "2026-11-06",
+    "percentile": 0.99401,
+    "score": 0.91148,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2023-34362",
+    "date": "2026-11-06",
+    "percentile": 0.9951,
+    "score": 0.93917,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2024-3400",
+    "date": "2026-11-06",
+    "percentile": 0.99104,
+    "score": 0.88752,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2019-0708",
+    "date": "2026-11-06",
+    "percentile": 0.9981,
+    "score": 0.96034,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2020-1472",
+    "date": "2026-11-06",
+    "percentile": 0.99462,
+    "score": 0.9251,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2017-0144",
+    "date": "2026-11-06",
+    "percentile": 0.99997,
+    "score": 0.97702,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2023-0001",
+    "date": "2026-11-06",
+    "percentile": 0.04819,
+    "score": 0.00043,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cve_id": "CVE-2024-9999",
+    "date": "2026-11-06",
+    "percentile": 0.23605,
+    "score": 0.00112,
+    "source": "epss"
+   },
+   "table": "epss"
+  },
+  {
+   "op": "upsert",
+   "row": {
+    "cursor": "2026-11-06",
+    "last_sync": "<ts>",
+    "message": "10 scores from file <fixtures>/sources/epss/epss_scores-sample.csv",
+    "records": 10,
+    "source": "epss",
+    "status": "ok"
+   },
+   "table": "source_sync"
+  }
+ ]
+}

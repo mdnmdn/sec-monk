@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/engine/reports.schema.json",
+  "title": "reports.* params (results are the api/*.schema.json payloads)",
+  "$defs": {
+    "empty": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "asset_detail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "object",
+      "properties": {
+        "asset": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            null
+          ]
+        },
+        "include_closed": {
+          "type": "boolean"
+        },
+        "fixable": {
+          "type": "boolean"
+        },
+        "hide_minor": {
+          "type": "boolean"
+        },
+        "hide_deferred": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "findings_result": {
+      "type": "array",
+      "items": {
+        "$ref": "../api/finding-row.schema.json"
+      }
+    },
+    "vuln_detail": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "raw": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "vuln_search": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ecosystem": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "vuln_search_result": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "sbom": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string"
+        },
+        "with_vulns": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "asset_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

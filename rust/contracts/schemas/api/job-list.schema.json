@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/job-list.schema.json",
+  "title": "GET /api/jobs",
+  "type": "array",
+  "items": {
+    "$ref": "job.schema.json"
+  },
+  "maxItems": 200
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/process-save.schema.json",
+  "title": "POST /api/processes/save",
+  "type": "object",
+  "properties": {
+    "asset": {
+      "type": "string"
+    },
+    "scan_id": {
+      "type": "integer"
+    },
+    "stats": {
+      "$ref": "match-stats.schema.json"
+    }
+  },
+  "required": [
+    "asset",
+    "scan_id",
+    "stats"
+  ],
+  "additionalProperties": false
+}

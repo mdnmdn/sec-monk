@@ -1,0 +1,63 @@
+{
+  "findings": [
+    {
+      "asset_id": "dir:/srv/payments-api",
+      "priority": "P1",
+      "vuln_id": "CVE-2021-44228",
+      "component": "org.apache.logging.log4j:log4j-core",
+      "version": "2.14.1",
+      "category": "library",
+      "fixed_version": "2.15.0",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": 0.97431,
+      "kev": true,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 51,
+      "advisory_ids": [
+        "CVE-2021-44228",
+        "EUVD-2021-30001",
+        "GHSA-jfh8-c2jp-5v3q"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Maven",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    },
+    {
+      "asset_id": "container:web",
+      "priority": "P3",
+      "vuln_id": "CVE-2024-3094",
+      "component": "xz-libs",
+      "version": "5.6.0-r0",
+      "category": "os-package",
+      "fixed_version": "5.6.1-r2",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": null,
+      "kev": false,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 105,
+      "advisory_ids": [
+        "ALPINE-CVE-2024-3094",
+        "CVE-2024-3094"
+      ],
+      "triage_source": null,
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Alpine:v3.20",
+      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+    }
+  ],
+  "limit": 200,
+  "limit_reached": false
+}

@@ -1,0 +1,16 @@
+{
+  "type": "req",
+  "id": 3,
+  "method": "source.sync",
+  "params": {
+    "source": "kev",
+    "options": {
+      "path": null,
+      "ecosystems": [],
+      "ids": [],
+      "since": null,
+      "full": false,
+      "limit": null
+    }
+  }
+}

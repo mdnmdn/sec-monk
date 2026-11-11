@@ -1,0 +1,77 @@
+{
+  "asset": {
+    "id": "dir:/work/npm-v3",
+    "type": "directory",
+    "name": "npm-v3",
+    "os_name": null,
+    "os_version": null,
+    "platform": null,
+    "meta": {
+      "path": "/work/npm-v3",
+      "files_parsed": 1
+    }
+  },
+  "collector": "fs",
+  "components": [
+    {
+      "name": "@babel/code-frame",
+      "version": "7.12.13",
+      "category": "library",
+      "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+      "cpe": null,
+      "vendor": null,
+      "ecosystem": "npm",
+      "source_path": "package-lock.json",
+      "meta": {
+        "evidence": "lockfile",
+        "parser": "npm-package-lock",
+        "resolved_host": "registry.npmjs.org",
+        "lockfile_version": 3,
+        "paths": [
+          "package-lock.json"
+        ]
+      }
+    },
+    {
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "category": "library",
+      "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "cpe": null,
+      "vendor": null,
+      "ecosystem": "npm",
+      "source_path": "package-lock.json",
+      "meta": {
+        "evidence": "lockfile",
+        "parser": "npm-package-lock",
+        "resolved_host": "registry.npmjs.org",
+        "lockfile_version": 3,
+        "paths": [
+          "package-lock.json"
+        ]
+      }
+    },
+    {
+      "name": "@babel/highlight",
+      "version": "7.25.9",
+      "category": "library",
+      "purl": "pkg:npm/%40babel/highlight@7.25.9",
+      "cpe": null,
+      "vendor": null,
+      "ecosystem": "npm",
+      "source_path": "package-lock.json",
+      "meta": {
+        "evidence": "lockfile",
+        "parser": "npm-package-lock",
+        "resolved_host": "registry.npmjs.org",
+        "lockfile_version": 3,
+        "paths": [
+          "package-lock.json"
+        ]
+      }
+    }
+  ],
+  "warnings": [],
+  "partial": false,
+  "partial_reason": null
+}

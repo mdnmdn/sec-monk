@@ -1,0 +1,25 @@
+[package]
+name = "secmonk-traits"
+description = "Domain traits: Collector/Probe, Source, Classifier, Matcher, Reporter, VersionOracle."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+secmonk-model.workspace = true
+secmonk-proto.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+futures-core.workspace = true
+futures-util.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+
+[lints]
+workspace = true

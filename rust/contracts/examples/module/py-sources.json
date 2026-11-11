@@ -1,0 +1,104 @@
+{
+  "schema": "secmonk-module/1",
+  "name": "py-sources",
+  "version": "0.1.0",
+  "kind": "source",
+  "runtime": "python",
+  "protocol": "secmonk-wire/1",
+  "description": "The 8 vulnerability feeds, run on a staging database",
+  "provides": {
+    "sources": [
+      {
+        "name": "cvelist",
+        "description": "CVE List v5 (CVEProject/cvelistV5) with CISA Vulnrichment ADP data",
+        "in_all": true
+      },
+      {
+        "name": "debian-tracker",
+        "description": "Debian Security Tracker: per-release status, urgency, no-dsa and DSA/DLA ids",
+        "in_all": true
+      },
+      {
+        "name": "epss",
+        "description": "FIRST EPSS exploitation probability scores (daily bulk or API lookup)",
+        "in_all": true
+      },
+      {
+        "name": "euvd",
+        "description": "ENISA EUVD: exploited and recent EU vulnerability records, with CVE aliases",
+        "in_all": true
+      },
+      {
+        "name": "kev",
+        "description": "CISA Known Exploited Vulnerabilities catalog (full snapshot)",
+        "in_all": true
+      },
+      {
+        "name": "msrc",
+        "description": "Microsoft MSRC CVRF v3: per-product fixed builds + KBs for Windows/Office/.NET (API blocked in sandbox)",
+        "in_all": true
+      },
+      {
+        "name": "nvd",
+        "description": "NVD CVE API 2.0: CVSS, CWE and CPE applicability",
+        "in_all": true
+      },
+      {
+        "name": "osv",
+        "description": "OSV.dev bulk (package ecosystems + distro advisories)",
+        "in_all": true
+      }
+    ],
+    "sync_all_order": [
+      "kev",
+      "epss",
+      "osv",
+      "cvelist",
+      "nvd",
+      "euvd",
+      "msrc",
+      "debian-tracker"
+    ],
+    "methods": [
+      "source.sync",
+      "source.ack",
+      "source.export"
+    ]
+  },
+  "capabilities": [
+    "network",
+    "writes-staging"
+  ],
+  "platforms": [
+    "macos",
+    "linux",
+    "windows"
+  ],
+  "python": {
+    "project": "python",
+    "env": "secmonk-modules",
+    "requires_python": ">=3.12,<3.14",
+    "entry": [
+      "-I",
+      "-m",
+      "secmonk_modules",
+      "serve",
+      "--stdio",
+      "--module",
+      "py-sources"
+    ]
+  },
+  "lifecycle": {
+    "start": "lazy",
+    "idle_timeout_s": 120,
+    "max_restarts": 1,
+    "restart_window_s": 60
+  },
+  "limits": {
+    "hello_timeout_s": 20,
+    "request_timeout_s": 21600,
+    "cancel_grace_s": 10,
+    "max_frame": 16777216,
+    "max_inflight": 1
+  }
+}

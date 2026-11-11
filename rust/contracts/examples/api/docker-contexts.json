@@ -1,0 +1,20 @@
+[
+  {
+    "name": "default",
+    "host": "unix:///var/run/docker.sock",
+    "description": "Local engine (well-known socket)",
+    "current": true
+  },
+  {
+    "name": "build-01",
+    "host": "ssh://build-01.example.internal",
+    "description": "CI builder (over ssh)",
+    "current": false
+  },
+  {
+    "name": "staging",
+    "host": "tcp://staging.example.internal:2376",
+    "description": "Staging engine (TLS)",
+    "current": false
+  }
+]

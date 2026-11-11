@@ -1,0 +1,5 @@
+{
+ "collector": "windows",
+ "options": [],
+ "target": "<fixtures>/collectors/windows/inventory-win11.json"
+}

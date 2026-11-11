@@ -1,0 +1,901 @@
+{
+ "result": {
+  "inventory": {
+   "asset": {
+    "id": "process:fixture-mac",
+    "meta": {
+     "launch_items": 4,
+     "launch_kinds": {
+      "agent": 1,
+      "child": 4,
+      "gui-app": 3,
+      "interactive": 4,
+      "kernel": 2,
+      "remote-session": 1,
+      "scheduled": 2,
+      "service": 4
+     },
+     "process_count": 21,
+     "processes": [
+      {
+       "launch": "kernel",
+       "mechanism": "init",
+       "pid": 0,
+       "ppid": 0,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "os",
+       "exe": "/sbin/launchd",
+       "identity": "macOS@14.5",
+       "launch": "kernel",
+       "mechanism": "init",
+       "pid": 0,
+       "ppid": 0,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/sbin/syslogd",
+       "identity": "macOS@14.5",
+       "label": "com.apple.syslogd",
+       "launch": "service",
+       "launch_source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+       "mechanism": "launchd-system-daemon",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "executable",
+       "exe": "/Library/PrivilegedHelperTools/com.example.updater",
+       "flags": [
+        "unidentified"
+       ],
+       "identity": "com.example.updater",
+       "label": "com.example.updater",
+       "launch": "service",
+       "launch_source": "/Library/LaunchDaemons/com.example.updater.plist",
+       "mechanism": "launchd-daemon",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "application",
+       "exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+       "identity": "Slack",
+       "label": "application.com.tinyspeck.slackmacgap.1234.5678",
+       "launch": "gui-app",
+       "mechanism": "launchservices",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "application",
+       "exe": "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+       "identity": "Slack",
+       "launch": "child",
+       "mechanism": "spawn",
+       "parent_exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+       "pid": 0,
+       "ppid": 300,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "application",
+       "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+       "flags": [
+        "downloaded"
+       ],
+       "identity": "Google Chrome",
+       "launch": "gui-app",
+       "mechanism": "launchservices",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "executable",
+       "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+       "flags": [
+        "user-writable-path",
+        "persistent-from-user-path",
+        "unidentified"
+       ],
+       "identity": "syncd",
+       "label": "com.sync.agent",
+       "launch": "agent",
+       "launch_source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist",
+       "mechanism": "launchd-agent",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "system-app",
+       "exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+       "identity": "Terminal",
+       "label": "application.com.apple.Terminal.111.222",
+       "launch": "gui-app",
+       "mechanism": "launchservices",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/bin/login",
+       "identity": "macOS@14.5",
+       "launch": "child",
+       "mechanism": "spawn",
+       "parent_exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+       "pid": 0,
+       "ppid": 400,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "os",
+       "exe": "/bin/zsh",
+       "identity": "macOS@14.5",
+       "launch": "interactive",
+       "mechanism": "terminal",
+       "parent_exe": "/usr/bin/login",
+       "pid": 0,
+       "ppid": 401,
+       "started": "<ts>",
+       "user": "alice",
+       "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+      },
+      {
+       "category": "executable",
+       "exe": "/opt/homebrew/bin/curl",
+       "flags": [
+        "unidentified"
+       ],
+       "identity": "curl",
+       "launch": "interactive",
+       "mechanism": "terminal",
+       "parent_exe": "/bin/zsh",
+       "pid": 0,
+       "ppid": 402,
+       "started": "<ts>",
+       "user": "alice",
+       "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+      },
+      {
+       "category": "executable",
+       "exe": "/usr/local/bin/hello",
+       "flags": [
+        "unidentified"
+       ],
+       "identity": "hello",
+       "launch": "interactive",
+       "mechanism": "terminal",
+       "parent_exe": "/bin/zsh",
+       "pid": 0,
+       "ppid": 402,
+       "started": "<ts>",
+       "user": "alice",
+       "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/bin/python3",
+       "identity": "macOS@14.5",
+       "launch": "interactive",
+       "mechanism": "terminal",
+       "parent_exe": "/bin/zsh",
+       "pid": 0,
+       "ppid": 402,
+       "script": "/Users/alice/tool.py",
+       "started": "<ts>",
+       "user": "alice",
+       "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/sbin/sshd",
+       "identity": "macOS@14.5",
+       "label": "com.openssh.sshd",
+       "launch": "service",
+       "launch_source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist",
+       "mechanism": "launchd-system-daemon",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/sbin/sshd",
+       "identity": "macOS@14.5",
+       "launch": "child",
+       "mechanism": "spawn",
+       "parent_exe": "/usr/sbin/sshd",
+       "pid": 0,
+       "ppid": 500,
+       "started": "<ts>",
+       "user": "alice"
+      },
+      {
+       "category": "os",
+       "exe": "/bin/zsh",
+       "identity": "macOS@14.5",
+       "launch": "child",
+       "mechanism": "spawn",
+       "parent_exe": "/usr/sbin/sshd",
+       "pid": 0,
+       "ppid": 501,
+       "started": "<ts>",
+       "user": "alice",
+       "via": "/usr/sbin/sshd"
+      },
+      {
+       "category": "executable",
+       "exe": "/tmp/x",
+       "flags": [
+        "exe-missing",
+        "user-writable-path",
+        "root-from-user-path",
+        "unidentified"
+       ],
+       "identity": "x",
+       "launch": "remote-session",
+       "mechanism": "sshd",
+       "parent_exe": "/bin/zsh",
+       "pid": 0,
+       "ppid": 502,
+       "started": "<ts>",
+       "user": "root",
+       "via": "/usr/sbin/sshd"
+      },
+      {
+       "category": "os",
+       "exe": "/usr/sbin/cron",
+       "identity": "macOS@14.5",
+       "launch": "service",
+       "mechanism": "init",
+       "parent_exe": "/sbin/launchd",
+       "pid": 0,
+       "ppid": 1,
+       "started": "<ts>",
+       "user": "root"
+      },
+      {
+       "category": "os",
+       "exe": "/bin/sh",
+       "identity": "macOS@14.5",
+       "launch": "scheduled",
+       "mechanism": "cron",
+       "parent_exe": "/usr/sbin/cron",
+       "pid": 0,
+       "ppid": 600,
+       "started": "<ts>",
+       "user": "root",
+       "via": "/usr/sbin/cron"
+      },
+      {
+       "category": "os",
+       "exe": "/bin/bash",
+       "identity": "macOS@14.5",
+       "launch": "scheduled",
+       "mechanism": "cron",
+       "parent_exe": "/bin/sh",
+       "pid": 0,
+       "ppid": 601,
+       "started": "<ts>",
+       "user": "root",
+       "via": "/usr/sbin/cron"
+      }
+     ],
+     "taken_at": "<ts>",
+     "without_exe": 1
+    },
+    "name": "fixture-mac",
+    "os_name": "macOS",
+    "os_version": "14.5",
+    "platform": "darwin",
+    "type": "host-processes"
+   },
+   "classified": true,
+   "collector": "process",
+   "components": [
+    {
+     "category": "application",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "path-only",
+      "process": {
+       "count": 1,
+       "executables": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+       ],
+       "flags": [
+        "downloaded"
+       ],
+       "identity": "path-only",
+       "launch": [
+        "gui-app"
+       ],
+       "processes": [
+        {
+         "exe": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+         "launch": "gui-app",
+         "mechanism": "launchservices",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "alice"
+        }
+       ],
+       "provenance": {
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome": {
+         "quarantine": {
+          "agent": "Safari",
+          "event": {
+           "agent_bundle_id": "com.apple.Safari",
+           "data_url": "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+           "origin_url": "https://www.google.com/chrome/",
+           "time": "2026-10-01T08:29:58+00:00"
+          },
+          "event_id": "9F0C1E52-6D3B-4E0B-9C59-1B2A3C4D5E6F",
+          "on": "/Applications/Google Chrome.app",
+          "raw_flags": "0083",
+          "time": "2026-10-01T08:30:00+00:00",
+          "user_approved": true
+         },
+         "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+         "signature": {
+          "authority": [
+           "Developer ID Application: Google LLC (EQHXZ8M8AV)",
+           "Developer ID Certification Authority",
+           "Apple Root CA"
+          ],
+          "developer_id": true,
+          "signed": true,
+          "team_id": "EQHXZ8M8AV"
+         },
+         "where_froms": [
+          "https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg",
+          "https://www.google.com/"
+         ]
+        }
+       },
+       "resolution": "path-only",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "chrome",
+      "product_source": "alias-table"
+     },
+     "name": "Google Chrome",
+     "purl": null,
+     "source_path": "/Applications/Google Chrome.app",
+     "vendor": "google",
+     "version": null
+    },
+    {
+     "category": "application",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "path-only",
+      "process": {
+       "count": 2,
+       "executables": [
+        "/Applications/Slack.app/Contents/MacOS/Slack",
+        "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper"
+       ],
+       "flags": [],
+       "helper": "Slack Helper.app",
+       "identity": "path-only",
+       "launch": [
+        "gui-app",
+        "child"
+       ],
+       "processes": [
+        {
+         "exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+         "label": "application.com.tinyspeck.slackmacgap.1234.5678",
+         "launch": "gui-app",
+         "mechanism": "launchservices",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "alice"
+        },
+        {
+         "exe": "/Applications/Slack.app/Contents/Frameworks/Slack Helper.app/Contents/MacOS/Slack Helper",
+         "launch": "child",
+         "mechanism": "spawn",
+         "parent_exe": "/Applications/Slack.app/Contents/MacOS/Slack",
+         "pid": 0,
+         "ppid": 300,
+         "started": "<ts>",
+         "user": "alice"
+        }
+       ],
+       "resolution": "path-only",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "slack",
+      "product_source": "alias-table"
+     },
+     "name": "Slack",
+     "purl": null,
+     "source_path": "/Applications/Slack.app",
+     "vendor": "slack",
+     "version": null
+    },
+    {
+     "category": "executable",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "none",
+      "paths": [],
+      "process": {
+       "count": 1,
+       "executables": [
+        "/Library/PrivilegedHelperTools/com.example.updater"
+       ],
+       "flags": [
+        "unidentified"
+       ],
+       "launch": [
+        "service"
+       ],
+       "processes": [
+        {
+         "exe": "/Library/PrivilegedHelperTools/com.example.updater",
+         "label": "com.example.updater",
+         "launch": "service",
+         "launch_source": "/Library/LaunchDaemons/com.example.updater.plist",
+         "mechanism": "launchd-daemon",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "root"
+        }
+       ],
+       "resolution": "none",
+       "users": [
+        "root"
+       ]
+      },
+      "product": "com.example.updater",
+      "product_source": "normalized-name"
+     },
+     "name": "com.example.updater",
+     "purl": null,
+     "source_path": "/Library/PrivilegedHelperTools/com.example.updater",
+     "vendor": null,
+     "version": null
+    },
+    {
+     "category": "executable",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "none",
+      "paths": [],
+      "process": {
+       "count": 1,
+       "executables": [
+        "/opt/homebrew/bin/curl"
+       ],
+       "flags": [
+        "unidentified"
+       ],
+       "launch": [
+        "interactive"
+       ],
+       "processes": [
+        {
+         "exe": "/opt/homebrew/bin/curl",
+         "launch": "interactive",
+         "mechanism": "terminal",
+         "parent_exe": "/bin/zsh",
+         "pid": 0,
+         "ppid": 402,
+         "started": "<ts>",
+         "user": "alice",
+         "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+        }
+       ],
+       "resolution": "none",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "curl",
+      "product_source": "alias-table"
+     },
+     "name": "curl",
+     "purl": null,
+     "source_path": "/opt/homebrew/bin/curl",
+     "vendor": "haxx",
+     "version": null
+    },
+    {
+     "category": "executable",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "none",
+      "paths": [],
+      "process": {
+       "count": 1,
+       "executables": [
+        "/usr/local/bin/hello"
+       ],
+       "flags": [
+        "unidentified"
+       ],
+       "launch": [
+        "interactive"
+       ],
+       "processes": [
+        {
+         "exe": "/usr/local/bin/hello",
+         "launch": "interactive",
+         "mechanism": "terminal",
+         "parent_exe": "/bin/zsh",
+         "pid": 0,
+         "ppid": 402,
+         "started": "<ts>",
+         "user": "alice",
+         "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+        }
+       ],
+       "resolution": "none",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "hello",
+      "product_source": "normalized-name"
+     },
+     "name": "hello",
+     "purl": null,
+     "source_path": "/usr/local/bin/hello",
+     "vendor": null,
+     "version": null
+    },
+    {
+     "category": "executable",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "none",
+      "paths": [],
+      "process": {
+       "count": 1,
+       "executables": [
+        "/Users/alice/Library/Application Support/Sync/syncd"
+       ],
+       "flags": [
+        "user-writable-path",
+        "persistent-from-user-path",
+        "unidentified"
+       ],
+       "launch": [
+        "agent"
+       ],
+       "processes": [
+        {
+         "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+         "label": "com.sync.agent",
+         "launch": "agent",
+         "launch_source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist",
+         "mechanism": "launchd-agent",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "alice"
+        }
+       ],
+       "resolution": "none",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "syncd",
+      "product_source": "normalized-name"
+     },
+     "name": "syncd",
+     "purl": null,
+     "source_path": "/Users/alice/Library/Application Support/Sync/syncd",
+     "vendor": null,
+     "version": null
+    },
+    {
+     "category": "executable",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "none",
+      "paths": [],
+      "process": {
+       "count": 1,
+       "executables": [
+        "/tmp/x"
+       ],
+       "flags": [
+        "exe-missing",
+        "user-writable-path",
+        "root-from-user-path",
+        "unidentified"
+       ],
+       "launch": [
+        "remote-session"
+       ],
+       "processes": [
+        {
+         "exe": "/tmp/x",
+         "launch": "remote-session",
+         "mechanism": "sshd",
+         "parent_exe": "/bin/zsh",
+         "pid": 0,
+         "ppid": 502,
+         "started": "<ts>",
+         "user": "root",
+         "via": "/usr/sbin/sshd"
+        }
+       ],
+       "resolution": "none",
+       "users": [
+        "root"
+       ]
+      },
+      "product": "x",
+      "product_source": "normalized-name"
+     },
+     "name": "x",
+     "purl": null,
+     "source_path": "/tmp/x",
+     "vendor": null,
+     "version": null
+    },
+    {
+     "category": "os",
+     "cpe": "cpe:2.3:o:apple:macos:14.5:*:*:*:*:*:*:*",
+     "ecosystem": null,
+     "meta": {
+      "build": "23F79",
+      "process": {
+       "count": 11,
+       "executables": [
+        "/sbin/launchd",
+        "/usr/sbin/syslogd",
+        "/usr/bin/login",
+        "/bin/zsh",
+        "/usr/bin/python3",
+        "/usr/sbin/sshd",
+        "/usr/sbin/cron",
+        "/bin/sh",
+        "/bin/bash"
+       ],
+       "flags": [],
+       "launch": [
+        "kernel",
+        "service",
+        "child",
+        "interactive",
+        "scheduled"
+       ],
+       "os_binary": true,
+       "processes": [
+        {
+         "exe": "/sbin/launchd",
+         "launch": "kernel",
+         "mechanism": "init",
+         "pid": 0,
+         "ppid": 0,
+         "started": "<ts>",
+         "user": "root"
+        },
+        {
+         "exe": "/usr/sbin/syslogd",
+         "label": "com.apple.syslogd",
+         "launch": "service",
+         "launch_source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+         "mechanism": "launchd-system-daemon",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "root"
+        },
+        {
+         "exe": "/usr/bin/login",
+         "launch": "child",
+         "mechanism": "spawn",
+         "parent_exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+         "pid": 0,
+         "ppid": 400,
+         "started": "<ts>",
+         "user": "root"
+        },
+        {
+         "exe": "/bin/zsh",
+         "launch": "interactive",
+         "mechanism": "terminal",
+         "parent_exe": "/usr/bin/login",
+         "pid": 0,
+         "ppid": 401,
+         "started": "<ts>",
+         "user": "alice",
+         "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+        },
+        {
+         "exe": "/usr/bin/python3",
+         "launch": "interactive",
+         "mechanism": "terminal",
+         "parent_exe": "/bin/zsh",
+         "pid": 0,
+         "ppid": 402,
+         "script": "/Users/alice/tool.py",
+         "started": "<ts>",
+         "user": "alice",
+         "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+        },
+        {
+         "exe": "/usr/sbin/sshd",
+         "label": "com.openssh.sshd",
+         "launch": "service",
+         "launch_source": "/System/Library/LaunchDaemons/com.openssh.sshd.plist",
+         "mechanism": "launchd-system-daemon",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "root"
+        },
+        {
+         "exe": "/usr/sbin/sshd",
+         "launch": "child",
+         "mechanism": "spawn",
+         "parent_exe": "/usr/sbin/sshd",
+         "pid": 0,
+         "ppid": 500,
+         "started": "<ts>",
+         "user": "alice"
+        },
+        {
+         "exe": "/bin/zsh",
+         "launch": "child",
+         "mechanism": "spawn",
+         "parent_exe": "/usr/sbin/sshd",
+         "pid": 0,
+         "ppid": 501,
+         "started": "<ts>",
+         "user": "alice",
+         "via": "/usr/sbin/sshd"
+        },
+        {
+         "exe": "/usr/sbin/cron",
+         "launch": "service",
+         "mechanism": "init",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "root"
+        },
+        {
+         "exe": "/bin/sh",
+         "launch": "scheduled",
+         "mechanism": "cron",
+         "parent_exe": "/usr/sbin/cron",
+         "pid": 0,
+         "ppid": 600,
+         "started": "<ts>",
+         "user": "root",
+         "via": "/usr/sbin/cron"
+        },
+        {
+         "exe": "/bin/bash",
+         "launch": "scheduled",
+         "mechanism": "cron",
+         "parent_exe": "/bin/sh",
+         "pid": 0,
+         "ppid": 601,
+         "started": "<ts>",
+         "user": "root",
+         "via": "/usr/sbin/cron"
+        }
+       ],
+       "resolution": "os",
+       "users": [
+        "root",
+        "alice"
+       ]
+      },
+      "product": "macos",
+      "product_source": "alias-table"
+     },
+     "name": "macOS",
+     "purl": null,
+     "source_path": null,
+     "vendor": "apple",
+     "version": "14.5"
+    },
+    {
+     "category": "system-app",
+     "cpe": null,
+     "ecosystem": null,
+     "meta": {
+      "identity": "path-only",
+      "process": {
+       "count": 1,
+       "executables": [
+        "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+       ],
+       "flags": [],
+       "identity": "path-only",
+       "launch": [
+        "gui-app"
+       ],
+       "processes": [
+        {
+         "exe": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+         "label": "application.com.apple.Terminal.111.222",
+         "launch": "gui-app",
+         "mechanism": "launchservices",
+         "parent_exe": "/sbin/launchd",
+         "pid": 0,
+         "ppid": 1,
+         "started": "<ts>",
+         "user": "alice"
+        }
+       ],
+       "resolution": "path-only",
+       "users": [
+        "alice"
+       ]
+      },
+      "product": "terminal",
+      "product_source": "normalized-name"
+     },
+     "name": "Terminal",
+     "purl": null,
+     "source_path": "/System/Applications/Utilities/Terminal.app",
+     "vendor": null,
+     "version": null
+    }
+   ],
+   "partial": false,
+   "partial_reason": null,
+   "schema": "secmonk-inventory/1",
+   "warnings": []
+  }
+ }
+}

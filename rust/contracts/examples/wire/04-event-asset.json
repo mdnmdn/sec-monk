@@ -1,0 +1,23 @@
+{
+  "type": "event",
+  "id": 7,
+  "seq": 0,
+  "data": {
+    "kind": "asset",
+    "schema": "secmonk-inventory/1",
+    "collector": "fs",
+    "classified": false,
+    "asset": {
+      "id": "dir:/work/npm-v3",
+      "type": "directory",
+      "name": "npm-v3",
+      "os_name": null,
+      "os_version": null,
+      "platform": null,
+      "meta": {
+        "path": "/work/npm-v3",
+        "files_parsed": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/process-row.schema.json",
+  "title": "Process row (procmon.view_row + depth)",
+  "type": "object",
+  "properties": {
+    "pid": {
+      "type": "integer"
+    },
+    "ppid": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "user": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "depth": {
+      "type": "integer"
+    },
+    "process": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "exe": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "launch": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "launch_detail": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "label": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "launch_source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "via": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidence": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "started": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "script": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "identity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "identity_method": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "category": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "findings": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "findings_detail": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "provenance": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "pid",
+    "flags"
+  ]
+}

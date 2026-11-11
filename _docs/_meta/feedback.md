@@ -6,7 +6,7 @@ type: meta
 context: meta
 status: reference
 tags: [docs, maintenance]
-updated: 2026-11-08
+updated: 2026-11-11
 verified: 2026-11-08
 related: [_meta/librarian.md, _meta/review-log.md]
 ---
@@ -25,3 +25,4 @@ The channel for everything a contributor or the librarian cannot do alone ([libr
 | id | date | target | kind | rationale | status |
 |---|---|---|---|---|---|
 | F1 | 2026-11-08 | `references/vuln-sources/*.md`, `tech/collectors/dependencies.md`, `tech/engine/matching.md`, `product/vision.md` | move | 14 "TODO" / "Known gaps" / "Open questions" sections (L8) hold open work that belongs in `plans/` items; moving them is a large edit across plans, so it needs a dedicated pass | open |
+| F2 | 2026-11-11 | `inbox/2026-11-08-port-to-compiled-stack.md` | split | At ~790 lines (L4 ceiling 500) the proposal serves several reader intents (architecture and protocol, transports and security, mixed Rust/Python roadmap, port effort and stack comparison); split it into linked inbox proposals once a human has reviewed its content | open |

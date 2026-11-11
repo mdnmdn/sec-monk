@@ -1,0 +1,5 @@
+{
+ "collector": "process",
+ "options": [],
+ "target": "<fixtures>/collectors/process/snapshot.json"
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/docker-contexts.schema.json",
+  "title": "GET /api/docker/contexts (ops.docker_contexts)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "host": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "current": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "name",
+      "host",
+      "description",
+      "current"
+    ],
+    "additionalProperties": false
+  }
+}

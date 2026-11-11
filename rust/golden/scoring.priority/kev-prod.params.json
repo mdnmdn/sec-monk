@@ -1,0 +1,10 @@
+{
+ "asset_meta": {
+  "env": "prod"
+ },
+ "cvss": 9.8,
+ "epss": 0.9,
+ "kev": true,
+ "severity": "CRITICAL",
+ "triage": null
+}

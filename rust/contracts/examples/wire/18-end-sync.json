@@ -1,0 +1,16 @@
+{
+  "type": "end",
+  "id": 3,
+  "result": {
+    "entry": {
+      "source": "kev",
+      "status": "ok",
+      "records": 1450,
+      "seconds": 2.4,
+      "message": null
+    },
+    "batches": 2,
+    "last_seq": 2,
+    "ops": 2903
+  }
+}

@@ -1,0 +1,121 @@
+{
+ "result": {
+  "asset": {
+   "first_seen": "<ts>",
+   "id": "dir:/srv/payments-api",
+   "last_seen": "<ts>",
+   "meta": {
+    "env": "prod"
+   },
+   "name": "payments-api",
+   "os_name": null,
+   "os_version": null,
+   "platform": null,
+   "type": "directory"
+  },
+  "components": [
+   {
+    "category": "library",
+    "cpe": null,
+    "ecosystem": "Maven",
+    "findings": {
+     "P1": 1,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 1,
+     "total": 1
+    },
+    "id": 1,
+    "meta": {},
+    "name": "org.apache.logging.log4j:log4j-core",
+    "path": null,
+    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+    "vendor": null,
+    "version": "2.14.1"
+   },
+   {
+    "category": "library",
+    "cpe": null,
+    "ecosystem": "npm",
+    "findings": {
+     "P1": 0,
+     "P2": 0,
+     "P3": 0,
+     "P4": 0,
+     "kev": 0,
+     "total": 0
+    },
+    "id": 2,
+    "meta": {},
+    "name": "left-pad",
+    "path": null,
+    "purl": "pkg:npm/left-pad@1.3.0",
+    "vendor": null,
+    "version": "1.3.0"
+   }
+  ],
+  "findings": [
+   {
+    "advisory_ids": [
+     "CVE-2021-44228",
+     "EUVD-2021-30001",
+     "GHSA-jfh8-c2jp-5v3q"
+    ],
+    "asset_id": "dir:/srv/payments-api",
+    "category": "library",
+    "component": "org.apache.logging.log4j:log4j-core",
+    "component_id": 1,
+    "confidence": 1.0,
+    "cvss_score": 10.0,
+    "ecosystem": "Maven",
+    "epss": 0.97431,
+    "first_seen": "<ts>",
+    "fixed_at": null,
+    "fixed_version": "2.15.0",
+    "kev": true,
+    "last_seen": "<ts>",
+    "matched_by": "osv-package",
+    "priority": "P1",
+    "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+    "severity": "CRITICAL",
+    "status": "open",
+    "triage": null,
+    "triage_source": "osv",
+    "version": "2.14.1",
+    "vuln_id": "CVE-2021-44228"
+   }
+  ],
+  "partial": false,
+  "scans": [
+   {
+    "collector": "fs",
+    "components": 2,
+    "finished_at": "<ts>",
+    "id": 1,
+    "partial": false,
+    "partial_reason": null,
+    "started_at": "<ts>",
+    "warnings": [
+     "synthetic fixture"
+    ]
+   }
+  ],
+  "summary": {
+   "closed": 0,
+   "components": 2,
+   "limit_reached": false,
+   "open": {
+    "P1": 1,
+    "P2": 0,
+    "P3": 0,
+    "P4": 0,
+    "kev": 1,
+    "total": 1
+   }
+  },
+  "warnings": [
+   "synthetic fixture"
+  ]
+ }
+}

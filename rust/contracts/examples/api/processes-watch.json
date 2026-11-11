@@ -1,0 +1,71 @@
+{
+  "events": [
+    {
+      "event": "changed-executable",
+      "pid": 320,
+      "ppid": 1,
+      "user": "alice",
+      "process": "syncd",
+      "exe": "/Users/alice/Library/Application Support/Sync/syncd",
+      "launch": "agent",
+      "launch_detail": "agent (com.sync.agent)",
+      "label": "com.sync.agent",
+      "launch_source": "/Users/alice/Library/LaunchAgents/com.sync.agent.plist",
+      "via": null,
+      "evidence": "pid-label",
+      "started": "2026-11-07T09:00:00",
+      "script": null,
+      "identity": "syncd",
+      "identity_method": "none",
+      "category": "executable",
+      "findings": "",
+      "findings_detail": [],
+      "flags": [
+        "user-writable-path",
+        "persistent-from-user-path",
+        "unidentified"
+      ],
+      "provenance": {
+        "created": "2026-11-08T15:03:47+00:00",
+        "sha256": "fe7a42d3c0546a5fb621923937404b321b292e7fe3e7c8b3835b054b0e92eea2"
+      }
+    },
+    {
+      "event": "new-executable",
+      "pid": 404,
+      "ppid": 402,
+      "user": "alice",
+      "process": "hello",
+      "exe": "/usr/local/bin/hello",
+      "launch": "interactive",
+      "launch_detail": "interactive (terminal)",
+      "label": null,
+      "launch_source": null,
+      "via": "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+      "evidence": "ancestry",
+      "started": "2026-11-07T09:00:00",
+      "script": null,
+      "identity": "example.com/secmonk-hello",
+      "identity_method": "go-binary",
+      "category": "library",
+      "findings": "P3x1",
+      "findings_detail": [
+        {
+          "vuln_id": "GO-2022-1059",
+          "priority": "P3",
+          "kev": false,
+          "fixed_version": "0.3.8",
+          "cvss_score": 7.5,
+          "component": "golang.org/x/text"
+        }
+      ],
+      "flags": [],
+      "provenance": {
+        "created": "2026-11-11T00:33:16+00:00",
+        "sha256": "960e8a69ab7704cd16cb720d1e9e96fa8d2f7a09f1e236193fbd697e7f87d8f3"
+      }
+    }
+  ],
+  "taken_at": "2026-11-07T10:05:00+00:00",
+  "baseline": false
+}

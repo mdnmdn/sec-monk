@@ -1,0 +1,116 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/go",
+  "meta": {
+   "files_parsed": 4,
+   "path": "<fixtures>/lang/go"
+  },
+  "name": "go",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Go",
+   "meta": {
+    "build": {
+     "-buildmode": "exe",
+     "-trimpath": "true",
+     "CGO_ENABLED": "0",
+     "GOARCH": "arm64",
+     "GOOS": "darwin"
+    },
+    "evidence": "binary",
+    "go_version": "go1.24.7",
+    "main": true,
+    "parser": "go-binary",
+    "paths": [
+     "hello-darwin-arm64",
+     "hello-linux-amd64"
+    ]
+   },
+   "name": "example.com/secmonk-hello",
+   "purl": "pkg:golang/example.com/secmonk-hello",
+   "source_path": "hello-darwin-arm64",
+   "vendor": null,
+   "version": null
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Go",
+   "meta": {
+    "evidence": "binary",
+    "parser": "go-binary",
+    "paths": [
+     "go.mod",
+     "hello-darwin-arm64",
+     "hello-linux-amd64"
+    ],
+    "replaced_from": "github.com/google/uuid@v1.3.0"
+   },
+   "name": "github.com/google/uuid",
+   "purl": "pkg:golang/github.com/google/uuid@1.3.1",
+   "source_path": "hello-darwin-arm64",
+   "vendor": null,
+   "version": "1.3.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Go",
+   "meta": {
+    "evidence": "binary",
+    "parser": "go-binary",
+    "paths": [
+     "go.mod",
+     "hello-darwin-arm64",
+     "hello-linux-amd64"
+    ]
+   },
+   "name": "golang.org/x/text",
+   "purl": "pkg:golang/golang.org/x/text@0.3.7",
+   "source_path": "hello-darwin-arm64",
+   "vendor": null,
+   "version": "0.3.7"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": "Go",
+   "meta": {
+    "build": {
+     "-buildmode": "exe",
+     "-trimpath": "true",
+     "CGO_ENABLED": "0",
+     "GOARCH": "arm64",
+     "GOOS": "darwin"
+    },
+    "evidence": "binary",
+    "go_version": "go1.24.7",
+    "parser": "go-binary",
+    "paths": [
+     "hello-darwin-arm64",
+     "hello-linux-amd64"
+    ],
+    "runtime": "go"
+   },
+   "name": "stdlib",
+   "purl": "pkg:golang/stdlib@1.24.7",
+   "source_path": "hello-darwin-arm64",
+   "vendor": null,
+   "version": "1.24.7"
+  }
+ ],
+ "end": {
+  "components": 4,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

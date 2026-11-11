@@ -1,0 +1,48 @@
+[package]
+name = "secmonk-host"
+description = "Composition of the sec-monk desktop app and the headless server: runtime, stores, module host, probe, engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[features]
+default = ["engine", "probe"]
+# `engine`: the stores, the engine service and the API binding (headless server). Off: probe + module host only.
+engine = ["dep:secmonk-engine", "dep:secmonk-store", "dep:secmonk-api"]
+# `probe`: wire py-probe (collectors, discovery, docker/k8s listings) into the probe service. Off: empty allowlist.
+probe = []
+
+[[bin]]
+name = "secmonk-headless"
+path = "src/bin/secmonk-headless.rs"
+required-features = ["engine"]
+
+[dependencies]
+async-trait.workspace = true
+secmonk-config.workspace = true
+secmonk-model.workspace = true
+secmonk-modhost.workspace = true
+secmonk-probe.workspace = true
+secmonk-proto.workspace = true
+secmonk-runtime.workspace = true
+secmonk-safeio.workspace = true
+secmonk-traits.workspace = true
+futures-util.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
+tokio-util.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+# optional: the `engine` feature
+secmonk-api = { workspace = true, optional = true }
+secmonk-engine = { workspace = true, optional = true }
+secmonk-store = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

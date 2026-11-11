@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/job.schema.json",
+  "title": "Job / run (reports.job_payload): GET /api/jobs/<id>, POST /api/jobs",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "kind": {
+      "enum": [
+        "scan",
+        "sync"
+      ]
+    },
+    "origin": {
+      "enum": [
+        "cli",
+        "ui"
+      ]
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "params": {
+      "type": "object"
+    },
+    "started": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "finished": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "running",
+        "ok",
+        "partial",
+        "error"
+      ]
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "result": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "summary": {
+      "type": "object"
+    },
+    "log_lines": {
+      "type": "integer"
+    },
+    "log": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "origin",
+    "title",
+    "params",
+    "started",
+    "finished",
+    "status",
+    "error",
+    "result",
+    "summary",
+    "log_lines"
+  ]
+}

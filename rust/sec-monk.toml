@@ -1,0 +1,63 @@
+# sec-monk desktop (Rust prototype): developer configuration.
+# Schema and rules: rust/_docs/tech/configuration.md. Relative paths resolve against this file's directory.
+# Everything the app, uv and the Python modules write goes below data_dir (gitignored).
+
+config_version = 1
+data_dir = "_data"             # resolved against this file, then canonicalized to an absolute path
+
+[database]
+backend = "sqlite"
+state = "sqlite://{data_dir}/db/state.sqlite3"
+mirror = "sqlite://{data_dir}/db/mirror.sqlite3"
+
+[python]
+version = "3.13"
+offline = false
+# find_links = "wheels"          # offline installs
+# index_url = "https://pypi.org/simple"
+
+[uv]
+version = "0.13.7"
+url = "https://github.com/astral-sh/uv/releases/download/{version}/{asset}"
+# archive = "downloads/uv-aarch64-apple-darwin.tar.gz"   # offline: a local copy, verified like a download
+
+# The same pins are compiled into secmonk-runtime; these entries override them (needed when [uv] version changes).
+# sha256 of each release archive, copied from the release's .sha256 files on 2026-11-11 (verify against
+# sha256.sum / GitHub attestations before a release build). A target without a checksum cannot download.
+[uv.sha256]
+aarch64-apple-darwin = "81b811b57e4624df7ed3aac148e0359100d9962f3d9dce00aec533dc2e086731"
+x86_64-apple-darwin = "20c47e4c1f630b8abaff8c291fa9b9aa300fef92c4fbff95adf198b55287cda7"
+x86_64-unknown-linux-gnu = "c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83"
+aarch64-unknown-linux-gnu = "71279f8d3c67241e807b9d8db872d1bf541579fb9f08b7d1eb1682196d1e57dc"
+x86_64-unknown-linux-musl = "287491da03f2a785c70fa75b13e1f849918c2f2b5415fe84876b8214eeb792f9"
+aarch64-unknown-linux-musl = "2d3ec076a0c4c0e8250bb6418c44080828b544f1a3be0b6e46adf9fb6923de45"
+x86_64-pc-windows-msvc = "0cdc5b38fe5a8168ed6a25814f5ba43c21d313dd3187314fccb37b7cec46e021"
+aarch64-pc-windows-msvc = "505d9e65e7692bac3ddf98c66754aa26c5050c409c184af30a881a0a72cc85e3"
+
+[modules]
+python_project = "python"
+enabled = ["py-engine", "py-procmon", "py-probe", "py-sources"]
+trust = "dev"                     # dev: editable install from the repo; "pinned" requires [modules.pins]
+
+# [modules.pins]
+# py-probe = { lock_sha256 = "…", tree_sha256 = "…" }
+
+# [modules.py-sources]
+# request_timeout_s = 21600
+
+[ui]
+static_dir = "../src/secmonk/web/static"   # the current UI, served in place (never copied); $SECMONK_STATIC overrides in dev
+scheme = "secmonk"
+devtools = true
+# snapshot = "../tests/fixtures/collectors/process/snapshot.json"   # process monitor on a snapshot file
+# http_listen = "127.0.0.1:8766"           # optional dev HTTP binding (loopback, Host check)
+
+[engine]
+min_confidence = 0.5
+
+[sources]
+nvd_api_key_env = "NVD_API_KEY"
+
+[log]
+level = "info"
+keep_days = 7

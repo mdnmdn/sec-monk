@@ -1,0 +1,963 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/java",
+  "meta": {
+   "files_parsed": 5,
+   "path": "<fixtures>/lang/java"
+  },
+  "name": "java",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "ch.qos.logback:logback-classic",
+   "purl": "pkg:maven/ch.qos.logback/logback-classic@1.5.15",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.5.15"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "ch.qos.logback:logback-core",
+   "purl": "pkg:maven/ch.qos.logback/logback-core@1.5.15",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.5.15"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "shaded-demo-app-1.0.0.jar"
+    ]
+   },
+   "name": "com.example:demo-app",
+   "purl": "pkg:maven/com.example/demo-app@1.0.0",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "1.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "springboot-app-0.1.0.jar"
+    ]
+   },
+   "name": "com.example:springboot-app",
+   "purl": "pkg:maven/com.example/springboot-app@0.1.0",
+   "source_path": "springboot-app-0.1.0.jar",
+   "vendor": null,
+   "version": "0.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "shaded-demo-app-1.0.0.jar",
+     "springboot-app-0.1.0.jar!/BOOT-INF/lib/jackson-annotations-2.9.0.jar"
+    ],
+    "shaded": true
+   },
+   "name": "com.fasterxml.jackson.core:jackson-annotations",
+   "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-annotations@2.9.0",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "2.9.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "shaded-demo-app-1.0.0.jar",
+     "springboot-app-0.1.0.jar!/BOOT-INF/lib/jackson-core-2.9.8.jar"
+    ],
+    "shaded": true
+   },
+   "name": "com.fasterxml.jackson.core:jackson-core",
+   "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-core@2.9.8",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "2.9.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "pom.xml",
+     "shaded-demo-app-1.0.0.jar",
+     "springboot-app-0.1.0.jar!/BOOT-INF/lib/jackson-databind-2.9.8.jar"
+    ],
+    "shaded": true
+   },
+   "name": "com.fasterxml.jackson.core:jackson-databind",
+   "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.9.8",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "2.9.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "commons-codec:commons-codec",
+   "purl": "pkg:maven/commons-codec/commons-codec@1.17.1",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.17.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "commons-io:commons-io",
+   "purl": "pkg:maven/commons-io/commons-io@2.16.1",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "2.16.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "net.bytebuddy:byte-buddy-agent",
+   "purl": "pkg:maven/net.bytebuddy/byte-buddy-agent@1.15.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.15.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "net.bytebuddy:byte-buddy",
+   "purl": "pkg:maven/net.bytebuddy/byte-buddy@1.15.11",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.15.11"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "net.sf.jopt-simple:jopt-simple",
+   "purl": "pkg:maven/net.sf.jopt-simple/jopt-simple@5.0.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.0.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "nl.jqno.equalsverifier:equalsverifier",
+   "purl": "pkg:maven/nl.jqno.equalsverifier/equalsverifier@3.18",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "3.18"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.apache.commons:commons-compress",
+   "purl": "pkg:maven/org.apache.commons/commons-compress@1.27.1",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.27.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "commons-lang3-3.12.0.jar",
+     "pom.xml",
+     "shaded-demo-app-1.0.0.jar"
+    ]
+   },
+   "name": "org.apache.commons:commons-lang3",
+   "purl": "pkg:maven/org.apache.commons/commons-lang3@3.12.0",
+   "source_path": "commons-lang3-3.12.0.jar",
+   "vendor": null,
+   "version": "3.12.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.apache.commons:commons-lang3",
+   "purl": "pkg:maven/org.apache.commons/commons-lang3@3.16.0",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "3.16.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.apache.commons:commons-math3",
+   "purl": "pkg:maven/org.apache.commons/commons-math3@3.6.1",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "3.6.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "shaded-demo-app-1.0.0.jar",
+     "springboot-app-0.1.0.jar!/BOOT-INF/lib/log4j-api-2.14.1.jar"
+    ],
+    "shaded": true
+   },
+   "name": "org.apache.logging.log4j:log4j-api",
+   "purl": "pkg:maven/org.apache.logging.log4j/log4j-api@2.14.1",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "2.14.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "confidence": 1.0,
+    "evidence": "binary",
+    "identified_by": "pom.properties",
+    "parser": "java-archive",
+    "paths": [
+     "pom.xml",
+     "shaded-demo-app-1.0.0.jar",
+     "springboot-app-0.1.0.jar!/BOOT-INF/lib/log4j-core-2.14.1.jar"
+    ],
+    "shaded": true
+   },
+   "name": "org.apache.logging.log4j:log4j-core",
+   "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+   "source_path": "shaded-demo-app-1.0.0.jar",
+   "vendor": null,
+   "version": "2.14.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "testCompileClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ],
+    "scope": "test"
+   },
+   "name": "org.apiguardian:apiguardian-api",
+   "purl": "pkg:maven/org.apiguardian/apiguardian-api@1.1.2",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.assertj:assertj-core",
+   "purl": "pkg:maven/org.assertj/assertj-core@3.27.0",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "3.27.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAgent",
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.jacoco:org.jacoco.agent",
+   "purl": "pkg:maven/org.jacoco/org.jacoco.agent@0.8.12",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "0.8.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.jacoco:org.jacoco.ant",
+   "purl": "pkg:maven/org.jacoco/org.jacoco.ant@0.8.12",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "0.8.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.jacoco:org.jacoco.core",
+   "purl": "pkg:maven/org.jacoco/org.jacoco.core@0.8.12",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "0.8.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.jacoco:org.jacoco.report",
+   "purl": "pkg:maven/org.jacoco/org.jacoco.report@0.8.12",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "0.8.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit.jupiter:junit-jupiter-api",
+   "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-api@5.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit.jupiter:junit-jupiter-engine",
+   "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-engine@5.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit.jupiter:junit-jupiter-params",
+   "purl": "pkg:maven/org.junit.jupiter/junit-jupiter-params@5.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit.platform:junit-platform-commons",
+   "purl": "pkg:maven/org.junit.platform/junit-platform-commons@1.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit.platform:junit-platform-engine",
+   "purl": "pkg:maven/org.junit.platform/junit-platform-engine@1.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.junit:junit-bom",
+   "purl": "pkg:maven/org.junit/junit-bom@5.11.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.11.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.mockito:mockito-core",
+   "purl": "pkg:maven/org.mockito/mockito-core@5.14.2",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.14.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.objenesis:objenesis",
+   "purl": "pkg:maven/org.objenesis/objenesis@3.4",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "3.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.openjdk.jmh:jmh-core",
+   "purl": "pkg:maven/org.openjdk.jmh/jmh-core@1.37",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.37"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.openjdk.jmh:jmh-generator-annprocess",
+   "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-annprocess@1.37",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.37"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.openjdk.jmh:jmh-generator-asm",
+   "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-asm@1.25",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.25"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.openjdk.jmh:jmh-generator-bytecode",
+   "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-bytecode@1.25",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.25"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.openjdk.jmh:jmh-generator-reflection",
+   "purl": "pkg:maven/org.openjdk.jmh/jmh-generator-reflection@1.25",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.25"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.opentest4j:opentest4j",
+   "purl": "pkg:maven/org.opentest4j/opentest4j@1.3.0",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "1.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.ow2.asm:asm-commons",
+   "purl": "pkg:maven/org.ow2.asm/asm-commons@9.7",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "9.7"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.ow2.asm:asm-tree",
+   "purl": "pkg:maven/org.ow2.asm/asm-tree@9.7",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "9.7"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmh",
+     "jmhCompileClasspath",
+     "jmhRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.ow2.asm:asm",
+   "purl": "pkg:maven/org.ow2.asm/asm@5.0.3",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "5.0.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jacocoAnt"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.ow2.asm:asm",
+   "purl": "pkg:maven/org.ow2.asm/asm@9.7",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "9.7"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Maven",
+   "meta": {
+    "configurations": [
+     "jmhRuntimeClasspath",
+     "testCompileClasspath",
+     "testRuntimeClasspath"
+    ],
+    "evidence": "lockfile",
+    "parser": "gradle-lockfile",
+    "paths": [
+     "gradle.lockfile"
+    ]
+   },
+   "name": "org.slf4j:slf4j-api",
+   "purl": "pkg:maven/org.slf4j/slf4j-api@2.0.16",
+   "source_path": "gradle.lockfile",
+   "vendor": null,
+   "version": "2.0.16"
+  }
+ ],
+ "end": {
+  "components": 44,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

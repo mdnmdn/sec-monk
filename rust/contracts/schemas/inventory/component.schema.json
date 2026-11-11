@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/inventory/component.schema.json",
+  "title": "Component (models.Component)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "category": {
+      "enum": [
+        "os",
+        "os-package",
+        "library",
+        "application",
+        "system-app",
+        "package",
+        "runtime",
+        "executable"
+      ]
+    },
+    "purl": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cpe": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "vendor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ecosystem": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "meta": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "category"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,5 @@
+{
+ "collector": "sbom",
+ "options": [],
+ "target": "<fixtures>/sbom/synthetic.cdx.json"
+}

@@ -1,0 +1,25 @@
+{
+ "result": [
+  {
+   "cvss_score": 10.0,
+   "ecosystem": "Maven",
+   "events": [
+    {
+     "introduced": "2.13.0"
+    },
+    {
+     "fixed": "2.15.0"
+    }
+   ],
+   "package": "org.apache.logging.log4j:log4j-core",
+   "product": null,
+   "range_type": "ECOSYSTEM",
+   "severity": "CRITICAL",
+   "source": "osv",
+   "summary": "Remote code injection in Log4j",
+   "vendor": null,
+   "versions": [],
+   "vuln_id": "GHSA-jfh8-c2jp-5v3q"
+  }
+ ]
+}

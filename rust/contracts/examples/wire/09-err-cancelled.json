@@ -1,0 +1,7 @@
+{
+  "type": "err",
+  "id": 7,
+  "code": "cancelled",
+  "error": "request 7 cancelled",
+  "hint": null
+}

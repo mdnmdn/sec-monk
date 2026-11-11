@@ -1,0 +1,202 @@
+{
+  "asset": "process:fixture-mac",
+  "host": "fixture-mac",
+  "platform": "darwin",
+  "os": {
+    "name": "macOS",
+    "version": "14.5",
+    "build": "23F79"
+  },
+  "taken_at": "2026-11-07T10:00:00+00:00",
+  "source": "snapshot",
+  "matched": true,
+  "summary": {
+    "processes": 21,
+    "components": 13,
+    "launch_kinds": {
+      "kernel": 2,
+      "service": 4,
+      "gui-app": 3,
+      "child": 4,
+      "agent": 1,
+      "interactive": 4,
+      "remote-session": 1,
+      "scheduled": 2
+    },
+    "with_findings": 3,
+    "flagged": 3,
+    "launch_items": 4,
+    "missing_programs": 1
+  },
+  "processes": [
+    {
+      "pid": 0,
+      "ppid": 0,
+      "user": "root",
+      "depth": 0,
+      "process": "kernel_task",
+      "exe": null,
+      "launch": "kernel",
+      "launch_detail": "kernel",
+      "label": null,
+      "launch_source": null,
+      "via": null,
+      "evidence": "pid",
+      "started": "2026-11-07T09:00:00",
+      "script": null,
+      "identity": "",
+      "identity_method": null,
+      "category": null,
+      "findings": "",
+      "findings_detail": [],
+      "flags": [],
+      "provenance": {}
+    },
+    {
+      "pid": 1,
+      "ppid": 0,
+      "user": "root",
+      "depth": 1,
+      "process": "launchd",
+      "exe": "/sbin/launchd",
+      "launch": "kernel",
+      "launch_detail": "kernel",
+      "label": null,
+      "launch_source": null,
+      "via": null,
+      "evidence": "pid",
+      "started": "2026-11-07T09:00:00",
+      "script": null,
+      "identity": "macOS 14.5",
+      "identity_method": "os",
+      "category": "os",
+      "findings": "",
+      "findings_detail": [],
+      "flags": [],
+      "provenance": {
+        "created": "2026-11-08T15:03:47+00:00",
+        "sha256": "870570c50712c5371ce30251c0f14bb445c77fce32fa3a30bc3fa7161cc9ecd4"
+      }
+    }
+  ],
+  "software": [
+    {
+      "name": "macOS",
+      "version": "14.5",
+      "category": "os",
+      "purl": null,
+      "vendor": "apple",
+      "product": "macos",
+      "resolution": "os",
+      "count": 11,
+      "users": [
+        "root",
+        "alice"
+      ],
+      "launch": [
+        "kernel",
+        "service",
+        "child",
+        "interactive",
+        "scheduled"
+      ],
+      "executables": [
+        "/sbin/launchd",
+        "/usr/sbin/syslogd",
+        "/usr/bin/login",
+        "/bin/zsh",
+        "/usr/bin/python3",
+        "/usr/sbin/sshd",
+        "/usr/sbin/cron",
+        "/bin/sh",
+        "/bin/bash"
+      ],
+      "pids": [
+        1,
+        95,
+        401,
+        402,
+        405,
+        500,
+        501,
+        502,
+        600,
+        601,
+        602
+      ],
+      "flags": [],
+      "via_executable": null,
+      "findings": "",
+      "findings_detail": []
+    },
+    {
+      "name": "ExampleUpdater",
+      "version": "2.4.1",
+      "category": "application",
+      "purl": "pkg:generic/example/ExampleUpdater@2.4.1?bundle_id=com.example.updater",
+      "vendor": null,
+      "product": "exampleupdater",
+      "resolution": "info-plist",
+      "count": 1,
+      "users": [
+        "root"
+      ],
+      "launch": [
+        "service"
+      ],
+      "executables": [
+        "/Library/PrivilegedHelperTools/com.example.updater"
+      ],
+      "pids": [
+        120
+      ],
+      "flags": [],
+      "via_executable": null,
+      "findings": "P3x1",
+      "findings_detail": [
+        {
+          "vuln_id": "MOCK-2026-0001",
+          "priority": "P3",
+          "kev": false,
+          "fixed_version": "2.5.0",
+          "cvss_score": 9.8
+        }
+      ]
+    }
+  ],
+  "launch_items": [
+    {
+      "label": "com.example.updater",
+      "mechanism": "launchd-daemon",
+      "kind": "service",
+      "program": "/Library/PrivilegedHelperTools/com.example.updater",
+      "args": [],
+      "source": "/Library/LaunchDaemons/com.example.updater.plist",
+      "scope": "system",
+      "run_at_load": true,
+      "keep_alive": true,
+      "disabled": null,
+      "running_pids": [
+        120
+      ],
+      "missing_program": false
+    },
+    {
+      "label": "com.apple.syslogd",
+      "mechanism": "launchd-system-daemon",
+      "kind": "service",
+      "program": "/usr/sbin/syslogd",
+      "args": [],
+      "source": "/System/Library/LaunchDaemons/com.apple.syslogd.plist",
+      "scope": "system",
+      "run_at_load": null,
+      "keep_alive": null,
+      "disabled": null,
+      "running_pids": [
+        95
+      ],
+      "missing_program": false
+    }
+  ],
+  "warnings": []
+}

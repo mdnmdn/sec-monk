@@ -1,0 +1,446 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/wire/envelope.schema.json",
+  "title": "secmonk-wire/1 message",
+  "description": "One frame payload. Frame = 4-byte big-endian unsigned length + this JSON object (UTF-8). See rust/_docs/tech/contracts.md (a).",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/hello"
+    },
+    {
+      "$ref": "#/$defs/req"
+    },
+    {
+      "$ref": "#/$defs/res"
+    },
+    {
+      "$ref": "#/$defs/err"
+    },
+    {
+      "$ref": "#/$defs/event"
+    },
+    {
+      "$ref": "#/$defs/end"
+    },
+    {
+      "$ref": "#/$defs/progress"
+    },
+    {
+      "$ref": "#/$defs/cancel"
+    },
+    {
+      "$ref": "#/$defs/notify"
+    }
+  ],
+  "$defs": {
+    "hello": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "hello"
+        },
+        "protocol": {
+          "type": "string",
+          "pattern": "^secmonk-wire/[0-9]+\\.[0-9]+$"
+        },
+        "role": {
+          "enum": [
+            "module",
+            "host",
+            "probe",
+            "engine",
+            "ui"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "runtime": {
+          "enum": [
+            "python",
+            "rust"
+          ]
+        },
+        "runtime_version": {
+          "type": "string"
+        },
+        "pid": {
+          "type": "integer"
+        },
+        "codecs": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "json"
+            ]
+          },
+          "minItems": 1
+        },
+        "codec": {
+          "enum": [
+            "json"
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "max_frame": {
+              "type": "integer",
+              "minimum": 65536,
+              "maximum": 67108864
+            },
+            "max_inflight": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            },
+            "chunk_items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            }
+          },
+          "required": [
+            "max_frame"
+          ]
+        },
+        "provides": {
+          "type": "object",
+          "properties": {
+            "collectors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "platforms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "description"
+                ]
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "in_all": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "in_all"
+                ]
+              }
+            },
+            "sync_all_order": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "methods": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+              }
+            }
+          },
+          "description": "Unknown keys are allowed and ignored (minor versions are additive); a manifest's provides stays closed (module/manifest.schema.json)."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "session": {
+          "type": "object",
+          "properties": {
+            "module": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+            },
+            "grants": {
+              "type": "object",
+              "properties": {
+                "db_read": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string"
+                    },
+                    "mirror": {
+                      "type": "string"
+                    },
+                    "uri_flags": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "mirror"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "settings": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "required": [
+        "type",
+        "protocol",
+        "role",
+        "name",
+        "version",
+        "codecs",
+        "limits"
+      ]
+    },
+    "req": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "req"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "method": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$"
+        },
+        "params": {
+          "type": "object"
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "res": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "res"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "result": {}
+      },
+      "required": [
+        "type",
+        "id",
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "err": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "err"
+        },
+        "id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$"
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "hint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "code",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "event"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "data": {}
+      },
+      "required": [
+        "type",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "end": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "end"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "result": {}
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "progress"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "cancel": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "cancel"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "notify": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "notify"
+        },
+        "method": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "method"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

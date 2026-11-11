@@ -1,0 +1,11 @@
+{
+  "type": "req",
+  "id": 13,
+  "method": "engine.match",
+  "params": {
+    "mode": "persisted",
+    "asset_id": "dir:/work/npm-v3",
+    "min_confidence": 0.5,
+    "view_limit": 500
+  }
+}

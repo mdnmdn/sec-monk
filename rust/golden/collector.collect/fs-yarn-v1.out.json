@@ -1,0 +1,365 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/javascript/yarn-v1",
+  "meta": {
+   "files_parsed": 1,
+   "path": "<fixtures>/lang/javascript/yarn-v1"
+  },
+  "name": "yarn-v1",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "@babel/code-frame",
+   "purl": "pkg:npm/%40babel/code-frame@7.12.13",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "7.12.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "@babel/helper-validator-identifier",
+   "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "7.29.7"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "@babel/highlight",
+   "purl": "pkg:npm/%40babel/highlight@7.25.9",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "7.25.9"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "ansi-styles",
+   "purl": "pkg:npm/ansi-styles@3.2.1",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "3.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "chalk",
+   "purl": "pkg:npm/chalk@2.4.2",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "2.4.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "color-convert",
+   "purl": "pkg:npm/color-convert@1.9.3",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "1.9.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "color-name",
+   "purl": "pkg:npm/color-name@1.1.3",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "1.1.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "escape-string-regexp",
+   "purl": "pkg:npm/escape-string-regexp@1.0.5",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "1.0.5"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "fsevents",
+   "purl": "pkg:npm/fsevents@2.3.2",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "2.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "has-flag",
+   "purl": "pkg:npm/has-flag@3.0.0",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "3.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "js-tokens",
+   "purl": "pkg:npm/js-tokens@4.0.0",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "4.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "lodash",
+   "purl": "pkg:npm/lodash@4.17.20",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "4.17.20"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "lru-cache",
+   "purl": "pkg:npm/lru-cache@6.0.0",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "minimist",
+   "purl": "pkg:npm/minimist@1.2.5",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "1.2.5"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "picocolors",
+   "purl": "pkg:npm/picocolors@1.1.1",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "1.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "semver",
+   "purl": "pkg:npm/semver@7.3.5",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "7.3.5"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "supports-color",
+   "purl": "pkg:npm/supports-color@5.5.0",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "5.5.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "npm",
+   "meta": {
+    "evidence": "lockfile",
+    "lockfile_format": "yarn-v1",
+    "parser": "yarn-lock",
+    "paths": [
+     "yarn.lock"
+    ],
+    "resolved_host": "registry.yarnpkg.com"
+   },
+   "name": "yallist",
+   "purl": "pkg:npm/yallist@4.0.0",
+   "source_path": "yarn.lock",
+   "vendor": null,
+   "version": "4.0.0"
+  }
+ ],
+ "end": {
+  "components": 18,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

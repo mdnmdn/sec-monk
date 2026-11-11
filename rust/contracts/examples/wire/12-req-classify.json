@@ -1,0 +1,46 @@
+{
+  "type": "req",
+  "id": 12,
+  "method": "engine.classify",
+  "params": {
+    "components": [
+      {
+        "name": "Google Chrome",
+        "version": "131.0.6778.86",
+        "category": "application",
+        "purl": null,
+        "cpe": null,
+        "vendor": null,
+        "ecosystem": null,
+        "source_path": "/Applications/Google Chrome.app",
+        "meta": {
+          "bundle_id": "com.google.Chrome"
+        }
+      },
+      {
+        "name": "openssl",
+        "version": "3.4.0",
+        "category": "package",
+        "purl": "pkg:brew/openssl@3.4.0",
+        "cpe": null,
+        "vendor": null,
+        "ecosystem": null,
+        "source_path": null,
+        "meta": {
+          "formula": "openssl@3"
+        }
+      },
+      {
+        "name": "requests",
+        "version": "2.31.0",
+        "category": "library",
+        "purl": "pkg:pypi/requests@2.31.0",
+        "cpe": null,
+        "vendor": null,
+        "ecosystem": null,
+        "source_path": null,
+        "meta": {}
+      }
+    ]
+  }
+}

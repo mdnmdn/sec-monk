@@ -1,0 +1,38 @@
+[
+  {
+    "id": "container:web",
+    "type": "container",
+    "os": "Alpine Linux 3.20.10",
+    "platform": null,
+    "last_seen": "2026-11-11T00:33:16+00:00",
+    "components": 16,
+    "open_findings": 1,
+    "name": "web",
+    "first_seen": "2026-11-11T00:33:16+00:00",
+    "findings_by_priority": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 1,
+      "P4": 0,
+      "kev": 0
+    }
+  },
+  {
+    "id": "dir:/srv/payments-api",
+    "type": "directory",
+    "os": "",
+    "platform": null,
+    "last_seen": "2026-11-11T00:33:16+00:00",
+    "components": 44,
+    "open_findings": 1,
+    "name": "payments-api",
+    "first_seen": "2026-11-11T00:33:16+00:00",
+    "findings_by_priority": {
+      "P1": 1,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "kev": 1
+    }
+  }
+]

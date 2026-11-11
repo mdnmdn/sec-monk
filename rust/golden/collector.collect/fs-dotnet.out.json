@@ -1,0 +1,6701 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/dotnet",
+  "meta": {
+   "files_parsed": 8,
+   "path": "<fixtures>/lang/dotnet"
+  },
+  "name": "dotnet",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Accelergreat.EntityFramework.PostgreSql",
+   "purl": "pkg:nuget/accelergreat.entityframework.postgresql@3.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Accelergreat.EntityFramework",
+   "purl": "pkg:nuget/accelergreat.entityframework@3.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Accelergreat",
+   "purl": "pkg:nuget/accelergreat@3.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Asp.Versioning.Http.Client",
+   "purl": "pkg:nuget/asp.versioning.http.client@10.2.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Asp.Versioning.Http",
+   "purl": "pkg:nuget/asp.versioning.http@10.2.3",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.2.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Asp.Versioning.Mvc.ApiExplorer",
+   "purl": "pkg:nuget/asp.versioning.mvc.apiexplorer@10.2.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Asp.Versioning.OpenApi",
+   "purl": "pkg:nuget/asp.versioning.openapi@10.2.3",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.2.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Azure.AI.OpenAI",
+   "purl": "pkg:nuget/aspire.azure.ai.openai@13.6.0-preview.1.26479.8",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0-preview.1.26479.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.Azure.AppContainers",
+   "purl": "pkg:nuget/aspire.hosting.azure.appcontainers@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.Dotnet",
+   "purl": "pkg:nuget/aspire.hosting.dotnet@13.6.0-preview.1.26479.8",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0-preview.1.26479.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.Foundry",
+   "purl": "pkg:nuget/aspire.hosting.foundry@13.6.0-preview.1.26479.8",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0-preview.1.26479.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.PostgreSQL",
+   "purl": "pkg:nuget/aspire.hosting.postgresql@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.RabbitMQ",
+   "purl": "pkg:nuget/aspire.hosting.rabbitmq@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.Redis",
+   "purl": "pkg:nuget/aspire.hosting.redis@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Hosting.Yarp",
+   "purl": "pkg:nuget/aspire.hosting.yarp@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Npgsql.EntityFrameworkCore.PostgreSQL",
+   "purl": "pkg:nuget/aspire.npgsql.entityframeworkcore.postgresql@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.Npgsql",
+   "purl": "pkg:nuget/aspire.npgsql@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.RabbitMQ.Client",
+   "purl": "pkg:nuget/aspire.rabbitmq.client@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Aspire.StackExchange.Redis",
+   "purl": "pkg:nuget/aspire.stackexchange.redis@13.6.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.6.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "AspNetCore.HealthChecks.Uris",
+   "purl": "pkg:nuget/aspnetcore.healthchecks.uris@9.0.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "9.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Castle.Core",
+   "purl": "pkg:nuget/castle.core@5.2.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "CommunityToolkit.Aspire.Hosting.Ollama",
+   "purl": "pkg:nuget/communitytoolkit.aspire.hosting.ollama@13.1.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "CommunityToolkit.Aspire.OllamaSharp",
+   "purl": "pkg:nuget/communitytoolkit.aspire.ollamasharp@13.1.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "coverlet.MTP",
+   "purl": "pkg:nuget/coverlet.mtp@10.1.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Dapper",
+   "purl": "pkg:nuget/dapper@2.1.89",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.1.89"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "DiffEngine",
+   "purl": "pkg:nuget/diffengine@11.3.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "11.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "DnsClient",
+   "purl": "pkg:nuget/dnsclient@1.6.1",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "1.6.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Duende.IdentityServer.AspNetIdentity",
+   "purl": "pkg:nuget/duende.identityserver.aspnetidentity@7.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Duende.IdentityServer.EntityFramework.Storage",
+   "purl": "pkg:nuget/duende.identityserver.entityframework.storage@7.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Duende.IdentityServer.EntityFramework",
+   "purl": "pkg:nuget/duende.identityserver.entityframework@7.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Duende.IdentityServer.Storage",
+   "purl": "pkg:nuget/duende.identityserver.storage@7.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Duende.IdentityServer",
+   "purl": "pkg:nuget/duende.identityserver@7.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "EmptyFiles",
+   "purl": "pkg:nuget/emptyfiles@4.4.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.4.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "FluentValidation.DependencyInjectionExtensions",
+   "purl": "pkg:nuget/fluentvalidation.dependencyinjectionextensions@12.1.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "12.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "FluentValidation",
+   "purl": "pkg:nuget/fluentvalidation@12.1.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "12.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "FluentValidation",
+   "purl": "pkg:nuget/fluentvalidation@12.2.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "12.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Google.Protobuf",
+   "purl": "pkg:nuget/google.protobuf@3.36.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "3.36.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Grpc.AspNetCore",
+   "purl": "pkg:nuget/grpc.aspnetcore@2.84.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.84.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Grpc.Net.ClientFactory",
+   "purl": "pkg:nuget/grpc.net.clientfactory@2.84.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.84.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Grpc.Tools",
+   "purl": "pkg:nuget/grpc.tools@2.84.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.84.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "IdentityModel",
+   "purl": "pkg:nuget/identitymodel@7.0.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "7.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "IPAddressRange",
+   "purl": "pkg:nuget/ipaddressrange@6.3.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "LinqFaster",
+   "purl": "pkg:nuget/linqfaster@1.0.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "1.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "MediatR",
+   "purl": "pkg:nuget/mediatr@13.1.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "13.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.ApplicationInsights",
+   "purl": "pkg:nuget/microsoft.applicationinsights@2.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Authentication.JwtBearer",
+   "purl": "pkg:nuget/microsoft.aspnetcore.authentication.jwtbearer@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Authentication.JwtBearer",
+   "purl": "pkg:nuget/microsoft.aspnetcore.authentication.jwtbearer@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Authentication.JwtBearer",
+   "purl": "pkg:nuget/microsoft.aspnetcore.authentication.jwtbearer@8.0.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.0.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Authentication.JwtBearer",
+   "purl": "pkg:nuget/microsoft.aspnetcore.authentication.jwtbearer@9.0.21",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "9.0.21"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Authentication.OpenIdConnect",
+   "purl": "pkg:nuget/microsoft.aspnetcore.authentication.openidconnect@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Components.QuickGrid",
+   "purl": "pkg:nuget/microsoft.aspnetcore.components.quickgrid@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Components.Web",
+   "purl": "pkg:nuget/microsoft.aspnetcore.components.web@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Identity.EntityFrameworkCore",
+   "purl": "pkg:nuget/microsoft.aspnetcore.identity.entityframeworkcore@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Identity.UI",
+   "purl": "pkg:nuget/microsoft.aspnetcore.identity.ui@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.JsonPatch",
+   "purl": "pkg:nuget/microsoft.aspnetcore.jsonpatch@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.JsonPatch",
+   "purl": "pkg:nuget/microsoft.aspnetcore.jsonpatch@8.0.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.0.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.JsonPatch",
+   "purl": "pkg:nuget/microsoft.aspnetcore.jsonpatch@9.0.21",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "9.0.21"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.MiddlewareAnalysis",
+   "purl": "pkg:nuget/microsoft.aspnetcore.middlewareanalysis@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.MiddlewareAnalysis",
+   "purl": "pkg:nuget/microsoft.aspnetcore.middlewareanalysis@8.0.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.0.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.MiddlewareAnalysis",
+   "purl": "pkg:nuget/microsoft.aspnetcore.middlewareanalysis@9.0.21",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "9.0.21"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Mvc.NewtonsoftJson",
+   "purl": "pkg:nuget/microsoft.aspnetcore.mvc.newtonsoftjson@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Mvc.NewtonsoftJson",
+   "purl": "pkg:nuget/microsoft.aspnetcore.mvc.newtonsoftjson@8.0.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.0.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Mvc.NewtonsoftJson",
+   "purl": "pkg:nuget/microsoft.aspnetcore.mvc.newtonsoftjson@9.0.21",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "9.0.21"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.Mvc.Testing",
+   "purl": "pkg:nuget/microsoft.aspnetcore.mvc.testing@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.OpenApi",
+   "purl": "pkg:nuget/microsoft.aspnetcore.openapi@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.TestHost",
+   "purl": "pkg:nuget/microsoft.aspnetcore.testhost@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.TestHost",
+   "purl": "pkg:nuget/microsoft.aspnetcore.testhost@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.TestHost",
+   "purl": "pkg:nuget/microsoft.aspnetcore.testhost@8.0.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.0.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.AspNetCore.TestHost",
+   "purl": "pkg:nuget/microsoft.aspnetcore.testhost@9.0.21",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "9.0.21"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Bcl.AsyncInterfaces",
+   "purl": "pkg:nuget/microsoft.bcl.asyncinterfaces@6.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Bcl.Cryptography",
+   "purl": "pkg:nuget/microsoft.bcl.cryptography@10.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Microsoft.Build.Locator",
+   "purl": "pkg:nuget/microsoft.build.locator@1.6.10",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "1.6.10"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.CSharp",
+   "purl": "pkg:nuget/microsoft.csharp@4.3.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore.Abstractions",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore.Analyzers",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore.analyzers@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore.Relational",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore.relational@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore.Relational",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore.relational@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore.Tools",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore.tools@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.EntityFrameworkCore",
+   "purl": "pkg:nuget/microsoft.entityframeworkcore@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.ApiDescription.Server",
+   "purl": "pkg:nuget/microsoft.extensions.apidescription.server@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Caching.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.caching.abstractions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Caching.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.caching.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Caching.Memory",
+   "purl": "pkg:nuget/microsoft.extensions.caching.memory@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Caching.Memory",
+   "purl": "pkg:nuget/microsoft.extensions.caching.memory@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.abstractions@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.abstractions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Binder",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.binder@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Binder",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.binder@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.EnvironmentVariables",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.environmentvariables@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.EnvironmentVariables",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.environmentvariables@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.FileExtensions",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.fileextensions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.FileExtensions",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.fileextensions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Json",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.json@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.Json",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.json@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration.UserSecrets",
+   "purl": "pkg:nuget/microsoft.extensions.configuration.usersecrets@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration",
+   "purl": "pkg:nuget/microsoft.extensions.configuration@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Configuration",
+   "purl": "pkg:nuget/microsoft.extensions.configuration@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.dependencyinjection.abstractions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.dependencyinjection.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.DependencyInjection",
+   "purl": "pkg:nuget/microsoft.extensions.dependencyinjection@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.DependencyInjection",
+   "purl": "pkg:nuget/microsoft.extensions.dependencyinjection@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.DiagnosticAdapter",
+   "purl": "pkg:nuget/microsoft.extensions.diagnosticadapter@3.1.32",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "3.1.32"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileProviders.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.fileproviders.abstractions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileProviders.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.fileproviders.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileProviders.Physical",
+   "purl": "pkg:nuget/microsoft.extensions.fileproviders.physical@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileProviders.Physical",
+   "purl": "pkg:nuget/microsoft.extensions.fileproviders.physical@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileSystemGlobbing",
+   "purl": "pkg:nuget/microsoft.extensions.filesystemglobbing@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.FileSystemGlobbing",
+   "purl": "pkg:nuget/microsoft.extensions.filesystemglobbing@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.Http.Resilience",
+   "purl": "pkg:nuget/microsoft.extensions.http.resilience@10.10.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.10.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.Identity.Stores",
+   "purl": "pkg:nuget/microsoft.extensions.identity.stores@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.logging.abstractions@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.logging.abstractions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Abstractions",
+   "purl": "pkg:nuget/microsoft.extensions.logging.abstractions@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Configuration",
+   "purl": "pkg:nuget/microsoft.extensions.logging.configuration@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Console",
+   "purl": "pkg:nuget/microsoft.extensions.logging.console@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging.Debug",
+   "purl": "pkg:nuget/microsoft.extensions.logging.debug@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging",
+   "purl": "pkg:nuget/microsoft.extensions.logging@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Logging",
+   "purl": "pkg:nuget/microsoft.extensions.logging@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Options.ConfigurationExtensions",
+   "purl": "pkg:nuget/microsoft.extensions.options.configurationextensions@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.Options",
+   "purl": "pkg:nuget/microsoft.extensions.options@10.0.12",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.12"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Options",
+   "purl": "pkg:nuget/microsoft.extensions.options@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Options",
+   "purl": "pkg:nuget/microsoft.extensions.options@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Extensions.Primitives",
+   "purl": "pkg:nuget/microsoft.extensions.primitives@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.Extensions.Primitives",
+   "purl": "pkg:nuget/microsoft.extensions.primitives@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.ServiceDiscovery.Yarp",
+   "purl": "pkg:nuget/microsoft.extensions.servicediscovery.yarp@10.10.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.10.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Extensions.ServiceDiscovery",
+   "purl": "pkg:nuget/microsoft.extensions.servicediscovery@10.10.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.10.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Abstractions",
+   "purl": "pkg:nuget/microsoft.identitymodel.abstractions@7.2.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "7.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Abstractions",
+   "purl": "pkg:nuget/microsoft.identitymodel.abstractions@8.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.JsonWebTokens",
+   "purl": "pkg:nuget/microsoft.identitymodel.jsonwebtokens@7.2.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "7.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.JsonWebTokens",
+   "purl": "pkg:nuget/microsoft.identitymodel.jsonwebtokens@8.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Logging",
+   "purl": "pkg:nuget/microsoft.identitymodel.logging@7.2.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "7.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Logging",
+   "purl": "pkg:nuget/microsoft.identitymodel.logging@8.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Protocols.OpenIdConnect",
+   "purl": "pkg:nuget/microsoft.identitymodel.protocols.openidconnect@7.7.3",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "7.7.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Protocols.OpenIdConnect",
+   "purl": "pkg:nuget/microsoft.identitymodel.protocols.openidconnect@8.19.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.19.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Protocols",
+   "purl": "pkg:nuget/microsoft.identitymodel.protocols@7.7.3",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "7.7.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Protocols",
+   "purl": "pkg:nuget/microsoft.identitymodel.protocols@8.19.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.19.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Tokens",
+   "purl": "pkg:nuget/microsoft.identitymodel.tokens@7.2.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "7.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.IdentityModel.Tokens",
+   "purl": "pkg:nuget/microsoft.identitymodel.tokens@8.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "shared-Microsoft.NETCore.App.6.0.1.deps.json"
+    ],
+    "runtime": true,
+    "runtime_target": ".NETCoreApp,Version=v6.0/linux-x64",
+    "tfm": ".NETCoreApp,Version=v6.0"
+   },
+   "name": "Microsoft.NETCore.App.Runtime.linux-x64",
+   "purl": "pkg:nuget/microsoft.netcore.app.runtime.linux-x64@6.0.1",
+   "source_path": "shared-Microsoft.NETCore.App.6.0.1.deps.json",
+   "vendor": null,
+   "version": "6.0.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Microsoft.NETCore.Platforms",
+   "purl": "pkg:nuget/microsoft.netcore.platforms@1.1.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "1.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Microsoft.NETCore.Platforms",
+   "purl": "pkg:nuget/microsoft.netcore.platforms@5.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "5.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Microsoft.NETCore.Targets",
+   "purl": "pkg:nuget/microsoft.netcore.targets@1.1.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "1.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.OpenApi",
+   "purl": "pkg:nuget/microsoft.openapi@2.12.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.12.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Reactive.Testing",
+   "purl": "pkg:nuget/microsoft.reactive.testing@7.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "7.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Testing.Extensions.Telemetry",
+   "purl": "pkg:nuget/microsoft.testing.extensions.telemetry@2.5.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+   "purl": "pkg:nuget/microsoft.testing.extensions.trxreport.abstractions@2.5.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Testing.Platform.MSBuild",
+   "purl": "pkg:nuget/microsoft.testing.platform.msbuild@2.5.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Testing.Platform",
+   "purl": "pkg:nuget/microsoft.testing.platform@2.5.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.VisualStudio.Web.CodeGeneration.Design",
+   "purl": "pkg:nuget/microsoft.visualstudio.web.codegeneration.design@10.0.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Microsoft.Web.LibraryManager.Build",
+   "purl": "pkg:nuget/microsoft.web.librarymanager.build@3.0.114",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "3.0.114"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Microsoft.Win32.Primitives",
+   "purl": "pkg:nuget/microsoft.win32.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json",
+     "project.assets.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Microsoft.Win32.Registry",
+   "purl": "pkg:nuget/microsoft.win32.registry@5.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "MongoDB.Bson",
+   "purl": "pkg:nuget/mongodb.bson@3.1.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "MongoDB.Driver",
+   "purl": "pkg:nuget/mongodb.driver@3.1.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.1.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Moq",
+   "purl": "pkg:nuget/moq@4.21.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.21.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "MSTest",
+   "purl": "pkg:nuget/mstest@4.0.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Namotion.Reflection",
+   "purl": "pkg:nuget/namotion.reflection@3.1.1",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "3.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "NETStandard.Library",
+   "purl": "pkg:nuget/netstandard.library@1.6.1",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "1.6.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Newtonsoft.Json.Bson",
+   "purl": "pkg:nuget/newtonsoft.json.bson@1.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "1.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "packages.lock.json",
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Newtonsoft.Json",
+   "purl": "pkg:nuget/newtonsoft.json@13.0.3",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "13.0.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx.Context",
+   "purl": "pkg:nuget/nito.asyncex.context@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx.Coordination",
+   "purl": "pkg:nuget/nito.asyncex.coordination@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx.Interop.WaitHandles",
+   "purl": "pkg:nuget/nito.asyncex.interop.waithandles@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx.Oop",
+   "purl": "pkg:nuget/nito.asyncex.oop@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx.Tasks",
+   "purl": "pkg:nuget/nito.asyncex.tasks@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.AsyncEx",
+   "purl": "pkg:nuget/nito.asyncex@5.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "5.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.Cancellation",
+   "purl": "pkg:nuget/nito.cancellation@1.1.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "1.1.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.Collections.Deque",
+   "purl": "pkg:nuget/nito.collections.deque@1.1.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "1.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Nito.Disposables",
+   "purl": "pkg:nuget/nito.disposables@2.2.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.2.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "NJsonSchema.Annotations",
+   "purl": "pkg:nuget/njsonschema.annotations@11.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "11.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "NJsonSchema",
+   "purl": "pkg:nuget/njsonschema@11.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "11.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Npgsql.EntityFrameworkCore.PostgreSQL",
+   "purl": "pkg:nuget/npgsql.entityframeworkcore.postgresql@10.0.3",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "10.0.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Npgsql.EntityFrameworkCore.PostgreSQL",
+   "purl": "pkg:nuget/npgsql.entityframeworkcore.postgresql@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Npgsql",
+   "purl": "pkg:nuget/npgsql@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-config",
+    "paths": [
+     "packages.config"
+    ],
+    "tfm": "net472"
+   },
+   "name": "NPOI",
+   "purl": "pkg:nuget/npoi@2.5.1",
+   "source_path": "packages.config",
+   "vendor": null,
+   "version": "2.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "NSubstitute.Analyzers.CSharp",
+   "purl": "pkg:nuget/nsubstitute.analyzers.csharp@1.0.17",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.0.17"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "NSubstitute",
+   "purl": "pkg:nuget/nsubstitute@5.3.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "5.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-config",
+    "paths": [
+     "packages.config"
+    ],
+    "tfm": "net472"
+   },
+   "name": "OpenMcdf.Extensions",
+   "purl": "pkg:nuget/openmcdf.extensions@2.2.1.4",
+   "source_path": "packages.config",
+   "vendor": null,
+   "version": "2.2.1.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-config",
+    "paths": [
+     "packages.config"
+    ],
+    "tfm": "net472"
+   },
+   "name": "OpenMcdf",
+   "purl": "pkg:nuget/openmcdf@2.2.1.4",
+   "source_path": "packages.config",
+   "vendor": null,
+   "version": "2.2.1.4"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Exporter.OpenTelemetryProtocol",
+   "purl": "pkg:nuget/opentelemetry.exporter.opentelemetryprotocol@1.19.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.19.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Extensions.Hosting",
+   "purl": "pkg:nuget/opentelemetry.extensions.hosting@1.19.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.19.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Instrumentation.AspNetCore",
+   "purl": "pkg:nuget/opentelemetry.instrumentation.aspnetcore@1.19.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.19.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Instrumentation.GrpcNetClient",
+   "purl": "pkg:nuget/opentelemetry.instrumentation.grpcnetclient@1.15.0-beta.1",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.15.0-beta.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Instrumentation.Http",
+   "purl": "pkg:nuget/opentelemetry.instrumentation.http@1.19.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.19.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "OpenTelemetry.Instrumentation.Runtime",
+   "purl": "pkg:nuget/opentelemetry.instrumentation.runtime@1.19.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "1.19.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Pgvector.EntityFrameworkCore",
+   "purl": "pkg:nuget/pgvector.entityframeworkcore@0.3.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "0.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Pgvector",
+   "purl": "pkg:nuget/pgvector@0.3.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "0.3.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Pipelines.Sockets.Unofficial",
+   "purl": "pkg:nuget/pipelines.sockets.unofficial@2.2.8",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "2.2.8"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-config",
+    "paths": [
+     "packages.config"
+    ],
+    "tfm": "net472"
+   },
+   "name": "Portable.BouncyCastle",
+   "purl": "pkg:nuget/portable.bouncycastle@1.8.6",
+   "source_path": "packages.config",
+   "vendor": null,
+   "version": "1.8.6"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Portable.BouncyCastle",
+   "purl": "pkg:nuget/portable.bouncycastle@1.9.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "1.9.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Collections",
+   "purl": "pkg:nuget/runtime.any.system.collections@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Diagnostics.Tools",
+   "purl": "pkg:nuget/runtime.any.system.diagnostics.tools@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Diagnostics.Tracing",
+   "purl": "pkg:nuget/runtime.any.system.diagnostics.tracing@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Globalization.Calendars",
+   "purl": "pkg:nuget/runtime.any.system.globalization.calendars@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Globalization",
+   "purl": "pkg:nuget/runtime.any.system.globalization@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.IO",
+   "purl": "pkg:nuget/runtime.any.system.io@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Reflection.Extensions",
+   "purl": "pkg:nuget/runtime.any.system.reflection.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Reflection.Primitives",
+   "purl": "pkg:nuget/runtime.any.system.reflection.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Reflection",
+   "purl": "pkg:nuget/runtime.any.system.reflection@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Resources.ResourceManager",
+   "purl": "pkg:nuget/runtime.any.system.resources.resourcemanager@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Runtime.Handles",
+   "purl": "pkg:nuget/runtime.any.system.runtime.handles@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Runtime.InteropServices",
+   "purl": "pkg:nuget/runtime.any.system.runtime.interopservices@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Runtime",
+   "purl": "pkg:nuget/runtime.any.system.runtime@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Text.Encoding.Extensions",
+   "purl": "pkg:nuget/runtime.any.system.text.encoding.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Text.Encoding",
+   "purl": "pkg:nuget/runtime.any.system.text.encoding@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Threading.Tasks",
+   "purl": "pkg:nuget/runtime.any.system.threading.tasks@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.any.System.Threading.Timer",
+   "purl": "pkg:nuget/runtime.any.system.threading.timer@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.debian.8-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.fedora.23-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.fedora.23-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.fedora.24-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.fedora.24-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.native.System.IO.Compression",
+   "purl": "pkg:nuget/runtime.native.system.io.compression@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.native.System.Net.Http",
+   "purl": "pkg:nuget/runtime.native.system.net.http@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.native.System.Security.Cryptography.Apple",
+   "purl": "pkg:nuget/runtime.native.system.security.cryptography.apple@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.native.System",
+   "purl": "pkg:nuget/runtime.native.system@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.opensuse.13.2-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.opensuse.13.2-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.opensuse.42.1-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.opensuse.42.1-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.Apple",
+   "purl": "pkg:nuget/runtime.osx.10.10-x64.runtime.native.system.security.cryptography.apple@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.osx.10.10-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.rhel.7-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.rhel.7-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.ubuntu.14.04-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.ubuntu.16.04-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.Microsoft.Win32.Primitives",
+   "purl": "pkg:nuget/runtime.win.microsoft.win32.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.Console",
+   "purl": "pkg:nuget/runtime.win.system.console@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.Diagnostics.Debug",
+   "purl": "pkg:nuget/runtime.win.system.diagnostics.debug@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.IO.FileSystem",
+   "purl": "pkg:nuget/runtime.win.system.io.filesystem@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.Net.Primitives",
+   "purl": "pkg:nuget/runtime.win.system.net.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.Net.Sockets",
+   "purl": "pkg:nuget/runtime.win.system.net.sockets@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "runtime.win.System.Runtime.Extensions",
+   "purl": "pkg:nuget/runtime.win.system.runtime.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "Scalar.AspNetCore",
+   "purl": "pkg:nuget/scalar.aspnetcore@2.17.10",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "2.17.10"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Serilog.Sinks.File",
+   "purl": "pkg:nuget/serilog.sinks.file@5.0.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "5.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "Serilog",
+   "purl": "pkg:nuget/serilog@3.1.1",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "3.1.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "SharpCompress",
+   "purl": "pkg:nuget/sharpcompress@0.30.1",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "0.30.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "SharpDX.Mathematics",
+   "purl": "pkg:nuget/sharpdx.mathematics@4.2.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "SharpDX",
+   "purl": "pkg:nuget/sharpdx@4.2.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-config",
+    "paths": [
+     "packages.config"
+    ],
+    "tfm": "net472"
+   },
+   "name": "SharpZipLib",
+   "purl": "pkg:nuget/sharpziplib@1.2.0",
+   "source_path": "packages.config",
+   "vendor": null,
+   "version": "1.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "Shouldly",
+   "purl": "pkg:nuget/shouldly@4.3.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "Snappier",
+   "purl": "pkg:nuget/snappier@1.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "1.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "StackExchange.Redis",
+   "purl": "pkg:nuget/stackexchange.redis@2.8.24",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "2.8.24"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.AppContext",
+   "purl": "pkg:nuget/system.appcontext@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Buffers",
+   "purl": "pkg:nuget/system.buffers@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Buffers",
+   "purl": "pkg:nuget/system.buffers@4.5.1",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "4.5.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.CodeDom",
+   "purl": "pkg:nuget/system.codedom@6.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Collections.Concurrent",
+   "purl": "pkg:nuget/system.collections.concurrent@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Collections.Immutable",
+   "purl": "pkg:nuget/system.collections.immutable@10.0.3",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.3"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Collections.Immutable",
+   "purl": "pkg:nuget/system.collections.immutable@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Collections",
+   "purl": "pkg:nuget/system.collections@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Console",
+   "purl": "pkg:nuget/system.console@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Diagnostics.Debug",
+   "purl": "pkg:nuget/system.diagnostics.debug@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Diagnostics.DiagnosticSource",
+   "purl": "pkg:nuget/system.diagnostics.diagnosticsource@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Diagnostics.DiagnosticSource",
+   "purl": "pkg:nuget/system.diagnostics.diagnosticsource@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Diagnostics.DiagnosticSource",
+   "purl": "pkg:nuget/system.diagnostics.diagnosticsource@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Diagnostics.EventLog",
+   "purl": "pkg:nuget/system.diagnostics.eventlog@6.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Diagnostics.Tools",
+   "purl": "pkg:nuget/system.diagnostics.tools@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Diagnostics.Tracing",
+   "purl": "pkg:nuget/system.diagnostics.tracing@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Dynamic.Runtime",
+   "purl": "pkg:nuget/system.dynamic.runtime@4.3.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0"
+    ]
+   },
+   "name": "System.Formats.Asn1",
+   "purl": "pkg:nuget/system.formats.asn1@10.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Globalization.Calendars",
+   "purl": "pkg:nuget/system.globalization.calendars@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Globalization.Extensions",
+   "purl": "pkg:nuget/system.globalization.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Globalization",
+   "purl": "pkg:nuget/system.globalization@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.IdentityModel.Tokens.Jwt",
+   "purl": "pkg:nuget/system.identitymodel.tokens.jwt@7.2.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "7.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.IdentityModel.Tokens.Jwt",
+   "purl": "pkg:nuget/system.identitymodel.tokens.jwt@8.23.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "8.23.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.IO.Compression.ZipFile",
+   "purl": "pkg:nuget/system.io.compression.zipfile@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.IO.Compression",
+   "purl": "pkg:nuget/system.io.compression@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.IO.FileSystem.Primitives",
+   "purl": "pkg:nuget/system.io.filesystem.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.IO.FileSystem",
+   "purl": "pkg:nuget/system.io.filesystem@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.IO.Pipelines",
+   "purl": "pkg:nuget/system.io.pipelines@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.IO.Pipelines",
+   "purl": "pkg:nuget/system.io.pipelines@5.0.1",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "5.0.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.IO",
+   "purl": "pkg:nuget/system.io@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Linq.Expressions",
+   "purl": "pkg:nuget/system.linq.expressions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Linq",
+   "purl": "pkg:nuget/system.linq@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Management",
+   "purl": "pkg:nuget/system.management@6.0.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.0.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Memory",
+   "purl": "pkg:nuget/system.memory@4.5.5",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "4.5.5"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Net.Http",
+   "purl": "pkg:nuget/system.net.http@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Net.NameResolution",
+   "purl": "pkg:nuget/system.net.nameresolution@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Net.Primitives",
+   "purl": "pkg:nuget/system.net.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Net.Sockets",
+   "purl": "pkg:nuget/system.net.sockets@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.ObjectModel",
+   "purl": "pkg:nuget/system.objectmodel@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Private.Uri",
+   "purl": "pkg:nuget/system.private.uri@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Reactive",
+   "purl": "pkg:nuget/system.reactive@7.0.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "7.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.Emit.ILGeneration",
+   "purl": "pkg:nuget/system.reflection.emit.ilgeneration@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.Emit.Lightweight",
+   "purl": "pkg:nuget/system.reflection.emit.lightweight@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.Emit",
+   "purl": "pkg:nuget/system.reflection.emit@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.Extensions",
+   "purl": "pkg:nuget/system.reflection.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.Primitives",
+   "purl": "pkg:nuget/system.reflection.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection.TypeExtensions",
+   "purl": "pkg:nuget/system.reflection.typeextensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "System.Reflection.TypeExtensions",
+   "purl": "pkg:nuget/system.reflection.typeextensions@4.7.0",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "4.7.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Reflection",
+   "purl": "pkg:nuget/system.reflection@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Resources.ResourceManager",
+   "purl": "pkg:nuget/system.resources.resourcemanager@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Runtime.CompilerServices.Unsafe",
+   "purl": "pkg:nuget/system.runtime.compilerservices.unsafe@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime.Extensions",
+   "purl": "pkg:nuget/system.runtime.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime.Handles",
+   "purl": "pkg:nuget/system.runtime.handles@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime.InteropServices.RuntimeInformation",
+   "purl": "pkg:nuget/system.runtime.interopservices.runtimeinformation@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime.InteropServices",
+   "purl": "pkg:nuget/system.runtime.interopservices@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime.Numerics",
+   "purl": "pkg:nuget/system.runtime.numerics@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Runtime",
+   "purl": "pkg:nuget/system.runtime@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Security.AccessControl",
+   "purl": "pkg:nuget/system.security.accesscontrol@5.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "5.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Security.AccessControl",
+   "purl": "pkg:nuget/system.security.accesscontrol@6.0.1",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "6.0.1"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Claims",
+   "purl": "pkg:nuget/system.security.claims@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.Algorithms",
+   "purl": "pkg:nuget/system.security.cryptography.algorithms@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.Cng",
+   "purl": "pkg:nuget/system.security.cryptography.cng@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.Csp",
+   "purl": "pkg:nuget/system.security.cryptography.csp@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.Encoding",
+   "purl": "pkg:nuget/system.security.cryptography.encoding@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.OpenSsl",
+   "purl": "pkg:nuget/system.security.cryptography.openssl@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.Primitives",
+   "purl": "pkg:nuget/system.security.cryptography.primitives@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Cryptography.X509Certificates",
+   "purl": "pkg:nuget/system.security.cryptography.x509certificates@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Principal.Windows",
+   "purl": "pkg:nuget/system.security.principal.windows@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Security.Principal.Windows",
+   "purl": "pkg:nuget/system.security.principal.windows@5.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "5.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Security.Principal",
+   "purl": "pkg:nuget/system.security.principal@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Text.Encoding.Extensions",
+   "purl": "pkg:nuget/system.text.encoding.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Text.Encoding",
+   "purl": "pkg:nuget/system.text.encoding@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Text.Encodings.Web",
+   "purl": "pkg:nuget/system.text.encodings.web@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Text.Encodings.Web",
+   "purl": "pkg:nuget/system.text.encodings.web@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "System.Text.Json",
+   "purl": "pkg:nuget/system.text.json@10.0.13",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "10.0.13"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "System.Text.Json",
+   "purl": "pkg:nuget/system.text.json@6.0.0",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "6.0.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Text.RegularExpressions",
+   "purl": "pkg:nuget/system.text.regularexpressions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Threading.Overlapped",
+   "purl": "pkg:nuget/system.threading.overlapped@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Threading.Tasks.Extensions",
+   "purl": "pkg:nuget/system.threading.tasks.extensions@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Threading.Tasks",
+   "purl": "pkg:nuget/system.threading.tasks@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Threading.Timer",
+   "purl": "pkg:nuget/system.threading.timer@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "project.assets.json",
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Threading",
+   "purl": "pkg:nuget/system.threading@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Xml.ReaderWriter",
+   "purl": "pkg:nuget/system.xml.readerwriter@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "evidence": "installed",
+    "parser": "dotnet-deps-json",
+    "paths": [
+     "published-loader.deps.json"
+    ],
+    "runtime_target": ".NETCoreApp,Version=v8.0/win-x64",
+    "tfm": ".NETCoreApp,Version=v8.0"
+   },
+   "name": "System.Xml.XDocument",
+   "purl": "pkg:nuget/system.xml.xdocument@4.3.0",
+   "source_path": "published-loader.deps.json",
+   "vendor": null,
+   "version": "4.3.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.analyzers",
+   "purl": "pkg:nuget/xunit.analyzers@2.2.0",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "2.2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.assert.source",
+   "purl": "pkg:nuget/xunit.v3.assert.source@3.2.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "3.2.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.assert",
+   "purl": "pkg:nuget/xunit.v3.assert@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.common",
+   "purl": "pkg:nuget/xunit.v3.common@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.core.mtp-v2",
+   "purl": "pkg:nuget/xunit.v3.core.mtp-v2@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.extensibility.core",
+   "purl": "pkg:nuget/xunit.v3.extensibility.core@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "central": true,
+    "declared_only": true,
+    "evidence": "manifest",
+    "parser": "dotnet-central-packages",
+    "paths": [
+     "Directory.Packages.props"
+    ]
+   },
+   "name": "xunit.v3.mtp-v2",
+   "purl": "pkg:nuget/xunit.v3.mtp-v2@3.2.2",
+   "source_path": "Directory.Packages.props",
+   "vendor": null,
+   "version": "3.2.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": true,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.mtp-v2",
+   "purl": "pkg:nuget/xunit.v3.mtp-v2@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.runner.common",
+   "purl": "pkg:nuget/xunit.v3.runner.common@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-packages-lock",
+    "paths": [
+     "packages.lock.json"
+    ],
+    "tfms": [
+     "net10.0",
+     "net8.0",
+     "net9.0"
+    ]
+   },
+   "name": "xunit.v3.runner.inproc.console",
+   "purl": "pkg:nuget/xunit.v3.runner.inproc.console@4.0.2",
+   "source_path": "packages.lock.json",
+   "vendor": null,
+   "version": "4.0.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "NuGet",
+   "meta": {
+    "direct": false,
+    "evidence": "lockfile",
+    "parser": "dotnet-project-assets",
+    "paths": [
+     "project.assets.json"
+    ]
+   },
+   "name": "ZstdSharp.Port",
+   "purl": "pkg:nuget/zstdsharp.port@0.7.3",
+   "source_path": "project.assets.json",
+   "vendor": null,
+   "version": "0.7.3"
+  }
+ ],
+ "end": {
+  "components": 336,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

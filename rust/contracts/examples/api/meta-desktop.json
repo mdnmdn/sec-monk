@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0",
+  "mode": "live",
+  "platform": "darwin",
+  "bind": "secmonk://localhost",
+  "db": {
+    "path": "/data/sec-monk/db/state.sqlite3",
+    "exists": true
+  },
+  "features": [
+    "processes",
+    "overview",
+    "assets",
+    "findings",
+    "vulns",
+    "sources",
+    "scan",
+    "jobs"
+  ],
+  "actions": true,
+  "engine": {
+    "runtime": "rust",
+    "schema": "state/3+mirror/3",
+    "modules": [
+      {
+        "name": "py-engine",
+        "runtime": "python",
+        "state": "ready"
+      }
+    ]
+  }
+}

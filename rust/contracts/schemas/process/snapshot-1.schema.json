@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/process/snapshot-1.schema.json",
+  "title": "secmonk-process-snapshot/1",
+  "description": "Writer contract of collectors/process/snapshot.py. Readers stay lenient (snapshot.from_dict: type checks, caps, re-redaction); unknown keys are ignored.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "secmonk-process-snapshot/1"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "host": {
+      "type": "string"
+    },
+    "taken_at": {
+      "type": "string"
+    },
+    "os": {
+      "type": "object"
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pid": {
+            "type": "integer"
+          },
+          "ppid": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "uid": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "user": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exe": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cgroup": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "container": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "runtime": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "pod": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "pid"
+        ]
+      },
+      "maxItems": 100000
+    },
+    "launch_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mechanism": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "program": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_at_load": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "keep_alive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "disabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "mechanism",
+          "label"
+        ]
+      }
+    },
+    "executables": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "exists": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "mtime": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "owner_uid": {
+            "type": "integer"
+          },
+          "world_writable": {
+            "type": "boolean"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "object"
+          },
+          "quarantine": {
+            "type": "object"
+          },
+          "where_froms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gatekeeper": {
+            "type": "object"
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "platform",
+    "host",
+    "taken_at",
+    "processes"
+  ]
+}

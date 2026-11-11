@@ -1,0 +1,167 @@
+{
+ "asset": {
+  "id": "dir:<fixtures>/lang/php/composer2",
+  "meta": {
+   "files_parsed": 2,
+   "path": "<fixtures>/lang/php/composer2"
+  },
+  "name": "composer2",
+  "os_name": null,
+  "os_version": null,
+  "platform": null,
+  "type": "directory"
+ },
+ "components": [
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "evidence": "installed",
+    "license": "MIT",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "868b3571a039f0ebc11ac8f344f4080babe2cb94"
+   },
+   "name": "guzzlehttp/guzzle",
+   "purl": "pkg:composer/guzzlehttp/guzzle@7.4.0",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "7.4.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "evidence": "installed",
+    "license": "MIT",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "adee536f95101929f262b8c59e8a61472f347d58"
+   },
+   "name": "guzzlehttp/psr7",
+   "purl": "pkg:composer/guzzlehttp/psr7@2.13.2",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "2.13.2"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "dev": true,
+    "evidence": "installed",
+    "license": "MIT",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "8680aa248f8e07bc8fb43f56f0f5fc77a0c96aae"
+   },
+   "name": "myclabs/deep-copy",
+   "purl": "pkg:composer/myclabs/deep-copy@1.14.0",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "1.14.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "dev": true,
+    "evidence": "installed",
+    "license": "BSD-3-Clause",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "8e16c225d57c3d6808014df6b1dd7598d0a5bbbe"
+   },
+   "name": "phpunit/phpunit",
+   "purl": "pkg:composer/phpunit/phpunit@9.5.0",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "9.5.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "evidence": "installed",
+    "license": "MIT",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71"
+   },
+   "name": "psr/http-message",
+   "purl": "pkg:composer/psr/http-message@2.0",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "2.0"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "dev": true,
+    "evidence": "installed",
+    "license": "BSD-3-Clause",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "reference": "ba01945089c3a293b01ba9badc29ad55b106b0bc"
+   },
+   "name": "sebastian/diff",
+   "purl": "pkg:composer/sebastian/diff@4.0.6",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "4.0.6"
+  },
+  {
+   "category": "library",
+   "cpe": null,
+   "ecosystem": "Packagist",
+   "meta": {
+    "evidence": "installed",
+    "license": "MIT",
+    "parser": "composer-installed",
+    "paths": [
+     "composer.lock",
+     "vendor/composer/installed.json"
+    ],
+    "raw_version": "v1.43.0",
+    "reference": "9c6a5d6b01ca51d486c813e9a9c0ed55f208bb74"
+   },
+   "name": "symfony/polyfill-php80",
+   "purl": "pkg:composer/symfony/polyfill-php80@1.43.0",
+   "source_path": "vendor/composer/installed.json",
+   "vendor": null,
+   "version": "1.43.0"
+  }
+ ],
+ "end": {
+  "components": 7,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 0
+ },
+ "warnings": []
+}

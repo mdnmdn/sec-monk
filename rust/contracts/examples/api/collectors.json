@@ -1,0 +1,17 @@
+[
+  {
+    "name": "docker-engine",
+    "description": "Live container (or local image) via a local or remote Docker/Podman engine",
+    "in_all": true
+  },
+  {
+    "name": "docker-image",
+    "description": "Container image: registry reference, docker-save tarball or OCI layout dir (no daemon)",
+    "in_all": true
+  },
+  {
+    "name": "fs",
+    "description": "Language dependencies in a folder/repo: lockfiles, manifests, installed packages, binaries",
+    "in_all": true
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/assets.schema.json",
+  "title": "GET /api/assets",
+  "type": "array",
+  "items": {
+    "$ref": "asset-row.schema.json"
+  }
+}

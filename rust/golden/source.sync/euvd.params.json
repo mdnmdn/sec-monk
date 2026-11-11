@@ -1,0 +1,11 @@
+{
+ "options": {
+  "ecosystems": [],
+  "full": false,
+  "ids": [],
+  "limit": null,
+  "path": "<fixtures>/sources/euvd/exploited-sample.json",
+  "since": null
+ },
+ "source": "euvd"
+}

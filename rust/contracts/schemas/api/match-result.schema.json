@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/match-result.schema.json",
+  "title": "POST /api/assets/match",
+  "type": "object",
+  "properties": {
+    "asset": {
+      "type": "string"
+    },
+    "stats": {
+      "$ref": "match-stats.schema.json"
+    }
+  },
+  "required": [
+    "asset",
+    "stats"
+  ],
+  "additionalProperties": false
+}

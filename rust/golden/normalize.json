@@ -1,0 +1,27 @@
+{
+  "normalizer": "secmonk-golden-normalize/1",
+  "placeholders": {
+    "_note": "longest path first; every string value is rewritten, in keys and values; applied before anything else",
+    "order": ["data_dir", "fixtures", "repo", "home"],
+    "tokens": {"data_dir": "<data_dir>", "fixtures": "<fixtures>", "repo": "<repo>", "home": "<home>"}
+  },
+  "volatile_keys": {
+    "_note": "key -> replacement; a value under such a key (at any depth) is replaced when it is not null",
+    "fetched_at": "<ts>", "first_seen": "<ts>", "last_seen": "<ts>", "last_sync": "<ts>", "mirror_synced_at": "<ts>",
+    "taken_at": "<ts>", "started_at": "<ts>", "finished_at": "<ts>", "fixed_at": "<ts>", "timestamp": "<ts>",
+    "seconds": 0, "pid": 0, "created": "<ts>", "mtime": "<ts>", "started": "<ts>", "date_added_local": "<ts>"
+  },
+  "sort": {
+    "_note": "list name -> keys of the sort tuple (missing keys sort as empty); lists not named here keep their order",
+    "components": ["purl", "category", "name", "version", "source_path"],
+    "warnings": [],
+    "finding_set": ["component_id", "vuln_id"],
+    "view": ["component", "vuln_id"],
+    "findings": ["component", "vuln_id", "asset_id"],
+    "targets": [],
+    "assets": ["id"]
+  },
+  "stream": {
+    "_note": "a stream method's out file is {items: [...merged...], end: <end.result>}; collector.collect merges to {asset, components, warnings, end}; source rows merge to {ops, end} in emission order with batch boundaries dropped"
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/engine/versions.schema.json",
+  "title": "versions.* and scoring.priority params/results",
+  "$defs": {
+    "compare_params": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        },
+        "b": {
+          "type": "string"
+        },
+        "scheme": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "scheme"
+      ],
+      "additionalProperties": false
+    },
+    "compare_result": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "enum": [
+            -1,
+            0,
+            1
+          ]
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "range_params": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "scheme": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "events",
+        "scheme"
+      ],
+      "additionalProperties": false
+    },
+    "in_range_result": {
+      "type": "object",
+      "properties": {
+        "affected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "affected"
+      ],
+      "additionalProperties": false
+    },
+    "first_fixed_result": {
+      "type": "object",
+      "properties": {
+        "fixed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "fixed"
+      ],
+      "additionalProperties": false
+    },
+    "scheme_params": {
+      "type": "object",
+      "properties": {
+        "ecosystem": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "ecosystem"
+      ],
+      "additionalProperties": false
+    },
+    "scheme_result": {
+      "type": "object",
+      "properties": {
+        "scheme": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scheme"
+      ],
+      "additionalProperties": false
+    },
+    "priority_params": {
+      "type": "object",
+      "properties": {
+        "cvss": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "epss": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "kev": {
+          "type": "boolean"
+        },
+        "asset_meta": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "triage": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "cvss",
+        "epss",
+        "kev"
+      ],
+      "additionalProperties": false
+    },
+    "priority_result": {
+      "type": "object",
+      "properties": {
+        "priority": {
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ]
+        }
+      },
+      "required": [
+        "priority"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

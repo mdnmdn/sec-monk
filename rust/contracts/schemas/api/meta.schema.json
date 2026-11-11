@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/meta.schema.json",
+  "title": "GET /api/meta",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "live",
+        "snapshot"
+      ]
+    },
+    "platform": {
+      "type": "string"
+    },
+    "db": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "exists": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "exists"
+      ]
+    },
+    "bind": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "actions": {
+      "type": "boolean"
+    },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "runtime": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "version",
+    "mode",
+    "platform",
+    "db",
+    "bind",
+    "features",
+    "actions"
+  ]
+}

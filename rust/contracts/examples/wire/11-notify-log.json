@@ -1,0 +1,10 @@
+{
+  "type": "notify",
+  "method": "log",
+  "params": {
+    "level": "info",
+    "logger": "secmonk.collectors.fs",
+    "message": "walking /work/npm-v3",
+    "request": 7
+  }
+}

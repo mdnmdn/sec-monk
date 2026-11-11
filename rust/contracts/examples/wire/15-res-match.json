@@ -1,0 +1,75 @@
+{
+  "type": "res",
+  "id": 13,
+  "result": {
+    "asset_id": "dir:/srv/payments-api",
+    "mode": "persisted",
+    "stats": {
+      "components": 18,
+      "matches": 3,
+      "findings": 1,
+      "withdrawn": 0,
+      "patched": 0
+    },
+    "based_on": {
+      "latest_scan_id": 41,
+      "mirror_synced_at": "2026-11-11T08:00:00+00:00"
+    },
+    "finding_set": [
+      {
+        "component_id": 51,
+        "vuln_id": "CVE-2021-44228",
+        "advisory_ids": [
+          "CVE-2021-44228",
+          "EUVD-2021-30001",
+          "GHSA-jfh8-c2jp-5v3q"
+        ],
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "fixed_version": "2.15.0",
+        "severity": "CRITICAL",
+        "cvss_score": 10.0,
+        "epss": 0.97431,
+        "kev": true,
+        "priority": "P1",
+        "status": "open",
+        "first_seen": "2026-11-11T00:33:16+00:00",
+        "last_seen": "2026-11-11T00:33:17+00:00",
+        "fixed_at": null,
+        "triage": null,
+        "triage_source": "osv"
+      }
+    ],
+    "view": [
+      {
+        "asset_id": "dir:/srv/payments-api",
+        "priority": "P1",
+        "vuln_id": "CVE-2021-44228",
+        "component": "org.apache.logging.log4j:log4j-core",
+        "version": "2.14.1",
+        "category": "library",
+        "fixed_version": "2.15.0",
+        "severity": "CRITICAL",
+        "cvss_score": 10.0,
+        "epss": 0.97431,
+        "kev": true,
+        "triage": null,
+        "matched_by": "osv-package",
+        "confidence": 1.0,
+        "status": "open",
+        "component_id": 51,
+        "advisory_ids": [
+          "CVE-2021-44228",
+          "EUVD-2021-30001",
+          "GHSA-jfh8-c2jp-5v3q"
+        ],
+        "triage_source": "osv",
+        "first_seen": "2026-11-11T00:33:16+00:00",
+        "last_seen": "2026-11-11T00:33:17+00:00",
+        "fixed_at": null,
+        "ecosystem": "Maven",
+        "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+      }
+    ]
+  }
+}

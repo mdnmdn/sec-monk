@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/api/sbom.schema.json",
+  "title": "GET /api/assets/<id>/sbom (CycloneDX 1.6, sbom.export_asset)",
+  "type": "object",
+  "properties": {
+    "bomFormat": {
+      "const": "CycloneDX"
+    },
+    "specVersion": {
+      "type": "string"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "bomFormat",
+    "specVersion"
+  ]
+}

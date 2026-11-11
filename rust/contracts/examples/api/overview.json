@@ -1,0 +1,171 @@
+{
+  "db": "~/.local/share/secmonk/secmonk.db",
+  "totals": {
+    "assets": 11,
+    "components": 159,
+    "open_findings": 12,
+    "fixable": 12,
+    "P1": 1,
+    "P2": 0,
+    "P3": 9,
+    "P4": 2,
+    "kev": 1
+  },
+  "assets": [
+    {
+      "id": "container:web",
+      "type": "container",
+      "os": "Alpine Linux 3.20.10",
+      "platform": null,
+      "last_seen": "2026-11-11T00:33:16+00:00",
+      "components": 16,
+      "open_findings": 1,
+      "name": "web",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "findings_by_priority": {
+        "P1": 0,
+        "P2": 0,
+        "P3": 1,
+        "P4": 0,
+        "kev": 0
+      }
+    },
+    {
+      "id": "dir:/srv/payments-api",
+      "type": "directory",
+      "os": "",
+      "platform": null,
+      "last_seen": "2026-11-11T00:33:16+00:00",
+      "components": 44,
+      "open_findings": 1,
+      "name": "payments-api",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "findings_by_priority": {
+        "P1": 1,
+        "P2": 0,
+        "P3": 0,
+        "P4": 0,
+        "kev": 1
+      }
+    }
+  ],
+  "top_findings": [
+    {
+      "asset_id": "dir:/srv/payments-api",
+      "priority": "P1",
+      "vuln_id": "CVE-2021-44228",
+      "component": "org.apache.logging.log4j:log4j-core",
+      "version": "2.14.1",
+      "category": "library",
+      "fixed_version": "2.15.0",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": 0.97431,
+      "kev": true,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 51,
+      "advisory_ids": [
+        "CVE-2021-44228",
+        "EUVD-2021-30001",
+        "GHSA-jfh8-c2jp-5v3q"
+      ],
+      "triage_source": "osv",
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Maven",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+    },
+    {
+      "asset_id": "rootfs:/srv/alpine-rootfs",
+      "priority": "P3",
+      "vuln_id": "CVE-2024-3094",
+      "component": "xz-libs",
+      "version": "5.6.0-r0",
+      "category": "os-package",
+      "fixed_version": "5.6.1-r2",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "epss": null,
+      "kev": false,
+      "triage": null,
+      "matched_by": "osv-package",
+      "confidence": 1.0,
+      "status": "open",
+      "component_id": 105,
+      "advisory_ids": [
+        "ALPINE-CVE-2024-3094",
+        "CVE-2024-3094"
+      ],
+      "triage_source": null,
+      "first_seen": "2026-11-11T00:33:16+00:00",
+      "last_seen": "2026-11-11T00:33:17+00:00",
+      "fixed_at": null,
+      "ecosystem": "Alpine:v3.20",
+      "purl": "pkg:apk/alpine/xz-libs@5.6.0-r0?arch=x86_64&distro=alpine-3.20.10&upstream=xz"
+    }
+  ],
+  "sources": [
+    {
+      "source": "cvelist",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": null,
+      "records": 1,
+      "status": "ok",
+      "message": "imported 1 from /files/cvelist/CVE-2021-44228.json"
+    },
+    {
+      "source": "epss",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": "2026-11-06",
+      "records": 10,
+      "status": "ok",
+      "message": "10 scores from file /files/epss/epss_scores-sample.csv"
+    },
+    {
+      "source": "euvd",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": null,
+      "records": 2,
+      "status": "ok",
+      "message": "2 records from file /files/euvd/exploited-sample.json"
+    },
+    {
+      "source": "kev",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": "2026.11.06",
+      "records": 9,
+      "status": "ok",
+      "message": "9 entries from file /files/kev/known_exploited_vulnerabilities.json"
+    },
+    {
+      "source": "nvd",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": null,
+      "records": 1,
+      "status": "ok",
+      "message": "from file /files/nvd/cve-2021-44228.json"
+    },
+    {
+      "source": "osv",
+      "last_sync": "2026-11-11T00:33:16+00:00",
+      "cursor": "2026-11-02T11:17:50.087142138Z",
+      "records": 2,
+      "status": "ok",
+      "message": "from /files/osv/alpine-ALPINE-CVE-2024-3094.json"
+    }
+  ],
+  "tables": {
+    "vulnerability": 13,
+    "alias": 6,
+    "affected": 31,
+    "kev": 9,
+    "epss": 10,
+    "asset": 11,
+    "component": 125,
+    "finding": 13
+  }
+}

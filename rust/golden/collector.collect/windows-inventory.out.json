@@ -1,0 +1,935 @@
+{
+ "asset": {
+  "id": "windows:WS-ALICE01",
+  "meta": {
+   "appx_frameworks_skipped": 1,
+   "collected_at": "2024-07-20T09:15:02Z",
+   "domain": "corp.example.com",
+   "dotnet_sdks": [
+    "8.0.400"
+   ],
+   "edition": "Professional",
+   "installation_type": "Client",
+   "is_admin": true,
+   "script_version": "1.0",
+   "winget": [
+    {
+     "id": "Microsoft.PowerToys",
+     "version": "0.82.1"
+    },
+    {
+     "id": "Git.Git",
+     "version": "2.45.2"
+    }
+   ]
+  },
+  "name": "WS-ALICE01",
+  "os_name": "Windows 11 Pro",
+  "os_version": "23H2 (build 22631.3880)",
+  "platform": "windows/amd64",
+  "type": "desktop"
+ },
+ "components": [
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "authors": "Chocolatey Software, Inc.",
+    "choco_id": "chocolatey",
+    "product_hint": "chocolatey",
+    "project_url": "https://chocolatey.org",
+    "source": "chocolatey",
+    "title": "Chocolatey"
+   },
+   "name": "chocolatey",
+   "purl": "pkg:chocolatey/chocolatey@2.2.2",
+   "source_path": "C:\\ProgramData\\chocolatey\\lib\\chocolatey",
+   "vendor": null,
+   "version": "2.2.2"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "authors": "Stephen Dolan",
+    "choco_id": "jq",
+    "product_hint": "jq",
+    "project_url": "https://jqlang.github.io/jq/",
+    "source": "chocolatey",
+    "title": "jq"
+   },
+   "name": "jq",
+   "purl": "pkg:chocolatey/jq@1.7.1",
+   "source_path": "C:\\ProgramData\\chocolatey\\lib\\jq",
+   "vendor": null,
+   "version": "1.7.1"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Adobe Acrobat (64-bit)",
+    "install_date": "20240601",
+    "msi_product_code": "{AC76BA86-1033-1033-7760-BC15014EA700}",
+    "product_hint": "adobe acrobat",
+    "publisher": "Adobe",
+    "registry_key": "{AC76BA86-1033-1033-7760-BC15014EA700}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "adobe"
+   },
+   "name": "Adobe Acrobat",
+   "purl": "pkg:generic/adobe/Adobe%20Acrobat@24.002.20933",
+   "source_path": "HKLM\\...\\Uninstall\\{AC76BA86-1033-1033-7760-BC15014EA700}",
+   "vendor": null,
+   "version": "24.002.20933"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "arch_variants": [
+     "x64"
+    ],
+    "install_location": "C:\\Program Files\\WindowsApps\\MSTeams_24004.1307.2669.7070_x64__8wekyb3d8bbwe",
+    "package_full_name": "MSTeams_24004.1307.2669.7070_x64__8wekyb3d8bbwe",
+    "product_hint": "microsoft teams",
+    "publisher": "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    "signature_kind": "Store",
+    "source": "appx",
+    "vendor_hint": "microsoft"
+   },
+   "name": "MSTeams",
+   "purl": "pkg:generic/appx/MSTeams@24004.1307.2669.7070",
+   "source_path": "C:\\Program Files\\WindowsApps\\MSTeams_24004.1307.2669.7070_x64__8wekyb3d8bbwe",
+   "vendor": null,
+   "version": "24004.1307.2669.7070"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "arch_variants": [
+     "x64",
+     "x86"
+    ],
+    "package_full_name": "Microsoft.Windows.Photos_2024.11050.1002.0_x64__8wekyb3d8bbwe",
+    "product_hint": "microsoft.windows.photos",
+    "publisher": "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    "signature_kind": "Store",
+    "source": "appx",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft.Windows.Photos",
+   "purl": "pkg:generic/appx/Microsoft.Windows.Photos@2024.11050.1002.0",
+   "source_path": "Microsoft.Windows.Photos_2024.11050.1002.0_x64__8wekyb3d8bbwe",
+   "vendor": null,
+   "version": "2024.11050.1002.0"
+  },
+  {
+   "category": "system-app",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "neutral",
+    "arch_variants": [
+     "neutral"
+    ],
+    "install_location": "C:\\Windows\\SystemApps\\ShellExperienceHost_cw5n1h2txyewy",
+    "package_full_name": "Microsoft.Windows.ShellExperienceHost_10.0.22621.3880_neutral_neutral_cw5n1h2txyewy",
+    "product_hint": "microsoft.windows.shellexperiencehost",
+    "publisher": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    "signature_kind": "System",
+    "source": "appx",
+    "vendor_hint": "microsoft-windows"
+   },
+   "name": "Microsoft.Windows.ShellExperienceHost",
+   "purl": "pkg:generic/appx/Microsoft.Windows.ShellExperienceHost@10.0.22621.3880",
+   "source_path": "C:\\Windows\\SystemApps\\ShellExperienceHost_cw5n1h2txyewy",
+   "vendor": null,
+   "version": "10.0.22621.3880"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "arch_variants": [
+     "x64"
+    ],
+    "install_location": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.20.11781.0_x64__8wekyb3d8bbwe",
+    "package_full_name": "Microsoft.WindowsTerminal_1.20.11781.0_x64__8wekyb3d8bbwe",
+    "product_hint": "windows terminal",
+    "publisher": "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    "signature_kind": "Store",
+    "source": "appx",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft.WindowsTerminal",
+   "purl": "pkg:generic/appx/Microsoft.WindowsTerminal@1.20.11781.0",
+   "source_path": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.20.11781.0_x64__8wekyb3d8bbwe",
+   "vendor": null,
+   "version": "1.20.11781.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Docker Desktop",
+    "install_date": "20240601",
+    "product_hint": "docker desktop",
+    "publisher": "Docker Inc.",
+    "registry_key": "Docker Desktop",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "docker"
+   },
+   "name": "Docker Desktop",
+   "purl": "pkg:generic/docker/Docker%20Desktop@4.31.1",
+   "source_path": "HKLM\\...\\Uninstall\\Docker Desktop",
+   "vendor": null,
+   "version": "4.31.1"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Google Chrome",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Google\\Chrome\\Application",
+    "product_hint": "google chrome",
+    "publisher": "Google LLC",
+    "registry_key": "Google Chrome",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "google"
+   },
+   "name": "Google Chrome",
+   "purl": "pkg:generic/google/Google%20Chrome@126.0.6478.127",
+   "source_path": "HKLM\\...\\Uninstall\\Google Chrome",
+   "vendor": null,
+   "version": "126.0.6478.127"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "also_chocolatey": "7zip.install",
+    "arch": "x64",
+    "display_name": "7-Zip 23.01 (x64)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\7-Zip",
+    "product_hint": "7-zip",
+    "publisher": "Igor Pavlov",
+    "registry_key": "7-Zip",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "igor-pavlov"
+   },
+   "name": "7-Zip",
+   "purl": "pkg:generic/igor-pavlov/7-Zip@23.01",
+   "source_path": "HKLM\\...\\Uninstall\\7-Zip",
+   "vendor": null,
+   "version": "23.01"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft 365 Apps for enterprise - en-us",
+    "install_date": "20240601",
+    "product_hint": "microsoft 365 apps for enterprise",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "O365ProPlusRetail - en-us",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft 365 Apps for enterprise",
+   "purl": "pkg:generic/microsoft/Microsoft%20365%20Apps%20for%20enterprise@16.0.17628.20144",
+   "source_path": "HKLM\\...\\Uninstall\\O365ProPlusRetail - en-us",
+   "vendor": null,
+   "version": "16.0.17628.20144"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x86",
+    "display_name": "Microsoft Edge WebView2 Runtime",
+    "install_date": "20240601",
+    "product_hint": "microsoft edge webview2 runtime",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "Microsoft EdgeWebView",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Edge WebView2 Runtime",
+   "purl": "pkg:generic/microsoft/Microsoft%20Edge%20WebView2%20Runtime@126.0.2592.87",
+   "source_path": "HKLM\\...\\Uninstall\\Microsoft EdgeWebView",
+   "vendor": null,
+   "version": "126.0.2592.87"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x86",
+    "display_name": "Microsoft Edge",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application",
+    "product_hint": "microsoft edge",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "Microsoft Edge",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Edge",
+   "purl": "pkg:generic/microsoft/Microsoft%20Edge@126.0.2592.87",
+   "source_path": "HKLM\\...\\Uninstall\\Microsoft Edge",
+   "vendor": null,
+   "version": "126.0.2592.87"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft OneDrive",
+    "install_date": "20240601",
+    "product_hint": "microsoft onedrive",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "OneDriveSetup.exe",
+    "scope": "user",
+    "source": "registry-uninstall",
+    "users": [
+     "alice"
+    ],
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft OneDrive",
+   "purl": "pkg:generic/microsoft/Microsoft%20OneDrive@24.116.0609.0001",
+   "source_path": "HKU\\...\\Uninstall\\OneDriveSetup.exe",
+   "vendor": null,
+   "version": "24.116.0609.0001"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft Teams classic",
+    "install_date": "20240601",
+    "product_hint": "microsoft teams classic",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "Teams",
+    "scope": "user",
+    "source": "registry-uninstall",
+    "users": [
+     "alice"
+    ],
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Teams classic",
+   "purl": "pkg:generic/microsoft/Microsoft%20Teams%20classic@1.6.00.18681",
+   "source_path": "HKU\\...\\Uninstall\\Teams",
+   "vendor": null,
+   "version": "1.6.00.18681"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft Teams",
+    "install_date": "20240601",
+    "product_hint": "microsoft teams",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "TeamsMachineInstaller",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Teams",
+   "purl": "pkg:generic/microsoft/Microsoft%20Teams@1.6.00.18681",
+   "source_path": "HKLM\\...\\Uninstall\\TeamsMachineInstaller",
+   "vendor": null,
+   "version": "1.6.00.18681"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft Update Health Tools",
+    "install_date": "20240601",
+    "msi_product_code": "{C2D3E4F5-A6B7-4C8D-9EAF-1A2B3C4D5EBB}",
+    "product_hint": "microsoft update health tools",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "{c2d3e4f5-a6b7-4c8d-9eaf-1a2b3c4d5ebb}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Update Health Tools",
+   "purl": "pkg:generic/microsoft/Microsoft%20Update%20Health%20Tools@5.72.0.0",
+   "source_path": "HKLM\\...\\Uninstall\\{c2d3e4f5-a6b7-4c8d-9eaf-1a2b3c4d5ebb}",
+   "vendor": null,
+   "version": "5.72.0.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "arch_variants": [
+     "x64",
+     "x86"
+    ],
+    "display_name": "Microsoft Visual C++ 2015-2022 Redistributable (x64) - 14.38.33135",
+    "install_date": "20240601",
+    "msi_product_code": "{E8B6A6E6-6F3B-4A0B-8ED0-6A0A3A9F1C11}",
+    "product_hint": "microsoft visual c++ 2015-2022 redistributable",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "{e8b6a6e6-6f3b-4a0b-8ed0-6a0a3a9f1c11}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Visual C++ 2015-2022 Redistributable",
+   "purl": "pkg:generic/microsoft/Microsoft%20Visual%20C%2B%2B%202015-2022%20Redistributable@14.38.33135.0",
+   "source_path": "HKLM\\...\\Uninstall\\{e8b6a6e6-6f3b-4a0b-8ed0-6a0a3a9f1c11}",
+   "vendor": null,
+   "version": "14.38.33135.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Microsoft Visual Studio Code (User)",
+    "install_date": "20240601",
+    "product_hint": "microsoft visual studio code (user)",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "{771FD6B0-FA20-440A-A002-3B3BAC16DC50}_is1",
+    "scope": "user",
+    "source": "registry-uninstall",
+    "users": [
+     "alice"
+    ],
+    "vendor_hint": "microsoft"
+   },
+   "name": "Microsoft Visual Studio Code (User)",
+   "purl": "pkg:generic/microsoft/Microsoft%20Visual%20Studio%20Code%20%28User%29@1.91.1",
+   "source_path": "HKU\\...\\Uninstall\\{771FD6B0-FA20-440A-A002-3B3BAC16DC50}_is1",
+   "vendor": null,
+   "version": "1.91.1"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x86",
+    "display_name": "Visual Studio Community 2022",
+    "install_date": "20240601",
+    "msi_product_code": "{0A1B2C3D-4E5F-4607-8192-A3B4C5D6E799}",
+    "product_hint": "visual studio community 2022",
+    "publisher": "Microsoft Corporation",
+    "registry_key": "{0a1b2c3d-4e5f-4607-8192-a3b4c5d6e799}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "microsoft"
+   },
+   "name": "Visual Studio Community 2022",
+   "purl": "pkg:generic/microsoft/Visual%20Studio%20Community%202022@17.12.2",
+   "source_path": "HKLM\\...\\Uninstall\\{0a1b2c3d-4e5f-4607-8192-a3b4c5d6e799}",
+   "vendor": null,
+   "version": "17.12.2"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "framework": "Microsoft.AspNetCore.App",
+    "product": "asp.net core",
+    "product_source": "alias-table",
+    "source": "dotnet-shared"
+   },
+   "name": "ASP.NET Core 8.0",
+   "purl": "pkg:generic/microsoft/aspnetcore-runtime@8.0.8?arch=x64",
+   "source_path": "C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App\\8.0.8",
+   "vendor": "microsoft",
+   "version": "8.0.8"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "framework": "Microsoft.WindowsDesktop.App",
+    "product": ".net",
+    "product_source": "alias-table",
+    "source": "dotnet-shared"
+   },
+   "name": ".NET Desktop Runtime 8.0",
+   "purl": "pkg:generic/microsoft/dotnet-desktop-runtime@8.0.8?arch=x64",
+   "source_path": "C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App\\8.0.8",
+   "vendor": "microsoft",
+   "version": "8.0.8"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "framework": "Microsoft.NETCore.App",
+    "product": ".net",
+    "product_source": "alias-table",
+    "source": "dotnet-shared"
+   },
+   "name": ".NET 6.0",
+   "purl": "pkg:generic/microsoft/dotnet-runtime@6.0.33?arch=x64",
+   "source_path": "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\6.0.33",
+   "vendor": "microsoft",
+   "version": "6.0.33"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "framework": "Microsoft.NETCore.App",
+    "product": ".net",
+    "product_source": "alias-table",
+    "source": "dotnet-shared"
+   },
+   "name": ".NET 8.0",
+   "purl": "pkg:generic/microsoft/dotnet-runtime@8.0.8?arch=x64",
+   "source_path": "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.8",
+   "vendor": "microsoft",
+   "version": "8.0.8"
+  },
+  {
+   "category": "runtime",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x86",
+    "framework": "Microsoft.NETCore.App",
+    "product": ".net",
+    "product_source": "alias-table",
+    "source": "dotnet-shared"
+   },
+   "name": ".NET 8.0",
+   "purl": "pkg:generic/microsoft/dotnet-runtime@8.0.8?arch=x86",
+   "source_path": "C:\\Program Files (x86)\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.8",
+   "vendor": "microsoft",
+   "version": "8.0.8"
+  },
+  {
+   "category": "os",
+   "cpe": "cpe:2.3:o:microsoft:windows_11_23h2:10.0.22631.3880:*:*:*:*:*:amd64:*",
+   "ecosystem": null,
+   "meta": {
+    "build": 22631,
+    "display_version": "23H2",
+    "dotnet_framework": {
+     "release": 533320,
+     "version": "4.8.09032"
+    },
+    "edition": "Professional",
+    "family": "client",
+    "hotfixes": [
+     "KB5027397",
+     "KB5039212",
+     "KB5040442"
+    ],
+    "install_date": "2023-11-14",
+    "installation_type": "Client",
+    "last_hotfix_on": "2024-07-17",
+    "marketing_name": "Windows 11 Pro",
+    "product": "windows 11 version 22h3",
+    "product_source": "alias-table",
+    "release": "23H2",
+    "server_core": false,
+    "ubr": 3880
+   },
+   "name": "Windows 11 Version 23H2",
+   "purl": "pkg:generic/microsoft/windows@10.0.22631.3880?release=11-23H2",
+   "source_path": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+   "vendor": "microsoft",
+   "version": "10.0.22631.3880"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Mozilla Firefox 127.0.2 (x64 en-US)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Mozilla Firefox",
+    "product_hint": "mozilla firefox",
+    "publisher": "Mozilla",
+    "registry_key": "Mozilla Firefox 127.0.2 (x64 en-US)",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "mozilla"
+   },
+   "name": "Mozilla Firefox",
+   "purl": "pkg:generic/mozilla/Mozilla%20Firefox@127.0.2",
+   "source_path": "HKLM\\...\\Uninstall\\Mozilla Firefox 127.0.2 (x64 en-US)",
+   "vendor": null,
+   "version": "127.0.2"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Node.js",
+    "install_date": "20240601",
+    "msi_product_code": "{5E6F7081-92A3-4BC4-9DAE-2A3B4C5D6E77}",
+    "product_hint": "node.js",
+    "publisher": "Node.js Foundation",
+    "registry_key": "{5e6f7081-92a3-4bc4-9dae-2a3b4c5d6e77}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "node-js"
+   },
+   "name": "Node.js",
+   "purl": "pkg:generic/node-js/Node.js@20.15.0",
+   "source_path": "HKLM\\...\\Uninstall\\{5e6f7081-92a3-4bc4-9dae-2a3b4c5d6e77}",
+   "vendor": null,
+   "version": "20.15.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Notepad++ (64-bit x64)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Notepad++",
+    "product_hint": "notepad++",
+    "publisher": "Notepad++ Team",
+    "registry_key": "Notepad++",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "notepad-team"
+   },
+   "name": "Notepad++",
+   "purl": "pkg:generic/notepad-team/Notepad%2B%2B@8.6.4",
+   "source_path": "HKLM\\...\\Uninstall\\Notepad++",
+   "vendor": null,
+   "version": "8.6.4"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Oracle VM VirtualBox 7.0.18",
+    "install_date": "20240601",
+    "product_hint": "oracle vm virtualbox",
+    "publisher": "Oracle Corporation",
+    "registry_key": "Oracle VM VirtualBox 7.0.18",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "oracle"
+   },
+   "name": "Oracle VM VirtualBox",
+   "purl": "pkg:generic/oracle/Oracle%20VM%20VirtualBox@7.0.18",
+   "source_path": "HKLM\\...\\Uninstall\\Oracle VM VirtualBox 7.0.18",
+   "vendor": null,
+   "version": "7.0.18"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Python Launcher",
+    "install_date": "20240601",
+    "msi_product_code": "{3C4D5E6F-7081-4A9B-8CAD-1F2A3B4C5D66}",
+    "product_hint": "python launcher",
+    "publisher": "Python Software Foundation",
+    "registry_key": "{3c4d5e6f-7081-4a9b-8cad-1f2a3b4c5d66}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "python"
+   },
+   "name": "Python Launcher",
+   "purl": "pkg:generic/python/Python%20Launcher@3.12.4150.0",
+   "source_path": "HKLM\\...\\Uninstall\\{3c4d5e6f-7081-4a9b-8cad-1f2a3b4c5d66}",
+   "vendor": null,
+   "version": "3.12.4150.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Python 3.12.4 (64-bit)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Python312",
+    "msi_product_code": "{7D1C0A52-9A1F-4A5E-A1C8-6B4A6A3F2C33}",
+    "product_hint": "python",
+    "publisher": "Python Software Foundation",
+    "registry_key": "{7d1c0a52-9a1f-4a5e-a1c8-6b4a6a3f2c33}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "python"
+   },
+   "name": "Python",
+   "purl": "pkg:generic/python/Python@3.12.4",
+   "source_path": "HKLM\\...\\Uninstall\\{7d1c0a52-9a1f-4a5e-a1c8-6b4a6a3f2c33}",
+   "vendor": null,
+   "version": "3.12.4"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "64bit",
+    "homepage": "https://www.7-zip.org/",
+    "product_hint": "7zip",
+    "scoop_bucket": "main",
+    "source": "scoop",
+    "user": "alice"
+   },
+   "name": "7zip",
+   "purl": "pkg:generic/scoop/7zip@24.07",
+   "source_path": "C:\\Users\\alice\\scoop",
+   "vendor": null,
+   "version": "24.07"
+  },
+  {
+   "category": "package",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "64bit",
+    "homepage": "https://github.com/BurntSushi/ripgrep",
+    "product_hint": "ripgrep",
+    "scoop_bucket": "main",
+    "source": "scoop",
+    "user": "alice"
+   },
+   "name": "ripgrep",
+   "purl": "pkg:generic/scoop/ripgrep@14.1.0",
+   "source_path": "C:\\Users\\alice\\scoop",
+   "vendor": null,
+   "version": "14.1.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "also_chocolatey": "putty.install",
+    "arch": "x64",
+    "display_name": "PuTTY release 0.81 (64-bit)",
+    "install_date": "20240601",
+    "msi_product_code": "{8F90A1B2-C3D4-4E5F-8A6B-7C8D9E0F1A88}",
+    "product_hint": "putty",
+    "publisher": "Simon Tatham",
+    "registry_key": "{8f90a1b2-c3d4-4e5f-8a6b-7c8d9e0f1a88}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "simon-tatham"
+   },
+   "name": "PuTTY",
+   "purl": "pkg:generic/simon-tatham/PuTTY@0.81.0.0",
+   "source_path": "HKLM\\...\\Uninstall\\{8f90a1b2-c3d4-4e5f-8a6b-7c8d9e0f1a88}",
+   "vendor": null,
+   "version": "0.81.0.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Slack",
+    "install_date": "20240601",
+    "product_hint": "slack",
+    "publisher": "Slack Technologies Inc.",
+    "registry_key": "slack",
+    "scope": "user",
+    "source": "registry-uninstall",
+    "users": [
+     "alice"
+    ],
+    "vendor_hint": "slack-technologies"
+   },
+   "name": "Slack",
+   "purl": "pkg:generic/slack-technologies/Slack@4.38.125",
+   "source_path": "HKU\\...\\Uninstall\\slack",
+   "vendor": null,
+   "version": "4.38.125"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "LibreOffice 24.2.4.2",
+    "install_date": "20240601",
+    "msi_product_code": "{B1C2D3E4-F5A6-4B7C-8D9E-0F1A2B3C4DAA}",
+    "product_hint": "libreoffice",
+    "publisher": "The Document Foundation",
+    "registry_key": "{b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4daa}",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "the-document"
+   },
+   "name": "LibreOffice",
+   "purl": "pkg:generic/the-document/LibreOffice@24.2.4.2",
+   "source_path": "HKLM\\...\\Uninstall\\{b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4daa}",
+   "vendor": null,
+   "version": "24.2.4.2"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "Git",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Git",
+    "product_hint": "git",
+    "publisher": "The Git Development Community",
+    "registry_key": "Git_is1",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "the-git-development-community"
+   },
+   "name": "Git",
+   "purl": "pkg:generic/the-git-development-community/Git@2.45.2",
+   "source_path": "HKLM\\...\\Uninstall\\Git_is1",
+   "vendor": null,
+   "version": "2.45.2"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Wireshark 4.2.5 x64",
+    "install_date": "20240601",
+    "product_hint": "wireshark",
+    "publisher": "The Wireshark developer community, https://www.wireshark.org",
+    "registry_key": "Wireshark",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "the-wireshark-developer-community"
+   },
+   "name": "Wireshark",
+   "purl": "pkg:generic/the-wireshark-developer-community/Wireshark@4.2.5",
+   "source_path": "HKLM\\...\\Uninstall\\Wireshark",
+   "vendor": null,
+   "version": "4.2.5"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "display_name": "VLC media player",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\VideoLAN\\VLC",
+    "product_hint": "vlc media player",
+    "publisher": "VideoLAN",
+    "registry_key": "VLC media player",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "videolan"
+   },
+   "name": "VLC media player",
+   "purl": "pkg:generic/videolan/VLC%20media%20player@3.0.20",
+   "source_path": "HKLM\\...\\Uninstall\\VLC media player",
+   "vendor": null,
+   "version": "3.0.20"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "WinRAR 7.01 (64-bit)",
+    "install_date": "20240601",
+    "product_hint": "winrar",
+    "publisher": "win.rar GmbH",
+    "registry_key": "WinRAR archiver",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "win-rar"
+   },
+   "name": "WinRAR",
+   "purl": "pkg:generic/win-rar/WinRAR@7.01.0",
+   "source_path": "HKLM\\...\\Uninstall\\WinRAR archiver",
+   "vendor": null,
+   "version": "7.01.0"
+  },
+  {
+   "category": "application",
+   "cpe": null,
+   "ecosystem": null,
+   "meta": {
+    "arch": "x64",
+    "display_name": "Zoom Workplace (64-bit)",
+    "install_date": "20240601",
+    "install_location": "C:\\Program Files\\Zoom\\bin",
+    "product_hint": "zoom workplace",
+    "publisher": "Zoom Video Communications, Inc.",
+    "registry_key": "ZoomUMX",
+    "scope": "machine",
+    "source": "registry-uninstall",
+    "vendor_hint": "zoom-video-communications"
+   },
+   "name": "Zoom Workplace",
+   "purl": "pkg:generic/zoom-video-communications/Zoom%20Workplace@6.0.11",
+   "source_path": "HKLM\\...\\Uninstall\\ZoomUMX",
+   "vendor": null,
+   "version": "6.0.11"
+  }
+ ],
+ "end": {
+  "components": 42,
+  "partial": false,
+  "partial_reason": null,
+  "warnings": 1
+ },
+ "warnings": [
+  "user hive of bob not loaded: per-user installs not inventoried"
+ ]
+}

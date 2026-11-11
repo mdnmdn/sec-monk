@@ -1,0 +1,7 @@
+{
+ "result": {
+  "targets": [
+   "<fixtures>/lang/go"
+  ]
+ }
+}
