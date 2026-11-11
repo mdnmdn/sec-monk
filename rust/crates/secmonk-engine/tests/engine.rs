@@ -374,6 +374,15 @@ async fn harness_with(
     scripts: &[(&str, Script)],
     tweak: impl FnOnce(&mut EngineConfig),
 ) -> Harness {
+    harness_full(scripts, tweak, |_| Vec::new()).await
+}
+
+/// The harness with `extra(store)` sources ahead of the fake one (native sources over the harness's mirror).
+async fn harness_full(
+    scripts: &[(&str, Script)],
+    tweak: impl FnOnce(&mut EngineConfig),
+    extra: impl FnOnce(Arc<SqliteStore>) -> Vec<Arc<dyn Source>>,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let state_db = dir.path().join("db/state.sqlite3");
     let store = Arc::new(
@@ -400,7 +409,11 @@ async fn harness_with(
         mirror: store.clone(),
         steps: steps.clone(),
         procmon: None,
-        sources: vec![source.clone()],
+        sources: {
+            let mut v = extra(store.clone());
+            v.push(source.clone());
+            v
+        },
         probe: Arc::new(FakeProbe {
             calls: Mutex::new(Vec::new()),
         }),
@@ -1325,5 +1338,409 @@ async fn payloads_follow_the_contracts() {
     meta["bind"] = json!("127.0.0.1:0");
     meta["actions"] = json!(true);
     cases.push(("api/meta.schema.json", meta));
+    check_contracts(&cases);
+}
+
+// ------------------------------------------------------------------------------------------------ native kev (ADR-0011)
+
+fn kev_fixture() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../tests/fixtures/sources/kev/known_exploited_vulnerabilities.json")
+}
+
+/// The fixture with `keep` of its entries (in order) and another catalog version, written to `dir`.
+fn kev_variant(dir: &Path, name: &str, keep: usize, version: &str) -> PathBuf {
+    let mut doc: Value = serde_json::from_slice(&std::fs::read(kev_fixture()).unwrap()).unwrap();
+    let v = doc["vulnerabilities"].as_array_mut().unwrap();
+    v.truncate(keep);
+    doc["count"] = json!(keep);
+    doc["catalogVersion"] = json!(version);
+    let p = dir.join(name);
+    std::fs::write(&p, serde_json::to_vec(&doc).unwrap()).unwrap();
+    p
+}
+
+fn native_kev(
+    limits: Option<secmonk_sources::batch::Limits>,
+) -> impl FnOnce(Arc<SqliteStore>) -> Vec<Arc<dyn Source>> {
+    move |store| {
+        let view = Arc::new(secmonk_engine::StoreMirrorView::new(store));
+        let mut kev = secmonk_sources::kev::KevSource::new(view);
+        if let Some(l) = limits {
+            kev = kev.with_limits(l);
+        }
+        vec![Arc::new(kev) as Arc<dyn Source>]
+    }
+}
+
+async fn kev_keys(store: &SqliteStore) -> Vec<String> {
+    store
+        .row_keys(secmonk_model::MirrorTable::Kev, "kev")
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|k| k["cve_id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+async fn sync_kev(h: &Harness, path: &Path, extra: Value) -> Value {
+    let mut b = json!({"kind": "sync", "sources": ["kev"], "path": path.display().to_string()});
+    for (k, v) in extra.as_object().unwrap() {
+        b[k] = v.clone();
+    }
+    run_job(&h.engine, b).await
+}
+
+#[tokio::test]
+async fn native_kev_syncs_through_the_engine_without_ack_or_export() {
+    let h = harness_full(&[], |_| {}, native_kev(None)).await;
+    let fixture = kev_fixture();
+    let job = sync_kev(&h, &fixture, json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    let entry = &job["result"]["sources"][0];
+    assert_eq!(entry["records"], 9, "{entry}");
+    assert_eq!(kev_keys(&h.store).await.len(), 9);
+    let mirror: &dyn MirrorStore = &*h.store;
+    assert_eq!(
+        mirror
+            .count_rows(secmonk_model::MirrorTable::RawRecord, "kev")
+            .await
+            .unwrap(),
+        9
+    );
+    let st = h.store.applied_state("kev").await.unwrap().unwrap();
+    assert_eq!(
+        (st.seq, st.generation.as_deref()),
+        (1, Some(secmonk_traits::NATIVE_GENERATION))
+    );
+    let sync = h.store.sync_state("kev").await.unwrap().unwrap();
+    assert_eq!(sync.cursor.as_deref(), Some("2026.11.06"));
+    assert_eq!(sync.records, Some(9));
+    assert!(
+        h.source.acks.lock().unwrap().is_empty(),
+        "the fake py-sources is never asked"
+    );
+
+    // the same feed again: the seqs continue, nothing changes
+    let job = sync_kev(&h, &fixture, json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert_eq!(h.store.applied_seq("kev").await.unwrap(), Some(2));
+    assert_eq!(kev_keys(&h.store).await.len(), 9);
+
+    // an update: 6 of 9 entries remain; the 3 others are deleted (their raw records stay, as in Python)
+    let d = tempfile::tempdir().unwrap();
+    let six = kev_variant(d.path(), "six.json", 6, "2026.11.10");
+    let job = sync_kev(&h, &six, json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert_eq!(kev_keys(&h.store).await.len(), 6);
+    assert_eq!(
+        mirror
+            .count_rows(secmonk_model::MirrorTable::RawRecord, "kev")
+            .await
+            .unwrap(),
+        9
+    );
+    let sync = h.store.sync_state("kev").await.unwrap().unwrap();
+    assert_eq!(sync.cursor.as_deref(), Some("2026.11.10"));
+
+    // under half of the stored rows: refused, the rows and the last good totals stay
+    let two = kev_variant(d.path(), "two.json", 2, "2026.11.11");
+    let job = sync_kev(&h, &two, json!({})).await;
+    assert_eq!(job["status"], "error", "{job:#}");
+    assert_eq!(kev_keys(&h.store).await.len(), 6);
+    let sync = h.store.sync_state("kev").await.unwrap().unwrap();
+    assert_eq!(sync.status.as_deref(), Some("error"));
+    assert_eq!(
+        (sync.records, sync.cursor.as_deref()),
+        (Some(6), Some("2026.11.10"))
+    );
+    // forced
+    let job = sync_kev(&h, &two, json!({"full": true})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert_eq!(kev_keys(&h.store).await.len(), 2);
+}
+
+#[tokio::test]
+async fn native_kev_resets_a_staging_applied_state_and_converges_after_a_partial_stream() {
+    // the mirror holds what py-sources applied: a staging generation, a row that is not in the feed
+    let h = harness_full(
+        &[],
+        |_| {},
+        native_kev(Some(secmonk_sources::batch::Limits {
+            ops: 4,
+            bytes: 1 << 20,
+        })),
+    )
+    .await;
+    let stale = gbatch(
+        "kev",
+        5,
+        GEN_A,
+        0,
+        json!([kev_row("CVE-2000-0001"), sync_row("kev", "ok")]),
+    );
+    assert!(!h.store.apply_rows(&stale).await.unwrap().needs_repair);
+    let job = sync_kev(&h, &kev_fixture(), json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert!(
+        log_of(&job)
+            .iter()
+            .any(|l| l.ends_with(&format!(
+                "kev: native importer: applied state of generation {GEN_A} (seq 5) reset; full sync against the mirror"
+            ))),
+        "{job:#}"
+    );
+    let keys = kev_keys(&h.store).await;
+    assert_eq!(keys.len(), 9);
+    assert!(!keys.contains(&"CVE-2000-0001".to_owned()));
+    let st = h.store.applied_state("kev").await.unwrap().unwrap();
+    assert_eq!(
+        st.generation.as_deref(),
+        Some(secmonk_traits::NATIVE_GENERATION)
+    );
+    assert_eq!(st.seq, 5, "19 ops in batches of 4");
+
+    // a host that stopped mid-stream: two batches of an update applied, the rest lost (no ack, no log to replay)
+    let d = tempfile::tempdir().unwrap();
+    let six = kev_variant(d.path(), "six.json", 6, "2026.11.10");
+    let src = native_kev(Some(secmonk_sources::batch::Limits {
+        ops: 4,
+        bytes: 1 << 20,
+    }))(h.store.clone())
+    .remove(0);
+    let params: SyncParams = serde_json::from_value(
+        json!({"source": "kev", "options": {"path": six.display().to_string()}}),
+    )
+    .unwrap();
+    let mut stream = src.sync(params, CallCtx::default()).await.unwrap();
+    for _ in 0..2 {
+        let StreamMsg::Item(b) = stream.next().await.unwrap().unwrap() else {
+            panic!("a batch expected");
+        };
+        assert!(!h.store.apply_rows(&b).await.unwrap().skipped);
+    }
+    drop(stream);
+    assert_eq!(kev_keys(&h.store).await.len(), 6, "the deletes came first");
+    assert_ne!(
+        h.store
+            .sync_state("kev")
+            .await
+            .unwrap()
+            .unwrap()
+            .cursor
+            .as_deref(),
+        Some("2026.11.10"),
+        "the status row comes last"
+    );
+    // the next sync is the repair: computed against the mirror as it is
+    let job = sync_kev(&h, &six, json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert_eq!(kev_keys(&h.store).await.len(), 6);
+    let sync = h.store.sync_state("kev").await.unwrap().unwrap();
+    assert_eq!(
+        (sync.records, sync.cursor.as_deref()),
+        (Some(6), Some("2026.11.10"))
+    );
+    assert!(h.source.acks.lock().unwrap().is_empty());
+}
+
+/// A view that forgets the applied state: the source numbers from 1 again, as if another writer had advanced the
+/// applied state between its read and the apply.
+struct ForgetfulView(secmonk_engine::StoreMirrorView);
+
+#[async_trait]
+impl secmonk_traits::MirrorView for ForgetfulView {
+    async fn applied(&self, _: &str) -> StepResult<Option<secmonk_traits::AppliedMark>> {
+        Ok(None)
+    }
+    async fn count_rows(&self, t: secmonk_model::MirrorTable, s: &str) -> StepResult<u64> {
+        self.0.count_rows(t, s).await
+    }
+    async fn row_keys(
+        &self,
+        t: secmonk_model::MirrorTable,
+        s: &str,
+    ) -> StepResult<Vec<Map<String, Value>>> {
+        self.0.row_keys(t, s).await
+    }
+}
+
+#[tokio::test]
+async fn a_native_batch_the_store_skips_is_an_error() {
+    let h = harness_full(
+        &[],
+        |_| {},
+        |store| {
+            let view = ForgetfulView(secmonk_engine::StoreMirrorView::new(store));
+            vec![Arc::new(secmonk_sources::kev::KevSource::new(Arc::new(view))) as Arc<dyn Source>]
+        },
+    )
+    .await;
+    let job = sync_kev(&h, &kev_fixture(), json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    // the second run streams seq 1 again: the store skips it, the engine must not report success
+    let job = sync_kev(&h, &kev_fixture(), json!({})).await;
+    let entry = &job["result"]["sources"][0];
+    assert_eq!(entry["status"], "error", "{job:#}");
+    assert!(
+        entry["message"]
+            .as_str()
+            .unwrap()
+            .contains("batch(es) skipped by the mirror store"),
+        "{entry}"
+    );
+}
+
+/// Another engine over the harness's store and steps with only the fake (staging-style) source: the same mirror
+/// switched back to `py-sources`.
+fn python_engine(h: &Harness) -> Arc<SecmonkEngine> {
+    let mut config = EngineConfig::new("0.0.0-test", h.store.state_path());
+    config.nvd_api_key_env = Some("SECMONK_TEST_NVD_KEY_UNSET".into());
+    SecmonkEngine::new(EngineDeps {
+        config,
+        state: h.store.clone(),
+        mirror: h.store.clone(),
+        steps: h.steps.clone(),
+        procmon: None,
+        sources: vec![h.source.clone()],
+        probe: Arc::new(FakeProbe {
+            calls: Mutex::new(Vec::new()),
+        }),
+        modules: None,
+    })
+}
+
+#[tokio::test]
+async fn a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back() {
+    // review W6.5 M1: staging is stale after a native era; only an ok run may repair from its export
+    let h = harness_full(&[], |_| {}, native_kev(None)).await;
+    let job = sync_kev(&h, &kev_fixture(), json!({})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    let py = python_engine(&h);
+    // the stale staging export: one old row
+    h.source.export(
+        "kev",
+        Export::Batches(
+            vec![gbatch(
+                "kev",
+                1,
+                GEN_A,
+                3,
+                json!([kev_row("CVE-2000-0001"), sync_row("kev", "ok")]),
+            )],
+            7,
+            GEN_A,
+        ),
+    );
+    for status in ["error", "partial"] {
+        // what py-sources streams after a failed / limited run: its staging generation, at least the status row
+        h.source.script(
+            "kev",
+            Script::Batches(
+                vec![gbatch("kev", 7, GEN_A, 3, json!([sync_row("kev", status)]))],
+                status,
+            ),
+        );
+        let job = run_job(&py, json!({"kind": "sync", "sources": ["kev"]})).await;
+        let entry = &job["result"]["sources"][0];
+        assert_eq!(entry["status"], "error", "{status}: {job:#}");
+        assert_eq!(entry["records"], 0, "{status}");
+        let msg = entry["message"].as_str().unwrap();
+        assert!(
+            msg == format!(
+                "{status}: half of it; not applied: mirror keeps the native importer data until a successful \
+                 py-sources sync"
+            ),
+            "{msg}"
+        );
+        assert!(
+            !log_of(&job).iter().any(|l| l.contains("repaired")),
+            "{job:#}"
+        );
+        assert_eq!(
+            kev_keys(&h.store).await.len(),
+            9,
+            "{status}: the mirror is unchanged"
+        );
+        assert_eq!(status_of(&h.store, "kev").await.as_deref(), Some("ok"));
+        let st = h.store.applied_state("kev").await.unwrap().unwrap();
+        assert_eq!(
+            (st.seq, st.generation.as_deref()),
+            (1, Some(secmonk_traits::NATIVE_GENERATION)),
+            "{status}: the native applied state stays"
+        );
+        assert!(
+            h.source.acks.lock().unwrap().is_empty(),
+            "nothing acknowledged"
+        );
+    }
+    // an ok run repairs the source from the staging export
+    h.source.script(
+        "kev",
+        Script::Batches(
+            vec![gbatch("kev", 7, GEN_A, 3, json!([sync_row("kev", "ok")]))],
+            "ok",
+        ),
+    );
+    let job = run_job(&py, json!({"kind": "sync", "sources": ["kev"]})).await;
+    assert_eq!(job["status"], "ok", "{job:#}");
+    assert!(
+        log_of(&job)
+            .iter()
+            .any(|l| l.ends_with(
+                "kev: repair from py-sources export: the last applied batches came from the native importer"
+            )),
+        "{job:#}"
+    );
+    assert_eq!(kev_keys(&h.store).await, vec!["CVE-2000-0001".to_owned()]);
+    let st = h.store.applied_state("kev").await.unwrap().unwrap();
+    assert_eq!((st.seq, st.generation.as_deref()), (7, Some(GEN_A)));
+    py.shutdown().await;
+}
+
+#[tokio::test]
+async fn native_kev_batches_follow_the_row_contract() {
+    // review W6.5 L2: every native batch and end validates against rust/contracts (source/rows, source/sync-end)
+    let h = harness(&[]).await;
+    let src = native_kev(Some(secmonk_sources::batch::Limits {
+        ops: 7,
+        bytes: 1 << 20,
+    }))(h.store.clone())
+    .remove(0);
+    let d = tempfile::tempdir().unwrap();
+    let six = kev_variant(d.path(), "six.json", 6, "2026.11.10");
+    let bad = d.path().join("bad.json");
+    std::fs::write(&bad, r#"{"vulnerabilities": [{"product": "x"}]}"#).unwrap();
+    let mut cases: Vec<(&str, Value)> = Vec::new();
+    for (path, options) in [
+        (kev_fixture(), json!({})),
+        (six.clone(), json!({})),             // deletes
+        (kev_fixture(), json!({"limit": 3})), // partial
+        (bad.clone(), json!({})),             // error: only the status row
+    ] {
+        let mut o = options;
+        o["path"] = json!(path.display().to_string());
+        let params: SyncParams =
+            serde_json::from_value(json!({"source": "kev", "options": o})).unwrap();
+        let mut stream = src.sync(params, CallCtx::default()).await.unwrap();
+        while let Some(m) = stream.next().await {
+            match m.unwrap() {
+                StreamMsg::Item(b) => {
+                    assert!(!h.store.apply_rows(&b).await.unwrap().skipped);
+                    cases.push(("source/rows.schema.json", serde_json::to_value(&b).unwrap()));
+                }
+                StreamMsg::End(e) => cases.push((
+                    "source/sync-end.schema.json",
+                    serde_json::to_value(&e).unwrap(),
+                )),
+            }
+        }
+    }
+    let deletes = cases
+        .iter()
+        .filter(|(_, v)| v.to_string().contains(r#""op":"delete""#))
+        .count();
+    assert!(deletes > 0, "a delete batch is among the cases");
+    assert!(cases.len() >= 8);
     check_contracts(&cases);
 }

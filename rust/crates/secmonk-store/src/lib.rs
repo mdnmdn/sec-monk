@@ -13,7 +13,9 @@
 //! pool (`SqliteStore::read_pool`). Postgres/MySQL backends implement the same traits.
 
 use async_trait::async_trait;
-use secmonk_model::{BasedOn, Finding, Inventory, JobFinish, JobKind, JobRow, NewJob, RowsBatch};
+use secmonk_model::{
+    BasedOn, Finding, Inventory, JobFinish, JobKind, JobRow, MirrorTable, NewJob, RowsBatch,
+};
 use serde_json::{Map, Value};
 
 pub mod jobs;
@@ -233,6 +235,18 @@ pub trait MirrorStore: Send + Sync {
 
     /// A source's sync state.
     async fn sync_state(&self, source: &str) -> StoreResult<Option<SyncState>>;
+
+    /// Number of rows of `table` whose `source` column is `source` (the snapshot guard of a native source,
+    /// rust ADR-0011).
+    async fn count_rows(&self, table: MirrorTable, source: &str) -> StoreResult<u64>;
+
+    /// Primary keys (column -> text value) of the rows of `table` whose `source` column is `source`, in key order.
+    /// `affected` has no natural key: `Invalid`. Used by native sources to compute their deletes (rust ADR-0011).
+    async fn row_keys(
+        &self,
+        table: MirrorTable,
+        source: &str,
+    ) -> StoreResult<Vec<Map<String, Value>>>;
 
     /// Whether any row was ever written.
     async fn is_initialized(&self) -> StoreResult<bool>;

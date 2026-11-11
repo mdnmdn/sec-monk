@@ -314,3 +314,23 @@ fn windows_verbatim_prefix_is_stripped() {
     assert!(!c.data_dir.to_string_lossy().starts_with(r"\\?\"));
     assert!(!c.state_url.contains('?') && !c.state_url.contains('\\'));
 }
+
+#[test]
+fn source_implementations_default_and_override() {
+    let d = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(d.path().join("cwd")).unwrap();
+    let p = PathBuf::from("x.toml");
+    let load = |text: &str| {
+        let raw = parse(text, &p).unwrap();
+        resolve(raw, ConfigOrigin::Flag, None, &opts(d.path()))
+    };
+    let c = load("config_version = 1\n").unwrap();
+    assert_eq!(c.source_impl("kev"), SourceImpl::Rust); // DEFAULT_RUST_SOURCES
+    assert_eq!(c.source_impl("osv"), SourceImpl::Python);
+    let c = load("[sources.implementation]\nkev = \"python\"\nosv = \"rust\"\n").unwrap();
+    assert_eq!(c.source_impl("kev"), SourceImpl::Python);
+    assert_eq!(c.source_impl("osv"), SourceImpl::Rust); // the host refuses it: no Rust osv
+    assert!(parse("[sources.implementation]\nkev = \"go\"\n", &p).is_err());
+    assert!(parse("[sources]\nimplementations = {}\n", &p).is_err());
+    assert!(load("[sources.implementation]\n\"Bad Name\" = \"rust\"\n").is_err());
+}

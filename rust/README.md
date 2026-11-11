@@ -14,7 +14,7 @@ Start here: [`_docs/INDEX.md`](_docs/INDEX.md), then [architecture](_docs/tech/a
 
 ```
 Cargo.toml, deny.toml, crates/, apps/desktop/src-tauri
-                                              Rust workspace (12 crates + the desktop app), dependency bans in deny.toml
+                                              Rust workspace (13 crates + the desktop app), dependency bans in deny.toml
 python/                                       uv project "secmonk-modules": `serve --stdio` adapters
 contracts/                                    JSON Schemas, catalogs, examples (README inside)
 golden/                                       shared golden outputs (conformance, differential tests)
@@ -22,6 +22,10 @@ sec-monk.toml                                 dev config: data_dir = "_data"
 _data/                                        everything written at run time (gitignored)
 _docs/                                        documentation (follows ../_docs/_meta rules)
 ```
+
+Crates worth naming: `secmonk-sources` holds the native (Rust) vulnerability sources. `kev` runs natively by default
+(no Python, no staging copy: [source-kev](_docs/tech/source-kev.md), [ADR-0011](_docs/decisions/0011-native-sources.md));
+`[sources.implementation] kev = "python"` in `sec-monk.toml` switches it back to the Python module.
 
 ## Rules that matter here
 

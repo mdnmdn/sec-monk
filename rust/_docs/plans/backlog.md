@@ -15,7 +15,7 @@ related: [tech/architecture.md, tech/component-lifecycle.md, decisions/0002-rust
 # Backlog beyond the prototype
 
 Order follows the proposal §15 and [architecture § 9](../tech/architecture.md#9-prototype-boundary-and-migration-order).
-Every port follows the [standard process](../tech/component-lifecycle.md) (golden → differential → flip).
+Every port follows the [standard process](../tech/component-lifecycle.md) (golden → differential → config selects Rust).
 
 ## 1. Engine core to Rust (first)
 
@@ -41,7 +41,8 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 ## 3. Sources
 
 - [ ] Native row emitters per source (no staging copy); drop the staging adapter
-      ([rust ADR-0010](../decisions/0010-source-staging-adapter.md)). Sources may stay Python for good.
+      ([rust ADR-0010](../decisions/0010-source-staging-adapter.md)). Sources may stay Python for good. **Partly done.**
+  - 2026-11-11: kev native (rust ADR-0011); others still on staging.
 - [ ] Seed the staging database and the v3 mirror from an existing Python `secmonk.db` (skip the first full sync).
 - [ ] Measure row-stream throughput on a full OSV + CVE List sync (millions of row ops over JSON stdio, staging copy included; not
       measured, only the `kev` fixture ran end to end); add a compressed codec if needed.
@@ -93,3 +94,11 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 - [ ] **A well-known config for general settings.** Shared defaults (for example the module list, uv pin, UI options),
       separate from the per-instance `sec-monk.toml`, with a defined merge order and the same ownership checks.
 - [ ] **cargo-deny is unrun** (not installed on the dev machine): run `cargo deny check bans` in CI.
+- [ ] **Retire the `py-sources` kev path** one release after the native kev source ([ADR-0011](../decisions/0011-native-sources.md)).
+- [ ] **Next source port: cursors through `MirrorView`.** Define how a delta source with cursors reads its cursor through
+      the read-only `MirrorView` ([source-kev](../tech/source-kev.md) is the example for the snapshot case).
+- [ ] Optional: list the native sources in `/api/meta` `engine.modules`.
+- [ ] **CI runs the real-module tests.** Run `SECMONK_REQUIRE_VENV=1 cargo test --workspace` in CI and release checks, so the
+      differential tests (native kev vs py-sources) fail instead of skipping when `rust/python/.venv` is missing.
+- [ ] **`--path` FIFO swap.** A file swapped for a FIFO between the metadata check and the open can still block the native
+      feed reader; close it with an `O_NONBLOCK` open (e.g. `rustix`) ([source-kev](../tech/source-kev.md)).

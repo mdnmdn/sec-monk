@@ -23,8 +23,8 @@ use futures_core::Stream;
 use serde_json::Value;
 
 pub use secmonk_model::{
-    CollectEnd, CollectItem, CollectParams, Component, Inventory, MatchParams, MatchResult,
-    RowsBatch, SyncEnd, SyncParams,
+    CollectEnd, CollectItem, CollectParams, Component, Inventory, JsonMap, MatchParams,
+    MatchResult, MirrorTable, RowsBatch, SyncEnd, SyncParams,
 };
 pub use secmonk_proto::{CollectorInfo, ErrorCode, SourceInfo, WireError};
 
@@ -157,6 +157,45 @@ pub trait Source: Send + Sync {
         source: &str,
         ctx: CallCtx,
     ) -> StepResult<ResultStream<RowsBatch, Value>>;
+
+    /// Whether this implementation is a **native importer** (rust ADR-0011): it computes its batches against the
+    /// mirror itself (through a [`MirrorView`]) instead of replaying a change log, so it has nothing to acknowledge or
+    /// export. Its batches carry [`NATIVE_GENERATION`] and no `acked_through`; before the stream the host resets an
+    /// applied state of another generation, and it never repairs the source from [`Source::export`]: the next sync
+    /// is the repair.
+    fn native(&self) -> bool {
+        false
+    }
+}
+
+/// The `generation` of every batch of a native importer (rust ADR-0011). The applied state of a source synced by
+/// the native importer carries it, so a later batch of a staging module (`py-sources`) has another generation and
+/// the host repairs the source from that module's export (rust ADR-0010).
+pub const NATIVE_GENERATION: &str = "native-rust";
+
+/// The applied state of a source, as a native source reads it (`source_applied`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppliedMark {
+    /// Last applied batch seq.
+    pub seq: u64,
+    /// Generation of that seq.
+    pub generation: Option<String>,
+}
+
+/// Read-only view of the mirror for native sources (rust ADR-0011): the previous state a source needs to compute
+/// its row operations (the snapshot guard's row count, the keys to delete, the seq to continue from). Implemented by
+/// the engine over its `MirrorStore`; a source never gets a database handle and never writes through this.
+#[async_trait]
+pub trait MirrorView: Send + Sync {
+    /// The source's applied state, if any.
+    async fn applied(&self, source: &str) -> StepResult<Option<AppliedMark>>;
+
+    /// Rows of `table` whose `source` column is `source`.
+    async fn count_rows(&self, table: MirrorTable, source: &str) -> StepResult<u64>;
+
+    /// Primary keys (column -> value) of the rows of `table` whose `source` column is `source`. Tables with a natural
+    /// key only (not `affected`).
+    async fn row_keys(&self, table: MirrorTable, source: &str) -> StepResult<Vec<JsonMap>>;
 }
 
 /// `engine.classify`: identity (CPE, vendor, product, ecosystem) for unclassified components.

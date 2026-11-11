@@ -58,6 +58,11 @@ min_confidence = 0.5
 [sources]
 nvd_api_key_env = "NVD_API_KEY"
 
+# Which implementation syncs a source: "rust" (native, secmonk-sources) or "python" (py-sources). kev defaults to
+# "rust" (differential test green, rust ADR-0011); every other source is "python".
+# [sources.implementation]
+# kev = "python"
+
 [log]
 level = "info"
 keep_days = 7

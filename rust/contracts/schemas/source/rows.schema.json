@@ -439,7 +439,7 @@
     "generation": {
       "type": "string",
       "pattern": "^[A-Za-z0-9_-]{8,64}$",
-      "description": "Identity of the module's staging database (random, persisted; new when the file is recreated). Seqs compare only within one generation: the host never skips a batch of another generation and repairs from source.export instead. Optional: a module without staging omits it."
+      "description": "Identity of the module's staging database (random, persisted; new when the file is recreated). Seqs compare only within one generation: the host never skips a batch of another generation and repairs from source.export instead. Optional: a module without staging omits it. A native source (rust ADR-0011) sends \"native-rust\" and no acked_through."
     },
     "acked_through": {
       "type": "integer",

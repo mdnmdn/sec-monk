@@ -11,6 +11,9 @@
 //! store transaction (delete the source's rows, apply the export, record the export's high-water mark and
 //! generation), then acknowledged through that mark.
 //!
+//! **Native importers** (rust ADR-0011, `Source::native`): batches computed against the mirror through a read-only
+//! `MirrorView`, under `NATIVE_GENERATION`; no ack, no export repair (see `sync_native`).
+//!
 //! One failing source never stops the others: its entry gets status `error` (as `ops.sync_source` does).
 
 use std::sync::Arc;
@@ -19,7 +22,7 @@ use std::time::Instant;
 use futures_util::StreamExt;
 use secmonk_model::{JobStatus, RowsBatch, SyncOptions, SyncParams, SyncSecrets};
 use secmonk_store::AppliedState;
-use secmonk_traits::{CallCtx, ProgressUpdate, Source, StreamMsg};
+use secmonk_traits::{CallCtx, NATIVE_GENERATION, ProgressUpdate, Source, StreamMsg};
 use serde_json::{Value, json};
 
 use crate::engine::{Inner, store_err};
@@ -166,6 +169,9 @@ impl Inner {
             Ok(a) => a,
             Err(e) => return out.error(store_err(e).message),
         };
+        if src.native() {
+            return self.sync_native(job, src, params, ctx, before).await;
+        }
         let streamed = self
             .stream_into_mirror(src, params, ctx, before.as_ref(), &mut out)
             .await;
@@ -178,6 +184,31 @@ impl Inner {
             if let Err(e) = streamed {
                 // no repair on a broken stream: nothing was acknowledged, the next sync decides again
                 return out.error(e.message);
+            }
+            if out.status != "ok" && is_native(before.as_ref()) {
+                // The mirror holds rows of the native importer that are newer than the module's staging database.
+                // Staging is complete only after an ok sync: a failed run left it at its state before the switch to
+                // the native importer, a limited run upserted a subset. The mirror and the native applied state stay;
+                // nothing is acknowledged; the next ok sync repairs from the staging export.
+                let status = out.status.clone();
+                let message = match out.message.as_deref() {
+                    Some(m) if !m.is_empty() => format!("{status}: {m}"),
+                    _ => status.clone(),
+                };
+                let message = format!(
+                    "{message}; not applied: mirror keeps the native importer data until a successful py-sources sync"
+                );
+                job.say(format!(
+                    "{name}: {message} ({} batch(es) drained)",
+                    out.drained
+                ));
+                out.records = 0;
+                return out.error(message);
+            }
+            if is_native(before.as_ref()) {
+                job.say(format!(
+                    "{name}: repair from py-sources export: the last applied batches came from the native importer"
+                ));
             }
             if out.drained > 0 {
                 job.say(format!(
@@ -216,6 +247,56 @@ impl Inner {
             job.say(format!(
                 "{name}: could not acknowledge the applied batches (they will be replayed and skipped): {}",
                 e.error
+            ));
+        }
+        match streamed {
+            Ok(()) => out,
+            Err(e) => out.error(e.message),
+        }
+    }
+
+    /// A native importer (rust ADR-0011) computed its batches against the mirror itself: there is no change log, so
+    /// no replay, no ack and no export repair (the next sync is the repair). When the source's applied state has
+    /// another generation (written by `py-sources`), it is reset first, so the native seqs start at 1 under
+    /// [`NATIVE_GENERATION`]; a later `py-sources` batch has another generation again and is repaired from the staging
+    /// export. A batch the store skips or refuses is an error: no batch of a native stream may be dropped.
+    async fn sync_native(
+        &self,
+        job: &Arc<Job>,
+        src: &Arc<dyn Source>,
+        params: SyncParams,
+        ctx: CallCtx,
+        mut before: Option<AppliedState>,
+    ) -> Outcome {
+        let name = params.source.clone();
+        let mut out = Outcome::default();
+        if let Some(a) = before
+            .as_ref()
+            .filter(|a| a.generation.as_deref() != Some(NATIVE_GENERATION))
+        {
+            if let Err(e) = self.deps.mirror.reset_applied_seq(&name).await {
+                return out.error(store_err(e).message);
+            }
+            job.say(format!(
+                "{name}: native importer: applied state of generation {} (seq {}) reset; full sync against the mirror",
+                a.generation.as_deref().unwrap_or("none"),
+                a.seq
+            ));
+            before = None;
+        }
+        let streamed = self
+            .stream_into_mirror(src, params, ctx, before.as_ref(), &mut out)
+            .await;
+        if let Some(reason) = out.repair.take() {
+            return out.error(format!(
+                "native importer: batch refused by the mirror store ({reason}); run the sync again"
+            ));
+        }
+        if out.skipped > 0 {
+            let skipped = out.skipped;
+            return out.error(format!(
+                "native importer: {skipped} batch(es) skipped by the mirror store (seq at or below the applied seq: \
+                 another writer changed the applied state during the sync); run the sync again"
             ));
         }
         match streamed {
@@ -377,10 +458,18 @@ fn check_batch(name: &str, batch: &RowsBatch, last_seq: Option<u64>) -> EngineRe
     Ok(())
 }
 
+/// The applied state was written by a native source (rust ADR-0011).
+fn is_native(before: Option<&AppliedState>) -> bool {
+    before.is_some_and(|a| a.generation.as_deref() == Some(NATIVE_GENERATION))
+}
+
 /// Why the store refused to compare a batch with the mirror (for the job log).
 fn repair_reason(before: Option<&AppliedState>, batch: &RowsBatch) -> String {
     let acked = batch.acked_through.unwrap_or(0);
     match before {
+        Some(a) if is_native(Some(a)) => {
+            "the last applied batches came from the native importer (generation native-rust)".into()
+        }
         Some(a) if a.generation.is_some() && a.generation != batch.generation => {
             "the staging database was recreated (another generation)".into()
         }

@@ -58,3 +58,5 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
       macOS and that the filesystem audit lists only `~/Library/WebKit/<id>` and `~/Library/Caches/<id>` outside `data_dir`.
 - [ ] Quit paths with the composed host: Cmd-Q and the red button both stop the modules (`RunEvent::Exit` runs
       `Service::shutdown`, about 0.2 s observed headless); force quit leaves no Python process.
+- [ ] **Real-network kev sync with the Rust source** (official URL, fallback GitHub mirror, proxy via `HTTPS_PROXY`):
+      unverified on a real machine ([source-kev](../tech/source-kev.md)).

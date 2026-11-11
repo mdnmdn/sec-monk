@@ -25,6 +25,8 @@ secmonk-traits.workspace = true
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "time"] }
 tempfile.workspace = true
 regex.workspace = true
+# the native sources, driven through the engine (tests/engine.rs, tests/real_modules.rs); the engine itself sees traits
+secmonk-sources.workspace = true
 # Only for the gated real-module test (tests/real_modules.rs): the engine itself receives trait objects and never
 # names the module host (architecture.md §2). rust/deny.toml needs `secmonk-engine` as a dev-only wrapper.
 secmonk-modhost.workspace = true

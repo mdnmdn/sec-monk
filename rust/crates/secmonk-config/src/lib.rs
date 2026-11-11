@@ -250,7 +250,23 @@ pub struct EngineSection {
 pub struct SourcesSection {
     /// Environment variable holding the NVD API key.
     pub nvd_api_key_env: Option<String>,
+    /// `[sources.implementation]`: source name -> `rust` | `python` (rust ADR-0011).
+    #[serde(default)]
+    pub implementation: BTreeMap<String, SourceImpl>,
 }
+
+/// Which implementation syncs a source (`[sources.implementation]`, rust ADR-0011).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SourceImpl {
+    /// The native Rust source (`secmonk-sources`), in-process.
+    Rust,
+    /// The Python source of `py-sources` (staging adapter, rust ADR-0010).
+    Python,
+}
+
+/// Sources whose default implementation is `rust` (their differential test against `py-sources` is green).
+pub const DEFAULT_RUST_SOURCES: [&str; 1] = ["kev"];
 
 /// `[log]`.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
@@ -317,6 +333,8 @@ pub struct Config {
     pub min_confidence: f64,
     /// NVD key variable name.
     pub nvd_api_key_env: String,
+    /// `[sources.implementation]` as written (defaults: [`Config::source_impl`]).
+    pub source_impls: BTreeMap<String, SourceImpl>,
     /// Log filter.
     pub log_level: String,
     /// Log files kept.
@@ -461,6 +479,11 @@ pub fn resolve(
             "modules.enabled: invalid module name {bad:?}"
         )));
     }
+    if let Some(bad) = raw.sources.implementation.keys().find(|n| !is_slug(n)) {
+        return Err(ConfigError::Invalid(format!(
+            "sources.implementation: invalid source name {bad:?}"
+        )));
+    }
     for (target, sum) in &raw.uv.sha256 {
         if sum.len() != 64 || !sum.bytes().all(|b| b.is_ascii_hexdigit()) {
             return Err(ConfigError::Invalid(format!(
@@ -516,6 +539,7 @@ pub fn resolve(
             .sources
             .nvd_api_key_env
             .unwrap_or_else(|| "NVD_API_KEY".into()),
+        source_impls: raw.sources.implementation,
         log_level: raw.log.level.unwrap_or_else(|| "info".into()),
         log_keep_days: raw.log.keep_days.unwrap_or(7),
     })
@@ -525,6 +549,18 @@ impl Config {
     /// The `data_dir` layout.
     pub fn layout(&self) -> Layout {
         Layout::new(&self.data_dir)
+    }
+
+    /// The implementation chosen for `source`: the `[sources.implementation]` entry, else `rust` for
+    /// [`DEFAULT_RUST_SOURCES`], else `python`. Whether a Rust implementation exists is the host's check.
+    pub fn source_impl(&self, source: &str) -> SourceImpl {
+        self.source_impls.get(source).copied().unwrap_or(
+            if DEFAULT_RUST_SOURCES.contains(&source) {
+                SourceImpl::Rust
+            } else {
+                SourceImpl::Python
+            },
+        )
     }
 
     /// File path of a `sqlite://` URL (`None` for other schemes).

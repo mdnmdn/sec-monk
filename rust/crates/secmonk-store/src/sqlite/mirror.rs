@@ -399,6 +399,53 @@ impl MirrorStore for SqliteStore {
         .transpose()
     }
 
+    async fn count_rows(&self, table: MirrorTable, source: &str) -> StoreResult<u64> {
+        // table names come from the closed enum, never from input
+        let sql = format!("SELECT COUNT(*) FROM {} WHERE source = ?", table.as_str());
+        let n: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+            .bind(source)
+            .fetch_one(&self.mirror.read)
+            .await?;
+        Ok(u64::try_from(n).unwrap_or(0))
+    }
+
+    async fn row_keys(
+        &self,
+        table: MirrorTable,
+        source: &str,
+    ) -> StoreResult<Vec<Map<String, Value>>> {
+        let t = spec(table);
+        if t.key.is_empty() {
+            return Err(StoreError::Invalid(format!(
+                "{}: no natural key",
+                table.as_str()
+            )));
+        }
+        let cols: Vec<String> = t.key.iter().map(|c| format!("\"{c}\"")).collect();
+        let sql = format!(
+            "SELECT {} FROM {} WHERE source = ? ORDER BY {}",
+            cols.join(", "),
+            table.as_str(),
+            cols.join(", ")
+        );
+        let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(source)
+            .fetch_all(&self.mirror.read)
+            .await?;
+        rows.iter()
+            .map(|r| {
+                t.key
+                    .iter()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        let v: Option<String> = r.try_get(i)?;
+                        Ok(((*c).to_owned(), v.map_or(Value::Null, Value::String)))
+                    })
+                    .collect::<StoreResult<Map<String, Value>>>()
+            })
+            .collect()
+    }
+
     async fn is_initialized(&self) -> StoreResult<bool> {
         is_initialized(&self.mirror.read).await
     }

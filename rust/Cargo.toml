@@ -44,6 +44,7 @@ secmonk-host = { path = "crates/secmonk-host", default-features = false }   # fe
 secmonk-probe = { path = "crates/secmonk-probe" }
 secmonk-engine = { path = "crates/secmonk-engine" }
 secmonk-api = { path = "crates/secmonk-api" }
+secmonk-sources = { path = "crates/secmonk-sources" }
 
 # serialization; preserve_order keeps JSON key order identical to Python's json.dumps of a dict
 serde = { version = "1.0.228", features = ["derive"] }

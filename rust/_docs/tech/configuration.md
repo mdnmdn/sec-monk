@@ -10,7 +10,7 @@ updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs]
 fixtures: rust/crates/secmonk-runtime/tests/fixtures/
-related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, tech/architecture.md, tech/data-model.md]
+related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, decisions/0011-native-sources.md, tech/architecture.md, tech/data-model.md]
 ---
 
 # Configuration
@@ -96,6 +96,7 @@ the host then fails the start ("py-engine is not enabled").
 | `[ui] devtools` | bool, `false` | Webview developer tools; only honoured in debug builds. |
 | `[engine] min_confidence` | float, `0.5` | As `secmonk ui`. |
 | `[sources] nvd_api_key_env` | string, `"NVD_API_KEY"` | Environment variable the host reads; the key travels in `source.sync` `secrets`, never in a module's environment or a log. |
+| `[sources.implementation]` | table source → `"rust"` \| `"python"`; `kev = "rust"`, others `"python"` | Which implementation syncs a source ([rust ADR-0011](../decisions/0011-native-sources.md)). `rust`: the native importer in `secmonk-sources`, listed ahead of `py-sources`; `python`: `py-sources`. A source defaults to `rust` once its differential test against `py-sources` is green (`secmonk_config::DEFAULT_RUST_SOURCES`). Every listed name must be servable as configured, else the start is refused (`ConfigError::Invalid`, as for an unknown key): `rust` needs a Rust implementation, `python` an enabled module whose manifest provides the source, so a misspelled name (`kve`) is refused. An unknown value is a parse error. |
 | `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` wins); log files older than `keep_days` are deleted at start. |
 
 ## Data directory layout

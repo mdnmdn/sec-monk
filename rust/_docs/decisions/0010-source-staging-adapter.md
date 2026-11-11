@@ -8,7 +8,7 @@ status: proposed
 tags: [vuln-source, modules, data-model, decision]
 updated: 2026-11-11
 verified: 2026-11-11
-related: [tech/contracts.md, tech/data-model.md, decisions/0006-python-read-only-db-access.md]
+related: [tech/contracts.md, tech/data-model.md, decisions/0006-python-read-only-db-access.md, decisions/0011-native-sources.md]
 ---
 
 # ADR-0010 — Source row stream and the staging adapter
@@ -75,3 +75,6 @@ and `src/` must not change.
   through `high_water`; this replaces `reset_applied_seq` + plain apply (which duplicated `affected` rows). Mirrors
   written before W4.4 (no generation) repair each source once. Not covered: a staging file restored from an older copy of
   the same generation (its seqs repeat and would be skipped) **(open)**.
+
+**Status note (2026-11-11):** native sources (Rust, no staging, no log, no export; `kev` first) are decided in
+[rust ADR-0011](0011-native-sources.md); this ADR still governs `py-sources`.

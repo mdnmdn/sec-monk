@@ -5,7 +5,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use secmonk_config::Config;
-use secmonk_engine::{EngineConfig, EngineDeps, ModuleInfo, ModuleStatus, SecmonkEngine};
+use secmonk_engine::{
+    EngineConfig, EngineDeps, ModuleInfo, ModuleStatus, SecmonkEngine, StoreMirrorView,
+};
 use secmonk_modhost::adapters::PyEngine;
 use secmonk_modhost::supervisor::{ModuleHandle, ModuleState};
 use secmonk_probe::ProbeService;
@@ -44,6 +46,53 @@ impl ModuleStatus for ModuleStates {
         }
         out
     }
+}
+
+/// The native sources `[sources.implementation]` selects (rust ADR-0011), each over a read-only view of the mirror.
+/// `python_served`: the sources of the enabled Python source modules (their manifests' `provides.sources`). Every
+/// name in `[sources.implementation]` must be servable as configured, else the start is refused (as an unknown config
+/// key is): `rust` needs a Rust implementation, `python` an enabled module serving the name; a misspelled name
+/// (`kve`) matches neither.
+pub(crate) fn native_sources(
+    config: &Config,
+    store: &SqliteStore,
+    python_served: &[String],
+) -> Result<Vec<Arc<dyn Source>>, HostError> {
+    use secmonk_config::{ConfigError, SourceImpl};
+    for (name, imp) in &config.source_impls {
+        let problem = match imp {
+            SourceImpl::Rust if !secmonk_sources::NATIVE_SOURCES.contains(&name.as_str()) => {
+                Some(format!(
+                    "sources.implementation.{name} = \"rust\": there is no Rust implementation of {name} (Rust: {})",
+                    secmonk_sources::NATIVE_SOURCES.join(", ")
+                ))
+            }
+            SourceImpl::Python if !python_served.contains(name) => Some(format!(
+                "sources.implementation.{name} = \"python\": no enabled module serves {name} (Python: {})",
+                if python_served.is_empty() {
+                    "none enabled".to_owned()
+                } else {
+                    python_served.join(", ")
+                }
+            )),
+            _ => None,
+        };
+        if let Some(p) = problem {
+            return Err(HostError::Config(ConfigError::Invalid(p)));
+        }
+    }
+    let view: Arc<dyn secmonk_traits::MirrorView> =
+        Arc::new(StoreMirrorView::new(Arc::new(store.clone())));
+    let mut out = Vec::new();
+    for name in secmonk_sources::NATIVE_SOURCES {
+        if config.source_impl(name) == SourceImpl::Rust
+            && let Some(src) = secmonk_sources::native_source(name, view.clone())
+        {
+            tracing::info!(source = name, "source implementation: rust (native)");
+            out.push(src);
+        }
+    }
+    Ok(out)
 }
 
 pub(crate) struct Parts<'a> {
@@ -121,5 +170,76 @@ mod tests {
         assert!(on.allow_actions);
         assert!(!off.allow_actions);
         assert_eq!(off.data_dir, config.data_dir);
+    }
+
+    async fn store_in(dir: &std::path::Path) -> SqliteStore {
+        SqliteStore::open(
+            &dir.join("state.sqlite3"),
+            &dir.join("mirror.sqlite3"),
+            &secmonk_store::StoreOptions::default(),
+        )
+        .await
+        .unwrap()
+    }
+
+    fn config_with(dir: &std::path::Path, sources: &str) -> Config {
+        std::fs::create_dir_all(dir.join("cwd")).unwrap();
+        let raw = secmonk_config::parse(sources, std::path::Path::new("x.toml")).unwrap();
+        secmonk_config::resolve(
+            raw,
+            secmonk_config::ConfigOrigin::Flag,
+            None,
+            &secmonk_config::LoadOptions {
+                cwd: dir.join("cwd"),
+                home: Some(dir.join("home")),
+                user_config_root: Some(dir.join("cfgroot")),
+                user_data_root: Some(dir.join("dataroot")),
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn the_configuration_selects_the_native_sources() {
+        let d = tempfile::tempdir().unwrap();
+        let store = store_in(d.path()).await;
+        let names = |v: &[Arc<dyn Source>]| -> Vec<String> {
+            v.iter().flat_map(|s| s.sources()).map(|i| i.name).collect()
+        };
+        // default: kev is native
+        let served: Vec<String> = ["epss", "kev", "osv"]
+            .iter()
+            .map(|n| (*n).to_owned())
+            .collect();
+        let native = native_sources(&config_with(d.path(), ""), &store, &served).unwrap();
+        assert_eq!(names(&native), vec!["kev"]);
+        assert!(native[0].native());
+        // python: nothing native (py-sources serves kev)
+        let c = config_with(d.path(), "[sources.implementation]\nkev = \"python\"\n");
+        assert!(native_sources(&c, &store, &served).unwrap().is_empty());
+        // ... but not when no enabled module serves it
+        let e = native_sources(&c, &store, &[]).err().unwrap();
+        assert!(
+            e.to_string().contains("no enabled module serves kev"),
+            "{e}"
+        );
+        // a misspelled name is refused (review W6.5 L7), whatever its value
+        for v in ["python", "rust"] {
+            let c = config_with(
+                d.path(),
+                &format!("[sources.implementation]\nkve = \"{v}\"\n"),
+            );
+            let e = native_sources(&c, &store, &served).err().unwrap();
+            assert!(e.to_string().contains("sources.implementation.kve"), "{e}");
+        }
+        // a source without a Rust implementation refuses the start
+        let c = config_with(d.path(), "[sources.implementation]\nosv = \"rust\"\n");
+        let e = native_sources(&c, &store, &served).err().unwrap();
+        assert!(
+            e.to_string().contains("no Rust implementation of osv"),
+            "{e}"
+        );
+        store.close().await;
     }
 }

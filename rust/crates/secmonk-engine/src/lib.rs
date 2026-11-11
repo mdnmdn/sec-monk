@@ -23,6 +23,7 @@ mod scan;
 pub mod service;
 pub mod skeleton;
 mod sync;
+mod view;
 
 pub use deps::{EngineConfig, EngineDeps, ModuleInfo, ModuleStatus};
 pub use engine::SecmonkEngine;
@@ -34,3 +35,4 @@ pub use params::{
 };
 pub use service::{EngineService, JsonObject};
 pub use skeleton::{EngineInfo, SkeletonEngine};
+pub use view::StoreMirrorView;

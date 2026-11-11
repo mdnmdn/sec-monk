@@ -10,7 +10,7 @@ updated: 2026-11-11
 verified: 2026-11-11
 code: [rust/crates/secmonk-proto/src/, rust/crates/secmonk-modhost/src/, rust/python/src/secmonk_modules/wire.py]
 fixtures: rust/contracts/examples/
-related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/component-lifecycle.md, decisions/0003-module-protocol-json-framed.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md]
+related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/component-lifecycle.md, decisions/0003-module-protocol-json-framed.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, decisions/0011-native-sources.md, tech/source-kev.md]
 ---
 
 # Contracts
@@ -132,7 +132,7 @@ compiled in.
 |---|---|
 | `name`, `version`, `description` | identity; `name` is a slug, unique in the registry |
 | `kind` | `probe` · `source` · `engine` · `tool` |
-| `runtime` | `python` (child stdio) or `rust` (in-process); flipping it is the last step of a port |
+| `runtime` | `python` (child stdio) or `rust` (in-process); changing it from `python` to `rust` is the last step of a port |
 | `protocol` | `secmonk-wire/1` |
 | `provides` | collectors / sources / `sync_all_order` / methods it serves (checked against `hello`) |
 | `capabilities` | `read-target`, `run-commands`, `network`, `db-read`, `local-system`, `stateful`, `writes-staging`: declared, shown, and the base of grants (`db-read` is the only one the host grants actively) |
@@ -225,6 +225,14 @@ previous state (cursors, `raw_record` re-normalization, MSRC merges) unchanged. 
 until sources emit rows natively. The sync runs to completion first, then the log is streamed (no overlap); a cancel is
 raised from the source's progress callback. The staging directory comes from `session.settings.module_dir` (the host sends
 `{data_dir}/modules/py-sources`), else `$SECMONK_MODULE_DIR`, else under `$SECMONK_HOME`. Decision and alternatives: [rust ADR-0010](../decisions/0010-source-staging-adapter.md).
+
+**Native importers (no staging).** A source implemented in Rust (`secmonk-sources`; `kev`, [source-kev](source-kev.md))
+emits the same batches in-process, computed against the mirror through a read-only `MirrorView` (`applied`,
+`count_rows`, `row_keys`): deletes for stored keys that left its snapshot, upserts, the `source_sync` row last. Its
+batches carry `generation = "native-rust"` and no `acked_through`; seqs continue the applied seq of that generation,
+else start at 1 (the host forgets another generation's applied state first). It keeps no log: `source.ack` is a no-op,
+`source.export` answers `unknown-method`, and the next sync is its repair. The wire format is unchanged. Decision:
+[rust ADR-0011](../decisions/0011-native-sources.md).
 
 ## (e) Engine-module calls
 

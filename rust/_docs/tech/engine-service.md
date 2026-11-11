@@ -8,8 +8,8 @@ status: implemented
 tags: [engine, jobs, sync, scan, rust]
 updated: 2026-11-11
 verified: 2026-11-11
-code: [rust/crates/secmonk-engine/src/, rust/crates/secmonk-host/src/engine.rs]
-related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md]
+code: [rust/crates/secmonk-engine/src/, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/]
+related: [tech/architecture.md, tech/api-contract.md, tech/data-model.md, tech/contracts.md, tech/source-kev.md, decisions/0011-native-sources.md]
 ---
 
 # Engine service
@@ -52,7 +52,8 @@ What `SecmonkEngine` does behind the 22 `EngineService` methods (`secmonk-engine
 | `jobs.rs` | `web/jobs.Job` | live jobs: one at a time, last 20 kept in memory; log lines without control characters, URL secrets scrubbed, at most 500 chars |
 | `payload.rs` | `ops.scan_result`, `sync_status`, `stored_result`, `reports.job_payload`, `job_summary` | job payloads and stored results (findings capped at 500 per target) |
 | `scan.rs` | `ops.scan_items`, `scan_target`, `_reuse_image` | expand -> reuse rule or collect -> classify -> sanitize -> save -> match ([architecture §7](architecture.md#7-data-flow-of-a-scan-job)) |
-| `sync.rs` | `JobRunner._sync`, `ops.sync_source` | per source: `Source.sync` stream -> `MirrorStore.apply_rows` per batch -> `Source.ack(last seq)` after the stream ends -> one entry, or the **export repair** (below); then `checkpoint` |
+| `sync.rs` | `JobRunner._sync`, `ops.sync_source` | per source: `Source.sync` stream -> `MirrorStore.apply_rows` per batch -> `Source.ack(last seq)` after the stream ends -> one entry, or the **export repair** (below); a **native** source takes `sync_native` (below); then `checkpoint` |
+| `view.rs` | (new) | `StoreMirrorView`: the read-only `MirrorView` of native importers over `MirrorStore` (`applied_state`, `count_rows`, `row_keys`) |
 | `opts.rs` | `parse_opts`, `_str_list`, `_opt_str` | option and body helpers |
 | `service.rs`, `params.rs`, `error.rs`, `deps.rs` | `web/data.py` params, `ApiError` | the `EngineService` trait (22 methods), typed query params, `EngineError` / `ErrorKind` with the wire code and `reason`, `EngineDeps` / `EngineConfig` |
 | `skeleton.rs` | (new) | `SkeletonEngine`: the wave-2 stand-in (`no-db` reads, 501 `not-implemented`), kept for the API's HTTP tests and the gate's tests; the `Gate` takes only `FEATURES` and `current_platform` from it. The real engine never answers 501 |
@@ -79,7 +80,24 @@ and calls `Source.export`: `MirrorStore::begin_repair` deletes the source's rows
 included) and applies the export in **one** transaction, committed with the export's `high_water` and `generation`;
 then `Source.ack(high_water)`. A failed export rolls back (nothing acknowledged; the next sync decides again). The job
 log says why, how many batches were not applied, rows removed and written, and a closing line counts skipped replays
-and repaired sources. One failing source never stops the others; the job status is
+and repaired sources.
+
+**Native importers** ([rust ADR-0011](../decisions/0011-native-sources.md), `Source::native()`, today `kev` from
+`secmonk-sources`, see [source-kev](source-kev.md)). The native importer computed its batches against the mirror
+through `StoreMirrorView`, under the generation `native-rust`. **Switch from `py-sources` to the native importer:**
+`sync_native` first resets an applied state of another generation (`reset_applied_seq`; job log `<source>: native
+importer: applied state of generation <g> (seq N) reset; full sync against the mirror`), then applies the stream as
+above. There is no ack and no export repair: a batch the store skips (`native importer: N batch(es) skipped by the
+mirror store …; run the sync again`) or answers `needs_repair` for (`native importer: batch refused by the mirror store
+(…); run the sync again`) fails the source, and the next sync, computed against the mirror as it is, is the repair.
+**Switch back to `py-sources`:** its batches carry the staging generation, so the store answers `needs_repair`; when the
+run's entry is `ok` the engine runs the export repair above (job log `<source>: repair from py-sources export: the last
+applied batches came from the native importer`). When it is not ok (`error` or `partial`), the staging export is older
+than the mirror: the engine drains the stream, applies and acknowledges nothing, keeps the native applied state and
+reports the source as `error` with records 0 and the message `<status>: <message>; not applied: mirror keeps the native
+importer data until a successful py-sources sync`; the next ok run repairs.
+
+One failing source never stops the others; the job status is
 `ops.sync_status` of the entries. `seconds` of an entry is the host's time for the source (download, staging and
 apply), where Python measured the source alone.
 
@@ -95,5 +113,11 @@ Tests: `tests/engine.rs` runs the engine over a real SQLite store and fake steps
 the payloads the engine builds (meta, sources, collectors, jobs, match result) against `rust/contracts` with the dev
 venv's `jsonschema` (skipped without `rust/python/.venv`). `tests/real_modules.rs` starts the real `py-sources` and
 `py-engine` from `rust/python/.venv` (skipped without it): a `kev` sync from the repo fixture applied and
-acknowledged, a second sync, `sources` read by py-engine, a persisted match written by the host.
+acknowledged, a second sync, `sources` read by py-engine, a persisted match written by the host; the repair scenarios of
+W4.4; and `native_kev_matches_py_sources`, the differential test of the native kev source against `py-sources`
+([source-kev](source-kev.md#tests)). `tests/engine.rs` `native_kev_*` and
+`a_failed_or_limited_python_run_after_native_syncs_never_rolls_the_mirror_back` drive the native kev source over the
+real store without Python. The venv-gated tests skip without `rust/python/.venv`; with `SECMONK_REQUIRE_VENV=1` in the
+environment a missing venv or fixture fails them instead (CI and release checks:
+`SECMONK_REQUIRE_VENV=1 cargo test --workspace`).
 

@@ -20,7 +20,7 @@ the contract and the golden outputs are what make a later Rust port mechanical (
 ```
 1 contract  ->  2 Python module  ->  3 conformance + golden  ->  4 manifest + install  ->  5 done
                                                                                           |
-                                         6 later: Rust impl -> differential test -> flip runtime -> retire Python
+                                         6 later: Rust impl -> differential test -> select Rust in config -> retire Python
 ```
 
 ## 1. Define and freeze the contract
@@ -149,7 +149,9 @@ rust/golden/                         <method>/<case>.params.json + .out.json, no
       generated cases, for versions: the univers-backed Python oracle); normalized JSON must be equal. Differences
       are bugs in one of the two until explained in the test file.
 - [ ] Rust manifest (`runtime = "rust"`, `rust.crate`, `rust.factory`); the registry picks it over the Python one when
-      both provide the same name and the config enables it (**flip** = change `enabled`).
+      both provide the same name and the config enables it. The choice between the two is a per-component
+      selection key in `sec-monk.toml`; for sources it is `[sources.implementation]` (`kev = "rust"` or `"python"`).
+      Worked example: `kev`, see [source-kev](source-kev.md) and [ADR-0011](../decisions/0011-native-sources.md).
 - [ ] Keep the Python module as the test reference for one release, then retire it, or keep it as the fallback for a
       platform without a Rust build. Never two production bindings longer than that.
 

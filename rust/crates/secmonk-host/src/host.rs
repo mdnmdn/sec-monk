@@ -89,7 +89,7 @@ pub struct Host {
     pub modules: Vec<ModuleHandle>,
     /// The probe service: collector allowlist and fixed probe methods over `py-probe`.
     pub probe: Arc<ProbeService>,
-    /// Vulnerability sources (`py-sources`).
+    /// Vulnerability sources: the native ones selected by `[sources.implementation]`, then `py-sources`.
     pub sources: Vec<Arc<dyn Source>>,
     /// Engine steps (`py-engine`): classify, match, versions, scoring, reports.
     pub steps: Option<Arc<PyEngine>>,
@@ -265,13 +265,27 @@ impl Host {
         }
         let probe = Arc::new(probe);
 
-        // 5. sources and engine steps
-        let sources: Vec<Arc<dyn Source>> = registry
-            .iter()
-            .filter(|e| e.manifest.kind == ModuleKind::Source)
-            .filter_map(|e| handle(&e.manifest.name))
-            .map(|h| Arc::new(PySource::new(h)) as Arc<dyn Source>)
-            .collect();
+        // 5. sources and engine steps: native sources first (a name served twice is taken from the first, so
+        // `[sources.implementation] <name> = "rust"` wins over py-sources), then the Python source modules
+        #[cfg(feature = "engine")]
+        let mut sources: Vec<Arc<dyn Source>> = {
+            let served: Vec<String> = registry
+                .iter()
+                .filter(|e| e.manifest.kind == ModuleKind::Source)
+                .flat_map(|e| e.manifest.provides.sources.iter().flatten())
+                .map(|i| i.name.clone())
+                .collect();
+            crate::engine::native_sources(&config, &store, &served)?
+        };
+        #[cfg(not(feature = "engine"))]
+        let mut sources: Vec<Arc<dyn Source>> = Vec::new();
+        sources.extend(
+            registry
+                .iter()
+                .filter(|e| e.manifest.kind == ModuleKind::Source)
+                .filter_map(|e| handle(&e.manifest.name))
+                .map(|h| Arc::new(PySource::new(h)) as Arc<dyn Source>),
+        );
         let steps = handle("py-engine").map(|h| Arc::new(PyEngine::new(h)));
         let procmon = handle("py-procmon").map(|h| Arc::new(PyEngine::new(h)));
 

@@ -8,8 +8,8 @@ status: implemented
 tags: [architecture, rust, tauri, python, modules, desktop]
 updated: 2026-11-11
 verified: 2026-11-11
-code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
-related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md]
+code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/crates/secmonk-sources/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
+related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md]
 ---
 
 # Rust prototype architecture
@@ -36,7 +36,7 @@ simplifications listed in [§9 below](#9-prototype-boundary-and-migration-order)
 |     |  Store traits             |  EngineSteps / Source traits     |  Probe trait                |
 |     v                           v                                  v                             |
 |  secmonk-store (SQL)       module host (registry, sessions, supervisor, PythonRuntime = uv)      |
-|  state.sqlite3              |  in-process: Rust impls (none yet; the session layer supports them)|
+|  state.sqlite3              |  in-process: Rust sources (secmonk-sources: kev) over a MirrorView |
 |  mirror.sqlite3 <-- ro --+  |  child stdio: py-engine  py-procmon  py-sources  py-probe          |
 +--------------------------|--|----------------------------------------------------------------------+
                            +--+ Python engine modules read SQLite read-only; every write goes through the store
@@ -45,7 +45,7 @@ simplifications listed in [§9 below](#9-prototype-boundary-and-migration-order)
 | Component | Owns | Must never |
 |---|---|---|
 | **probe** (`secmonk-probe` + `py-probe`) | Reading targets: collectors, discovery, docker/k8s listings, process snapshots; redaction before data leaves it. | Depend on the store or the engine crates; hold vulnerability data; classify or match; run a command that is not fixed and documented. |
-| **engine** (`secmonk-engine` + `py-engine`, `py-sources`, `py-procmon`) | Store and mirror (through `secmonk-store`), sync, classify on ingest, match, scoring, finding lifecycle, jobs, the API payloads. | Read a target itself (every target goes through the `Probe` trait); call vulnerability APIs during a scan; trust module output without validation. |
+| **engine** (`secmonk-engine` + `secmonk-sources`, `py-engine`, `py-sources`, `py-procmon`) | Store and mirror (through `secmonk-store`), sync, classify on ingest, match, scoring, finding lifecycle, jobs, the API payloads. | Read a target itself (every target goes through the `Probe` trait); call vulnerability APIs during a scan; trust module output without validation. |
 | **ui** (webview + `secmonk-api`) | Rendering payloads; routing `/api` calls to the engine service. | Business logic or SQL; reaching a probe directly; `v-html` / inline scripts. |
 | **module host** (`secmonk-modhost`, `secmonk-runtime`) | Manifests, install (uv), launch, framing, `hello`, request multiplexing, cancel, timeouts, restart. | Domain logic; SQL; deciding which module runs from UI input. |
 | **Python modules** (`rust/python`, package `secmonk_modules`) | Thin adapters from the protocol to the unchanged `secmonk` package (path dependency on the repo root). | Write the v3 store; read files the host did not grant; print to the frame channel. |
@@ -69,6 +69,7 @@ rust/
     secmonk-runtime          PythonRuntime trait, UvRuntime (download, verify, install, env, launch command)
     secmonk-modhost          registry, transports (inproc, child-stdio), sessions, supervisor, Py* adapters
     secmonk-probe            local probe service: collector allowlist, dispatch to Probe impls
+    secmonk-sources          native vulnerability sources (kev): feeds -> row batches over a read-only MirrorView
     secmonk-engine           engine service: jobs, sync, scan, reuse rule, run history, payload facade
     secmonk-api              engine<->ui route table, validation, ApiError, static files, security headers
     secmonk-host             composition root: Host::start, preparing Gate, Service, logging, secmonk-headless
@@ -92,6 +93,7 @@ rust/
 | `secmonk-runtime` | config, model, safeio, dunce, reqwest (rustls), sha2, tar, flate2, zip | store, engine, api | compiler |
 | `secmonk-modhost` | traits, proto, runtime, config, safeio, model, rustix (unix, process-group kill) | **store**, engine, api | compiler + `deny.toml` + `cargo tree` check |
 | `secmonk-probe` | traits, model, proto, modhost | **store**, engine, sources | compiler + CI `cargo tree -p secmonk-probe` must not list `secmonk-store` |
+| `secmonk-sources` | traits, model, safeio, reqwest (rustls, the workspace client), tokio | **store**, modhost, engine (reads the mirror only through `MirrorView`) | compiler |
 | `secmonk-engine` | traits, store, model, proto, safeio | **modhost** (gets trait objects; `modhost`, `runtime`, `config` only as dev-dependencies of the gated `tests/real_modules.rs`), api | compiler + `deny.toml` (dev wrapper) |
 | `secmonk-api` | engine (its service types and errors), http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
 | `secmonk-host` | everything; with `engine` off only config, runtime, modhost, probe, traits, model, proto, safeio | — | composition root (the only crate that names modhost and engine together) |
@@ -164,7 +166,8 @@ not allow). Every method returns `StepResult<T> = Result<T, WireError>`; droppin
 |---|---|
 | `Collector` | `collectors()`, `expand_targets`, `collect` (stream of `CollectItem`, then `CollectEnd`) |
 | `Probe: Collector` | `methods()`, `call(method, params)`: `discover.host`, `docker.*`, `k8s.kubeconfigs`, `process.snapshot` |
-| `Source` | `sources()`, `sync_all_order()`, `sync` (stream of `RowsBatch`, then `SyncEnd`), `ack`, `export` |
+| `Source` | `sources()`, `sync_all_order()`, `sync` (stream of `RowsBatch`, then `SyncEnd`), `ack`, `export`, `native()` (default `false`; [rust ADR-0011](../decisions/0011-native-sources.md)) |
+| `MirrorView` | `applied`, `count_rows`, `row_keys`: the read-only mirror of native importers (`secmonk_engine::StoreMirrorView`) |
 | `Classifier`, `Matcher` | `classify(components)`, `match_asset(MatchParams)` |
 | `Reporter` | `methods()`, `report(method, params)`: `reports.*`, `procmon.*` |
 | `VersionOracle` | `compare`, `in_range`, `first_fixed`, `scheme`, `priority` |
@@ -193,7 +196,7 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 | 2 | `Python` "installing Python" | `ensure()` the managed interpreter; load the registry from `<python_project>/modules` |
 | 3 | `ModuleEnv` "installing the module environment" | `ensure_env` once per env of the available Python modules (`uv sync --frozen`; pinned mode verifies pins first) |
 | 4 | `Databases` "opening the databases" | `SqliteStore::open`: files 0600, migrations; any backend but `sqlite` is `Unsupported` |
-| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; `PySource`s; `PyEngine` for `py-engine` and `py-procmon`; `eager` modules started now, so a broken install fails the start; then `engine::build` |
+| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; the native importers `[sources.implementation]` selects (`engine::native_sources`), then the `PySource`s; `PyEngine` for `py-engine` and `py-procmon`; `eager` modules started now, so a broken install fails the start; then `engine::build` |
 
 Spike timings on macOS arm64: uv download ~4 s, Python install 6-8 s, first sync ~4 s, warm start ~27 ms. The first
 headless start on 2026-11-11 (`rust/_data/logs`, with the project's path dependency) took 38 s to `ready`, 25 s of it
@@ -353,7 +356,7 @@ on all three and reports the missing capability as an unavailable feature ([rust
 |---|---|---|
 | Tauri shell, config, store + schema v3, module host + uv, API router, jobs, run history, reuse rule, redaction helpers | **Rust** | — |
 | Collectors, discovery, docker/k8s listings | Python (`py-probe`) | Rust by value: `safeio`, `lang`, `fs`, `rootfs`, process backends first (proposal §9.6) |
-| Sources | Python (`py-sources`, staging adapter) | Native record emitters; possibly Python for good |
+| Sources | Python (`py-sources`, staging adapter); `kev` native in Rust (`secmonk-sources`, [rust ADR-0011](../decisions/0011-native-sources.md)) | Native record emitters; possibly Python for good |
 | classify, match, scoring, versions | Python (`py-engine`) | **Rust first** after the prototype (hot, security-critical; differential tests against `univers`) |
 | Report payloads (`reports.*`, `procmon.*`) | Python (`py-engine`, `py-procmon`) | Rust together with the store queries they need |
 
@@ -362,7 +365,8 @@ Simplifications against the proposal (deliberate, cheap to undo):
 1. Versions, classify, match and scoring are **pluggable Python modules** here; the proposal keeps them out of the
    module interface. They become Rust in-process code first, then lose their Python binding.
 2. One **write path**: Python modules never write the v3 store; sources reach it through a staging adapter
-   ([rust ADR-0010](../decisions/0010-source-staging-adapter.md)), engine modules read it read-only
+   ([rust ADR-0010](../decisions/0010-source-staging-adapter.md)) or, natively, emit rows computed against a read-only
+   view (rust ADR-0011); engine modules read it read-only
    ([rust ADR-0006](../decisions/0006-python-read-only-db-access.md)).
 3. **Schema v3 stays a superset of v2** so the unchanged `secmonk` read code runs on it ([data-model](data-model.md)).
 4. `py-procmon` reads this machine **and** matches: the probe/engine split at the snapshot comes later.
