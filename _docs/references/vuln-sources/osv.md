@@ -6,8 +6,8 @@ type: reference
 context: references
 status: implemented
 tags: [vuln-source, osv, purl, distro, ghsa]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-11
+verified: 2026-11-11
 sample: real
 reachable: partial
 code: src/secmonk/sources/osv.py
@@ -234,7 +234,8 @@ PypiVersion, RpmVersion, RubygemsVersion, SemverVersion, ...):
 | Red Hat, Rocky Linux, AlmaLinux (+SUSE, openSUSE, Azure Linux, Mageia, openEuler) | `RpmVersion` | include `epoch:` prefix; OSV always has epoch for Red Hat |
 | Wolfi / Chainguard | `AlpineLinuxVersion` (apk) | |
 | GIT | none | commit-graph; use `versions[]` list only |
-| Hex, Pub, CRAN, Hackage, Julia, opam | `SemverVersion` fallback / `GenericVersion` | low priority |
+| Pub, SwiftURL | `SemverVersion` | versions bare, Pub may carry build metadata (`0.3.5+1`) |
+| Hex, CRAN, Hackage, Julia, opam | `SemverVersion` fallback / `GenericVersion` | low priority |
 
 PURL type <-> OSV ecosystem:
 
@@ -248,6 +249,8 @@ PURL type <-> OSV ecosystem:
 | `pkg:gem/<n>` | `RubyGems` | |
 | `pkg:nuget/<n>` | `NuGet` | case-insensitive |
 | `pkg:composer/<vendor>/<n>` | `Packagist` | `vendor/name` |
+| `pkg:pub/<n>` | `Pub` | pub.dev name (probe 2026-11-11) |
+| `pkg:swift/<host>/<owner>/<repo>` | `SwiftURL` | `host/owner/repo` (repository URL without scheme and `.git`, probe 2026-11-11; 3 of 33 names are bare repo names) |
 | `pkg:githubactions/<o>/<r>` | `GitHub Actions` | |
 | `pkg:deb/debian/<src>?distro=debian-12` | `Debian:12` | source pkg; OSV purls use codename `distro=trixie` while scanners emit `debian-12`: map via a table |
 | `pkg:deb/ubuntu/<src>?distro=ubuntu-22.04` | `Ubuntu:22.04:LTS` | derive `:LTS` from release (even-year .04 releases) |
@@ -286,7 +289,7 @@ version-compare, plus `versions[]` membership.
 
 ### Recommended sync strategy (prototype)
 
-1. Default ecosystems: PyPI, npm, Maven, Go, crates.io, RubyGems, NuGet, Packagist (~303 MB zips), plus distro: Debian, Alpine, Red Hat, Rocky Linux, AlmaLinux
+1. Default ecosystems: PyPI, npm, Maven, Go, crates.io, RubyGems, NuGet, Packagist, Pub, SwiftURL (~303 MB zips; Pub and SwiftURL add 0.14 MB), plus distro: Debian, Alpine, Red Hat, Rocky Linux, AlmaLinux
    (~130 MB). Total ~434 MB download, roughly 1.5 GB of JSON unzipped (zip ratios seen: 3.4x Go, 5x Rocky; estimate), ~0.6 - 1 GB SQLite after
    normalising (estimate; store `raw` compressed or not at all). Ubuntu (809 MB) opt-in (`--ecosystem Ubuntu`), skip Chainguard/Wolfi/GIT unless asked.
    Derive the list from the collected inventory (only sync ecosystems that appear in the scanned inventory) to keep it small; Docker image with Debian 12 ->

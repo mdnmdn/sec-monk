@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, vuln-source, distro, backlog, triage, exploit]
-updated: 2026-11-07
+updated: 2026-11-11
 verified: 2026-11-07
 related: [references/vuln-sources/distros.md, references/vuln-sources/README.md, references/homebrew.md, tech/engine/matching.md, tech/data-model.md]
 ---
@@ -91,7 +91,7 @@ Effort: S <= 1 day, M = 2-4 days, L = 1+ week. Priority reflects scan-quality ga
 | 25 | **FreeBSD VuXML** | BSD hosts | XML | blocked | `affected` (`FreeBSD`, pkg versions) | M + L collector (SSH refuses BSDs today) | D open |
 | 26 | **NixOS** | Nix-managed software (pruned today: `/nix/store`) | no official feed found; `vulnix` scans store paths vs NVD; nixpkgs-security-tracker repo path unverified | blocked/unknown | `component` from store paths (name-version) -> CPE matching | L | D open |
 | 27 | **Chrome / Edge release channels** | "outdated browser" signal (latest stable) - CVEs themselves come from the Chrome CNA records already in CVE List v5 | JSON (`versionhistory.googleapis.com`) | **200** | `meta` on components, not `affected` | S | D+V sandbox |
-| 28 | **OSV ecosystems without a collector** (GitHub Actions, VSCode, Pub, Hex, CRAN, Hackage, SwiftURL, Julia, opam, Bitnami, Android) | coverage per language/tool; VS Code extensions on macOS are listed in macos.md "Future" | OSV | bucket OK | `affected` (existing importer) | S per ecosystem + collector M | D sandbox |
+| 28 | **OSV ecosystems without a collector** (GitHub Actions, VSCode, Hex, CRAN, Hackage, Julia, opam, Bitnami, Android; Pub and SwiftURL got parsers 2026-11-11) | coverage per language/tool; VS Code extensions on macOS are listed in macos.md "Future" | OSV | bucket OK | `affected` (existing importer) | S per ecosystem + collector M | D sandbox |
 
 ## The vuln-list mirror (aquasecurity/vuln-list) - a way around blocked hosts
 

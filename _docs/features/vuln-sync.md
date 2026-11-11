@@ -6,8 +6,8 @@ type: feature
 context: features
 status: implemented
 tags: [cli, vuln-source, sync, osv, cve, kev, epss, nvd, euvd, msrc]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-11
+verified: 2026-11-11
 code: src/secmonk/sources/
 related: [references/vuln-sources/README.md, tech/data-model.md, tech/architecture.md, features/README.md, references/probes.md]
 ---
@@ -55,6 +55,9 @@ Other options: `--full` (ignore the stored cursor), `--limit N` (debug cap), `--
 - KEV falls back to the `cisagov/kev-data` GitHub mirror when cisa.gov is unreachable.
 - Raw records are stored verbatim (`SECMONK_OSV_STORE_RAW=0` skips OSV raw storage to keep the DB small).
 - Syncing `msrc` or `debian-tracker` is explicit: `sync all` does not include them.
+- `sync osv` without `-e` syncs the default ecosystems: PyPI, npm, Maven, Go, crates.io, RubyGems, NuGet, Packagist,
+  Pub, SwiftURL, Debian, Alpine, Red Hat, Rocky Linux, AlmaLinux (`sources/osv.DEFAULT_ECOSYSTEMS`); Ubuntu and the
+  others are opt-in with `-e`.
 - Which sources are reachable from the dev sandbox, and which were validated on real data: [vuln-sources index](../references/vuln-sources/README.md), [probe log](../references/probes.md).
 
 ## Acceptance criteria

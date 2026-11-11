@@ -18,6 +18,7 @@ PURL_TO_OSV = {
     "nuget": "NuGet",
     "composer": "Packagist",
     "pub": "Pub",
+    "swift": "SwiftURL",
     "hex": "Hex",
 }
 
@@ -93,7 +94,7 @@ def osv_package_name(purl: PackageURL) -> str:
     """Package name as OSV spells it for a purl."""
     if purl.type == "maven" and purl.namespace:
         return f"{purl.namespace}:{purl.name}"
-    if purl.type in ("npm", "composer", "golang") and purl.namespace:
+    if purl.type in ("npm", "composer", "golang", "swift") and purl.namespace:
         return f"{purl.namespace}/{purl.name}"
     return purl.name
 

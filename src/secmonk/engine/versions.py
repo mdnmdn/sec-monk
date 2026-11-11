@@ -23,6 +23,7 @@ _ECOSYSTEM_SCHEME: dict[str, type[uv.Version]] = {
     "NuGet": uv.NugetVersion,
     "Packagist": uv.ComposerVersion,
     "Pub": uv.SemverVersion,
+    "SwiftURL": uv.SemverVersion,
     "Hex": uv.SemverVersion,
     "Debian": uv.DebianVersion,
     "Ubuntu": uv.DebianVersion,

@@ -1,13 +1,13 @@
 ---
 title: Language dependency scanning
-summary: Language dependency parsers in collectors/lang covering parser contract, directory walkers, options, matching and verified results for seven ecosystems.
+summary: Language dependency parsers in collectors/lang covering parser contract, directory walkers, options, matching and verified results for nine ecosystems.
 read_when: you add or change a lockfile, manifest or binary parser, or change how fs, rootfs or image scans find language packages
 type: tech
 context: tech
 status: implemented
-tags: [collector, dependencies, npm, python, go, rust, java, dotnet, php]
-updated: 2026-11-07
-verified: 2026-11-07
+tags: [collector, dependencies, npm, python, go, rust, java, dotnet, php, swift, dart]
+updated: 2026-11-11
+verified: 2026-11-11
 code: src/secmonk/collectors/lang/
 fixtures: tests/fixtures/lang/
 related: [features/inventory-dependencies.md, references/package-formats/README.md, tech/collectors/rootfs.md, tech/collectors/ssh.md]
@@ -19,7 +19,7 @@ One set of **file parsers**, three ways of feeding them files:
 
 ```
                       collectors/lang/  (registry of LangParser)
-     javascript.py  python.py  php.py  golang.py  rust.py  java.py  dotnet.py
+     javascript.py  python.py  php.py  golang.py  rust.py  java.py  dotnet.py  swift.py  dart.py
                  ▲                    ▲                          ▲
                  │ walk_dir()         │ walk_dir(rootfs=True)    │ LangAccumulator.feed()
         ┌────────┴───────┐   ┌────────┴─────────┐      ┌─────────┴──────────┐
@@ -39,7 +39,7 @@ components with a PURL (→ OSV ecosystem via `engine/purl.PURL_TO_OSV`) and
 |---|---|---|
 | `installed` | What is actually on disk | `*.dist-info/METADATA`, `node_modules/*/package.json`, `vendor/composer/installed.json`, `*.deps.json` |
 | `binary` | Build info embedded in an artifact | Go buildinfo, Rust `.dep-v0` (cargo-auditable), jar `pom.properties` |
-| `lockfile` | Resolved dependency graph | package-lock, yarn.lock, pnpm-lock, poetry.lock, uv.lock, Pipfile.lock, composer.lock, go.sum, Cargo.lock, packages.lock.json, gradle.lockfile |
+| `lockfile` | Resolved dependency graph | package-lock, yarn.lock, pnpm-lock, poetry.lock, uv.lock, Pipfile.lock, composer.lock, go.sum, Cargo.lock, packages.lock.json, gradle.lockfile, Package.resolved, pubspec.lock |
 | `manifest` | Declared + pinned | requirements `==`, go.mod, pom.xml literal versions, csproj PackageReference |
 
 `dedupe()` merges identical PURLs across files, keeping the strongest evidence and all paths
@@ -49,8 +49,9 @@ form lets it add warnings without failing (e.g. Go-looking binary without build 
 construction goes through `safe_library()`, so one malformed entry never drops the rest of a file.
 
 **Vendored files are not project evidence**: lockfile and manifest parsers are skipped for paths inside
-`node_modules`, `site-packages`, `dist-packages`, `vendor` and `.cargo/registry|git`; installed-metadata
-parsers (`package.json` in node_modules, dist-info, `vendor/composer/installed.json`) and binaries still run. Unpinned declarations (ranges, `pyproject.toml`, `Cargo.toml`) are not reported.
+`node_modules`, `site-packages`, `dist-packages`, `vendor`, `.pub-cache`, `.cargo/registry|git` and the SwiftPM
+checkouts `.build/checkouts` / `SourcePackages/checkouts`; installed-metadata
+parsers (`package.json` in node_modules, dist-info, `vendor/composer/installed.json`) and binaries still run. Unpinned declarations (ranges, `pyproject.toml`, `Cargo.toml`, `Package.swift`, `pubspec.yaml`) are not reported.
 
 ## Walkers
 
@@ -80,8 +81,20 @@ parsers (`package.json` in node_modules, dist-info, `vendor/composer/installed.j
 ## Matching
 
 Components carry OSV ecosystems (`npm`, `PyPI`, `Go`, `crates.io`, `Maven`, `NuGet`,
-`Packagist`) and go through the exact `osv-package` strategy (confidence 1.0). Sync the
-ecosystems you need: `secmonk sync osv -e npm -e PyPI -e Go -e crates.io -e Maven -e NuGet -e Packagist`.
+`Packagist`, `SwiftURL`, `Pub`) and go through the exact `osv-package` strategy (confidence 1.0). All of them
+are in the default `sync osv` set; to sync only some: `secmonk sync osv -e npm -e PyPI -e Go -e crates.io -e Maven
+-e NuGet -e Packagist -e SwiftURL -e Pub`.
+
+Name mapping for the two newest ecosystems (`engine/purl.py`: `PURL_TO_OSV`, `osv_package_name`;
+`engine/versions.py`: both compare as `SemverVersion`):
+
+| Ecosystem | Component name = OSV package name | PURL |
+|---|---|---|
+| `SwiftURL` | repository URL without scheme, user, port and `.git`: `github.com/apple/swift-nio` | `pkg:swift/github.com/apple/swift-nio@2.58.0` |
+| `Pub` | pub.dev name: `http` | `pkg:pub/http@0.13.1` |
+
+Swift pins without a version (branch / revision only) are inventoried with `version=None` and a warning; they
+cannot match. Details: [swift.md](../../references/package-formats/swift.md), [dart.md](../../references/package-formats/dart.md).
 
 ## Verified end to end (2026-11-07, real OSV data)
 
@@ -101,6 +114,10 @@ exact package matching too.
 - Interpreters installed from source (e.g. CPython in `python:*` images under `/usr/local`) are not
   detected as runtimes yet.
 - Go binaries built without modules (GOPATH mode) expose only the stdlib version.
+- Swift: only `Package.resolved`; Swift registry pins and branch/revision pins are not matchable, and a few OSV
+  `SwiftURL` records name the package without a URL (`swift-crypto`), which no pin can match.
+- Dart: only `pubspec.lock`; packages from self-hosted pub servers are skipped, transitive packages are never
+  flagged `dev`.
 
 See each format doc in [references/package-formats](../../references/package-formats/README.md).
 Cross-cutting: no reachability analysis; vendored/copied source without metadata is invisible;

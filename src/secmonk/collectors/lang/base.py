@@ -37,13 +37,15 @@ MAX_PARSE_BYTES = 64 * 1024 * 1024
 # the user without failing (e.g. "looks like a Go binary but no build info found").
 # Directories that hold *someone else's* code: lockfiles / manifests found inside are not evidence
 # about the scanned project (installed-package metadata and binaries still are).
-VENDORED_DIRS = frozenset({"node_modules", "site-packages", "dist-packages", "vendor"})
-_VENDORED_PAIRS = ((".cargo", "registry"), (".cargo", "git"))
+VENDORED_DIRS = frozenset({"node_modules", "site-packages", "dist-packages", "vendor", ".pub-cache"})
+# SwiftPM checkouts: `.build/checkouts/<repo>` (swift build), `SourcePackages/checkouts/<repo>` (Xcode)
+_VENDORED_PAIRS = ((".cargo", "registry"), (".cargo", "git"), (".build", "checkouts"),
+                   ("SourcePackages", "checkouts"))
 
 
 def is_vendored(path: str) -> bool:
     """True when `path` lies inside a dependency directory (node_modules, site-packages, dist-packages,
-    vendor/, .cargo/registry). Composer's own `vendor/composer/installed.json` is installed-metadata
+    vendor/, .pub-cache, .cargo/registry, SwiftPM checkouts). Composer's own `vendor/composer/installed.json` is installed-metadata
     (EV_INSTALLED) and therefore never filtered by this."""
     parts = path.split("/")[:-1]
     if any(p in VENDORED_DIRS for p in parts):
@@ -54,7 +56,7 @@ def is_vendored(path: str) -> bool:
 @dataclass(frozen=True)
 class LangParser:
     name: str                                   # e.g. 'npm-package-lock'
-    ecosystem: str                              # OSV ecosystem: npm, PyPI, Go, crates.io, NuGet, Maven, Packagist
+    ecosystem: str                              # OSV ecosystem: npm, PyPI, Go, crates.io, NuGet, Maven, Packagist, ...
     evidence: str                               # EV_* constant
     match: Callable[[str], bool]                # relative posix path -> candidate?
     parse: Callable[[str, bytes], Any]          # -> list[Component] | (list[Component], list[str])
@@ -103,7 +105,7 @@ def library(ecosystem_purl_type: str, name: str, version: str | None, *, path: s
                        qualifiers=qualifiers)
     m = {"evidence": evidence, "parser": parser}
     m.update({k: v for k, v in meta.items() if v is not None})
-    display = f"{namespace}/{name}" if namespace and ecosystem_purl_type in ("npm", "composer", "golang") \
+    display = f"{namespace}/{name}" if namespace and ecosystem_purl_type in ("npm", "composer", "golang", "swift") \
         else (f"{namespace}:{name}" if namespace and ecosystem_purl_type == "maven" else name)
     return Component(name=display, version=version or None, category=CAT_LIBRARY, purl=purl,
                      ecosystem=purls.PURL_TO_OSV.get(ecosystem_purl_type), source_path=path, meta=m)

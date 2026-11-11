@@ -6,8 +6,8 @@ type: reference
 context: references
 status: reference
 tags: [package-format, dependencies]
-updated: 2026-11-07
-verified: 2026-11-07
+updated: 2026-11-11
+verified: 2026-11-11
 related: [tech/collectors/dependencies.md]
 ---
 
@@ -24,3 +24,5 @@ Formats read by the language parsers (`src/secmonk/collectors/lang/`).
 | [javascript.md](javascript.md) | npm / `pkg:npm` | package-lock.json v1/v2/v3, npm-shrinkwrap.json, yarn.lock v1 + berry, pnpm-lock.yaml v5-v9, bun.lock, installed node_modules/**/package.json |
 | [python.md](python.md) | PyPI / `pkg:pypi` (+ `pkg:conda`) | installed dist-info/egg-info, conda-meta, poetry.lock, Pipfile.lock, uv.lock, pdm.lock, pinned requirements*.txt |
 | [php.md](php.md) | Packagist / `pkg:composer` | composer.lock, vendor/composer/installed.json (Composer 1 + 2) |
+| [swift.md](swift.md) | SwiftURL / `pkg:swift` | Package.resolved v1/v2/v3 (SwiftPM, Xcode) |
+| [dart.md](dart.md) | Pub / `pkg:pub` | pubspec.lock (Dart, Flutter) |

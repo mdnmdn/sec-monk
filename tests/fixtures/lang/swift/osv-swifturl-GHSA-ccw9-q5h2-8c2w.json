@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.9.0",
+  "id": "GHSA-ccw9-q5h2-8c2w",
+  "published": "2023-05-18T17:30:44Z",
+  "modified": "2026-07-08T06:29:25.820719581Z",
+  "aliases": [
+    "CVE-2022-24666"
+  ],
+  "summary": "swift-nio-http2 vulnerable to denial of service via invalid HTTP/2 HEADERS frame length",
+  "details": "A program using swift-nio-http2 is vulnerable to a denial of service attack, caused by a network peer sending a specially crafted HTTP/2 frame. This attack affects all swift-nio-http2 versions from 1.0.0 to 1.19.1. It is fixed in 1.19.2 and later releases.\n\nThis vulnerability is caused by a logical ",
+  "affected": [
+    {
+      "package": {
+        "name": "github.com/apple/swift-nio-http2",
+        "ecosystem": "SwiftURL",
+        "purl": "pkg:swift/github.com/apple/swift-nio-http2"
+      },
+      "ranges": [
+        {
+          "type": "SEMVER",
+          "events": [
+            {
+              "introduced": "1.0.0"
+            },
+            {
+              "fixed": "1.19.2"
+            }
+          ]
+        }
+      ],
+      "database_specific": {
+        "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2023/05/GHSA-ccw9-q5h2-8c2w/GHSA-ccw9-q5h2-8c2w.json"
+      }
+    }
+  ],
+  "references": [
+    {
+      "type": "WEB",
+      "url": "https://github.com/apple/swift-nio-http2/security/advisories/GHSA-ccw9-q5h2-8c2w"
+    },
+    {
+      "type": "ADVISORY",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-24666"
+    },
+    {
+      "type": "WEB",
+      "url": "https://github.com/apple/swift-nio-http2/commit/93215774aa7d223a5ad5aa0b80453375d669fa8f"
+    }
+  ],
+  "database_specific": {
+    "cwe_ids": [
+      "CWE-130"
+    ],
+    "github_reviewed": true,
+    "github_reviewed_at": "2023-05-18T17:30:44Z",
+    "nvd_published_at": null,
+    "severity": "HIGH"
+  },
+  "severity": [
+    {
+      "type": "CVSS_V3",
+      "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+    }
+  ]
+}

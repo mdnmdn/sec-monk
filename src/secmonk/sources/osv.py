@@ -40,7 +40,7 @@ from .base import (
 
 BUCKET = "https://osv-vulnerabilities.storage.googleapis.com"
 DEFAULT_ECOSYSTEMS = [
-    "PyPI", "npm", "Maven", "Go", "crates.io", "RubyGems", "NuGet", "Packagist",
+    "PyPI", "npm", "Maven", "Go", "crates.io", "RubyGems", "NuGet", "Packagist", "Pub", "SwiftURL",
     "Debian", "Alpine", "Red Hat", "Rocky Linux", "AlmaLinux",
 ]
 MAX_MEMBER_SIZE = 50 * 1024 * 1024
