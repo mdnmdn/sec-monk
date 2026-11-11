@@ -44,6 +44,8 @@ const SHOTS = [
   ["27-scan-docker", "_design/pages/scan-docker.html", 1500],
   ["28-storybook-job-result", "_design/storybook/index.html#job-result"],
   ["29-scan-host", "_design/pages/scan-host.html", 1500],
+  ["30-scan-k8s", "_design/pages/scan-k8s.html", 2000],
+  ["31-asset-cluster", "_design/pages/asset-cluster.html"],
 ];
 const TYPES = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json" };
 

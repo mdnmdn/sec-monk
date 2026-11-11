@@ -60,7 +60,7 @@
   const store = UI.createStore(UI.MockSource(window.SECMONK_MOCK, { latency: 0 }));
   store.state.snap = JSON.parse(JSON.stringify(window.SECMONK_MOCK.snapshot));
   app.provide("store", store);
-  for (const n of ["ProcessDetail", "FindingsTable", "FindingDetail", "JobResult", "JobTarget", "JobItems", "JobHistory", "HostCandidates", "HostScan", "SbomExport"]) app.component(n, UI.VIEWS[n]);
+  for (const n of ["ProcessDetail", "FindingsTable", "FindingDetail", "JobResult", "JobTarget", "JobItems", "JobHistory", "HostCandidates", "HostScan", "SbomExport", "HostSummary", "K8sAccess", "K8sImages"]) app.component(n, UI.VIEWS[n]);
   // ProcessDetail uses vue-router only through its parent views; a memory router keeps $router available
   app.use(VueRouter.createRouter({ history: VueRouter.createMemoryHistory(), routes: [{ path: "/:p(.*)*", component: { template: "<div/>" } }] }));
   app.mount("#sb");

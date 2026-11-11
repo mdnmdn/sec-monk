@@ -73,6 +73,7 @@
       job: (id) => call(`/api/jobs/${encodeURIComponent(id)}`),
       startJob: (body) => post("/api/jobs", body),
       dockerContexts: () => call("/api/docker/contexts"),
+      k8sKubeconfigs: () => call("/api/k8s/kubeconfigs"),
       // host auto mode: {target (blank = this machine), opt: ["k=v", ...]} -> {host, candidates, warnings}
       discover: ({ target, opt } = {}) => {
         const q = new URLSearchParams();
@@ -174,11 +175,13 @@
         return wait(strip(j));
       },
       dockerContexts: () => (data.meta.actions ? wait(data.docker.contexts) : fail(403, "actions are disabled on this server")),
-      // recorded payloads: this machine (macOS) for a blank / local target, the Linux ssh host for anything else
+      k8sKubeconfigs: () => (data.meta.actions ? wait(data.k8s.kubeconfigs) : fail(403, "actions are disabled on this server")),
+      // recorded payloads: this machine (macOS) for a blank / local target, the cluster for k8s://, else the Linux ssh host
       discover: ({ target } = {}) => {
         if (!data.meta.actions) return fail(403, "actions are disabled on this server");
-        const local = !target || ["local", "localhost"].includes(String(target).trim().toLowerCase());
-        return new Promise((r) => setTimeout(() => r(clone(local ? data.discover.local : data.discover.ssh)), latency * 4));
+        const t = String(target || "").trim();
+        const which = !t || ["local", "localhost"].includes(t.toLowerCase()) ? "local" : t.startsWith("k8s://") ? "k8s" : "ssh";
+        return new Promise((r) => setTimeout(() => r(clone(data.discover[which])), latency * 4));
       },
       // the API's semantics on the recorded listing: running only unless all, `matched` from the selector
       dockerContainers: (p = {}) => {
@@ -1238,6 +1241,66 @@
       </data-gate></div>`,
   };
 
+  // ================================================================== Kubernetes (k8s collector, host mode)
+  /** What a cluster probe could not read: access {version, nodes, namespaces, pods, denied_namespaces} -> lines. */
+  function deniedAccess(access) {
+    const a = access || {};
+    const out = Object.entries(a).filter(([k, v]) => k !== "denied_namespaces" && (v === "denied" || v === "error"))
+      .map(([k, v]) => `${k}: ${v}`);
+    if (Array.isArray(a.denied_namespaces) && a.denied_namespaces.length) out.push(`pods in ${a.denied_namespaces.join(", ")}: denied`);
+    return out;
+  }
+
+  /** Callout when a cluster was read with partial access (k8s asset meta.access, discover host.access). */
+  const K8sAccess = {
+    name: "K8sAccess",
+    props: { access: Object },
+    setup(props) { return { denied: computed(() => deniedAccess(props.access)) }; },
+    template: `<sm-callout v-if="denied.length" variant="warn" title="Partial access">The credentials could not read everything: findings
+      cover what was readable. <ul class="sm-links"><li v-for="d in denied" :key="d">{{ d }}</li></ul></sm-callout>`,
+  };
+
+  /** Images a cluster's pods run (k8s asset meta.images: refs = one pinned ref per digest, ref = the first; invalid
+   * strings have none). "Scan these images" fills the scan form: docker-image, the shown refs, `source=registry` (never
+   * a local path); private-registry images only when "include private" is on. */
+  const K8sImages = {
+    name: "K8sImages",
+    props: { images: { type: Array, default: () => [] } },
+    setup(props) {
+      const router = useRouter();
+      const q = ref("");
+      const priv = ref(false);
+      const refsOf = (i) => (Array.isArray(i.refs) && i.refs.length ? i.refs : i.ref ? [i.ref] : []);
+      const rows = computed(() => props.images.filter((i) => includesQ(q.value, i.image, ...refsOf(i), ...(i.namespaces || []))));
+      const nPrivate = computed(() => rows.value.filter((i) => i.private && refsOf(i).length).length);
+      const refs = computed(() => [...new Set(rows.value.filter((i) => !i.invalid && (priv.value || !i.private)).flatMap(refsOf))]);
+      const scan = () => router.push({ path: "/scan", query: { collector: "docker-image", target: refs.value.join(","), options: "source=registry" } });
+      const cols = [{ key: "ref", label: "Image" }, { key: "namespaces", label: "Namespaces" }, { key: "pods", label: "Pods", cls: "is-num" },
+        { key: "flags", label: "Pod settings" }];
+      return { q, priv, rows, refs, refsOf, nPrivate, scan, cols };
+    },
+    template: `<div class="sm-stack">
+      <div class="sm-toolbar"><sm-search v-model="q" placeholder="Search image, namespace"/>
+        <sm-switch v-if="nPrivate" v-model="priv">include {{ nPrivate }} private-registry image(s)</sm-switch><span class="sm-toolbar__spacer"></span>
+        <span class="sm-toolbar__count">{{ rows.length }} of {{ images.length }}</span>
+        <sm-button icon="target" :disabled="!refs.length" title="Scan form with collector docker-image, these refs and source=registry (pulled from their registries)" @click="scan">Scan these images ({{ refs.length }})</sm-button></div>
+      <sm-table :columns="cols" :rows="rows" row-key="image" static label="Cluster images">
+        <template #cell-ref="{ row }"><span class="sm-ident"><span class="sm-badges"><b class="sm-mono sm-truncate sm-cell-path" :title="refsOf(row).join(', ') || row.image">{{ refsOf(row)[0] || row.image }}</b>
+            <span v-if="refsOf(row).length > 1" class="sm-muted" :title="refsOf(row).join(', ')">+{{ refsOf(row).length - 1 }} digest(s)</span>
+            <sm-badge v-if="row.invalid" variant="danger" title="not a registry reference: it cannot be pulled, so it is not scanned">not scannable</sm-badge>
+            <sm-badge v-else :variant="row.pinned ? 'ok' : 'warn'" :title="row.pinned ? 'pinned by digest' : 'pulled by tag: what runs may differ from what is scanned'">{{ row.pinned ? 'pinned' : 'tag' }}</sm-badge>
+            <sm-badge v-if="row.private" variant="outline" title="private or loopback registry: pulling it needs access from the machine running secmonk">private</sm-badge>
+            <sm-badge v-if="row.init" variant="outline">init</sm-badge></span>
+          <span v-if="row.image && row.image !== refsOf(row)[0]" class="sm-ident__sub" :title="row.image">{{ row.image }}</span></span></template>
+        <template #cell-namespaces="{ row }"><span class="sm-badges"><span v-for="n in row.namespaces || []" :key="n" class="sm-badge sm-badge--outline">{{ n }}</span></span></template>
+        <template #cell-pods="{ row }">{{ Array.isArray(row.pods) ? row.pods.length : row.pods }}</template>
+        <template #cell-flags="{ row }"><span class="sm-badges"><sm-badge v-if="row.privileged" variant="warn" title="a container runs privileged">privileged</sm-badge>
+          <sm-badge v-if="row.host_path" variant="warn" title="mounts a hostPath volume">hostPath</sm-badge>
+          <sm-badge v-if="row.host_network" variant="warn" title="uses the host network">hostNetwork</sm-badge></span></template>
+        <template #empty><sm-empty title="No images recorded" icon="package"/></template>
+      </sm-table></div>`,
+  };
+
   const AssetDetailView = {
     name: "AssetDetailView",
     setup() {
@@ -1263,6 +1326,7 @@
         { value: "findings", label: "Findings", count: d.value ? d.value.summary.open.total : null },
         { value: "components", label: "Components", count: d.value ? d.value.components.length : null },
         { value: "scans", label: "Scans", count: d.value ? d.value.scans.length : null },
+        ...(d.value && Array.isArray(d.value.asset.meta?.images) ? [{ value: "images", label: "Images", count: d.value.asset.meta.images.length }] : []),
         { value: "details", label: "Details" },
       ]);
       const setTab = (t) => { f.tab = t; f.q = ""; };
@@ -1283,7 +1347,7 @@
         { key: "eco", label: "Ecosystem / vendor" }, { key: "path", label: "Path" }, { key: "findings", label: "Open findings" }];
       const scanCols = [{ key: "id", label: "Scan", cls: "is-num", width: "64px" }, { key: "collector", label: "Collector" },
         { key: "started_at", label: "Started" }, { key: "components", label: "Components", cls: "is-num" }, { key: "state", label: "" }];
-      const metaRows = computed(() => Object.entries(d.value?.asset.meta || {}).map(([k, v]) => ({
+      const metaRows = computed(() => Object.entries(d.value?.asset.meta || {}).filter(([k, v]) => !(k === "images" && Array.isArray(v))).map(([k, v]) => ({
         label: k, value: v == null ? null : typeof v === "object" ? JSON.stringify(v) : String(v), mono: typeof v === "object" })));
       return { res, f, d, id, findings, components, catOptions, prioOptions, tabs, setTab, selected, showComponent, matching,
         rematch, rescan, compCols, scanCols, metaRows, fmt };
@@ -1298,6 +1362,7 @@
         <div class="sm-muted"><span class="sm-mono">{{ data.asset.id }}</span> · last scan <span :title="data.asset.last_seen">{{ fmt.ago(data.asset.last_seen) }}</span>
           <template v-if="data.scans[0]"> with <b>{{ data.scans[0].collector }}</b></template></div>
         <sm-callout v-if="data.partial" variant="warn" title="Partial inventory">The latest scan was partial ({{ data.scans[0].partial_reason || 'see warnings' }}): components it did not see are kept from earlier scans.</sm-callout>
+        <k8s-access v-if="data.asset.meta && data.asset.meta.access" :access="data.asset.meta.access"/>
         <sm-callout v-if="data.warnings.length" variant="warn" :title="data.warnings.length + ' collector warning(s) in the latest scan'">
           <ul><li v-for="(w, i) in data.warnings.slice(0, 8)" :key="i">{{ w }}</li></ul></sm-callout>
         <div class="sm-stats">
@@ -1321,7 +1386,10 @@
           <div class="sm-toolbar"><sm-chips v-model="f.cat" :options="catOptions"/></div>
           <sm-table :columns="compCols" :rows="components" row-key="id" label="Components" @select="showComponent">
             <template #cell-name="{ row }"><span class="sm-ident"><b class="sm-truncate">{{ row.name }}</b><span class="sm-ident__sub" :title="row.purl || row.cpe">{{ row.purl || row.cpe }}</span></span></template>
-            <template #cell-version="{ row }"><span class="sm-mono">{{ row.version || '—' }}</span></template>
+            <template #cell-version="{ row }"><span class="sm-badges"><span class="sm-mono">{{ row.version || '—' }}</span>
+              <template v-if="row.meta"><sm-badge v-if="row.meta.pre_release" variant="warn" title="pre-release version (alpha / beta / rc)">pre-release</sm-badge>
+                <sm-badge v-if="row.meta.vendor_build" variant="outline" title="vendor build of the upstream version (e.g. -eks-, +k3s): advisories are matched on the upstream version">vendor build</sm-badge>
+                <sm-badge v-if="row.meta.version_is_installed_not_running" variant="outline" title="the installed version: what is running may differ until a restart">installed</sm-badge></template></span></template>
             <template #cell-category="{ row }"><sm-badge variant="outline">{{ row.category }}</sm-badge></template>
             <template #cell-eco="{ row }">{{ row.ecosystem || row.vendor || '' }}</template>
             <template #cell-path="{ row }"><span class="sm-mono sm-truncate sm-cell-path" :title="row.path">{{ row.path }}</span></template>
@@ -1329,6 +1397,7 @@
             <template #empty><sm-empty title="No component matches the filters" icon="search"/></template>
           </sm-table>
         </template>
+        <k8s-images v-else-if="f.tab === 'images'" :images="data.asset.meta.images || []"/>
         <sm-table v-else-if="f.tab === 'scans'" :columns="scanCols" :rows="data.scans" row-key="id" static label="Scans">
           <template #cell-started_at="{ row }"><span :title="row.started_at">{{ fmt.datetime(row.started_at) }}</span></template>
           <template #cell-state="{ row }"><span class="sm-badges"><sm-badge v-if="row.partial" variant="warn" :title="row.partial_reason">partial</sm-badge>
@@ -1430,6 +1499,16 @@
         summary = summary || `${label}: ${d[k].join(", ")}`;
       }
     }
+    if (typeof d.nodes === "number") {                 // k8s-cluster
+      summary = `${fmt.plural(d.nodes, "node")}, ${fmt.plural(d.namespaces ?? 0, "namespace")}, ${fmt.plural(d.pods ?? 0, "pod")}`;
+      if (Array.isArray(d.distro) && d.distro.length) lines.push(`distribution: ${d.distro.join(", ")}`);
+    }
+    if (Array.isArray(d.images) && d.images.length && d.images[0].image !== undefined) {  // k8s-images: {refs, image, pinned, namespaces…}
+      const ref = (i) => (Array.isArray(i.refs) && i.refs.length ? i.refs.join(", ") : i.ref || i.image);
+      const notes = (i) => [!i.pinned && "by tag", i.private && "private registry", i.invalid && "not a registry reference"].filter(Boolean);
+      lines.splice(0, lines.length, ...d.images.map((i) => `${ref(i)}${notes(i).length ? "  (" + notes(i).join(", ") + ")" : ""}  [${(i.namespaces || []).join(", ")}]`));
+      summary = `${fmt.plural(d.count ?? d.images.length, "image")}, ${d.pinned ?? 0} pinned by digest`;
+    }
     for (const k of ["engine", "path", "platform"]) if (d[k]) lines.push(`${k}: ${d[k]}`);
     return { summary, lines };
   }
@@ -1443,7 +1522,7 @@
     name: "HostCandidates",
     props: { rows: { type: Array, required: true } },
     setup() {
-      const editable = (r) => r.collector === "docker-engine" || r.collector === "fs";
+      const editable = (r) => ["docker-engine", "docker-image", "fs"].includes(r.collector);
       return { editable, facts: candidateFacts };
     },
     template: `<div class="sm-cands" role="group" aria-label="What to scan">
@@ -1466,26 +1545,97 @@
       </div></div>`,
   };
 
-  /** Host mode of the Scan page: explore a host, tick candidates, scan them as one job. `again`: a host-mode job
-   * whose stored items are shown ticked (Run again), without exploring. */
+  /** Explored host facts (discover payload `host`): this machine / ssh host (name, OS, arch) or a Kubernetes cluster
+   * (cluster, context, server, version, distro, access callout, other contexts). */
+  const HostSummary = {
+    name: "HostSummary",
+    props: { host: { type: Object, required: true } },
+    setup(props) {
+      const k8s = computed(() => props.host.kind === "k8s");
+      const version = computed(() => props.host.kubernetes_version || props.host.version || null);
+      const distro = computed(() => (Array.isArray(props.host.distro) ? props.host.distro : props.host.distro ? [props.host.distro] : []));
+      return { k8s, version, distro };
+    },
+    template: `<div class="sm-stack">
+      <div class="sm-host"><sm-icon :name="k8s ? 'grid' : host.kind === 'ssh' ? 'link' : 'monitor'"/>
+        <b>{{ host.name || host.target || 'this machine' }}</b>
+        <template v-if="k8s"><span v-if="version">Kubernetes {{ version }}</span>
+          <sm-badge v-for="x in distro" :key="x" variant="outline">{{ x }}</sm-badge>
+          <span v-if="host.arch" class="sm-muted">{{ host.arch }}</span>
+          <sm-badge variant="info" :title="host.server || ''">context {{ host.context || '(current)' }}</sm-badge>
+          <span v-if="host.server" class="sm-muted sm-mono">{{ host.server }}</span></template>
+        <template v-else><span>{{ host.os }}<template v-if="host.os_version"> {{ host.os_version }}</template></span>
+          <span v-if="host.arch" class="sm-muted">{{ host.arch }}</span>
+          <sm-badge :variant="host.kind === 'ssh' ? 'info' : 'outline'">{{ host.kind === 'ssh' ? 'ssh ' + host.target : 'local' }}</sm-badge></template></div>
+      <k8s-access v-if="k8s && host.access" :access="host.access"/>
+      <div v-if="k8s && host.other_contexts && host.other_contexts.length" class="sm-muted">Explored the current context; others in this
+        kubeconfig: <span class="sm-mono">{{ host.other_contexts.slice(0, 10).join(', ') }}</span><template v-if="host.other_contexts.length > 10"> …</template> (pick one above).</div>
+    </div>`,
+  };
+
+  // GET /api/discover error codes (Kubernetes) -> a plain title; the server's message and hint follow
+  const DISCOVER_ERRORS = {
+    "kubectl-missing": "kubectl is not installed on the machine running secmonk ui",
+    "k8s-denied": "The cluster refused these credentials",
+    "k8s-unreachable": "The cluster cannot be reached",
+  };
+  const HOST_KINDS = [{ value: "local", label: "This machine", icon: "monitor" }, { value: "ssh", label: "SSH host", icon: "link" },
+    { value: "k8s", label: "Kubernetes cluster", icon: "grid" }];
+
+  /** Host mode of the Scan page: explore this machine, an ssh host or a Kubernetes context, tick candidates, scan
+   * them as one job. `again`: a host-mode job whose stored items are shown ticked (Run again), without exploring. */
   const HostScan = {
     name: "HostScan",
     props: { again: Object },
     setup(props) {
       const store = useStore();
       const actions = computed(() => !store.state.meta || store.state.meta.actions !== false);
-      const form = reactive({ host: "", identity: "", known_hosts: "", connect_timeout: "", save: true, min_confidence: 0.5 });
+      const form = reactive({ kind: "local", host: "", identity: "", known_hosts: "", connect_timeout: "", sudo: false,
+        kubeconfig: "", context: "", namespace: "", save: true, min_confidence: 0.5 });
       const adv = ref(false);
       const disc = reactive({ loading: false, error: null, data: null, from: null });
       const rows = ref([]);
-      const remote = computed(() => !LOCAL_HOSTS.includes(form.host.trim().toLowerCase()));
-      const discOpts = computed(() => ["identity", "known_hosts", "connect_timeout"].filter((k) => String(form[k]).trim())
-        .map((k) => `${k}=${String(form[k]).trim()}`));
+
+      // ---- Kubernetes: kubeconfig files and their contexts (GET /api/k8s/kubeconfigs)
+      const kube = reactive({ data: null, error: null, loading: false });
+      const kubeFile = computed(() => (kube.data || []).find((k) => k.path === form.kubeconfig) || null);
+      const contexts = computed(() => (kubeFile.value ? kubeFile.value.contexts : []));
+      async function loadKube() {
+        kube.loading = true;
+        try {
+          kube.data = await store.source.k8sKubeconfigs();
+          kube.error = null;
+          const first = kube.data.find((k) => k.contexts.length) || kube.data[0];
+          if (!form.kubeconfig && first) form.kubeconfig = first.path;
+          if (!form.context) form.context = (contexts.value.find((c) => c.current) || contexts.value[0] || {}).name || "";
+        } catch (e) { kube.error = e; } finally { kube.loading = false; }
+      }
+      watch(() => form.kind, (k) => { if (k === "k8s" && !kube.data && !kube.loading && actions.value) loadKube(); }, { immediate: true });
+      watch(() => form.kubeconfig, () => {
+        if (kube.data && !contexts.value.some((c) => c.name === form.context)) {
+          form.context = (contexts.value.find((c) => c.current) || contexts.value[0] || {}).name || "";
+        }
+      });
+
+      const target = computed(() => (form.kind === "k8s" ? `k8s://${form.context}` : form.kind === "ssh" ? form.host.trim() : ""));
+      const discOpts = computed(() => {
+        const o = [];
+        if (form.kind === "ssh") {
+          for (const k of ["identity", "known_hosts", "connect_timeout"]) if (String(form[k]).trim()) o.push(`${k}=${String(form[k]).trim()}`);
+          if (form.sudo) o.push("sudo=true");
+        }
+        if (form.kind === "k8s") {
+          if (form.kubeconfig) o.push(`kubeconfig=${form.kubeconfig}`);
+          if (form.namespace.trim()) o.push(`namespace=${form.namespace.replace(/\s+/g, "")}`);
+        }
+        return o;
+      });
+      const canExplore = computed(() => actions.value && !disc.loading && (form.kind !== "ssh" || !!form.host.trim()));
       async function explore() {
         disc.loading = true;
         disc.error = null;
         try {
-          const d = await store.source.discover({ target: form.host.trim(), opt: discOpts.value });
+          const d = await store.source.discover({ target: target.value, opt: discOpts.value });
           rows.value = d.candidates.map((c) => ({ ...c, options: [...c.options], checked: c.selected && c.available, orig: c.target }));
           Object.assign(disc, { data: d, from: null });
         } catch (e) { disc.error = e; } finally { disc.loading = false; }
@@ -1493,8 +1643,13 @@
       watch(() => props.again, (job) => {
         const p = job && job.params;
         if (!p || p.mode !== "host") return;
-        const host = LOCAL_HOSTS.includes(String(p.host || "").trim().toLowerCase()) ? "" : p.host;   // stored as "local"
-        Object.assign(form, { host, save: p.save !== false, min_confidence: p.min_confidence ?? 0.5 });
+        const h = String(p.host || "").trim();
+        const opt = (k) => (p.items || []).flatMap((it) => it.options || []).map(splitOpt).find(([key]) => key === k)?.[1] || "";
+        if (h.startsWith("k8s://")) {
+          Object.assign(form, { kind: "k8s", context: h.slice(6), kubeconfig: opt("kubeconfig") || form.kubeconfig, namespace: opt("namespace") });
+        } else if (LOCAL_HOSTS.includes(h.toLowerCase())) form.kind = "local";
+        else Object.assign(form, { kind: "ssh", host: h, sudo: truthy(opt("sudo") || "false") });
+        Object.assign(form, { save: p.save !== false, min_confidence: p.min_confidence ?? 0.5 });
         const seen = {};
         rows.value = (p.items || []).map((it) => {
           const id = it.id || itemId(it);
@@ -1510,43 +1665,59 @@
       const edited = computed(() => chosen.value.some((r) => r.target !== r.orig));
       const setAll = (on) => { for (const r of rows.value) r.checked = on && r.available; };
       const warnings = computed(() => (disc.data && disc.data.warnings) || []);
-      const pastHosts = computed(() => uniq(store.state.jobs.list.filter((j) => j.params && j.params.mode === "host" && j.params.host !== "local")
-        .map((j) => j.params.host)));
-      const cli = computed(() => ["secmonk scan-host", form.host.trim() && shellArg(form.host.trim()), ...discOpts.value.map((o) => `-o ${shellArg(o)}`),
+      const pastHosts = computed(() => uniq(store.state.jobs.list.filter((j) => j.params && j.params.mode === "host" && j.params.host
+        && j.params.host !== "local" && !String(j.params.host).startsWith("k8s://")).map((j) => j.params.host)));
+      const cli = computed(() => ["secmonk scan-host", target.value && shellArg(target.value), ...discOpts.value.map((o) => `-o ${shellArg(o)}`),
         chosen.value.length ? `--only ${[...new Set(chosen.value.map((r) => r.id))].join(",")}` : "--yes", !form.save && "--no-save",
         +form.min_confidence !== 0.5 && `--min-confidence ${form.min_confidence}`].filter(Boolean).join(" "));
       const approx = computed(() => (chosen.value.some((r) => r.guessed) ? "candidate ids guessed: that run did not store them"
         : edited.value ? "approximate: the CLI scans the proposed targets, not the edited ones" : null));
       const tooMany = computed(() => chosen.value.length > 20);
       const canRun = computed(() => actions.value && !store.busy.value && chosen.value.length > 0 && !tooMany.value);
-      const run = () => store.startJob({ kind: "scan", host: form.host.trim() || null, save: form.save, min_confidence: +form.min_confidence,
+      const run = () => store.startJob({ kind: "scan", host: target.value || null, save: form.save, min_confidence: +form.min_confidence,
         // the candidate id travels with the item (stored in the history: Run again, the scan-host command)
         items: chosen.value.map((r) => ({ ...(r.guessed ? {} : { id: r.id }), collector: r.collector, target: (r.target || "").trim() || null,
           options: r.options })) });
-      return { store, actions, form, adv, disc, rows, remote, explore, chosen, setAll, warnings, pastHosts, cli, approx, tooMany, canRun, run };
+      const loadingNote = computed(() => ({ ssh: "probing the host over ssh: this can take up to a minute…",
+        k8s: "asking the cluster through kubectl: this can take a few seconds…" })[form.kind] || "looking at this machine…");
+      return { store, actions, form, adv, disc, rows, kube, kubeFile, contexts, loadKube, explore, canExplore, chosen, setAll, warnings,
+        pastHosts, cli, approx, tooMany, canRun, run, loadingNote, HOST_KINDS, DISCOVER_ERRORS };
     },
     template: `<div class="sm-stack">
+      <div class="sm-toolbar"><sm-segmented v-model="form.kind" :options="HOST_KINDS"/></div>
       <div class="sm-form">
-        <sm-field label="Host" hint="empty = this machine; or [ssh://]user@host[:port] (Linux or macOS, key usable without a prompt)">
-          <input class="sm-input" v-model="form.host" placeholder="user@host or ssh://user@host:2222" list="sm-past-scan-hosts" spellcheck="false"
-            @keydown.enter="actions && !disc.loading && explore()"></sm-field>
-        <datalist id="sm-past-scan-hosts"><option v-for="h in pastHosts" :key="h" :value="h"></option></datalist>
-        <details class="sm-details sm-field--wide" :open="adv" @toggle="adv = $event.target.open"><summary>Advanced: SSH</summary>
-          <div class="sm-form sm-mt-2">
-            <sm-field label="SSH key" hint="identity: private key file on the server machine"><input class="sm-input" v-model="form.identity" placeholder="~/.ssh/id_ed25519" spellcheck="false"></sm-field>
-            <sm-field label="Known hosts" hint="known_hosts file to check the host key against"><input class="sm-input" v-model="form.known_hosts" placeholder="~/.ssh/known_hosts" spellcheck="false"></sm-field>
-            <sm-field label="Connect timeout" hint="seconds"><input class="sm-input" type="number" min="1" max="120" v-model="form.connect_timeout" placeholder="10"></sm-field>
-          </div></details>
-        <div class="sm-form__actions"><sm-button :variant="rows.length ? '' : 'primary'" icon="search" :loading="disc.loading" :disabled="!actions" @click="explore">{{ rows.length ? 'Explore again' : 'Explore' }}</sm-button>
-          <span class="sm-muted">{{ disc.loading ? (remote ? 'probing the host over ssh: this can take up to a minute…' : 'looking at this machine…') : 'lists what can be scanned there (secmonk discover)' }}</span></div>
+        <template v-if="form.kind === 'ssh'">
+          <sm-field label="Host" hint="[ssh://]user@host[:port] (Linux or macOS, key usable without a prompt)">
+            <input class="sm-input" v-model="form.host" placeholder="user@host or ssh://user@host:2222" list="sm-past-scan-hosts" spellcheck="false"
+              @keydown.enter="canExplore && explore()"></sm-field>
+          <datalist id="sm-past-scan-hosts"><option v-for="h in pastHosts" :key="h" :value="h"></option></datalist>
+          <sm-field label="Privileges"><sm-switch v-model="form.sudo">{{ form.sudo ? 'use sudo (sudo -n: needs a NOPASSWD rule)' : 'as the ssh user' }}</sm-switch></sm-field>
+          <details class="sm-details sm-field--wide" :open="adv" @toggle="adv = $event.target.open"><summary>Advanced: SSH</summary>
+            <div class="sm-form sm-mt-2">
+              <sm-field label="SSH key" hint="identity: private key file on the server machine"><input class="sm-input" v-model="form.identity" placeholder="~/.ssh/id_ed25519" spellcheck="false"></sm-field>
+              <sm-field label="Known hosts" hint="known_hosts file to check the host key against"><input class="sm-input" v-model="form.known_hosts" placeholder="~/.ssh/known_hosts" spellcheck="false"></sm-field>
+              <sm-field label="Connect timeout" hint="seconds"><input class="sm-input" type="number" min="1" max="120" v-model="form.connect_timeout" placeholder="10"></sm-field>
+            </div></details>
+        </template>
+        <template v-else-if="form.kind === 'k8s'">
+          <sm-field label="Kubeconfig" :hint="kube.error ? kube.error.message : kubeFile && kubeFile.error ? kubeFile.error : 'files on the machine running secmonk ui (kubectl is used)'">
+            <select class="sm-select" v-model="form.kubeconfig" aria-label="Kubeconfig" :disabled="!kube.data || !kube.data.length">
+              <option value="" disabled>{{ kube.loading ? 'loading…' : kube.data && !kube.data.length ? 'no kubeconfig found' : 'choose a file' }}</option>
+              <option v-for="k in kube.data || []" :key="k.path" :value="k.path">{{ k.path }}{{ k.error ? ' (unreadable)' : ' — ' + $fmt.plural(k.contexts.length, 'context') }}</option></select></sm-field>
+          <sm-field label="Context" hint="k8s://<context>"><select class="sm-select" v-model="form.context" aria-label="Kubernetes context" :disabled="!contexts.length">
+            <option value="">(current context)</option>
+            <option v-for="c in contexts" :key="c.name" :value="c.name" :title="c.server">{{ c.name }}{{ c.current ? ' (current)' : '' }}{{ c.server ? ' — ' + c.server : '' }}</option></select></sm-field>
+          <sm-field label="Namespaces" hint="optional, comma separated: only their pods"><input class="sm-input" v-model="form.namespace" placeholder="default, shop" spellcheck="false"></sm-field>
+          <sm-callout v-if="kube.data && kube.data.some(k => k.error)" variant="warn" title="Some kubeconfig files could not be read" class="sm-field--wide">
+            <ul class="sm-links"><li v-for="k in kube.data.filter(k => k.error)" :key="k.path"><span class="sm-mono">{{ k.path }}</span>: {{ k.error }}</li></ul></sm-callout>
+        </template>
+        <div class="sm-form__actions"><sm-button :variant="rows.length ? '' : 'primary'" icon="search" :loading="disc.loading" :disabled="!canExplore" @click="explore">{{ rows.length ? 'Explore again' : 'Explore' }}</sm-button>
+          <span class="sm-muted">{{ disc.loading ? loadingNote : 'lists what can be scanned there (secmonk discover)' }}</span></div>
       </div>
-      <sm-callout v-if="disc.error" variant="error" :title="disc.error.message">{{ disc.error.hint }}</sm-callout>
+      <sm-callout v-if="disc.error" variant="error" :title="DISCOVER_ERRORS[disc.error.code] || disc.error.message">
+        <div v-if="DISCOVER_ERRORS[disc.error.code] && disc.error.message !== DISCOVER_ERRORS[disc.error.code]" class="sm-mono">{{ disc.error.message }}</div><div>{{ disc.error.hint }}</div></sm-callout>
       <template v-if="rows.length">
-        <div v-if="disc.data" class="sm-host"><sm-icon :name="disc.data.host.kind === 'ssh' ? 'link' : 'monitor'"/>
-          <b>{{ disc.data.host.name || disc.data.host.target || 'this machine' }}</b>
-          <span>{{ disc.data.host.os }}<template v-if="disc.data.host.os_version"> {{ disc.data.host.os_version }}</template></span>
-          <span v-if="disc.data.host.arch" class="sm-muted">{{ disc.data.host.arch }}</span>
-          <sm-badge :variant="disc.data.host.kind === 'ssh' ? 'info' : 'outline'">{{ disc.data.host.kind === 'ssh' ? 'ssh ' + disc.data.host.target : 'local' }}</sm-badge></div>
+        <host-summary v-if="disc.data" :host="disc.data.host"/>
         <sm-callout v-if="disc.from != null" variant="info" :title="'Settings of job #' + disc.from">The items of that run, not a fresh look at the host: Explore again to see what it offers now.</sm-callout>
         <sm-callout v-if="warnings.length" variant="warn" :title="$fmt.plural(warnings.length, 'warning')"><ul class="sm-links"><li v-for="(w, i) in warnings" :key="i">{{ w }}</li></ul></sm-callout>
         <div class="sm-toolbar"><sm-button size="sm" icon="check" @click="setAll(true)">Select all available</sm-button><sm-button size="sm" variant="ghost" @click="setAll(false)">None</sm-button>
@@ -1572,7 +1743,8 @@
       const mode = ref(route.query.mode === "host" ? "host" : "single");
       const hostAgain = ref(null);
       const modes = [{ value: "single", label: "Single collector", icon: "target" }, { value: "host", label: "Host (auto)", icon: "server" }];
-      const form = reactive({ collector: route.query.collector || "fs", target: route.query.target || "", options: "", save: true,
+      const form = reactive({ collector: route.query.collector || "fs", target: route.query.target || "",
+        options: String(route.query.options || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join("\n"), save: true,
         min_confidence: 0.5, engine: engineDefaults() });
       const advanced = ref(false);
       const info = computed(() => (collectors.data || []).find((c) => c.name === form.collector) || null);
@@ -2159,7 +2331,7 @@
     UI.install(app);
     app.provide("store", store);
     for (const [n, c] of Object.entries({ SnapshotGate, MonitorActions, SnapshotNotes, ProcessDetail, NoDb, DataGate,
-      FindingsTable, FindingDetail, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, ActionsOff })) app.component(n, c);
+      FindingsTable, FindingDetail, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, K8sAccess, K8sImages, HostSummary, ActionsOff })) app.component(n, c);
     app.use(router);
     app.mount(el);
     store.loadMeta();
@@ -2170,5 +2342,5 @@
   Object.assign(UI, { ApiSource, MockSource, ApiError, createStore, mountApp, NAV, ROUTES, useResource, fkey,
     VIEWS: { OverviewView, ProcessesView, SoftwareView, LaunchItemsView, ActivityView, AssetsView, AssetDetailView, ScanView,
       UnmatchedView, FindingsView, VulnsView, VulnDetailView, SourcesView, JobsView, AboutView, ProcessDetail, FindingDetail,
-      FindingsTable, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, DataGate, App } });
+      FindingsTable, JobResult, JobTarget, JobItems, JobHistory, HostCandidates, HostScan, SbomExport, K8sAccess, K8sImages, HostSummary, DataGate, App } });
 })(window);

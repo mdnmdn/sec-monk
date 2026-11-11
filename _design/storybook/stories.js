@@ -240,6 +240,7 @@
       variants: [
         { name: "This Mac (local)", template: `<host-candidates :rows="rows"/>`, data: { rows: candRows(M.discover.local) } },
         { name: "Linux host over ssh", template: `<host-candidates :rows="rows"/>`, data: { rows: candRows(M.discover.ssh) } },
+        { name: "Kubernetes cluster", template: `<host-candidates :rows="rows"/>`, data: { rows: candRows(M.discover.k8s) } },
       ] },
     { id: "host-scan", group: "Patterns", title: "Host scan (host-scan)",
       doc: "Host mode of the Scan page: host field (blank = this machine), SSH options, Explore (loading state: an ssh probe can take a minute), host summary, warnings, candidates, Scan selected (N) as one batch job, and the secmonk scan-host command. Prop again: a host-mode job whose items are shown ticked (Run again).",
@@ -253,6 +254,29 @@
         { name: "Default", template: `<sbom-export :asset-id="id"/>`, data: { id: M.assets[0].id } },
         { name: "Unknown asset (error toast)", template: `<sbom-export asset-id="dir:/nowhere"/>` },
         { name: "Disabled", template: `<sbom-export :asset-id="id" disabled/>`, data: { id: M.assets[0].id } },
+      ] },
+    { id: "host-summary", group: "Patterns", title: "Host summary (host-summary)",
+      doc: "The explored host (GET /api/discover `host`): this machine or an ssh host (name, OS, version, architecture), or a Kubernetes cluster (cluster, Kubernetes version, distribution, context, server, partial-access callout, other contexts).",
+      variants: [
+        { name: "This Mac", template: `<host-summary :host="h"/>`, data: { h: M.discover.local.host } },
+        { name: "Linux over ssh", template: `<host-summary :host="h"/>`, data: { h: M.discover.ssh.host } },
+        { name: "Kubernetes (partial access)", template: `<host-summary :host="h"/>`, data: { h: M.discover.k8s.host } },
+        { name: "Kubernetes, current context of several", template: `<host-summary :host="h"/>`, data: { h: { ...M.discover.k8s.host, access: { version: "ok" }, other_contexts: ["prod-eks", "staging"] } } },
+      ] },
+    { id: "k8s-access", group: "Patterns", title: "Kubernetes access (k8s-access)",
+      doc: "Partial-access callout of a cluster (asset meta.access / discover host.access): reads refused or failed, namespaces whose pods were refused. Renders nothing with full access.",
+      variants: [
+        { name: "Denied namespace", template: `<k8s-access :access="a"/>`, data: { a: M.discover.k8s.host.access } },
+        { name: "Nodes and cluster-wide pods denied", template: `<k8s-access :access="{ version: 'ok', nodes: 'denied', namespaces: 'ok', pods: 'denied', denied_namespaces: ['kube-system'] }"/>` },
+      ] },
+    { id: "k8s-images", group: "Patterns", title: "Cluster images (k8s-images)",
+      doc: "The Images tab of a cluster asset (meta.images): refs (one per digest), pinned-by-digest or tag, private registry, not scannable (invalid string), init, namespaces, pods, privileged / hostPath / hostNetwork; search; Scan these images fills the scan form with docker-image, the shown refs and source=registry (private-registry refs only when included).",
+      variants: [
+        { name: "kind cluster (one private registry)", template: `<k8s-images :images="imgs"/>`, data: { imgs: M.asset_details[Object.keys(M.asset_details).find((k) => k.startsWith("k8s:"))].asset.meta.images } },
+        { name: "Several digests, an invalid image string", template: `<k8s-images :images="imgs"/>`, data: { imgs: [
+          { image: "nginx:1.25", ref: "docker.io/library/nginx@sha256:" + "a".repeat(64), refs: ["docker.io/library/nginx@sha256:" + "a".repeat(64), "docker.io/library/nginx@sha256:" + "b".repeat(64)],
+            pinned: true, namespaces: ["web"], pods: ["web/a", "web/b"], init: false },
+          { image: "not a valid ref!", refs: [], invalid: true, pinned: false, namespaces: ["legacy"], pods: ["legacy/x"], host_network: true }] } },
       ] },
     { id: "job-items", group: "Patterns", title: "Job items (job-items)",
       doc: "The items of a host-mode run (params.items: collector, target, options), in the Jobs drawer.",

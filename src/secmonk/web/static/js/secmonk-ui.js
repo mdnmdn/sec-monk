@@ -149,7 +149,10 @@
       help: "comma separated: container names or ids, globs (web-*), re:<regex> (search); images: image:<ref>, image:* (every tagged image), image:<glob>, image:re:<regex>, each scanned once per image Id; container patterns see running containers unless 'include stopped'" },
     ssh: { placeholder: "user@host[:port]" },
     windows: { placeholder: "/path/to/inventory.json (from secmonk windows-script)" },
-    process: { placeholder: "(this machine) or a snapshot.json", optional: true },
+    process: { placeholder: "(this machine), a snapshot.json or ssh://user@host", optional: true,
+      help: "empty = this machine; a secmonk-process-snapshot/1 JSON; ssh://user@host[:port] = a Linux host's processes (options identity=, known_hosts=, sudo=true)" },
+    k8s: { placeholder: "k8s://my-context", optional: true,
+      help: "a kubeconfig context (empty = the current one); options kubeconfig=<path>, context=, namespace=a,b, timeout= (kubectl on the server machine)" },
     sbom: { placeholder: "path/to/bom.cdx.json (CycloneDX or SPDX JSON)",
       help: "CycloneDX 1.4–1.6 or SPDX 2.x JSON on the machine running secmonk ui; option asset_id=sbom:<name> to choose the asset id" },
   };

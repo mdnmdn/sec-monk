@@ -30,6 +30,14 @@ with an image title label added, so each has its own config digest = image Id, a
 job 5 scans `image:nginx:latest`, job 6 is a host-mode batch (the container `web` and
 `image:*`) in which nginx is reused (same image Id) and postgres collected.
 
+Kubernetes: a synthetic kind cluster "dev-kind" behind a fake kubectl (k8s._run patched): control plane
+v1.32.0-rc.1 (a pre-release component), one arm64 node (kubelet v1.31.0), namespaces
+default / shop / restricted, cluster-wide pod listing refused and `restricted` refused (partial access), four images
+(nginx pinned, shop-api pinned, redis by tag, privileged with a hostPath, a tool from a loopback registry). Scanned as asset k8s:dev-kind and explored
+with `k8s://dev-kind`; the kubeconfig picker lists a synthetic ~/.kube/config (dev-kind, prod-eks) and an unreadable
+file. Remote processes: asset process:ssh:… from the captured Linux script output
+(tests/fixtures/collectors/process/linux/remote-output.txt) through a canned ssh transport.
+
 Host auto mode (`discover`): the real discovery code with the platform facts patched: a synthetic macOS host
 "alice-mbp" (15.1, arm64, no Full Disk Access, Homebrew in /opt/homebrew, the fake engine) and a synthetic Ubuntu
 host reached over a fake ssh transport (dpkg + docker; the remote engine probe answers with the fixture listing).
@@ -280,6 +288,128 @@ class FakeSSH(Transport):
         return 0, ("\n".join(lines) + "\n").encode(), b""
 
 
+KIND_POD = {"default": [("web", "nginx:1.25.3", "docker.io/library/nginx@sha256:" + "2" * 64, {})],
+            "shop": [("api", "ghcr.io/example/shop-api:2.4", "ghcr.io/example/shop-api@sha256:" + "3" * 64, {}),
+                     ("cache", "redis:7.2", "", {"privileged": True, "host_path": True}),
+                     ("tool", "localhost:5000/internal/tool:1", "localhost:5000/internal/tool@sha256:" + "4" * 64, {})]}
+FORBIDDEN = 'Error from server (Forbidden): pods is forbidden: User "dev" cannot list resource "pods"'
+
+
+def kind_kubectl(argv: list[str], timeout: float, cap: int = 0) -> tuple[int, bytes, bytes]:
+    """A fake `kubectl` for the synthetic kind cluster: answers by sub-command (k8s._run signature)."""
+    rest = [a for a in argv[1:] if not a.startswith(("--kubeconfig", "--context", "--request-timeout"))]
+    ok = lambda doc: (0, json.dumps(doc).encode(), b"")
+    if rest[:2] == ["config", "view"]:
+        return ok({"kind": "Config", "current-context": "dev-kind",
+                   "contexts": [{"name": "dev-kind", "context": {"cluster": "dev-kind", "user": "dev", "namespace": "default"}}],
+                   "clusters": [{"name": "dev-kind", "cluster": {"server": "https://127.0.0.1:41234"}}]})
+    if rest[:2] == ["get", "--raw"]:
+        return ok({"major": "1", "minor": "32", "gitVersion": "v1.32.0-rc.1", "platform": "linux/arm64"})
+    what = rest[1]
+    if what == "nodes":
+        return ok({"items": [{"metadata": {"name": "dev-kind-control-plane", "labels": {}},
+                              "spec": {"providerID": "kind://docker/dev-kind/dev-kind-control-plane"},
+                              "status": {"nodeInfo": {"kubeletVersion": "v1.31.0", "kubeProxyVersion": "v1.31.0",
+                                                      "containerRuntimeVersion": "containerd://1.7.18",
+                                                      "osImage": "Debian GNU/Linux 12 (bookworm)",
+                                                      "kernelVersion": "6.10.0-linuxkit", "operatingSystem": "linux",
+                                                      "architecture": "arm64"}}}]})
+    if what == "namespaces":
+        return ok({"items": [{"metadata": {"name": n}} for n in ("default", "shop", "restricted")]})
+    if what == "pods":
+        ns = next((a.split("=", 1)[1] for a in rest if a.startswith("--namespace=")), None)
+        if ns not in KIND_POD:                       # cluster-wide listing and `restricted`: refused
+            return 1, b"", FORBIDDEN.encode()
+        items = []
+        for name, image, image_id, flags in KIND_POD[ns]:
+            sc = {"securityContext": {"privileged": True}} if flags.get("privileged") else {}
+            spec = {"containers": [{"name": name, "image": image, **sc}]}
+            if flags.get("host_path"):
+                spec["volumes"] = [{"name": "data", "hostPath": {"path": "/var/lib/redis"}}]
+            status = [{"name": name, "image": image, "imageID": image_id}] if image_id else [{"name": name, "image": image}]
+            items.append({"metadata": {"namespace": ns, "name": f"{name}-1"}, "spec": spec,
+                          "status": {"containerStatuses": status}})
+        return ok({"items": items})
+    return 1, b"", f"unexpected kubectl call {rest}".encode()
+
+
+KUBECONFIG = """apiVersion: v1
+kind: Config
+current-context: dev-kind
+clusters:
+- name: dev-kind
+  cluster: {server: "https://127.0.0.1:41234"}
+- name: prod-eks
+  cluster: {server: "https://prod.eks.example.internal"}
+contexts:
+- name: dev-kind
+  context: {cluster: dev-kind, user: dev, namespace: default}
+- name: prod-eks
+  context: {cluster: prod-eks, user: ops}
+users:
+- name: dev
+  user: {token: not-a-real-token}
+- name: ops
+  user: {token: not-a-real-token}
+"""
+
+
+class CannedSSH(Transport):
+    """Returns the captured output of the remote process script (no ssh, no host)."""
+    name = "canned"
+
+    def __init__(self, out: bytes):
+        self.out = out
+
+    def stream(self, cmd, timeout=60, stdin=None):
+        import subprocess
+
+        from secmonk.collectors import ssh
+
+        proc = subprocess.Popen(["cat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return ssh._ProcStream(proc, timeout, self.out)
+
+    def run(self, cmd, timeout=60, stdin=None):
+        raise NotImplementedError
+
+
+def k8s_payloads(db: Path, home: Path) -> dict:
+    """The kind cluster scanned (asset k8s:dev-kind), explored (k8s://dev-kind) and the kubeconfig picker listing."""
+    from secmonk.collectors import k8s
+
+    kube = home / ".kube"
+    kube.mkdir(parents=True)
+    (kube / "config").write_text(KUBECONFIG)
+    (kube / "broken.yaml").write_text("apiVersion: v1\nkind: Config\ncontexts: [\n")
+    saved = (k8s._run, k8s.shutil.which, os.environ.get("HOME"), os.environ.get("KUBECONFIG"))
+    try:
+        k8s._run = kind_kubectl
+        k8s.shutil.which = lambda name: "/usr/local/bin/kubectl"
+        os.environ["HOME"] = str(home)                     # the picker reads ~/.kube: the synthetic one
+        os.environ["KUBECONFIG"] = os.pathsep.join([str(kube / "config"), str(kube / "broken.yaml")])
+        scan(db, "k8s", "k8s://dev-kind")
+        kubeconfigs = ops.k8s_kubeconfigs()
+        found = ops.discover_host("k8s://dev-kind", {"kubeconfig": str(kube / "config")})
+    finally:
+        k8s._run, k8s.shutil.which = saved[0], saved[1]
+        for var, val in (("HOME", saved[2]), ("KUBECONFIG", saved[3])):
+            if val is None:
+                os.environ.pop(var, None)
+            else:
+                os.environ[var] = val
+    return {"kubeconfigs": kubeconfigs, "discover": found}
+
+
+def remote_process(db: Path) -> None:
+    out = (FIX / "collectors/process/linux/remote-output.txt").read_bytes()
+    inv = ops.collect("process", "ssh://deploy@build-01.example.internal", {"transport": CannedSSH(out)})
+    c = connect(db)
+    try:
+        ops.save_and_match(c, inv)
+    finally:
+        c.close()
+
+
 def discover_payloads() -> dict:
     """GET /api/discover for this machine (synthetic macOS facts, the fake engine) and for an ssh Linux host."""
     saved = (dsc._local_os, dsc._local_host, dsc._brew_prefixes, dsc.os, dsc._docker_probe, proc_backend.current_platform)
@@ -363,6 +493,8 @@ def main() -> None:
         for collector, target in (("fs", "payments-api"), ("fs", "web-frontend"), ("macos", "macbook")):
             scan(db, collector, srv / target)
         cli_scan(db, "rootfs", srv / "alpine-rootfs")                                   # job 2, from the CLI
+        kube = k8s_payloads(db, tmp / "home")                                            # asset k8s:dev-kind
+        remote_process(db)                                                               # asset process:ssh:…
         shutil.copy(FIX / "sbom/synthetic.spdx.json", srv / "vendor-app.spdx.json")
         scan(db, "sbom", srv / "vendor-app.spdx.json")                                   # an imported SBOM (sbom:…)
         lock = srv / "web-frontend/package-lock.json"
@@ -384,7 +516,7 @@ def main() -> None:
                 status="partial")
         docker = {"contexts": ops.docker_contexts(), "containers": ops.docker_containers(all=True)}
         run_job(runner, {"kind": "scan", "collector": "docker-engine", "target": "image:nginx:latest"})   # job 5
-        discovered = discover_payloads()
+        discovered = {**discover_payloads(), "k8s": kube["discover"]}
         by_id = {c["id"]: c for c in discovered["local"]["candidates"]}
         items = [{**{k: by_id["docker"][k] for k in ("id", "collector", "options")}, "target": "web"},    # narrowed
                  {k: by_id["docker-images"][k] for k in ("id", "collector", "target", "options")}]
@@ -435,12 +567,16 @@ def main() -> None:
                 "jobs": [runner.get(j["id"]) for j in runner.list()],
                 "docker": docker,
                 "discover": discovered,
+                "k8s": {"kubeconfigs": kube["kubeconfigs"]},
                 # GET /api/assets/<id>/sbom?vulns=1 per asset (the mock drops `vulnerabilities` for the plain export)
                 "sbom": {a["id"]: sbom.export_asset(c, a["id"], with_vulns=True) for a in assets},
             }
         finally:
             c.close()
-        text = json.dumps(data, indent=1, default=str).replace(sock, "/var/run/docker.sock").replace(str(tmp.resolve()), "").replace(str(tmp), "")
+        text = json.dumps(data, indent=1, default=str).replace(sock, "/var/run/docker.sock")
+        for home in (str((tmp / "home").resolve()), str(tmp / "home")):           # the synthetic ~ of the kubeconfigs
+            text = text.replace(home, "/Users/alice")
+        text = text.replace(str(tmp.resolve()), "").replace(str(tmp), "")
     for leak in (str(tmp), str(tmp.resolve()), str(REPO), str(Path.home())):   # macOS: /var/folders -> /private/var/…
         if leak in text:
             raise SystemExit(f"local path leaked into the mock: {leak}")

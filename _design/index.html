@@ -50,9 +50,11 @@
       <tr><td><a href="pages/assets.html">Assets</a></td><td class="sm-mono">#/assets</td><td>every scanned target, open findings per priority</td></tr>
       <tr><td><a href="pages/asset-detail.html">Asset detail — findings</a></td><td class="sm-mono">#/assets/dir:/srv/web-frontend?closed=1</td><td>findings incl. a fixed one, tabs, re-match / rescan</td></tr>
       <tr><td><a href="pages/asset-components.html">Asset detail — components</a></td><td class="sm-mono">#/assets/dir:/srv/payments-api?tab=components</td><td>components with their open findings</td></tr>
+      <tr><td><a href="pages/asset-cluster.html">Asset detail — cluster images</a></td><td class="sm-mono">#/assets/k8s:dev-kind@…?tab=images</td><td>images the pods run (pinned, namespaces, privileged / hostPath), partial access, scan these images</td></tr>
       <tr><td><a href="pages/scan.html">Scan</a></td><td class="sm-mono">#/scan</td><td>scan form (collector, target, options) and the scan history (UI and CLI runs, multi-target result)</td></tr>
       <tr><td><a href="pages/scan-docker.html">Scan — Docker engine</a></td><td class="sm-mono">#/scan?again=4</td><td>"Run again" of a docker-engine scan: engine fields, selector, container preview</td></tr>
       <tr><td><a href="pages/scan-host.html">Scan — host (auto)</a></td><td class="sm-mono">#/scan?mode=host</td><td>host mode: this Mac explored, host summary, candidate checkbox panel, editable targets, scan-host command</td></tr>
+      <tr><td><a href="pages/scan-k8s.html">Scan — Kubernetes cluster</a></td><td class="sm-mono">#/scan?mode=host</td><td>host mode on a kind cluster: kubeconfig / context pickers (one unreadable file), cluster summary, partial access, image candidates</td></tr>
       <tr><td><a href="pages/unmatched.html">Unmatched identities</a></td><td class="sm-mono">#/unmatched</td><td>alias-table candidates</td></tr>
       <tr><th colspan="3">Risk</th></tr>
       <tr><td><a href="pages/findings.html">Findings</a></td><td class="sm-mono">#/findings?all=1</td><td>CLI filters, fixed findings included</td></tr>
