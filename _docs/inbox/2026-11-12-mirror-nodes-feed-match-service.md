@@ -287,6 +287,49 @@ roadmap R5.
 | The serving node learns tenants' software | identity allowlist, no stored bodies, components sent once; hash-prefix mode or feed-follow for stricter tenants |
 | Redistributing feed data to other organizations | licences differ per source (some OSV sources ask for attribution): check each before serving outside one organization |
 
+## 9. Room for inventory history and a dependency graph (not in scope)
+
+Two later features must stay possible: the **history** of an asset's or an application's inventory and findings, and
+a **dependency graph** (application → embedded runtime → library; project → direct → transitive dependency).
+Neither is built by this proposal. The rules below keep the way open.
+
+What exists (2026-11-12):
+
+- `scan` rows are kept. `asset_component` rows are never deleted: a removed component keeps an older `last_scan_id`.
+  The component key contains the version, so an upgrade is a new component.
+- The parsers see relations and mostly flatten them: npm lockfile nesting, `.NET` `direct`, Java `parent` of a shaded
+  jar, macOS `meta.embedded_in`, Dart `direct` / `dev`, CycloneDX `dependencies` on import.
+- Lost today: a gap (removed, then back), per-scan `asset.meta` and per-asset `meta`, finding reopenings. Rust
+  `replace_findings` deletes and re-inserts an asset's findings.
+
+Likely shape (sketch, for later):
+
+| Feature | Model | Note |
+|---|---|---|
+| Inventory history | intervals `asset_component_span(asset, component, from_scan, to_scan)` | Closed only by a complete scan, as removal is today; "installed at time T" and "for how long" become one query. |
+| Findings history | events `finding_event(asset, component, vuln, at, from, to, cause)`, with `cause` = a scan id **or** the mirror versions (`as_of`) | Tells "the component changed" apart from "the vulnerability became known"; gives exposure windows (time to fix). |
+| Dependency graph | occurrences `occurrence(asset, component, path)` and edges `dependency(asset, parent occurrence, child occurrence, kind, scope, direct)`; kinds `depends`, `embeds`, `contains`, `runs` | Edges are **per asset and per location**: the same `lodash@4.17.21` has different parents in two projects. It is a DAG with shared nodes and, for npm, possible cycles. |
+| Links between assets | `asset_link(from, to, kind)`: container → image, cluster → image, host → container | Today only in `meta` (`image_id`). |
+| Application history | the history of the application's subgraph | needs the graph |
+
+Guardrails for this proposal:
+
+1. **Matching stays per component identity.** The graph adds context, never identity. `match.components`,
+   `component_match` and the lookup keys do not change.
+2. **Graph, paths and history never leave the state node.** The identity allowlist sent to M (§3.3) stays explicit
+   and excludes parents, paths and occurrences: a graph tells more about a host than a package list.
+3. **Graph-based priority lives on S.** Direct or transitive, dev scope and "pulled in by application X" are scoring
+   inputs; scoring is already on the state node (§3.4).
+4. **The finding key stays `(asset, component, vuln)`.** Occurrences are read by join, so the key and the
+   `findings` payload do not change.
+5. **Lifecycle changes carry a cause from P0 on.** The finding builder records the scan id or the `as_of` of each
+   transition; `replace_findings` diffs old and new in its transaction rather than losing the transition.
+6. **Nothing deletes inventory rows.** The Rust port keeps `scan` and `asset_component` rows, as Python does.
+   Pruning, if ever needed, compacts them into intervals.
+7. **The inventory contract can grow.** Relations arrive later as an optional component `ref` and a new `relations`
+   item of the `collector.collect` stream, negotiated in `hello`. Today's `deny_unknown_fields` and closed `kind`
+   enum mean a new minor version of `secmonk-inventory/1`, not a silent addition.
+
 ## Recommendation
 
 Accept the B + C design as in §3. Start with P0 and P1 inside the single-process app: they add re-matching after a
