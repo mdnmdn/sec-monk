@@ -149,8 +149,19 @@ later          client --since (versions only, no component)--> match.changes -->
 - **The server returns the lookup keys.** The client never computes them, so normalization (`purl.normalize_name`,
   product candidates, brew names, vendor alternatives) lives only on the mirror. Coarse keys (`prod:<product>`
   without vendor) give a safe superset.
-- Size: one `changes` answer is the keys and ids touched since the last poll, typically KB to a few hundred KB a day
-  (to measure). A Bloom filter of the keys is an option if it grows.
+- **Size.** A plain `changes` answer grows with how much the mirror changed, not with the client's inventory: after a
+  month offline it can hold tens of thousands of ids and keys (MB). Three modes keep it small; the client picks:
+
+  | Mode | S sends | M answers | Size, 5 000 components after a month (estimate) | M learns |
+  |---|---|---|---|---|
+  | **filtered** (default) | `since` + a Bloom filter of its lookup keys and matched ids (about 7 000 entries, 1 % false positives) | only the changed keys and ids that pass the filter | about 8 KB up; the real hits plus about 1 % of the changes down | about what the first match already showed |
+  | **digest** (private) | the days it missed | precomputed daily Bloom filters of changed keys and ids, the same static files for every client | about 30 small files; about 1 % of the client's components re-matched for nothing | nothing |
+  | **full** | its distinct components again | their complete sets | about 1 MB up; everything matched again | the inventory, again |
+
+  Before polling, the client asks `changes.count(since)` and takes whichever is smaller. M answers `resync`, which
+  forces **full**, when `since` is older than its retention (for example 90 days) or the importer or matcher version
+  changed. A false positive only means one more component sent to `match.components`, whose answer is the complete
+  set, so it costs bandwidth and never correctness.
 - What the server still learns: the components the client sends on a first scan and on a hit. A stricter client
   can ask by **hash prefixes of lookup keys** and match locally on the rows returned (as password-breach range
   queries do). That puts the matcher on the client, which every node has anyway (py-engine). It is a later option, §6.
