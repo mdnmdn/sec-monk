@@ -111,6 +111,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 | Doc | Summary | Read when | Status | Verified |
 |---|---|---|---|---|
 | [Proposal — probe / engine / ui architecture on a compiled stack (Rust), standalone or distributed](inbox/2026-11-08-port-to-compiled-stack.md) | Probe/engine/ui split, standalone or across hosts (topologies, protocol, transports, security); Rust host with Python modules over stdio (strangler); databases, Tauri; versus Go, .NET, JVM; effort, path. | you decide whether or how to split sec-monk into probe, engine and ui, run it across hosts, choose a wire protocol or transport, decide what stays in Python, port it to a compiled language, add database backends or build a desktop app | proposed | 2026-11-11 |
+| [Proposal — mirror nodes for the Rust version (feed, match service, vulnerability summaries)](inbox/2026-11-12-mirror-nodes-feed-match-service.md) | Rust only - nodes with a state part and an optional mirror; a mirror serves a feed to other mirrors and a batch match and summary service to state-only nodes; versions, APIs, data model, costs, security, effort. | you decide whether a vulnerability mirror is shared by several Rust engines, design the match or feed API between nodes, or plan the distributed mode (roadmap R5) of the Rust version | proposed | 2026-11-12 |
 
 ## meta
 
@@ -131,7 +132,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **agentless**: [inventory-ssh](features/inventory-ssh.md), [ssh](tech/collectors/ssh.md)
 - **alias**: [euvd](references/vuln-sources/euvd.md)
 - **apk**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
-- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
+- **architecture**: [0007-process-monitor](decisions/0007-process-monitor.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md), [architecture](tech/architecture.md), [README](tech/collectors/README.md), [web-ui](tech/web-ui.md)
 - **auto-mode**: [discover](tech/discover.md)
 - **backlog**: [next-sources](plans/next-sources.md)
 - **backports**: [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md)
@@ -152,12 +153,12 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **cwe**: [nvd](references/vuln-sources/nvd.md)
 - **cyclonedx**: [sbom](features/sbom.md), [sbom](tech/sbom.md)
 - **dart**: [inventory-dependencies](features/inventory-dependencies.md), [dart](references/package-formats/dart.md), [dependencies](tech/collectors/dependencies.md)
-- **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [data-model](tech/data-model.md)
+- **data-model**: [0002-sqlite-local-mirror](decisions/0002-sqlite-local-mirror.md), [0004-sqlite-schema-v2](decisions/0004-sqlite-schema-v2.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md), [data-model](tech/data-model.md)
 - **dependencies**: [inventory-dependencies](features/inventory-dependencies.md), [inventory-docker](features/inventory-docker.md), [inventory-ssh](features/inventory-ssh.md), [README](references/package-formats/README.md), [dart](references/package-formats/dart.md), [dotnet](references/package-formats/dotnet.md), [go](references/package-formats/go.md), [java](references/package-formats/java.md), [javascript](references/package-formats/javascript.md), [php](references/package-formats/php.md), [python](references/package-formats/python.md), [rust](references/package-formats/rust.md), [swift](references/package-formats/swift.md), [dependencies](tech/collectors/dependencies.md)
 - **design**: [web-ui](features/web-ui.md)
 - **desktop**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [macos](tech/collectors/macos.md), [windows](tech/collectors/windows.md)
 - **discover**: [discover](tech/discover.md)
-- **distributed**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md)
+- **distributed**: [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md)
 - **distro**: [next-sources](plans/next-sources.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [distros](references/vuln-sources/distros.md), [osv](references/vuln-sources/osv.md)
 - **docker**: [inventory-docker](features/inventory-docker.md), [on-linux-docker](plans/on-linux-docker.md), [docker-engine](tech/collectors/docker-engine.md), [docker-image](tech/collectors/docker-image.md), [discover](tech/discover.md)
 - **docs**: [README](_meta/README.md), [authoring](_meta/authoring.md), [feedback](_meta/feedback.md), [frontmatter](_meta/frontmatter.md), [guidelines](_meta/guidelines.md), [librarian](_meta/librarian.md), [review-log](_meta/review-log.md), [tools](_meta/tools.md)
@@ -196,7 +197,7 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **linuxbrew**: [inventory-homebrew](features/inventory-homebrew.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md)
 - **macos**: [0007-process-monitor](decisions/0007-process-monitor.md), [inventory-homebrew](features/inventory-homebrew.md), [inventory-macos](features/inventory-macos.md), [inventory-ssh](features/inventory-ssh.md), [process-monitor](features/process-monitor.md), [on-macos](plans/on-macos.md), [homebrew](references/homebrew.md), [homebrew](tech/collectors/homebrew.md), [macos](tech/collectors/macos.md), [process](tech/collectors/process.md), [ssh](tech/collectors/ssh.md)
 - **maintenance**: [feedback](_meta/feedback.md), [librarian](_meta/librarian.md), [review-log](_meta/review-log.md)
-- **matching**: [scan-and-findings](features/scan-and-findings.md), [engine-and-quality](plans/engine-and-quality.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [data-model](tech/data-model.md), [matching](tech/engine/matching.md)
+- **matching**: [scan-and-findings](features/scan-and-findings.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md), [engine-and-quality](plans/engine-and-quality.md), [debian-tracker](references/vuln-sources/debian-tracker.md), [data-model](tech/data-model.md), [matching](tech/engine/matching.md)
 - **msrc**: [inventory-windows](features/inventory-windows.md), [vuln-sync](features/vuln-sync.md), [on-windows](plans/on-windows.md), [msrc](references/vuln-sources/msrc.md), [windows-inventory](references/windows-inventory.md), [windows](tech/collectors/windows.md)
 - **network**: [on-open-network](plans/on-open-network.md), [probes](references/probes.md), [README](references/vuln-sources/README.md)
 - **npm**: [inventory-dependencies](features/inventory-dependencies.md), [javascript](references/package-formats/javascript.md), [dependencies](tech/collectors/dependencies.md), [rootfs](tech/collectors/rootfs.md)
@@ -224,10 +225,10 @@ One row per document: open the ones whose *Read when* matches your task. Structu
 - **roadmap**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
 - **rootfs**: [inventory-docker](features/inventory-docker.md), [on-linux-docker](plans/on-linux-docker.md), [rootfs](tech/collectors/rootfs.md)
 - **rpm**: [docker-image](tech/collectors/docker-image.md), [rootfs](tech/collectors/rootfs.md)
-- **rust**: [inventory-dependencies](features/inventory-dependencies.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
+- **rust**: [inventory-dependencies](features/inventory-dependencies.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md), [rust](references/package-formats/rust.md), [dependencies](tech/collectors/dependencies.md)
 - **sbom**: [sbom](features/sbom.md), [docker-image](tech/collectors/docker-image.md), [sbom](tech/sbom.md)
 - **scope**: [0003-prototype-scope](decisions/0003-prototype-scope.md), [0005-prototype-scope-nov-2026](decisions/0005-prototype-scope-nov-2026.md), [vision](product/vision.md)
-- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [0010-remote-process-snapshot](decisions/0010-remote-process-snapshot.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [web-ui](tech/web-ui.md)
+- **security**: [0006-per-user-state-locations](decisions/0006-per-user-state-locations.md), [0008-web-ui-stack](decisions/0008-web-ui-stack.md), [0009-web-ui-vendored-libraries](decisions/0009-web-ui-vendored-libraries.md), [0010-remote-process-snapshot](decisions/0010-remote-process-snapshot.md), [2026-11-08-port-to-compiled-stack](inbox/2026-11-08-port-to-compiled-stack.md), [2026-11-12-mirror-nodes-feed-match-service](inbox/2026-11-12-mirror-nodes-feed-match-service.md), [web-ui](tech/web-ui.md)
 - **server**: [windows](tech/collectors/windows.md)
 - **spdx**: [sbom](features/sbom.md), [sbom](tech/sbom.md)
 - **sqlite**: [data-model](tech/data-model.md)
