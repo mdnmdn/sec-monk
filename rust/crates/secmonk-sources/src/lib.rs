@@ -54,12 +54,14 @@ macro_rules! importers {
 
 // One line per importer, alphabetical by module; nothing else to register.
 importers! {
+    cvelist,
     debian_tracker,
     epss,
     euvd,
     kev,
     msrc,
     nvd,
+    osv,
 }
 
 /// The importer of source `name`, if there is one.

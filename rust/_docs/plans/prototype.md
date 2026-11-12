@@ -92,6 +92,10 @@ Assumptions (cheap to reverse, confirm or correct):
 | W10.1 | Native nvd (R1 step 4) with throughput measurement vs py-sources (roadmap D2) | nvd agent | in review: page-by-page like Python, API key as sensitive header, caps; 100k CVEs native 30 s vs py-sources 89 s (M2); default rust; API path tested only against a local server; done: committed |
 | W10.2 | Independent read-only review of W10.1 | reviewer | done: 1 high (H1 nvd:progress held and dropped on failure; Python commits it per window), 2 medium (non-ASCII --since panics the job; API path not compared with Python), 5 low |
 | W10.3 | Fix W10.2 findings | nvd agent | done: H1 progress per window as Python, M1 non-ASCII --since, M2 API differential via test-only hook in py-sources (env cleared by the host), L1-L5 |
+| W11.1 | Native cvelist (hardened git subprocess, local bare repo in tests, volume vs py-sources) | cvelist agent | in review: differential green, 100k records native 29-37 s vs py-sources 149 s (M2); default_rust false until importers get the host cache dir (clone now in the per-user cache); @referenced refused |
+| W11.2 | Native osv (untrusted zips in memory, per-ecosystem cursors, volume vs py-sources) | osv agent | in review: differential green, zip safety tests, 100k records native 13-16 s vs py-sources 50 s (M2), default rust; host test needs a fake source name (shared change 1); 7 consolidation items |
+| W11.3 | Independent reviews of cvelist and osv (two read-only reviewers) | reviewers | in progress |
+| W11.4 | Review fixes + consolidation (host cache/scratch dir for importers, shared helpers, host test) | - | backlog |
 
 ## Log
 
@@ -146,3 +150,6 @@ Assumptions (cheap to reverse, confirm or correct):
 - 2026-11-11 Committed e39d08a (euvd, msrc, debian-tracker + shared importer code). W10.1 (nvd) dispatched.
 - 2026-11-12 W10.1 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 316 passed 0 failed 11 ignored. W10.2 review dispatched.
 - 2026-11-12 W10.3 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 318 passed 0 failed 11 ignored; rust/python pytest 226 passed 1 skipped, ruff clean; checked that modules start with env_clear (the SECMONK_TEST_NVD_HOOK hook is test-only).
+- 2026-11-12 Committed 625344a (nvd). W11.1 cvelist and W11.2 osv dispatched in parallel; shared modules frozen during the ports, consolidation afterwards. default_rust only if not slower than py-sources (roadmap D2).
+- 2026-11-12 W11.1 and W11.2 done; full workspace 358 passed, 1 failed (host test uses osv as a source without Rust implementation). W11.3 reviews dispatched.
+- 2026-11-12 Committed W11.1 + W11.2 as in review at the user's request: fmt OK, clippy clean, ruff clean; `cargo test --workspace` stops at the known secmonk-host failure (`the_configuration_selects_the_native_sources` uses osv as a source without Rust implementation; fix in W11.4). W11.3 reviews not yet collected.

@@ -19,8 +19,10 @@ secmonk-traits.workspace = true
 serde.workspace = true              # euvd: a bounded visitor over the records of a feed document (no derive needed)
 serde_json.workspace = true
 sha2.workspace = true               # debian-tracker: the cursor (SHA-256 of the content, as the Python source; as secmonk-runtime)
+tempfile.workspace = true           # osv: the downloaded all.zip in an anonymous private temporary file (already a dev-dependency here)
 tokio = { workspace = true, features = ["fs", "io-util", "rt", "sync", "time"] }  # sync: debian-tracker download -> parser channel
 tracing.workspace = true
+zip.workspace = true                # osv: the all.zip archives (already in the lock for secmonk-runtime; stored and deflate only)
 
 [dev-dependencies]
 flate2.workspace = true

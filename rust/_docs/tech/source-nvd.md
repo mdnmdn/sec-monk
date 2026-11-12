@@ -1,6 +1,6 @@
 ---
 title: Source nvd — the native (Rust) NVD CVE API 2.0 source
-summary: The Rust nvd source in secmonk-sources - pages written one by one as Python commits them, delta windows and cursors, API key, pacing and retries, CVSS, CWE and CPE rows, caps and memory, volume, differences from Python, tests.
+summary: The Rust nvd source in secmonk-sources - pages written one by one as Python commits them, delta windows and cursors, API key, pacing and retries, CVSS, CWE and CPE rows, caps, volume, differences, tests.
 read_when: you change the Rust nvd source, switch nvd between Rust and Python, debug an nvd sync (cursor, windows, retries, API key, CPE rows), or port a paged API source whose status is known only after its last page
 type: tech
 context: tech
