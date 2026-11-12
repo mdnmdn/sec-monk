@@ -1,6 +1,6 @@
 ---
 title: Proposal — mirror nodes for the Rust version (feed, match service, vulnerability summaries)
-summary: Rust only - nodes with a state part and an optional mirror; a mirror serves a feed to other mirrors and a batch match and summary service to state-only nodes; upstream source versions, APIs, flows, costs, security, effort.
+summary: Rust only - nodes with state and an optional mirror; a mirror serves a feed to other mirrors and batch match and summaries to state-only nodes; upstream source versions, APIs, flows, costs, security, effort.
 read_when: you decide whether a vulnerability mirror is shared by several Rust engines, design the match or feed API between nodes, or plan the distributed mode (roadmap R5) of the Rust version
 type: proposal
 context: inbox
