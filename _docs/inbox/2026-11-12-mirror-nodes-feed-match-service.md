@@ -158,10 +158,25 @@ later          client --since (versions only, no component)--> match.changes -->
   | **digest** (private) | the days it missed | precomputed daily Bloom filters of changed keys and ids, the same static files for every client | about 30 small files; about 1 % of the client's components re-matched for nothing | nothing |
   | **full** | its distinct components again | their complete sets | about 1 MB up; everything matched again | the inventory, again |
 
-  Before polling, the client asks `changes.count(since)` and takes whichever is smaller. M answers `resync`, which
-  forces **full**, when `since` is older than its retention (for example 90 days) or the importer or matcher version
-  changed. A false positive only means one more component sent to `match.components`, whose answer is the complete
-  set, so it costs bandwidth and never correctness.
+  Before polling, the client asks `changes.count(since)` and takes whichever is smaller. A false positive only means
+  one more component sent to `match.components`, whose answer is the complete set, so it costs bandwidth and never
+  correctness.
+- **Resync is per source, and so is its cost.** `changes` answers each source separately: changes, or `resync` when
+  that source's `since` is missing (a source new to the client), older than M's retention (for example 90 days), or
+  from another importer version. A `resync` re-sends only the components that source can affect, chosen by the
+  family of the stored lookup keys:
+
+  | Source in `resync` | Components re-sent |
+  |---|---|
+  | `osv:<Eco>` | those with a `pkg:<Eco>/…` key |
+  | `debian-tracker` | those with a `pkg:Debian:…/…` key |
+  | `nvd`, `cvelist`, `euvd`, `msrc` (product-based, and `pkg:` rows from cvelist `packageName`) | those with a `prod:…` key, plus those with a `pkg:` key in an ecosystem these sources cover **(verify)** |
+  | `kev`, `epss` (enrichment only) | none: `vulninfo.summaries` again for the client's ids |
+
+  Only a change of the **matcher** version re-sends every component.
+- **The client does not match.** In the filtered, digest and full modes, S only intersects sets (keys and ids) and
+  stores answers. Matching, version comparison and key normalization stay on M. S runs only what needs the asset:
+  the finding builder, `scoring.priority` with the asset's `meta`, and the lifecycle.
 - What the server still learns: the components the client sends on a first scan and on a hit. A stricter client
   can ask by **hash prefixes of lookup keys** and match locally on the rows returned (as password-breach range
   queries do). That puts the matcher on the client, which every node has anyway (py-engine). It is a later option, §6.
