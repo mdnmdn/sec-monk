@@ -103,6 +103,36 @@ impl PythonRuntime for DevVenv {
     }
 }
 
+/// A runtime that adds `env` to every module it launches (test-only hooks such as `SECMONK_TEST_NVD_HOOK`, which the
+/// host never passes to a module).
+pub struct EnvRuntime {
+    pub inner: Arc<dyn PythonRuntime>,
+    pub env: Vec<(String, OsString)>,
+}
+
+#[async_trait]
+impl PythonRuntime for EnvRuntime {
+    async fn ensure(&self) -> RuntimeResult<RuntimeInfo> {
+        self.inner.ensure().await
+    }
+
+    async fn ensure_env(&self, project: &Path, env: &str) -> RuntimeResult<EnvInfo> {
+        self.inner.ensure_env(project, env).await
+    }
+
+    fn command(&self, env: &str, entry: &[String]) -> RuntimeResult<LaunchSpec> {
+        self.command_for(env, entry, &["read-target", "network"])
+    }
+
+    fn command_for(&self, env: &str, entry: &[String], caps: &[&str]) -> RuntimeResult<LaunchSpec> {
+        let mut spec = self.inner.command_for(env, entry, caps)?;
+        for (k, v) in &self.env {
+            spec.env.insert(k.clone(), v.clone());
+        }
+        Ok(spec)
+    }
+}
+
 /// No collectors: this test drives sources and engine steps only (the probe has its own tests).
 pub struct NoProbe;
 
@@ -351,6 +381,34 @@ impl Diff {
         let h = ModuleHandle::python(
             self.registry.get("py-sources").unwrap(),
             self.runtime.clone(),
+            Diff::settings(store, root.clone()),
+        );
+        self.handles.push(h.clone());
+        (
+            Arc::new(PySource::new(h)),
+            root.join("py-sources/staging.sqlite3"),
+        )
+    }
+
+    /// [`Diff::py_sources`] whose module process also gets `env` ([`EnvRuntime`]).
+    pub fn py_sources_env(
+        &mut self,
+        store: &SqliteStore,
+        modules: &str,
+        env: &[(&str, &Path)],
+    ) -> (Arc<dyn Source>, PathBuf) {
+        let root = self.config.data_dir.join(modules);
+        std::fs::create_dir_all(&root).unwrap();
+        let runtime: Arc<dyn PythonRuntime> = Arc::new(EnvRuntime {
+            inner: self.runtime.clone(),
+            env: env
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), v.as_os_str().to_os_string()))
+                .collect(),
+        });
+        let h = ModuleHandle::python(
+            self.registry.get("py-sources").unwrap(),
+            runtime,
             Diff::settings(store, root.clone()),
         );
         self.handles.push(h.clone());

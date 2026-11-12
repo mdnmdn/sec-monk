@@ -111,3 +111,7 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
       differential tests (native kev vs py-sources) fail instead of skipping when `rust/python/.venv` is missing.
 - [ ] **`--path` FIFO swap.** A file swapped for a FIFO between the metadata check and the open can still block the native
       feed reader; close it with an `O_NONBLOCK` open (e.g. `rustix`) ([source-kev](../tech/source-kev.md)).
+- [ ] **nvd against the live API**: request shapes and the `apiKey` header, rate limits behind the 0.6 s / 6 s pacing, real page
+      sizes, the largest real record and CPE match count (caps 8 MiB, 50,000 rows) ([source-nvd](../tech/source-nvd.md)).
+- [ ] **nvd parses each record twice** (page check, then emission); a single parse would cut about a third of the build time.
+- [ ] **Retire the `py-sources` nvd path** one release after the native nvd importer.

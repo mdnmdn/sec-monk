@@ -59,6 +59,7 @@ importers! {
     euvd,
     kev,
     msrc,
+    nvd,
 }
 
 /// The importer of source `name`, if there is one.

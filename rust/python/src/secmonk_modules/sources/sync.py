@@ -46,6 +46,45 @@ def _sync_options(raw: dict[str, Any], secrets: dict[str, Any], ctx: Request):
                        progress=lambda m: ctx.progress(str(m)))      # also the cancel point: raises Cancelled
 
 
+TEST_NVD_HOOK = "SECMONK_TEST_NVD_HOOK"
+_NVD_ORIGINALS: dict[str, Any] = {}
+
+
+def _nvd_test_hook() -> None:
+    """Test-only: when `$SECMONK_TEST_NVD_HOOK` names a JSON file `{"api_url": ..., "now": ...}`, point the unchanged
+    nvd source at that URL (a local server), make its sleeps no-ops and fix its "now", so the differential test of the
+    native importer can compare the API path (rust/crates/secmonk-engine/tests/native_nvd.rs). The file is read again
+    at every nvd sync; without it the originals are restored. The host never passes `SECMONK_TEST_*` variables to a
+    module (`MODULE_PASSTHROUGH` in secmonk-runtime), so production modules never see it."""
+    import json
+    import os
+    import time
+    import types
+    from datetime import datetime
+
+    from secmonk.sources import nvd
+
+    if not _NVD_ORIGINALS:
+        _NVD_ORIGINALS.update(API_URL=nvd.API_URL, time=nvd.time, datetime=nvd.datetime)
+    path = os.environ.get(TEST_NVD_HOOK)
+    if not path or not os.path.isfile(path):
+        for k, v in _NVD_ORIGINALS.items():
+            setattr(nvd, k, v)
+        return
+    with open(path, encoding="utf-8") as f:
+        hook = json.load(f)
+    fixed = datetime.fromisoformat(hook["now"]) if hook.get("now") else None
+
+    class _Now(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed.astimezone(tz) if fixed is not None else datetime.now(tz)
+
+    nvd.API_URL = hook["api_url"]
+    nvd.time = types.SimpleNamespace(sleep=lambda _s: None, monotonic=time.monotonic)
+    nvd.datetime = _Now
+
+
 def _check_source(name: str) -> type:
     from secmonk import ops
 
@@ -77,6 +116,8 @@ def sync(ctx: Request, p: dict) -> Iterator[dict[str, Any]]:
     name = p["source"]
     cls = _check_source(name)
     opts = _sync_options(p["options"], p.get("secrets") or {}, ctx)
+    if name == "nvd":
+        _nvd_test_hook()
     with staging.LOCK:
         conn = _open(ctx)
         try:

@@ -106,6 +106,48 @@ pub async fn serve_headers(responses: Vec<Answer>) -> (String, Arc<Mutex<Vec<Str
     (format!("http://{addr}"), log)
 }
 
+/// [`serve_headers`] that records the whole request head of each connection (request line and headers, as sent),
+/// and closes a connection without an answer for a status of 0 (a transport error for the client).
+pub async fn serve_heads(responses: Vec<Answer>) -> (String, Arc<Mutex<Vec<String>>>) {
+    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = l.local_addr().unwrap();
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let seen = log.clone();
+    tokio::spawn(async move {
+        for (status, headers, body) in responses {
+            let (mut s, _) = l.accept().await.unwrap();
+            let mut buf = vec![0u8; 16384];
+            let mut n = 0;
+            while n < buf.len() {
+                let k = s.read(&mut buf[n..]).await.unwrap_or(0);
+                n += k;
+                if k == 0 || buf[..n].windows(4).any(|w| w == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            seen.lock()
+                .unwrap()
+                .push(String::from_utf8_lossy(&buf[..n]).into_owned());
+            if status == 0 {
+                let _ = s.shutdown().await;
+                continue;
+            }
+            let extra: String = headers
+                .iter()
+                .map(|(k, v)| format!("{k}: {v}\r\n"))
+                .collect();
+            let head = format!(
+                "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{extra}Connection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = s.write_all(head.as_bytes()).await;
+            let _ = s.write_all(&body).await;
+            let _ = s.shutdown().await;
+        }
+    });
+    (format!("http://{addr}"), log)
+}
+
 /// [`serve_logged`] without the log.
 pub async fn serve(responses: Vec<(u16, Vec<u8>)>) -> String {
     serve_logged(responses).await.0

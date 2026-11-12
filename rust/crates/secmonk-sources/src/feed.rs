@@ -120,12 +120,24 @@ fn client(
     allow_http: bool,
     origin: Option<String>,
 ) -> Result<reqwest::Client, String> {
+    client_with(timeout, allow_http, origin, false)
+}
+
+/// [`client`], or with `no_redirects` a client that follows no redirect (a 3xx answer is returned as it is).
+fn client_with(
+    timeout: Duration,
+    allow_http: bool,
+    origin: Option<String>,
+    no_redirects: bool,
+) -> Result<reqwest::Client, String> {
     let mut b = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .https_only(!allow_http)
         .connect_timeout(timeout)
         .read_timeout(timeout);
-    if let Some(home) = origin {
+    if no_redirects {
+        b = b.redirect(reqwest::redirect::Policy::none());
+    } else if let Some(home) = origin {
         b = b.redirect(reqwest::redirect::Policy::custom(move |attempt| {
             if attempt.previous().len() >= 10 {
                 return attempt.error("too many redirects");
@@ -191,6 +203,105 @@ pub async fn get(g: &Get<'_>) -> Result<(Vec<u8>, Validators), String> {
         let chunk = chunk.map_err(|e| scrub(&e.to_string()))?;
         if body.len() as u64 + chunk.len() as u64 > g.max_bytes {
             return Err(g.too_large(&shown));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok((body, validators))
+}
+
+/// Why [`fetch`] failed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FetchError {
+    /// No complete answer (connect, timeout, a body cut short): the request may be sent again.
+    Transport(String),
+    /// An answer whose status is not 2xx (a redirect too, with `no_redirects`): the code, the `Retry-After` header
+    /// (ASCII text, if any) and the message `HTTP <code> for <url>`.
+    Status {
+        /// The HTTP status code.
+        code: u16,
+        /// The `Retry-After` header as sent.
+        retry_after: Option<String>,
+        /// `HTTP <code> for <url>` (no URL credentials).
+        message: String,
+    },
+    /// Anything else: the size cap, a client that could not be built.
+    Other(String),
+}
+
+impl FetchError {
+    /// The message.
+    pub fn message(&self) -> &str {
+        match self {
+            FetchError::Transport(m)
+            | FetchError::Other(m)
+            | FetchError::Status { message: m, .. } => m,
+        }
+    }
+}
+
+/// A client for [`fetch`], to reuse for every request of a run: `User-Agent`, `https_only` unless `allow_http`,
+/// connect and read timeout `timeout`; no redirect followed when `no_redirects` (a 3xx answer is returned as it is),
+/// else reqwest's default (up to 10).
+pub fn fetch_client(
+    timeout: Duration,
+    allow_http: bool,
+    no_redirects: bool,
+) -> Result<reqwest::Client, String> {
+    client_with(timeout, allow_http, None, no_redirects)
+}
+
+/// One GET of `g.url` with `client` ([`fetch_client`]; its redirect policy applies, `g.same_origin_redirects`,
+/// `g.allow_http` and `g.timeout` are the client's) and extra request `headers` (mark secret values with
+/// `HeaderValue::set_sensitive`), within `total` when given (connecting, waiting and reading together; a transport
+/// error when it runs out). Unlike [`get`], the failure says whether a retry makes sense ([`FetchError`]); retries
+/// and pacing are the caller's. Messages carry no URL credentials and no header values.
+pub async fn fetch(
+    client: &reqwest::Client,
+    g: &Get<'_>,
+    headers: &[(reqwest::header::HeaderName, reqwest::header::HeaderValue)],
+    total: Option<Duration>,
+) -> Result<(Vec<u8>, Validators), FetchError> {
+    let shown = secmonk_safeio::strip_url_secrets(g.url, false);
+    let mut req = client.get(g.url);
+    if let Some(a) = g.accept {
+        req = req.header(reqwest::header::ACCEPT, a);
+    }
+    for (k, v) in headers {
+        req = req.header(k, v.clone());
+    }
+    if let Some(t) = total {
+        req = req.timeout(t);
+    }
+    let resp = req.send().await.map_err(|e| {
+        if e.is_builder() {
+            FetchError::Other(request_error(&e, &shown))
+        } else {
+            FetchError::Transport(request_error(&e, &shown))
+        }
+    })?;
+    let status = resp.status();
+    if !status.is_success() {
+        let retry_after = resp
+            .headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        return Err(FetchError::Status {
+            code: status.as_u16(),
+            retry_after,
+            message: format!("HTTP {} for {shown}", status.as_u16()),
+        });
+    }
+    if resp.content_length().is_some_and(|n| n > g.max_bytes) {
+        return Err(FetchError::Other(g.too_large(&shown)));
+    }
+    let validators = Validators::of(&resp);
+    let mut body: Vec<u8> = Vec::new();
+    let mut stream = resp.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| FetchError::Transport(scrub(&e.to_string())))?;
+        if body.len() as u64 + chunk.len() as u64 > g.max_bytes {
+            return Err(FetchError::Other(g.too_large(&shown)));
         }
         body.extend_from_slice(&chunk);
     }

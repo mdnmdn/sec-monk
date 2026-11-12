@@ -89,6 +89,9 @@ Assumptions (cheap to reverse, confirm or correct):
 | W9.6 | Fix W9.5 findings + move local copies into shared modules (feed get/get_streamed/decode, native Outcome.total/guard, py helpers) + MemView rowid paging | consolidation agent | done: M1/M2 + lows fixed, local copies moved to feed/decode/native/py, MemView rowid paging (euvd test 12 s -> 0.47 s), hello_timeout_s 120 in tests |
 | W9.3 | Independent read-only review of W9.1 (groundwork + euvd) | reviewer | done: 0 high, 2 medium (M1 rows_page temp B-tree sort -> quadratic paging; M2 euvd memory bound incomplete), 7 low |
 | W9.4 | Fix W9.3 findings except L4 (MemView, frozen until ports end) | euvd agent | done: M1 rowid-range paging + EXPLAIN test, M2 hashed ids + stored-row caps + worst case 0.85 GiB (estimate), L1-L3, L5, L6; store/sources/engine 109 passed; workspace clippy blocked by in-progress debian_tracker.rs |
+| W10.1 | Native nvd (R1 step 4) with throughput measurement vs py-sources (roadmap D2) | nvd agent | in review: page-by-page like Python, API key as sensitive header, caps; 100k CVEs native 30 s vs py-sources 89 s (M2); default rust; API path tested only against a local server; done: committed |
+| W10.2 | Independent read-only review of W10.1 | reviewer | done: 1 high (H1 nvd:progress held and dropped on failure; Python commits it per window), 2 medium (non-ASCII --since panics the job; API path not compared with Python), 5 low |
+| W10.3 | Fix W10.2 findings | nvd agent | done: H1 progress per window as Python, M1 non-ASCII --since, M2 API differential via test-only hook in py-sources (env cleared by the host), L1-L5 |
 
 ## Log
 
@@ -140,3 +143,6 @@ Assumptions (cheap to reverse, confirm or correct):
 - 2026-11-11 W9.2a done. Found: the Python feature doc vuln-sync.md says msrc is not in `sync all`, the Python code includes it; native msrc keeps the code's behaviour.
 - 2026-11-11 W9.2b done. Coordinator verified the workspace: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 288 passed 0 failed 8 ignored (4.6 min). debian-tracker is also in Python `sync all` (doc says otherwise; asked user). W9.5 review dispatched.
 - 2026-11-11 W9.6 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 295 passed 0 failed 8 ignored; figurative words reworded in tech docs (older code comments with "wins" left as is). Committing euvd, msrc, debian-tracker and the shared importer code.
+- 2026-11-11 Committed e39d08a (euvd, msrc, debian-tracker + shared importer code). W10.1 (nvd) dispatched.
+- 2026-11-12 W10.1 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 316 passed 0 failed 11 ignored. W10.2 review dispatched.
+- 2026-11-12 W10.3 done; coordinator verified: fmt OK, clippy clean, `SECMONK_REQUIRE_VENV=1 cargo test --workspace` 318 passed 0 failed 11 ignored; rust/python pytest 226 passed 1 skipped, ruff clean; checked that modules start with env_clear (the SECMONK_TEST_NVD_HOOK hook is test-only).

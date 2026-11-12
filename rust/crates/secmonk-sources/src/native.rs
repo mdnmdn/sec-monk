@@ -3,6 +3,7 @@
 //! The operations of a run are an async stream ([`Ops`]), so an importer may read the mirror view while the engine
 //! applies the batches already cut (rust ADR-0012).
 
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use futures_util::StreamExt;
@@ -56,6 +57,22 @@ impl Outcome {
         }
     }
 }
+
+/// The end of a run whose status is known only once its operations were produced (nvd: pages written one by one,
+/// a failure on a later page decides the status): the fields of [`Outcome`] without the operations.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Tail {
+    pub(crate) status: String,
+    /// `SyncResult.records`.
+    pub(crate) records: u64,
+    /// `SyncResult.total` when it differs from `records`.
+    pub(crate) total: Option<u64>,
+    pub(crate) cursor: Option<String>,
+    pub(crate) message: Option<String>,
+}
+
+/// Where an importer leaves its [`Tail`] before its operation stream ends ([`stream_deferred`] reads it then).
+pub(crate) type TailCell = Arc<Mutex<Option<Tail>>>;
 
 /// `options.limit`: `None`, or >= 1 (`py-sources` answers `invalid-params` for 0 too).
 pub(crate) fn limit(opts: &SyncOptions) -> StepResult<Option<u64>> {
@@ -217,6 +234,7 @@ pub(crate) fn stream(
             message,
         }),
         t0,
+        tail: None,
     };
     futures_util::stream::unfold(batches, |mut b| async move {
         let msg = b.next().await?;
@@ -225,13 +243,68 @@ pub(crate) fn stream(
     .boxed()
 }
 
-/// The state of the lazy batch stream behind [`stream`].
+/// [`stream`] for a run whose end is decided by its operations: `ops` is read to its end, then the [`Tail`] the
+/// importer left in `tail` gives the `source_sync` row (the last operation) and the end entry. A stream that ends
+/// without a tail is an internal error of the importer.
+pub(crate) fn stream_deferred(
+    name: &str,
+    ops: Ops,
+    tail: TailCell,
+    first_seq: u64,
+    limits: Limits,
+    t0: Instant,
+) -> ResultStream<RowsBatch, SyncEnd> {
+    let (source, cell) = (name.to_owned(), tail.clone());
+    let last = futures_util::stream::once(async move {
+        let t = read_tail(&cell, &source)?;
+        let message = t.message.as_deref().map(feed::scrub);
+        Ok(sync_row(
+            &source,
+            &t.status,
+            t.total.unwrap_or(t.records),
+            t.cursor,
+            message,
+            &secmonk_model::time::now_iso(),
+        ))
+    });
+    let batches = Batches {
+        ops: ops.chain(last).boxed(),
+        cutter: Cutter::new(name, first_seq, limits),
+        n_ops: 0,
+        entry: Some(SyncEntry {
+            source: name.to_owned(),
+            status: String::new(),
+            records: 0,
+            seconds: 0.0,
+            message: None,
+        }),
+        t0,
+        tail: Some(tail),
+    };
+    futures_util::stream::unfold(batches, |mut b| async move {
+        let msg = b.next().await?;
+        Some((msg, b))
+    })
+    .boxed()
+}
+
+/// The tail an importer left (an internal error when there is none).
+fn read_tail(cell: &TailCell, source: &str) -> StepResult<Tail> {
+    cell.lock()
+        .map_err(|_| internal(source, "result lock poisoned".into()))?
+        .clone()
+        .ok_or_else(|| internal(source, "the operations ended without a result".into()))
+}
+
+/// The state of the lazy batch stream behind [`stream`] and [`stream_deferred`].
 struct Batches {
     ops: Ops,
     cutter: Cutter,
     n_ops: u64,
     entry: Option<SyncEntry>,
     t0: Instant,
+    /// [`stream_deferred`]: the entry's status, records and message come from here at the end.
+    tail: Option<TailCell>,
 }
 
 impl Batches {
@@ -252,6 +325,15 @@ impl Batches {
         if let Some(b) = self.cutter.finish() {
             self.entry = Some(entry);
             return Some(Ok(StreamMsg::Item(b)));
+        }
+        if let Some(cell) = &self.tail {
+            let t = match read_tail(cell, &entry.source) {
+                Ok(t) => t,
+                Err(e) => return Some(Err(e)),
+            };
+            entry.status = t.status;
+            entry.records = t.records;
+            entry.message = t.message.as_deref().map(feed::scrub);
         }
         entry.seconds = (self.t0.elapsed().as_secs_f64() * 10.0).round() / 10.0;
         Some(Ok(StreamMsg::End(SyncEnd {

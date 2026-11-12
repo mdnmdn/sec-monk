@@ -59,6 +59,16 @@ const DECIMAL_ZEROS: [u32; 68] = [
     0x1FBF0,
 ];
 
+/// Python's `str.isdecimal()` for one character (also what `re`'s `\d` matches): a Unicode decimal digit (category
+/// Nd, the runs of [`DECIMAL_ZEROS`]).
+pub fn is_decimal(c: char) -> bool {
+    let u = u32::from(c);
+    DECIMAL_ZEROS
+        .partition_point(|z| *z <= u)
+        .checked_sub(1)
+        .is_some_and(|i| u - DECIMAL_ZEROS[i] < 10)
+}
+
 /// Unicode decimal digits replaced by ASCII ones, as Python's `float()` does before parsing; other characters kept.
 fn ascii_digits(s: &str) -> Cow<'_, str> {
     if s.is_ascii() {
