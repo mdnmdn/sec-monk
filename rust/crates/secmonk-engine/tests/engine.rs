@@ -418,6 +418,7 @@ async fn harness_full(
             calls: Mutex::new(Vec::new()),
         }),
         modules: None,
+        node_store: None,
     });
     Harness {
         _dir: dir,
@@ -1048,6 +1049,7 @@ async fn gated_engine() -> (Harness, Arc<GatedState>) {
             calls: Mutex::new(Vec::new()),
         }),
         modules: None,
+        node_store: None,
     });
     (Harness { engine, ..h }, gated)
 }
@@ -1624,6 +1626,7 @@ fn python_engine(h: &Harness) -> Arc<SecmonkEngine> {
             calls: Mutex::new(Vec::new()),
         }),
         modules: None,
+        node_store: None,
     })
 }
 

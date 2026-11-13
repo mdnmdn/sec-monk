@@ -63,8 +63,9 @@ pub trait MirrorNodeStore: Send + Sync {
         limit: usize,
     ) -> StoreResult<Vec<(String, String)>>;
 
-    /// The lookup keys of the `affected` rows of `ids` (every source): `pkg:<ecosystem>/<package>` for a row with
-    /// a package, `prod:<lower(product)>` for a row with a product (both when it has both). Sorted, distinct.
+    /// The lookup keys of the `affected` rows of `ids` (every source): `pkg:<lower(ecosystem)>/<lower(package)>`
+    /// for a row with a package, `prod:<product normalized>` for a row with a product (both when it has both), built
+    /// by `secmonk_model::node::pkg_key` / `prod_key` (all keys lowercase). Sorted, distinct.
     /// `ids` are read in chunks of 500.
     async fn lookup_keys_for_vulns(&self, ids: &[String]) -> StoreResult<Vec<String>>;
 

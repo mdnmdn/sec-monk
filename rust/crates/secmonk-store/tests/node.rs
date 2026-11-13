@@ -375,7 +375,7 @@ async fn lookup_keys_come_from_affected_rows() {
         s.lookup_keys_for_vulns(&ids(&["GHSA-1", "GHSA-2", "CVE-1", "nope"]))
             .await
             .unwrap(),
-        ["pkg:PyPI/requests", "pkg:npm/left-pad", "prod:requests"]
+        ["pkg:npm/left-pad", "pkg:pypi/requests", "prod:requests"]
     );
     assert!(s.lookup_keys_for_vulns(&[]).await.unwrap().is_empty());
     // more ids than one IN list holds
@@ -385,7 +385,7 @@ async fn lookup_keys_come_from_affected_rows() {
         .collect();
     assert_eq!(
         s.lookup_keys_for_vulns(&many).await.unwrap(),
-        ["pkg:PyPI/flask"]
+        ["pkg:pypi/flask"]
     );
     assert_eq!(s.covered_ecosystems().await.unwrap(), ["PyPI", "npm"]);
 }

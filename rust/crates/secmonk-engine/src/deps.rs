@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use secmonk_store::{MirrorStore, StateStore};
+use secmonk_store::{MirrorNodeStore, MirrorStore, StateStore};
 use secmonk_traits::{EngineSteps, Probe, Reporter, Source};
 use serde::Serialize;
 
@@ -93,6 +93,10 @@ pub struct EngineDeps {
     pub probe: Arc<dyn Probe>,
     /// Module states for `/api/meta` (optional: `engine.modules` is `[]` without it).
     pub modules: Option<Arc<dyn ModuleStatus>>,
+    /// The mirror's node reads and version records (`SqliteStore::mirror_node_store`). With it, a sync job records
+    /// each source's served version after a complete run and re-matches the stored assets the sync affected
+    /// (`crate::node`); `None`: neither.
+    pub node_store: Option<Arc<dyn MirrorNodeStore>>,
 }
 
 impl std::fmt::Debug for EngineDeps {
@@ -101,6 +105,7 @@ impl std::fmt::Debug for EngineDeps {
             .field("config", &self.config)
             .field("procmon", &self.procmon.is_some())
             .field("sources", &self.sources.len())
+            .field("node_store", &self.node_store.is_some())
             .finish_non_exhaustive()
     }
 }

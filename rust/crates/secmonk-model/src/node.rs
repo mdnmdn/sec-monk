@@ -115,20 +115,31 @@ impl ComponentIdentity {
     }
 }
 
-/// Lookup key of a package row: `pkg:<ecosystem>/<package>`, both as stored in `affected` (no normalization
-/// here: the engine normalizes before it emits keys, and the mirror writes them the same way).
+/// Lookup key of a package row: `pkg:<lower(ecosystem)>/<lower(package)>`. **All lookup keys are lowercase**, on
+/// both sides: the mirror derives them from `affected` rows with this function and the match service derives a
+/// component's keys with it too (`secmonk-engine::node::component_lookup_keys`), so a case difference between an
+/// ecosystem's spelling and a stored row can only add keys (a safe superset), never lose one.
 pub fn pkg_key(ecosystem: &str, package: &str) -> String {
-    format!("pkg:{ecosystem}/{package}")
+    format!(
+        "pkg:{}/{}",
+        ecosystem.to_lowercase(),
+        package.to_lowercase()
+    )
 }
 
-/// Lookup key of a product row: `prod:<product>`, lowercased (vendor is not part of it: a coarse key is a safe
-/// superset).
+/// Lookup key of a product row: `prod:<product>`, normalized as `affected.product` is (Python
+/// `norm_vendor_product`: lowercase, `_` as a space, runs of whitespace as one space, trimmed). Vendor is not part
+/// of it: a coarse key is a safe superset.
 pub fn prod_key(product: &str) -> String {
-    format!("prod:{}", product.to_lowercase())
+    let p = product.to_lowercase().replace('_', " ");
+    format!(
+        "prod:{}",
+        p.split_whitespace().collect::<Vec<_>>().join(" ")
+    )
 }
 
 /// The ecosystem of a `pkg:<ecosystem>/<package>` key (the text between `pkg:` and the first `/`), `None` for
-/// any other key. Used to pick the components a `resync` of one ecosystem concerns.
+/// any other key (lowercase, as every key). Used to pick the components a `resync` of one ecosystem concerns.
 pub fn lookup_key_ecosystem(key: &str) -> Option<&str> {
     key.strip_prefix("pkg:")?.split_once('/').map(|(e, _)| e)
 }
@@ -672,11 +683,19 @@ mod tests {
 
     #[test]
     fn lookup_keys() {
-        assert_eq!(pkg_key("PyPI", "requests"), "pkg:PyPI/requests");
+        assert_eq!(pkg_key("PyPI", "requests"), "pkg:pypi/requests");
+        assert_eq!(
+            pkg_key("Maven", "org.Apache:Log4j"),
+            "pkg:maven/org.apache:log4j"
+        );
         assert_eq!(prod_key("OpenSSL"), "prod:openssl");
         assert_eq!(
-            lookup_key_ecosystem("pkg:Debian:12/openssl"),
-            Some("Debian:12")
+            prod_key(" Internet_Explorer  11 "),
+            "prod:internet explorer 11"
+        );
+        assert_eq!(
+            lookup_key_ecosystem(&pkg_key("Debian:12", "openssl")),
+            Some("debian:12")
         );
         assert_eq!(lookup_key_ecosystem("prod:openssl"), None);
     }

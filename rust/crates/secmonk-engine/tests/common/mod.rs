@@ -436,6 +436,7 @@ impl Diff {
             sources,
             probe: Arc::new(NoProbe),
             modules: None,
+            node_store: None,
         });
         self.engines.push(e.clone());
         e

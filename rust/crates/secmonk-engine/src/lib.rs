@@ -15,6 +15,7 @@ pub mod deps;
 mod engine;
 pub mod error;
 mod jobs;
+pub mod node;
 mod opts;
 pub mod params;
 mod payload;
