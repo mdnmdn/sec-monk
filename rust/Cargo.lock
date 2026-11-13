@@ -3348,6 +3348,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "secmonk-auth"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "getrandom 0.3.4",
+ "hex",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "subtle",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.2.1+spec-1.1.0",
+ "tracing",
+]
+
+[[package]]
 name = "secmonk-config"
 version = "0.1.0"
 dependencies = [
@@ -3457,6 +3475,19 @@ dependencies = [
  "tokio",
  "tokio-util",
  "toml 1.2.1+spec-1.1.0",
+ "tracing",
+]
+
+[[package]]
+name = "secmonk-node"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "secmonk-model",
+ "secmonk-traits",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
  "tracing",
 ]
 

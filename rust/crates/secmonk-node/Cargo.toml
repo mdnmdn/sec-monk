@@ -1,0 +1,20 @@
+[package]
+name = "secmonk-node"
+description = "Mirror-node services over HTTP: the /node/v1 binding (match, vulninfo, feed) and the remote clients (rust ADR-0013)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+secmonk-model.workspace = true
+secmonk-traits.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
