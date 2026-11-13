@@ -10,6 +10,29 @@ use crate::ConfigError;
 pub struct Layout {
     /// The data directory (absolute).
     pub root: PathBuf,
+    /// `[paths]`: directories moved out of `root` (absolute).
+    pub moved: MovedDirs,
+}
+
+/// `[paths]` as resolved: a directory that lives elsewhere than its default below `data_dir`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MovedDirs {
+    /// `tools/` (uv releases, `downloads/`).
+    pub tools: Option<PathBuf>,
+    /// `python/` (`UV_PYTHON_INSTALL_DIR`, `bin/`).
+    pub python: Option<PathBuf>,
+    /// `venvs/`.
+    pub venvs: Option<PathBuf>,
+    /// `uv-cache/`.
+    pub uv_cache: Option<PathBuf>,
+    /// `cache/secmonk/` (`SECMONK_CACHE`).
+    pub cache: Option<PathBuf>,
+    /// `logs/` (`modules/`).
+    pub logs: Option<PathBuf>,
+    /// `db/`.
+    pub db: Option<PathBuf>,
+    /// `auth/`.
+    pub auth: Option<PathBuf>,
 }
 
 macro_rules! sub {
@@ -21,40 +44,20 @@ macro_rules! sub {
 }
 
 sub! {
-    /// `db/`: state and mirror databases.
-    db => "db";
-    /// `tools/`: uv releases.
-    tools => "tools";
-    /// `tools/downloads/`: partial downloads.
-    downloads => "tools/downloads";
-    /// `python/`: `UV_PYTHON_INSTALL_DIR`.
-    python => "python";
-    /// `python/bin/`: `UV_PYTHON_BIN_DIR`.
-    python_bin => "python/bin";
     /// `pycache/`: bytecode.
     pycache => "pycache";
     /// `webview/`: webview data (Linux, Windows).
     webview => "webview";
-    /// `uv-cache/`: `UV_CACHE_DIR`.
-    uv_cache => "uv-cache";
     /// `uv-tools/`: `UV_TOOL_DIR`.
     uv_tools => "uv-tools";
     /// `uv-tools/bin/`: `UV_TOOL_BIN_DIR`.
     uv_tools_bin => "uv-tools/bin";
     /// `uv-home/`: sentinel HOME/XDG/APPDATA of uv steps; must stay empty.
     uv_home => "uv-home";
-    /// `venvs/`: module environments.
-    venvs => "venvs";
     /// `modules/`: module-owned files.
     modules => "modules";
     /// `python-home/`: `SECMONK_HOME` of modules.
     python_home => "python-home";
-    /// `cache/secmonk/`: `SECMONK_CACHE` of modules.
-    secmonk_cache => "cache/secmonk";
-    /// `logs/`.
-    logs => "logs";
-    /// `logs/modules/`.
-    module_logs => "logs/modules";
     /// `jobs/`: per-job scratch.
     jobs => "jobs";
     /// `tmp/`: `TMPDIR` of children.
@@ -68,7 +71,75 @@ impl Layout {
     pub fn new(root: &Path) -> Layout {
         Layout {
             root: root.to_path_buf(),
+            moved: MovedDirs::default(),
         }
+    }
+
+    /// The layout of `root` with the `[paths]` directories moved.
+    pub fn with_moved(root: &Path, moved: MovedDirs) -> Layout {
+        Layout {
+            root: root.to_path_buf(),
+            moved,
+        }
+    }
+
+    fn pick(&self, moved: &Option<PathBuf>, rel: &str) -> PathBuf {
+        moved.clone().unwrap_or_else(|| self.root.join(rel))
+    }
+
+    /// `db/` (`[paths] db`): state and mirror databases.
+    pub fn db(&self) -> PathBuf {
+        self.pick(&self.moved.db, "db")
+    }
+
+    /// `tools/` (`[paths] tools`): uv releases.
+    pub fn tools(&self) -> PathBuf {
+        self.pick(&self.moved.tools, "tools")
+    }
+
+    /// `tools/downloads/`: partial downloads.
+    pub fn downloads(&self) -> PathBuf {
+        self.tools().join("downloads")
+    }
+
+    /// `python/` (`[paths] python`): `UV_PYTHON_INSTALL_DIR`.
+    pub fn python(&self) -> PathBuf {
+        self.pick(&self.moved.python, "python")
+    }
+
+    /// `python/bin/`: `UV_PYTHON_BIN_DIR`.
+    pub fn python_bin(&self) -> PathBuf {
+        self.python().join("bin")
+    }
+
+    /// `uv-cache/` (`[paths] uv_cache`): `UV_CACHE_DIR`.
+    pub fn uv_cache(&self) -> PathBuf {
+        self.pick(&self.moved.uv_cache, "uv-cache")
+    }
+
+    /// `venvs/` (`[paths] venvs`): module environments.
+    pub fn venvs(&self) -> PathBuf {
+        self.pick(&self.moved.venvs, "venvs")
+    }
+
+    /// `cache/secmonk/` (`[paths] cache`): `SECMONK_CACHE` of modules.
+    pub fn secmonk_cache(&self) -> PathBuf {
+        self.pick(&self.moved.cache, "cache/secmonk")
+    }
+
+    /// `logs/` (`[paths] logs`).
+    pub fn logs(&self) -> PathBuf {
+        self.pick(&self.moved.logs, "logs")
+    }
+
+    /// `logs/modules/`.
+    pub fn module_logs(&self) -> PathBuf {
+        self.logs().join("modules")
+    }
+
+    /// `auth/` (`[paths] auth`): API keys file and JWT secret.
+    pub fn auth(&self) -> PathBuf {
+        self.pick(&self.moved.auth, "auth")
     }
 
     /// `tools/uv-<version>/`.
@@ -115,6 +186,7 @@ impl Layout {
             self.jobs(),
             self.tmp(),
             self.run(),
+            self.auth(),
         ]
     }
 

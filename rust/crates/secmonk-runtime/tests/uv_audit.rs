@@ -91,6 +91,8 @@ async fn uv_audit() {
         trust: TrustMode::Dev,
         module_pins: Default::default(),
         asset: platform::host_asset(),
+        uv_path: None,
+        uv_any_version: false,
     };
     let rt = UvRuntime::new(settings);
     let t = std::time::Instant::now();
