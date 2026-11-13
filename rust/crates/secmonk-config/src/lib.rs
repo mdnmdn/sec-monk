@@ -19,7 +19,7 @@ mod sections;
 
 pub use layout::{Layout, MovedDirs};
 pub use lookup::{ConfigOrigin, Located, MAX_CONFIG_BYTES, check_owner, locate, read_config};
-pub use overrides::{ENV_PREFIX, RESERVED_ENV, effective_toml, env_key, parse_set};
+pub use overrides::{ENV_PREFIX, RESERVED_ENV, effective_toml, env_key, parse_set, path_setting};
 pub use sections::{
     AuthMode, AuthSection, MatcherMode, NodeSection, NodeService, PathsSection, ServerSection,
     UpstreamSection,
@@ -188,6 +188,9 @@ pub struct ModulesSection {
     pub enabled: Option<Vec<String>>,
     /// `dev` or `pinned`.
     pub trust: Option<TrustMode>,
+    /// Install the modules project editable (dev mode only; default true). A bundled app sets it false: its
+    /// project lives in the read-only install directory and is copied into the venv instead.
+    pub editable: Option<bool>,
     /// Integrity pins (pinned mode).
     #[serde(default)]
     pub pins: BTreeMap<String, ModulePin>,
@@ -335,6 +338,8 @@ pub struct Config {
     pub modules_enabled: Vec<String>,
     /// Trust mode.
     pub trust: TrustMode,
+    /// `[modules] editable` (default true): with `trust = "dev"`, install the project editable.
+    pub modules_editable: bool,
     /// Integrity pins.
     pub module_pins: BTreeMap<String, ModulePin>,
     /// Per-module overrides.
@@ -438,6 +443,10 @@ pub struct LoadOptions {
     pub env_overrides: Vec<(String, String)>,
     /// `--set section.key=value` ([`parse_set`]). Override the environment.
     pub cli_overrides: Vec<String>,
+    /// Defaults of the running application (`section.key=value`, same syntax as `--set`), applied **below** the
+    /// file: a key the file (or an override) sets wins. The desktop app's release build uses it to point
+    /// `[modules] python_project` at its bundled copy. Empty for `from_env`.
+    pub app_defaults: Vec<String>,
 }
 
 impl LoadOptions {
@@ -460,6 +469,7 @@ impl LoadOptions {
                 })
                 .collect(),
             cli_overrides: Vec::new(),
+            app_defaults: Vec::new(),
         }
     }
 }
@@ -754,6 +764,7 @@ pub fn resolve(
             .enabled
             .unwrap_or_else(|| DEFAULT_MODULES.iter().map(|m| (*m).to_owned()).collect()),
         trust: raw.modules.trust.unwrap_or_default(),
+        modules_editable: raw.modules.editable.unwrap_or(true),
         module_pins: raw.modules.pins,
         module_overrides: raw.modules.overrides,
         ui_static_dir: static_dir,

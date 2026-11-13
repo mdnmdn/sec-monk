@@ -16,6 +16,8 @@
 //! `secmonk-server` for every subcommand (serving when none is given); Tauri is not in the dependency graph.
 
 #[cfg(feature = "ui")]
+pub mod bundle;
+#[cfg(feature = "ui")]
 mod static_dir;
 #[cfg(feature = "ui")]
 mod window;
@@ -111,7 +113,7 @@ mod ui {
         Ok(())
     }
 
-    pub fn run(config: Arc<Config>) -> Result<(), String> {
+    pub fn run(config: Arc<Config>, context: tauri::Context<tauri::Wry>) -> Result<(), String> {
         let service = Service::new(config.clone());
         let router: Arc<OnceLock<Arc<Router>>> = Arc::new(OnceLock::new());
         let for_scheme = router.clone();
@@ -163,7 +165,7 @@ mod ui {
                 window::open_main(app, &config)?;
                 Ok(())
             })
-            .build(tauri::generate_context!())
+            .build(context)
             .map_err(|e| e.to_string())?;
 
         app.run(move |_app, event| {
@@ -178,7 +180,7 @@ mod ui {
 
 /// No subcommand: open the window.
 #[cfg(all(feature = "ui", feature = "engine"))]
-fn window(cli: &secmonk_host::cli::Cli) -> i32 {
+fn window(cli: &secmonk_host::cli::Cli, context: tauri::Context<tauri::Wry>) -> i32 {
     let config = match cli.load_config() {
         Ok(c) => std::sync::Arc::new(c),
         Err(e) => {
@@ -187,7 +189,7 @@ fn window(cli: &secmonk_host::cli::Cli) -> i32 {
         }
     };
     secmonk_host::logging::init(&config, cfg!(debug_assertions));
-    match ui::run(config) {
+    match ui::run(config, context) {
         Ok(()) => 0,
         Err(e) => {
             tracing::error!("{e}");
@@ -216,10 +218,27 @@ pub fn run() -> i32 {
                 return 2;
             }
         };
-        // a subcommand (or --serve) never touches Tauri; without a window toolkit the server is the default
+        #[cfg(feature = "ui")]
+        let context = tauri::generate_context!();
+        #[cfg(feature = "ui")]
+        let mut cli = cli;
+        // An installed app (release build) finds its Python project and UI in its resource directory (on Windows
+        // the install directory); they become defaults below the config file. Debug builds keep the repository's
+        // dev configuration. Computed before any subcommand, so `secmonk-desktop serve` of a bundle works too.
+        #[cfg(feature = "ui")]
+        if !cfg!(debug_assertions)
+            && let Ok(res) =
+                tauri::utils::platform::resource_dir(context.package_info(), &tauri::Env::default())
+        {
+            cli.app_defaults = bundle::app_defaults(&res);
+        }
+        // a subcommand (or --serve) never builds the Tauri app; without a window toolkit the server is the default
         if cli.command.is_some() {
             return secmonk_host::cli::run(PROG, &cli);
         }
+        #[cfg(feature = "ui")]
+        return window(&cli, context);
+        #[cfg(not(feature = "ui"))]
         window(&cli)
     }
     #[cfg(not(feature = "engine"))]

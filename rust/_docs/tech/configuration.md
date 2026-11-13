@@ -86,7 +86,8 @@ the host then fails the start ("py-engine is not enabled").
 | `[uv] path` | path \| `"auto"`, unset | Use this uv binary instead of downloading one: `<uv> --version` must equal `[uv] version` (or the built-in pin) unless `any_version = true`; nothing is downloaded and no `VERIFIED` file is written (the file is the user's choice, not checksum-pinned). `"auto"`: `uv` (`uv.exe`) on `PATH` (absolute entries only), used when its version matches, else the managed download. See [uv: reuse](#reuse-of-installed-tools). |
 | `[uv] any_version` | bool, `false` | Accept any version of `[uv] path`. |
 | `[uv.sha256]` | table target → hex, built-in pins | sha256 of each release archive; required whenever `[uv] version` differs from the built-in pin; a target without a checksum cannot download (fail closed). |
-| `[modules] python_project` | path, `"python"` | The uv project of the Python modules (`rust/python`). |
+| `[modules] python_project` | path, `"python"` | The uv project of the Python modules (`rust/python`). A release desktop app defaults it to its bundled copy (`<resource_dir>/python-project/rust/python`, [release](release.md)). |
+| `[modules] editable` | bool, `true` | With `trust = "dev"`, install the project editable (`uv sync` without `--no-editable`). A release desktop app defaults it to `false`: its project sits in the read-only install directory and is copied into the venv. |
 | `[modules] enabled` | list of names, the four shipped modules when absent | Modules that may run; anything else is never installed or started. `enabled = []` enables none. `py-engine` is required by the engine. |
 | `[modules] trust` | `"dev"` \| `"pinned"` | `dev`: the project is installed editable from the repo; hashes are recorded, not compared. `pinned`: the `uv.lock` and source tree on disk must match `[modules.pins]` (and the manifest `integrity`) before install and before every start ([Module integrity](#module-integrity)). Pinned mode does not refuse at startup by itself: it needs a pin per enabled module and each module's launch entry must be exactly `-I -m secmonk_modules serve --stdio --module <name>` (`registry::fixed_entry`); the runtime verifies the lock and tree hash. |
 | `[modules.pins]` | table name → sha256 | `lock_sha256` / `tree_sha256` per module (pinned mode); print them with `uv run python scripts/pins.py` in `rust/python`. |
@@ -122,6 +123,11 @@ the host then fails the start ("py-engine is not enabled").
 | `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` takes precedence); log files older than `keep_days` are deleted at start. |
 
 ## Overrides
+
+**Application defaults** sit *below* the file: `LoadOptions::app_defaults` (`section.key=value`, same syntax as
+`--set`) is applied only for keys the file leaves unset. The release desktop app uses it for `modules.python_project`,
+`modules.editable = false` and `ui.static_dir` when its bundle carries them (`apps/desktop/src-tauri/src/bundle.rs`);
+`secmonk_config::path_setting` quotes a path as a TOML string (Windows backslashes, non-ASCII names).
 
 Precedence, highest first: **`--set section.key=value`** (repeatable; `LoadOptions.cli_overrides`) > **environment**
 (`SECMONK_*`; `LoadOptions.env_overrides`, filled by `LoadOptions::from_env`) > **file** > defaults. Overrides are merged

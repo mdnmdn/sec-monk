@@ -64,3 +64,10 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
 - [ ] **No console for the GUI exe.** `secmonk-desktop.exe` is a windows-subsystem binary: `--serve` prints nothing visible; use `secmonk-server.exe` for the server and read the log in `data_dir\logs` **(verify)**.
 - [ ] **ACLs of `api_keys.toml`, `jwt.key` and `node_id`.** On Unix they are created 0600; there is no equivalent here, so they inherit the folder ACL. Check who can read them and decide on an explicit ACL **(verify)**.
 - [ ] **Release artifacts.** `.zip` of the server, `.msi` and NSIS installers of the desktop app from [release](../tech/release.md): install, start, uninstall; SmartScreen on unsigned builds.
+- [ ] **Desktop bundle (2026-11-13).** Install the NSIS `*-setup.exe` as a normal user (per-user, no UAC prompt) and the
+      `.msi`; on first start the window shows "preparing" while uv, Python and the bundled `python-project` install
+      into `%LOCALAPPDATA%\sec-monk` (non-editable); the engine reaches `ready`; nothing is written below the install
+      directory. `secmonk-server.exe apikey create` works from PowerShell next to the app executable. WebView2 missing:
+      the bootstrapper installs it silently **(verify)**. Path lengths: the deepest bundled file is about 83 characters
+      below `python-project\` **(verify under `MAX_PATH`)**.
+

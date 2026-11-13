@@ -86,13 +86,29 @@ still carries only the static UI (`tauri.conf.json` `bundle.resources`); a relea
 
 Constraints: whole repo checked out (`tauri.conf.json` bundles `src/secmonk/web/static`); `bash` on every step.
 
+**What a desktop bundle contains** (2026-11-13). The build step runs `rust/scripts/stage_python_project.py
+rust/target/bundle-python`, builds `secmonk-server` for the target and copies it to
+`apps/desktop/src-tauri/binaries/secmonk-server-<triple>[.exe]`, then `cargo tauri build --config
+tauri.bundle.conf.json`. That config (merged over `tauri.conf.json` only for release bundles, so dev builds need no
+staging) adds:
+
+| Item | Where it lands (resource dir; on Windows the install directory) | Used for |
+|---|---|---|
+| `static/` | the UI (`src/secmonk/web/static`) | the window; `ui.static_dir` default |
+| `python-project/` | `pyproject.toml`, `README.md`, `uv.lock`, `src/secmonk/`, `rust/python/` (no tests, venv, caches) | `[modules] python_project` default; installed **non-editable** into `<data_dir>/venvs` (the install dir is read-only) |
+| `secmonk-server[.exe]` (sidecar, next to the app executable) | the CLI without Tauri | `apikey`, `config show`, `serve` from a terminal; the Windows window executable has no console |
+
+Windows: NSIS installs per user (`installMode = currentUser`, no administrator, under `%LOCALAPPDATA%\Programs`);
+the WebView2 runtime is fetched by the silent bootstrapper when missing. The release app turns the resources into
+defaults below the config file (`apps/desktop/src-tauri/src/bundle.rs`, `LoadOptions::app_defaults`), so a user's
+`sec-monk.toml` or `--set` still wins. The same staging script builds the server archive.
+
 ## Not done
 
 | Item | State |
 |---|---|
 | Code signing (macOS, Windows) and notarization | not configured; placeholders (commented) in `build-desktop` |
 | Tauri updater signatures (`TAURI_SIGNING_PRIVATE_KEY`) | not configured |
-| Desktop bundle modules | the Python modules project and the root project are not bundled; a release window cannot start its modules ([desktop-app](../features/desktop-app.md)) |
 | x86_64 macOS | cross-compiled on macos-14 (`--target x86_64-apple-darwin`); not yet run on a GitHub runner, and the Tauri bundle of the cross target is unchecked |
 | Release gating | `release` does not run after a cancelled or failed job (`!cancelled()`, no `failure` or `cancelled` in `needs`); a cancelled run publishes nothing |
 | tauri-cli pin | manual: `TAURI_CLI_VERSION` follows the `tauri` lock entry; the `~2.12` range is not checked against crates.io |

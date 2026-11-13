@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": {
+      "../../../../src/secmonk/web/static/": "static/",
+      "../../../target/bundle-python/": "python-project/"
+    },
+    "externalBin": ["binaries/secmonk-server"],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": { "installMode": "currentUser" }
+    }
+  }
+}

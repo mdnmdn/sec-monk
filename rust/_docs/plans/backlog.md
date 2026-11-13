@@ -72,7 +72,7 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 ## 6. Runtime and packaging
 
 - [ ] uv linked as crates behind `PythonRuntime` (evaluate only; uv crate API not stable).
-- [x] Release workflow (2026-11-13): desktop bundles and server archives, [release](../tech/release.md). Open there: code signing and notarization, updater signatures, a desktop bundle that carries no Python modules yet.
+- [x] Release workflow (2026-11-13): desktop bundles and server archives, [release](../tech/release.md). Open there: code signing and notarization, updater signatures. The desktop bundle carries the Python project and the `secmonk-server` sidecar since 2026-11-13.
 - [ ] Release packaging: static UI and Python project as Tauri resources, pinned module hashes (`trust = "pinned"`),
       offline bundle (uv archive + wheels).
 - [ ] Verify uv checksums against GitHub attestations in the release pipeline.

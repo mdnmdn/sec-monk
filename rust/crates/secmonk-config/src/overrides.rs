@@ -86,6 +86,13 @@ pub(crate) fn apply_overrides(
     mut doc: toml::Table,
     opts: &LoadOptions,
 ) -> Result<toml::Table, ConfigError> {
+    // application defaults first, only where the file left the key unset (the file and the overrides win)
+    for arg in &opts.app_defaults {
+        let (key, value) = parse_set(arg)?;
+        if !has_key(&doc, &key) {
+            set_override(&mut doc, &key, &value, &format!("app default {key}"), opts)?;
+        }
+    }
     let mut env: Vec<&(String, String)> = opts.env_overrides.iter().collect();
     env.sort();
     for (name, value) in env {
@@ -110,6 +117,27 @@ pub(crate) fn apply_overrides(
         set_override(&mut doc, &key, &value, &format!("--set {key}"), opts)?;
     }
     Ok(doc)
+}
+
+/// A `section.key=value` entry (for `--set` or [`crate::LoadOptions::app_defaults`]) whose value is `path` as a
+/// TOML string: quoted and escaped, so Windows backslashes and non-ASCII names survive the TOML parse.
+pub fn path_setting(key: &str, path: &std::path::Path) -> String {
+    let value = toml::Value::String(path.to_string_lossy().into_owned());
+    format!("{key}={value}")
+}
+
+/// Whether the dotted `key` is set in `doc`.
+fn has_key(doc: &toml::Table, key: &str) -> bool {
+    let mut t = doc;
+    let parts: Vec<&str> = key.split('.').collect();
+    for (i, part) in parts.iter().enumerate() {
+        match t.get(*part) {
+            None => return false,
+            Some(toml::Value::Table(inner)) if i + 1 < parts.len() => t = inner,
+            Some(_) => return i + 1 == parts.len(),
+        }
+    }
+    false
 }
 
 fn nested(parts: &[&str], value: toml::Value) -> toml::Table {
@@ -278,6 +306,7 @@ pub fn effective_toml(c: &Config) -> String {
             TrustMode::Pinned => "pinned",
         }),
     );
+    put(&mut t, "editable", toml::Value::Boolean(c.modules_editable));
     if !c.module_pins.is_empty() {
         let mut pins = T::new();
         for (name, pin) in &c.module_pins {

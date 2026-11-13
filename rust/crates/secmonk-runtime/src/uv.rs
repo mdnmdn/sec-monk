@@ -44,6 +44,9 @@ pub struct UvSettings {
     pub find_links: Option<PathBuf>,
     /// Trust mode (`pinned` installs non-editable and verifies `module_pins` before `uv sync` and every start).
     pub trust: TrustMode,
+    /// `[modules] editable`: with `trust = "dev"`, install the project editable (false in a bundled app, whose
+    /// project sits in the read-only install directory).
+    pub editable: bool,
     /// `[modules.pins]` of the enabled modules (they share the project; each pin must match it).
     pub module_pins: BTreeMap<String, ModulePin>,
     /// The asset of this host (overridable in tests).
@@ -93,6 +96,7 @@ impl UvSettings {
             index_url: c.index_url.clone(),
             find_links: c.find_links.clone(),
             trust: c.trust,
+            editable: c.modules_editable,
             module_pins: c
                 .module_pins
                 .iter()
@@ -491,7 +495,7 @@ impl PythonRuntime for UvRuntime {
             .insert(env.to_string(), project.clone());
         let venv = self.layout().venv(env);
         let python = self.venv_python(env);
-        let editable = self.settings.trust == TrustMode::Dev;
+        let editable = self.settings.trust == TrustMode::Dev && self.settings.editable;
         let marker = InstallMarker {
             uv_version: self.settings.uv_version.clone(),
             python_version: self.settings.python_version.clone(),
@@ -636,6 +640,7 @@ mod tests {
             index_url: None,
             find_links: None,
             trust: TrustMode::Dev,
+            editable: true,
             module_pins: BTreeMap::new(),
             asset: Some(asset),
             uv_path: None,

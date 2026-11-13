@@ -59,6 +59,9 @@ pub struct Cli {
     pub config: Option<PathBuf>,
     /// `--set` entries, the convenience flags included, in command-line order.
     pub overrides: Vec<String>,
+    /// Defaults of the running application, below the config file ([`secmonk_config::LoadOptions::app_defaults`]):
+    /// a bundled desktop app points `[modules] python_project` at its own copy. Not set by [`parse`].
+    pub app_defaults: Vec<String>,
     /// The subcommand (or `--serve`); `None` when none was given: `secmonk-server` serves, the desktop app opens
     /// its window.
     pub command: Option<Command>,
@@ -69,6 +72,7 @@ impl Cli {
     pub fn load_options(&self) -> LoadOptions {
         let mut o = LoadOptions::from_env(self.config.clone());
         o.cli_overrides = self.overrides.clone();
+        o.app_defaults = self.app_defaults.clone();
         o
     }
 

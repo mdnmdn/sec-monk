@@ -229,8 +229,21 @@ jobs:
           BUNDLES: ${{ matrix.bundles }}
         run: |
           set -euo pipefail
-          # tauri.conf.json bundles ../../../../src/secmonk/web/static, so the whole repository is checked out.
-          (cd rust/apps/desktop/src-tauri && cargo tauri build --target "$TARGET" --bundles "$BUNDLES" -- --locked)
+          # The installed app needs its own Python project (the engine modules) and the UI. tauri.bundle.conf.json
+          # adds them as resources next to the executable (on Windows the install directory): the UI from
+          # src/secmonk/web/static and python-project/ staged here; the app points [modules] python_project at it
+          # and installs it non-editable (apps/desktop/src-tauri/src/bundle.rs). It also ships secmonk-server as a
+          # sidecar: the window executable has no console on Windows, so secmonk-server(.exe) is the CLI there.
+          PY="$(command -v python3 || command -v python)"
+          "$PY" rust/scripts/stage_python_project.py rust/target/bundle-python
+          EXT=""
+          if [ "$RUNNER_OS" = "Windows" ]; then EXT=".exe"; fi
+          (cd rust && cargo build --release --locked -p secmonk-host --bin secmonk-server --target "$TARGET")
+          mkdir -p rust/apps/desktop/src-tauri/binaries
+          cp "rust/target/$TARGET/release/secmonk-server$EXT" \
+            "rust/apps/desktop/src-tauri/binaries/secmonk-server-$TARGET$EXT"
+          (cd rust/apps/desktop/src-tauri && \
+            cargo tauri build --config tauri.bundle.conf.json --target "$TARGET" --bundles "$BUNDLES" -- --locked)
 
       - name: Collect bundles
         id: collect
@@ -328,12 +341,11 @@ jobs:
           # the archive keeps the repository layout: the root project (pyproject.toml, uv.lock, README.md for the
           # build backend, src/secmonk with its data files and the UI static files) at the archive root and the
           # modules project under rust/python. No virtualenv, caches or tests.
-          cp pyproject.toml README.md "$STAGE/"
-          if [ -f uv.lock ]; then cp uv.lock "$STAGE/"; fi
-          mkdir -p "$STAGE/src"
-          tar --exclude=__pycache__ --exclude='*.pyc' -cf - src/secmonk | tar -C "$STAGE" -xf -
-          tar -C rust --exclude=.venv --exclude=__pycache__ --exclude='*.pyc' --exclude=.pytest_cache --exclude=.ruff_cache --exclude=tests \
-            -cf - python | tar -C "$STAGE/rust" -xf -
+          # One staging script for the server archive and the desktop bundle (rust/scripts/stage_python_project.py).
+          PY="$(command -v python3 || command -v python)"
+          "$PY" rust/scripts/stage_python_project.py stage/python
+          cp -R stage/python/. "$STAGE/"
+          rm -rf stage/python
           test -f "$STAGE/rust/python/pyproject.toml"
           test -d "$STAGE/src/secmonk/web/static"
 

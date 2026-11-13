@@ -51,7 +51,10 @@ never initialised, the same options (`--config`, `--set`, `--data-dir`, `--liste
 same way and never start the engine. A build without the `ui` feature behaves like `secmonk-server` for every
 subcommand (serving when none is given). The Windows release app is a GUI-subsystem program (no console is attached;
 attaching to the parent console needs `unsafe`, which the workspace forbids), so on Windows use `secmonk-server.exe` for
-the command line. Details: [README](../../README.md#server-mode-secmonk-server), [architecture §3](../tech/architecture.md#3-composition-secmonk-host-and-the-desktop-app).
+the command line: the installers ship it next to the app executable (a Tauri sidecar). An installed app finds its UI
+and its own copy of the Python project in its resource directory (on Windows the install directory) and installs the
+modules into `data_dir` on first start; a `sec-monk.toml` of the user still overrides those defaults
+([release](../tech/release.md)). Details: [README](../../README.md#server-mode-secmonk-server), [architecture §3](../tech/architecture.md#3-composition-secmonk-host-and-the-desktop-app).
 
 ### How the window reaches the engine
 

@@ -701,3 +701,52 @@ fn trusted_proxies_and_loopback_helpers() {
     assert!(is_loopback_listen("localhost:1") && is_loopback_listen("[::ffff:127.0.0.1]:1"));
     assert!(!is_loopback_listen("0.0.0.0:1"));
 }
+
+#[test]
+fn app_defaults_sit_below_the_file_and_the_overrides() {
+    let d = tempfile::tempdir().unwrap();
+    let r = d.path();
+    let bundled = r.join("bundle/python-project/rust/python");
+    let defaults = vec![
+        path_setting("modules.python_project", &bundled),
+        "modules.editable=false".to_string(),
+    ];
+    // no file: the app defaults apply
+    let mut o = opts(r);
+    o.app_defaults = defaults.clone();
+    let c = load(&o).unwrap();
+    assert_eq!(c.python_project, bundled);
+    assert!(!c.modules_editable);
+    // without app defaults the dev values stay
+    let c = load(&opts(r)).unwrap();
+    assert!(c.modules_editable);
+    // a file that sets python_project wins over the app default; editable still comes from the default
+    write(
+        &r.join("cwd/sec-monk.toml"),
+        "[modules]\npython_project = \"mine\"\n",
+    );
+    let mut o = opts(r);
+    o.app_defaults = defaults.clone();
+    let c = load(&o).unwrap();
+    assert_eq!(c.python_project, r.join("cwd/mine"));
+    assert!(!c.modules_editable);
+    // --set wins over both
+    o.cli_overrides = vec!["modules.editable=true".into()];
+    assert!(load(&o).unwrap().modules_editable);
+    // an app default naming an unknown key is refused like any override
+    let mut o = opts(r);
+    o.app_defaults = vec!["modules.nope=1".into()];
+    assert!(load(&o).is_err());
+}
+
+#[test]
+fn path_settings_survive_backslashes_and_non_ascii() {
+    let d = tempfile::tempdir().unwrap();
+    let r = d.path();
+    for name in ["C:\\Program Files\\sec-monk\\python", "Jos\u{e9} \"q\" dir"] {
+        let p = r.join(name);
+        let mut o = opts(r);
+        o.app_defaults = vec![path_setting("modules.python_project", &p)];
+        assert_eq!(load(&o).unwrap().python_project, p, "{name}");
+    }
+}

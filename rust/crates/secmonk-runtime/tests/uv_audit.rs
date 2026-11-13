@@ -89,6 +89,7 @@ async fn uv_audit() {
         index_url: None,
         find_links: None,
         trust: TrustMode::Dev,
+        editable: true,
         module_pins: Default::default(),
         asset: platform::host_asset(),
         uv_path: None,
