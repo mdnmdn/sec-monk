@@ -4,6 +4,8 @@
 #   desktop  Tauri app secmonk-desktop (rust/apps/desktop/src-tauri), built with the tauri-cli v2.
 #   server   secmonk-server (crate secmonk-host), packaged with the Python modules (rust/python), the root Python project they depend on, the UI and an archive config.
 #
+# Gate: the `checks` job (fmt, clippy, tests without the desktop app) must pass before any build starts. rust-ci.yml runs the full set on every push.
+#
 # Signing and notarization are NOT configured. The secrets below are placeholders; nothing reads them yet.
 #   macOS:    APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
 #   Updater:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
@@ -53,6 +55,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # Mirrors rust/rust-toolchain.toml (channel). Components and targets go to this exact toolchain.
+  RUST_TOOLCHAIN: "1.98.0"
+  # tauri-cli minor that matches the tauri crate in rust/Cargo.lock (tauri 2.12.5). Update with the tauri lock entry.
+  TAURI_CLI_VERSION: "~2.12"
+
 jobs:
   plan:
     name: Plan build matrices
@@ -76,17 +84,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          # macos-13 is retired: x86_64 macOS is cross-compiled on the arm64 runner (macos-14).
           DESKTOP_ALL='[
             {"kind":"linux","os":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","bundles":"deb,appimage"},
             {"kind":"macos","os":"macos-14","target":"aarch64-apple-darwin","bundles":"app,dmg"},
-            {"kind":"macos","os":"macos-13","target":"x86_64-apple-darwin","bundles":"app,dmg"},
+            {"kind":"macos","os":"macos-14","target":"x86_64-apple-darwin","bundles":"app,dmg"},
             {"kind":"windows","os":"windows-latest","target":"x86_64-pc-windows-msvc","bundles":"msi,nsis"}
           ]'
           SERVER_ALL='[
             {"kind":"linux","os":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu"},
             {"kind":"linux","os":"ubuntu-24.04-arm","target":"aarch64-unknown-linux-gnu"},
             {"kind":"macos","os":"macos-14","target":"aarch64-apple-darwin"},
-            {"kind":"macos","os":"macos-13","target":"x86_64-apple-darwin"},
+            {"kind":"macos","os":"macos-14","target":"x86_64-apple-darwin"},
             {"kind":"windows","os":"windows-latest","target":"x86_64-pc-windows-msvc"}
           ]'
 
@@ -114,16 +123,44 @@ jobs:
           echo "Desktop matrix: $DESKTOP"
           echo "Server matrix:  $SERVER"
 
+  checks:
+    name: Checks (fmt, clippy, tests without desktop)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: release-checks
+
+      - name: Format, clippy and tests
+        working-directory: rust
+        env:
+          CARGO_INCREMENTAL: "0"
+        run: |
+          set -euo pipefail
+          cargo fmt --all --check
+          cargo clippy --workspace --exclude secmonk-desktop --all-targets -- -D warnings
+          cargo test --workspace --exclude secmonk-desktop
+
   build-desktop:
     name: Desktop ${{ matrix.target }}
-    needs: plan
+    needs: [plan, checks]
     if: needs.plan.outputs.desktop_count != '0'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.desktop) }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Read workspace version
         id: version
@@ -145,30 +182,32 @@ jobs:
             build-essential curl wget file libxdo-dev
 
       - name: Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
         with:
+          # The pinned toolchain gets the target: cross-compiled targets (x86_64 macOS on the arm64 runner) need it here.
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo build
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: rust -> target
           key: desktop-${{ matrix.target }}
 
       - name: Cache tauri-cli binary
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/bin/cargo-tauri
             ~/.cargo/bin/cargo-tauri.exe
-          key: tauri-cli-v2-${{ runner.os }}-${{ runner.arch }}
+          key: tauri-cli-${{ env.TAURI_CLI_VERSION }}-${{ runner.os }}-${{ runner.arch }}
 
-      - name: Install tauri-cli v2
+      - name: Install tauri-cli v2 (pinned minor)
         shell: bash
         run: |
           set -euo pipefail
           if ! command -v cargo-tauri >/dev/null 2>&1; then
-            cargo install tauri-cli --version "^2" --locked
+            cargo install tauri-cli --version "$TAURI_CLI_VERSION" --locked
           fi
           cargo tauri --version
 
@@ -219,7 +258,7 @@ jobs:
           test -n "$(ls -A dist)"
 
       - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-${{ matrix.target }}
           path: dist/*
@@ -227,14 +266,14 @@ jobs:
 
   build-server:
     name: Server ${{ matrix.target }}
-    needs: plan
+    needs: [plan, checks]
     if: needs.plan.outputs.server_count != '0'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.server) }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Read workspace version
         id: version
@@ -246,12 +285,13 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
         with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo build
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: rust -> target
           key: server-${{ matrix.target }}
@@ -334,7 +374,7 @@ jobs:
           test -n "$(ls -A dist)"
 
       - name: Upload server artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: server-${{ matrix.target }}
           path: dist/*
@@ -342,21 +382,24 @@ jobs:
 
   release:
     name: Create GitHub release
-    needs: [plan, build-desktop, build-server]
-    if: always() && (inputs.tag != '' || github.event_name == 'push') && !contains(needs.*.result, 'failure')
+    needs: [plan, checks, build-desktop, build-server]
+    # Never after a cancellation or a failed job: a partial set is not published.
+    if: >-
+      !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      && (inputs.tag != '' || github.event_name == 'push')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: "*"
           merge-multiple: true
           path: dist
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:

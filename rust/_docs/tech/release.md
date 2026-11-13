@@ -8,7 +8,7 @@ status: implemented
 tags: [release, ci, github-actions, tauri, server, packaging]
 updated: 2026-11-13
 verified: 2026-11-13
-code: [.github/workflows/release.yml]
+code: [.github/workflows/release.yml, .github/workflows/rust-ci.yml]
 related: [plans/node-server-design.md]
 ---
 
@@ -22,8 +22,8 @@ built from `rust/`: the **desktop** app (`secmonk-desktop`, Tauri, via `cargo ta
 
 | Trigger | Builds | Release |
 |---|---|---|
-| Actions → Release → Run workflow | the checked products and platforms | only when `tag` is set |
-| push of a tag `v*` | everything | always, as a **draft**, never a prerelease |
+| Actions → Release → Run workflow | the checked products and platforms (after `checks` passes) | only when `tag` is set |
+| push of a tag `v*` | everything (after `checks` passes) | always, as a **draft**, never a prerelease |
 
 ## Inputs (workflow_dispatch)
 
@@ -41,9 +41,12 @@ built from `rust/`: the **desktop** app (`secmonk-desktop`, Tauri, via `cargo ta
 | Job | Runs | Output |
 |---|---|---|
 | `plan` | always | `desktop` and `server` matrices (`{"include":[…]}`), with counts |
-| `build-desktop` | matrix non-empty | artifacts `desktop-<triple>` |
-| `build-server` | matrix non-empty | artifacts `server-<triple>` |
-| `release` | `tag` set or tag push; no job failed | downloads all artifacts, publishes with `softprops/action-gh-release@v2` |
+| `checks` | always | `cargo fmt --check`, `cargo clippy` and `cargo test` of the workspace without `secmonk-desktop` (no venv: the venv-gated tests skip) |
+| `build-desktop` | `plan` and `checks` pass; matrix non-empty | artifacts `desktop-<triple>` |
+| `build-server` | `plan` and `checks` pass; matrix non-empty | artifacts `server-<triple>` |
+| `release` | `tag` set or tag push; no job failed or was cancelled | downloads all artifacts, publishes with `softprops/action-gh-release` |
+
+`rust-ci.yml` ("Rust CI", on pushes and pull requests touching `rust/**`, `src/**`, the workflow itself) runs the full set on every change: the workspace checks with the venv (`SECMONK_REQUIRE_VENV=1`), the headless desktop check and the dependency rules (`probe` does not reach the store, `node` does not reach the engine or the store), `cargo-deny check bans` (`rust/deny.toml`), the desktop clippy with WebKitGTK, pytest and ruff of `rust/python`, and `node --test rust/ui/test/*.test.mjs`.
 
 Matrix targets:
 
@@ -52,10 +55,10 @@ Matrix targets:
 | `x86_64-unknown-linux-gnu` | ubuntu-22.04 | deb, AppImage | yes |
 | `aarch64-unknown-linux-gnu` | ubuntu-24.04-arm | — | yes |
 | `aarch64-apple-darwin` | macos-14 | app, dmg | yes |
-| `x86_64-apple-darwin` | macos-13 | app, dmg | yes |
+| `x86_64-apple-darwin` | macos-14 (arm64, cross-compiled with `--target`) | app, dmg | yes |
 | `x86_64-pc-windows-msvc` | windows-latest | msi, nsis | yes |
 
-Version: `rust/Cargo.toml` `[workspace.package] version`. Toolchain: `dtolnay/rust-toolchain@stable`, pinned by `rust/rust-toolchain.toml`. `tauri-cli` ^2 is cached.
+Version: `rust/Cargo.toml` `[workspace.package] version`. Toolchain: `dtolnay/rust-toolchain` at `RUST_TOOLCHAIN` (1.98.0, the channel of `rust/rust-toolchain.toml`), with the target of the matrix entry added: the cross-compiled x86_64 macOS target is installed on that same toolchain. `tauri-cli` is `~2.12` (the minor of the `tauri` crate in `rust/Cargo.lock`, 2.12.5), built with `--locked`, cached by version (`TAURI_CLI_VERSION` in the workflow; update it with the `tauri` lock entry). Third-party actions are pinned to commit SHAs with a `# vX` comment; `dtolnay/rust-toolchain` is pinned to the SHA of its `stable` branch, which moves: re-pin it on each update.
 
 ## Archives (in `dist/`, then attached to the release)
 
@@ -90,5 +93,7 @@ Constraints: whole repo checked out (`tauri.conf.json` bundles `src/secmonk/web/
 | Code signing (macOS, Windows) and notarization | not configured; placeholders (commented) in `build-desktop` |
 | Tauri updater signatures (`TAURI_SIGNING_PRIVATE_KEY`) | not configured |
 | Desktop bundle modules | the Python modules project and the root project are not bundled; a release window cannot start its modules ([desktop-app](../features/desktop-app.md)) |
-| Cancelled runs | `release` runs on `always()`; cancelling a run can still publish the partial set as a draft |
-| Verification | YAML parsed, actionlint clean, plan and archive steps run locally; no GitHub run yet |
+| x86_64 macOS | cross-compiled on macos-14 (`--target x86_64-apple-darwin`); not yet run on a GitHub runner, and the Tauri bundle of the cross target is unchecked |
+| Release gating | `release` does not run after a cancelled or failed job (`!cancelled()`, no `failure` or `cancelled` in `needs`); a cancelled run publishes nothing |
+| tauri-cli pin | manual: `TAURI_CLI_VERSION` follows the `tauri` lock entry; the `~2.12` range is not checked against crates.io |
+| Verification | YAML parsed and actionlint clean for `release.yml` and `rust-ci.yml`; plan and archive steps ran locally earlier; the first GitHub runs of `Release` and `Rust CI` are still pending |
