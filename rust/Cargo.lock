@@ -3446,6 +3446,7 @@ dependencies = [
  "secmonk-sources",
  "secmonk-store",
  "secmonk-traits",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
