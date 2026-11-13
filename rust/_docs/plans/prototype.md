@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [rust, plan, prototype]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 ---
 
@@ -153,3 +153,4 @@ Assumptions (cheap to reverse, confirm or correct):
 - 2026-11-12 Committed 625344a (nvd). W11.1 cvelist and W11.2 osv dispatched in parallel; shared modules frozen during the ports, consolidation afterwards. default_rust only if not slower than py-sources (roadmap D2).
 - 2026-11-12 W11.1 and W11.2 done; full workspace 358 passed, 1 failed (host test uses osv as a source without Rust implementation). W11.3 reviews dispatched.
 - 2026-11-12 Committed W11.1 + W11.2 as in review at the user's request: fmt OK, clippy clean, ruff clean; `cargo test --workspace` stops at the known secmonk-host failure (`the_configuration_selects_the_native_sources` uses osv as a source without Rust implementation; fix in W11.4). W11.3 reviews not yet collected.
+- 2026-11-13 Server mode (`secmonk-server`, `--serve`, TLS, API keys and JWTs), the Tauri IPC command `secmonk_api` and the mirror-node services (`/node/v1`, phases P0-P4) were implemented outside the waves above: [ADR-0013](../decisions/0013-mirror-nodes-and-source-versions.md), [ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md), [node-api](../tech/node-api.md), [release](../tech/release.md); the brief [node-server-design](node-server-design.md) is done. Open items are in [backlog](backlog.md) and the `on-*` plans.

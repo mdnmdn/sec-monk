@@ -20,6 +20,8 @@ offline = false
 version = "0.13.7"
 url = "https://github.com/astral-sh/uv/releases/download/{version}/{asset}"
 # archive = "downloads/uv-aarch64-apple-darwin.tar.gz"   # offline: a local copy, verified like a download
+# path = "auto"                  # use `uv` from PATH when its version matches (else download); or a file: path = "/usr/local/bin/uv"
+# any_version = false            # accept any version of `path` (default: it must report `version`)
 
 # The same pins are compiled into secmonk-runtime; these entries override them (needed when [uv] version changes).
 # sha256 of each release archive, copied from the release's .sha256 files on 2026-11-11 (verify against
@@ -67,3 +69,40 @@ nvd_api_key_env = "NVD_API_KEY"
 [log]
 level = "info"
 keep_days = 7
+
+# Every key below can also be set as --set section.key=value or SECMONK_SECTION__KEY (precedence: --set > env > file).
+# [paths]                        # move directories out of data_dir (relative: this file's directory); share tools between data dirs
+# tools = "~/.sec-monk-shared/tools"
+# python = "~/.sec-monk-shared/python"
+# venvs = "…"
+# uv_cache = "~/.sec-monk-shared/uv-cache"
+# cache = "…"                    # SECMONK_CACHE of modules
+# logs = "…"
+# db = "…"                       # {db_dir} in [database] URLs
+# auth = "…"                     # api_keys.toml, jwt.key
+
+# [server]                       # server mode (secmonk-server, secmonk-desktop --serve)
+# listen = "127.0.0.1:8765"      # unset: ui.http_listen, then 127.0.0.1:8765
+# tls_cert = "tls/cert.pem"      # with tls_key: HTTPS
+# tls_key = "tls/key.pem"
+# allow_hosts = []               # extra Host names (public DNS name)
+# insecure_http = false          # plain HTTP on a non-loopback address (behind a TLS proxy)
+# allow_actions = true
+# auth = "auto"                  # "auto" | "required" | "off" (loopback only)
+# serve_ui = true
+
+# [auth]
+# keys_file = "…"                # default {paths.auth}/api_keys.toml
+# jwt_ttl_s = 3600
+# jwt_secret_file = "…"          # default {paths.auth}/jwt.key
+# rate_per_minute = 600
+
+# [node]                         # mirror node
+# mirror = true
+# serve = ["feed", "match", "vulninfo"]
+# matcher = "local"              # "remote" needs node.upstream.url
+# [node.upstream]
+# url = "https://mirror.example:8765"
+# api_key_env = "SECMONK_UPSTREAM_API_KEY"
+# ca_cert = "…"
+# sources = []

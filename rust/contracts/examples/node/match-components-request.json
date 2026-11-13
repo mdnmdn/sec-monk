@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "name": "openssl",
+      "version": "3.0.2-0ubuntu1.10",
+      "category": "os-package",
+      "purl": "pkg:deb/ubuntu/openssl@3.0.2-0ubuntu1.10",
+      "vendor": "ubuntu",
+      "ecosystem": "Ubuntu:22.04",
+      "meta": { "source_package": "openssl", "product": "openssl" }
+    },
+    { "name": "requests", "version": "2.19.0", "category": "library", "purl": "pkg:pypi/requests@2.19.0", "ecosystem": "PyPI" }
+  ],
+  "min_confidence": 0.5
+}

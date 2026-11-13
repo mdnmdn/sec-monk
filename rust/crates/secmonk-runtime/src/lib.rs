@@ -18,9 +18,11 @@ pub mod pins;
 pub mod platform;
 pub mod tree;
 mod uv;
+mod uv_external;
 
 pub use tree::{TreeDigest, module_digest, verify_module_tree, verify_project_pins};
-pub use uv::{UvRuntime, UvSettings};
+pub use uv::{UvInUse, UvRuntime, UvSettings, UvSource};
+pub use uv_external::find_on_path;
 
 /// Runtime errors.
 #[derive(Debug, thiserror::Error)]
@@ -79,6 +81,26 @@ pub enum RuntimeError {
         expected: String,
         /// Value on disk.
         actual: String,
+    },
+    /// `[uv] path` names a uv that is not the configured version (and `uv.any_version` is not set).
+    #[error(
+        "uv at {path} is version {found}, expected {expected}; use that version or set [uv] any_version = true"
+    )]
+    UvVersion {
+        /// The binary.
+        path: PathBuf,
+        /// What `--version` reported (`unknown` when unparsable).
+        found: String,
+        /// Configured or pinned version.
+        expected: String,
+    },
+    /// An external uv (`[uv] path`, or `uv` on `PATH`) sits where others could replace it.
+    #[error("uv at {path} is not trusted: {reason}")]
+    UntrustedUv {
+        /// The binary.
+        path: PathBuf,
+        /// What is wrong.
+        reason: String,
     },
     /// Filesystem error.
     #[error("{path}: {source}")]

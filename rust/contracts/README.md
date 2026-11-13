@@ -4,7 +4,7 @@ The interfaces of the Rust prototype as JSON Schema (draft 2020-12). Explained i
 [`../_docs/tech/contracts.md`](../_docs/tech/contracts.md) and [`../_docs/tech/api-contract.md`](../_docs/tech/api-contract.md).
 
 ```
-schemas/   wire/ (secmonk-wire/1 envelope)  module/ (manifest)  inventory/  source/ (mirror rows)
+schemas/   node/ (mirror-node requests)  wire/ (secmonk-wire/1 envelope)  module/ (manifest)  inventory/  source/ (mirror rows)
            engine/ (classify, match, versions, reports, procmon)  probe/ (docker, discover)
            process/ (secmonk-process-snapshot/1)  api/ (one schema per /api payload)  catalog/
 catalog/   module-methods.json (every module method once)   api-routes.json (the 22 /api routes)

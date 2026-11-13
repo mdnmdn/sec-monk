@@ -29,6 +29,7 @@ pub use secmonk_model::{
 pub use secmonk_proto::{CollectorInfo, ErrorCode, SourceInfo, WireError};
 
 pub mod collect;
+pub mod node;
 
 /// Error of every trait method.
 pub type StepError = WireError;
@@ -165,6 +166,15 @@ pub trait Source: Send + Sync {
     /// is the repair.
     fn native(&self) -> bool {
         false
+    }
+
+    /// The version of the importer that writes `source`'s rows (`rust/1`, `py-sources/1`; no `@`), recorded with the
+    /// source's version after a complete import (proposal §3.2 rule 2: another importer is another version, the
+    /// rows can differ). `None` (the default): the engine records `python/<secmonk version>`
+    /// (`secmonk_engine::node::default_importer_module`) for a module source and `rust/1` for a native one.
+    fn importer_version(&self, source: &str) -> Option<String> {
+        let _ = source;
+        None
     }
 }
 

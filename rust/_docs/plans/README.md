@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/prototype.md, plans/backlog.md, plans/roadmap.md]
 ---
@@ -19,6 +19,7 @@ related: [plans/prototype.md, plans/backlog.md, plans/roadmap.md]
 | [prototype.md](prototype.md) | any | The prototype waves and their status (owned by the coordinator) |
 | [roadmap.md](roadmap.md) | any | Proposed phases R0-R6 after the prototype, milestones and decisions needed (proposal) |
 | [backlog.md](backlog.md) | any | After the prototype: Rust migration order, distributed mode, other databases, uv as crates, docs tooling |
+| [node-server-design.md](node-server-design.md) | any | Design brief of the server mode, API-key/JWT auth, UI transport and mirror nodes (done 2026-11-13; not kept in sync) |
 | [on-macos.md](on-macos.md) | macos | What only a real Mac can confirm |
 | [on-linux.md](on-linux.md) | linux | WebKitGTK, distro packaging, musl |
 | [on-windows.md](on-windows.md) | windows | WebView2, process spawning, paths, registry |

@@ -1,0 +1,12 @@
+/* Login card and sign-out button of the Rust overlay; tokens come from /static/css/secmonk.css (light and dark). */
+#secmonk-login:not([hidden]) {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: var(--sm-bg); padding: var(--sm-s4);
+}
+.rui-login__card { width: min(360px, 100%); box-shadow: var(--sm-shadow-lg); }
+.rui-login__body { display: flex; flex-direction: column; gap: var(--sm-s3); }
+.rui-login__title { margin: 0; font-size: var(--sm-fs-xl); font-weight: 650; color: var(--sm-text); }
+.rui-login__label { font-size: var(--sm-fs-sm); color: var(--sm-text-2); }
+.rui-login__input { width: 100%; box-sizing: border-box; }
+.rui-login__error { margin: 0; min-height: 1.2em; font-size: var(--sm-fs-sm); color: var(--sm-danger); }
+.rui-signout { position: fixed; right: var(--sm-s4); bottom: var(--sm-s4); z-index: 50; box-shadow: var(--sm-shadow); }

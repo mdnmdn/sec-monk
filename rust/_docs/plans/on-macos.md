@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: macos
 tags: [plan, macos, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/README.md, decisions/0009-platform-targets.md]
 ---
@@ -60,3 +60,10 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
       `Service::shutdown`, about 0.2 s observed headless); force quit leaves no Python process.
 - [ ] **Real-network kev sync with the Rust source** (official URL, fallback GitHub mirror, proxy via `HTTPS_PROXY`):
       unverified on a real machine ([source-kev](../tech/source-kev.md)).
+
+## Added by the server-mode and IPC work (2026-11-13)
+
+- [ ] **`secmonk_api` IPC in a real WKWebView window.** `transport.js` must detect Tauri and use the single command `secmonk_api` (CSP `connect-src` with `ipc:`); no request to the `secmonk` origin's `/api/` over the network, an unlisted command refused for the window ([ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md), [architecture §6](../tech/architecture.md#6-serving-the-current-ui)). Only unit and headless tests ran **(verify)**.
+- [ ] **.dmg / .app bundles from the release workflow.** Download the artifacts of [release](../tech/release.md), open them, check the bundle layout and that the app starts.
+- [ ] **x86_64 bundle cross-compiled on macos-14.** Not yet run on a GitHub runner; run it on an Intel Mac or under Rosetta.
+- [ ] **Gatekeeper with unsigned builds.** Record what the user sees for the unsigned `.dmg` / `.app` (quarantine attribute, right-click open); signing and notarization are not configured.

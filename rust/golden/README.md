@@ -23,3 +23,7 @@ call of a module method on the repo fixtures (`tests/fixtures/`, read only):
   `uv run pytest -q tests/test_golden.py` does the same inside the suite and also rejects orphan files and machine-specific text.
 - Not recorded (not deterministic or needs a live target): `discover.host`, `docker.containers`, `docker.image_check`,
   `source.ack`, `source.export` (covered by conformance and adapter tests).
+- **Lookup keys** (`node/lookup-keys.components.json` -> `node/lookup-keys.expected.json`, not a module call): the
+  `affected` keys the Python matcher (`engine/match.py`) queries for each classified component, recorded by
+  `cd rust/python && uv run python scripts/lookup_keys_golden.py` (`--check` compares). The components are synthetic.
+  `secmonk-engine` asserts `component_lookup_keys` returns a superset (`node::keys` tests).

@@ -65,6 +65,7 @@ async fn sync_and_match_over_the_real_modules() {
         sources: vec![source],
         probe: Arc::new(NoProbe),
         modules: None,
+        node_store: None,
     });
 
     // 1. sync kev from the fixture: py-sources runs the unchanged source on staging, the host applies and acks
@@ -215,6 +216,7 @@ async fn sync_repairs_and_never_loses_or_duplicates_rows() {
             sources: vec![source.clone() as Arc<dyn Source>],
             probe: Arc::new(NoProbe),
             modules: None,
+            node_store: None,
         })
     };
     async fn sync(engine: &SecmonkEngine, name: &str, path: &Path, full: bool) -> Value {

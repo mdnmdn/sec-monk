@@ -6,9 +6,9 @@ type: tech
 context: tech
 status: implemented
 tags: [config, uv, python, data-dir, rust]
-updated: 2026-11-11
-verified: 2026-11-11
-code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/lib.rs]
+updated: 2026-11-13
+verified: 2026-11-13
+code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-host/src/node.rs, rust/crates/secmonk-sources/src/lib.rs]
 fixtures: rust/crates/secmonk-runtime/tests/fixtures/
 related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, decisions/0011-native-sources.md, tech/architecture.md, tech/data-model.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
@@ -75,7 +75,7 @@ the host then fails the start ("py-engine is not enabled").
 | `config_version` | int, `1` | Format version of this file; an unknown major is refused. |
 | `data_dir` | path, per-user | Everything the app and uv write (layout below). Created 0700. |
 | `[database] backend` | `"sqlite"` | `postgres`, `mysql` later. |
-| `[database] state`, `mirror` | URL, `sqlite://{data_dir}/db/state.sqlite3`, `…/mirror.sqlite3` | `{data_dir}` is substituted. Two URLs so the mirror can stay SQLite when state moves ([data-model](data-model.md) R1). |
+| `[database] state`, `mirror` | URL, `sqlite://{db_dir}/state.sqlite3`, `…/mirror.sqlite3` | `{data_dir}` and `{db_dir}` (= `[paths] db`, default `{data_dir}/db`) are substituted: the same files as before while `[paths] db` is unset. Two URLs so the mirror can stay SQLite when state moves ([data-model](data-model.md) R1). |
 | `[python] version` | string, `"3.13"` | Interpreter for module venvs (python-build-standalone via uv). `3.13` is a minor selector: uv picked `cpython-3.13.18` on 2026-11-11; whether a given uv version always resolves it to the same build is unverified **(verify)**. |
 | `[python] offline` | bool, `false` | No download of any kind: uv from `uv.archive` or already in `tools/`, `UV_OFFLINE=1`, `UV_PYTHON_DOWNLOADS=never`, packages from `python.find_links`. |
 | `[python] find_links` | path, unset | Wheel directory for offline installs. |
@@ -83,8 +83,11 @@ the host then fails the start ("py-engine is not enabled").
 | `[uv] version` | string, built-in pin | Pinned uv release; overrides the pin compiled into `secmonk-runtime` (0.13.7). |
 | `[uv] url` | template | `https://github.com/astral-sh/uv/releases/download/{version}/{asset}` |
 | `[uv] archive` | path, unset | A local copy of the release archive (offline machines); verified like a download. |
+| `[uv] path` | path \| `"auto"`, unset | Use this uv binary instead of downloading one: `<uv> --version` must equal `[uv] version` (or the built-in pin) unless `any_version = true`; nothing is downloaded and no `VERIFIED` file is written (the file is the user's choice, not checksum-pinned). `"auto"`: `uv` (`uv.exe`) on `PATH` (absolute entries only), used when its version matches, else the managed download. See [uv: reuse](#reuse-of-installed-tools). |
+| `[uv] any_version` | bool, `false` | Accept any version of `[uv] path`. |
 | `[uv.sha256]` | table target → hex, built-in pins | sha256 of each release archive; required whenever `[uv] version` differs from the built-in pin; a target without a checksum cannot download (fail closed). |
-| `[modules] python_project` | path, `"python"` | The uv project of the Python modules (`rust/python`). |
+| `[modules] python_project` | path, `"python"` | The uv project of the Python modules (`rust/python`). A release desktop app defaults it to its bundled copy (`<resource_dir>/python-project/rust/python`, [release](release.md)). |
+| `[modules] editable` | bool, `true` | With `trust = "dev"`, install the project editable (`uv sync` without `--no-editable`). A release desktop app defaults it to `false`: its project sits in the read-only install directory and is copied into the venv. |
 | `[modules] enabled` | list of names, the four shipped modules when absent | Modules that may run; anything else is never installed or started. `enabled = []` enables none. `py-engine` is required by the engine. |
 | `[modules] trust` | `"dev"` \| `"pinned"` | `dev`: the project is installed editable from the repo; hashes are recorded, not compared. `pinned`: the `uv.lock` and source tree on disk must match `[modules.pins]` (and the manifest `integrity`) before install and before every start ([Module integrity](#module-integrity)). Pinned mode does not refuse at startup by itself: it needs a pin per enabled module and each module's launch entry must be exactly `-I -m secmonk_modules serve --stdio --module <name>` (`registry::fixed_entry`); the runtime verifies the lock and tree hash. |
 | `[modules.pins]` | table name → sha256 | `lock_sha256` / `tree_sha256` per module (pinned mode); print them with `uv run python scripts/pins.py` in `rust/python`. |
@@ -97,13 +100,72 @@ the host then fails the start ("py-engine is not enabled").
 | `[engine] min_confidence` | float, `0.5` | As `secmonk ui`. |
 | `[sources] nvd_api_key_env` | string, `"NVD_API_KEY"` | Environment variable the host reads; the key is sent in `source.sync` `secrets`, never in a module's environment or a log. |
 | `[sources.implementation]` | table source → `"rust"` \| `"python"`; unset: the importer's default (`rust` for the native importers with `default_rust`, see each `source-<name>.md`), `"python"` for every other source | Which implementation syncs a source ([rust ADR-0011](../decisions/0011-native-sources.md)). `rust`: the native importer in `secmonk-sources`, listed ahead of `py-sources`; `python`: `py-sources`. A source defaults to `rust` once its differential test against `py-sources` is green: `default_rust` in the importer's `IMPORTER` (`secmonk_sources::IMPORTERS`, [rust ADR-0012](../decisions/0012-native-importer-row-reads-and-registry.md); `Config::source_impl(source, default)` takes the default from the host). Every listed name must be servable as configured, else the start is refused (`ConfigError::Invalid`, as for an unknown key): `rust` needs a Rust implementation, `python` an enabled module whose manifest provides the source, so a misspelled name (`kve`) is refused. An unknown value is a parse error. |
+| `[paths] tools`, `python`, `venvs`, `uv_cache`, `cache`, `logs`, `db`, `auth` | path, unset = `data_dir/<default>` | Moves one directory out of `data_dir` ([layout](#data-directory-layout)); resolved like other paths (file directory, `~`). Share `tools` (and `python`, `uv_cache`) between data dirs to download uv and Python once. |
+| `[server] listen` | `host:port`, unset | HTTP(S) listener of the server mode; unset: `[ui] http_listen`, then `127.0.0.1:8765` (the host decides). |
+| `[server] tls_cert`, `tls_key` | PEM paths, unset | Set together or not at all (else refused); with both the server speaks HTTPS. |
+| `[server] allow_hosts` | list of names, `[]` | Extra accepted `Host` names. |
+| `[server] insecure_http` | bool, `false` | Plain HTTP on a non-loopback address (behind a TLS-terminating proxy). |
+| `[server] allow_actions` | bool, `true` | Scans and syncs through the API. |
+| `[server] auth` | `"auto"` \| `"required"` \| `"off"`, `"auto"` | `auto`: required on a non-loopback address **or when `[node] serve` is not empty** (the node API is never served unauthenticated; logged), off on plain loopback. `off` with a non-loopback `listen`, or with a non-empty `[node] serve`, is refused (`ConfigError::Invalid`). Loopback means `127.0.0.0/8`, `::1` and IPv4-mapped IPv6 (`secmonk_config::is_loopback_addr`, the one definition). |
+| `[server] serve_ui` | bool, `true` | Serve the UI files. |
+| `[server] trusted_proxies` | list of IPs / CIDRs, `[]` | Reverse proxies whose `X-Forwarded-For` is trusted for the client address (rate limiting, lockout). Validated syntactically at load (`10.0.0.1`, `10.0.0.0/8`, `fd00::/8`); an invalid entry is refused. Empty: the socket peer is always the client. Passed to `secmonk_api::Server::with_trusted_proxies` (`TrustedProxies::parse`) by the server mode. |
+| `[auth] keys_file` | path, `{paths.auth}/api_keys.toml` | API keys. |
+| `[auth] jwt_ttl_s` | int > 0, `3600` | JWT lifetime. |
+| `[auth] jwt_secret_file` | path, `{paths.auth}/jwt.key` | JWT signing secret. |
+| `[auth] rate_per_minute` | int > 0, `600` | Calls per minute per key. |
+| `[node] mirror` | bool, `true` | This node has a mirror part: the engine records source versions after a sync and re-matches stored assets. `false` with a non-empty `serve` or `upstream.sources` is refused at start (exit 2 for `serve`). |
+| `[node] serve` | list of `"feed"` \| `"match"` \| `"vulninfo"`, `[]` | Node API services offered (sorted, deduplicated); an unknown value is refused. Only the listed services are mounted at `/node/v1` (others 404), by `secmonk-server` / `--serve`, never by the window; the node id is kept in `{paths.auth}/node_id`. Needs `mirror = true`. A non-empty `serve` turns authentication on (see `[server] auth`). |
+| `[node] matcher` | `"local"` \| `"remote"`, `"local"` | `remote`: match through `node.upstream` (requires `node.upstream.url`); vulnerability detail and search also come from the upstream. Allowed together with `mirror = true` (the mirror still serves and follows), but the local mirror is then unused for matching: a warning is logged. |
+| `[node.upstream] url` | http(s) URL, unset | Required by `matcher = "remote"` and by a non-empty `sources`. |
+| `[node.upstream] api_key_env` | string, `"SECMONK_UPSTREAM_API_KEY"` | Variable holding the upstream API key (the name only is configuration); read by the host at start, a missing or empty variable fails the start when `sources` or `matcher = "remote"` need the upstream. |
+| `[node.upstream] ca_cert` | path, unset | PEM to trust (self-signed upstream). |
+| `[node.upstream] sources` | list of source names, `[]` | Sources followed from the upstream feed (they go ahead of the native and Python sources); needs `mirror = true`; a name also set in `[sources.implementation]` is refused. |
 | `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` takes precedence); log files older than `keep_days` are deleted at start. |
+
+## Overrides
+
+**Application defaults** sit *below* the file: `LoadOptions::app_defaults` (`section.key=value`, same syntax as
+`--set`) is applied only for keys the file leaves unset. The release desktop app uses it for `modules.python_project`,
+`modules.editable = false` and `ui.static_dir` when its bundle carries them (`apps/desktop/src-tauri/src/bundle.rs`);
+`secmonk_config::path_setting` quotes a path as a TOML string (Windows backslashes, non-ASCII names).
+
+Precedence, highest first: **`--set section.key=value`** (repeatable; `LoadOptions.cli_overrides`) > **environment**
+(`SECMONK_*`; `LoadOptions.env_overrides`, filled by `LoadOptions::from_env`) > **file** > defaults. Overrides are merged
+into the parsed TOML document before it is deserialized, so every schema rule applies to them, including
+`deny_unknown_fields`; each override is also checked on its own, so the error names the variable or flag
+(`--set server.lissten`, `environment variable SECMONK_SERVER__LISTENN`). They work with no config file too.
+
+| Rule | Detail |
+|---|---|
+| Env name | strip `SECMONK_`, lower-case, `__` separates levels: `SECMONK_DATA_DIR` → `data_dir`, `SECMONK_SERVER__LISTEN` → `server.listen`, `SECMONK_NODE__UPSTREAM__URL` → `node.upstream.url`. `--set` keys use dots. |
+| Reserved (not overrides) | `SECMONK_CONFIG`, `SECMONK_STATIC`, `SECMONK_API_KEY`, `SECMONK_UPSTREAM_API_KEY`, `SECMONK_JWT_SECRET`, `SECMONK_LOG` (`RESERVED_ENV`). A `SECMONK_<NAME>` variable **without** `__` is an override only for a top-level key (`SECMONK_DATA_DIR`, `SECMONK_CONFIG_VERSION`); any other is ignored, since other tools use the prefix (the Python project's `SECMONK_HOME`, `SECMONK_DB`, `SECMONK_SSH_PASSWORD`, test hooks). A variable **with** `__` is always an override, so a typo in one is refused. |
+| Value | a TOML value when `v = <value>` parses (`true`, `8`, `0.8`, `["a","b"]`), else a string; a typed value the schema refuses falls back to the text (`python.version=3.12` is the string `3.12`). |
+| Relative paths | an override's relative path resolves against the **current directory** (`LoadOptions.cwd`), `~` against home; file values keep resolving against the file's directory. Path keys: `data_dir`, `paths.*`, `python.find_links`, `uv.archive`, `uv.path` (not `auto`), `modules.python_project`, `ui.static_dir`, `ui.snapshot`, `server.tls_cert`, `server.tls_key`, `auth.keys_file`, `auth.jwt_secret_file`, `node.upstream.ca_cert`. |
+| API | `env_key(name)`, `parse_set(arg)`, `effective_toml(&Config)` (TOML of the resolved configuration for `config show`; no secrets: `Config` holds environment variable names only). |
 
 ## Data directory layout
 
 The directories below are created at start by `Layout::create()` (`secmonk-config/src/layout.rs`), 0700. `rust/_data/`
 after a first run on macOS arm64 (2026-11-11) holds exactly: `cache db jobs logs modules pycache python python-home run
 tmp tools uv-cache uv-home uv-tools venvs`.
+
+`[paths]` moves a directory elsewhere: `Layout::tools()`, `downloads()`, `python()`, `python_bin()`, `venvs()`,
+`uv_cache()`, `secmonk_cache()`, `logs()`, `module_logs()`, `db()` and `auth()` return the configured directory
+(`Layout::with_moved`, `Config::layout()`; `Layout::new(root)` keeps the defaults), and `Layout::create()` creates
+it 0700 with the same checks (owned by the current user, no symlink; a shared directory owned by you is fine). The
+uv environment and the module environment are built from `Layout`, so `UV_PYTHON_INSTALL_DIR`, `UV_CACHE_DIR`,
+`UV_PROJECT_ENVIRONMENT` and `SECMONK_CACHE` follow.
+
+| `[paths]` key | Default | Directory |
+|---|---|---|
+| `tools` | `tools/` | uv releases (`uv-<version>/`, `downloads/`) |
+| `python` | `python/` | `UV_PYTHON_INSTALL_DIR` (`bin/`) |
+| `venvs` | `venvs/` | module environments |
+| `uv_cache` | `uv-cache/` | `UV_CACHE_DIR` |
+| `cache` | `cache/secmonk/` | `SECMONK_CACHE` |
+| `logs` | `logs/` | log files (`modules/`) |
+| `db` | `db/` | state and mirror databases (`{db_dir}`) |
+| `auth` | `auth/` | API keys file, JWT secret |
 
 | Path | Written by | Content |
 |---|---|---|
@@ -140,10 +202,11 @@ the `secmonk` path dependency); later starts re-run `uv python find` and are rea
 |---|---|
 | 0 Paths | Canonicalize `data_dir` to an **absolute** path first. With a relative one, uv builds the path dependency with its working directory in the repo and a relative pycache prefix wrote into the repo (found by the spike). |
 | 1 Pick the asset | Target triple from the running OS/arch and libc (Linux: musl when `/lib/ld-musl-*` exists and no *real* glibc loader / `libc.so.6` does, or when the host binary itself is musl; a glibc name that resolves to musl's loader or to `libgcompat`, as Alpine's `gcompat` installs it, does not count): `uv-<triple>.tar.gz` (macOS, Linux gnu or musl), `uv-<triple>.zip` on Windows (flat, `uv.exe` at the root) ([architecture § platform matrix](architecture.md#8-platform-matrix)). Each asset has a sibling `<asset>.sha256`; the release also has a combined `sha256.sum`. |
+| 1b External uv | `[uv] path` set: `<uv> --version` (empty environment, 30 s) must report `[uv] version`/the pin unless `any_version`, else `RuntimeError::UvVersion`; steps 2-4 are skipped and nothing is written under `tools/` (`UvRuntime::uv_in_use()` says which uv runs: managed, configured, PATH). `"auto"`: the first executable `uv` in an absolute `PATH` entry; a missing or other-version uv falls back to step 2. |
 | 2 Download | Skip if `tools/uv-<v>/VERIFIED` exists, records the current pin (version, asset, archive sha256: a changed `[uv]` pin re-fetches) and the binary hash matches. Else fetch `url` (HTTPS only, rustls) or copy `archive` to `tools/downloads/<asset>.part`, hashing while writing, at most 512 MiB. Offline without `archive` fails with a clear message. |
 | 3 Verify | sha256 of the archive must equal the pin. Pins (version + sha256 per target) are **compiled into `secmonk-runtime`** (`pins.rs`); `[uv.sha256]` in the config overrides them per target; with another `[uv] version` the compiled pins no longer apply and a missing config checksum fails closed. Mismatch → delete the `.part`, error, no retry loop (tested on a local fake archive). |
 | 4 Extract | Only the expected entries (`uv`, `uvx` / `uv.exe`, `uvx.exe`) at depth ≤ 2, file names only (no directories from the archive), regular files (links skipped), 256 MiB per entry, at most 64 entries, written with `create_new` into a fresh `tools/uv-<v>.partial/`, then `VERIFIED`, then rename into place; mode 0700. An entry with `..` or an absolute path refuses the whole archive (tested: tar and zip). |
-| 5 Python | `uv python find <version>` (downloads `never`); when it fails, `uv python install <version>` with `UV_PYTHON_DOWNLOADS=automatic` for this step only (offline: a clear error instead). |
+| 5 Python | Skipped when a module venv marker (`venvs/*/.secmonk-install.json`) records the same python version and its interpreter still exists (nothing to find). Else `uv python find <version>` (downloads `never`); when it fails, `uv python install <version>` with `UV_PYTHON_DOWNLOADS=automatic` for this step only (offline: a clear error instead). |
 | 6 Env | `uv sync --project <python_project> --frozen --no-dev` (+ `--offline` offline, `--no-editable` in pinned mode), `UV_PROJECT_ENVIRONMENT=venvs/<env>`. `uv.lock` is committed and `--frozen` is always used. Before it, the project is hashed and, in pinned mode, compared with the pins (a mismatch stops here, nothing is installed). Skipped when `.secmonk-install.json` matches (uv version, python version, lock sha256, tree sha256: in dev a changed source re-syncs). |
 | 7 Launch | Not through uv: exec `venvs/<env>/bin/python` (Windows `Scripts\python.exe`) with `-X pycache_prefix=<data_dir>/pycache` followed by the manifest `entry` (`-I -m secmonk_modules serve --stdio --module <name>`); `-X` works under `-I`, unlike `PYTHONPYCACHEPREFIX`. Working directory `<data_dir>/tmp`. `uv run` would stay as a parent process, so killing the worker would leave Python running (found by the spike). `-I` ignores `PYTHON*` variables, the user site and the current directory. |
 
@@ -184,6 +247,19 @@ directory had no new uv entry. `data_dir` use: tools 28 MB, python 64 MB.
 
 Pitfalls: a `noexec` mount for `data_dir` breaks the managed Python (Linux, from the spike notes, not run; the app does not detect it yet);
 Windows `MAX_PATH` limits deep venv paths, so keep `data_dir` short; SmartScreen may flag the unsigned `uv.exe`.
+
+### Reuse of installed tools
+
+Nothing is downloaded or probed twice: the verified uv lives in `paths.tools`, so data dirs that point `[paths] tools`
+(and `python`, `uv_cache`) at one directory share a single download (concurrent first starts of two data dirs can race
+on `uv-<v>.partial`; start one first). A uv you already have is used with `[uv] path` (a file, or `"auto"` for `PATH`);
+it is not checksum-pinned, only version-checked, so point it at a binary you trust. **Trust model of an external uv**:
+it is trusted by its location and its `--version` string only (a `PATH` uv has no checksum). On unix the file (symlinks
+resolved) and its directory must be owned by you or root and not writable by group or others, else a configured
+`[uv] path` is refused (`RuntimeError::UntrustedUv`) and an `auto` `PATH` uv is skipped for the managed download. The
+first successful check is cached for the life of the process (no `uv --version` per call; a binary swapped later is
+not noticed until restart). The managed interpreter is found
+once: later starts skip `uv python find` while a module venv records it.
 
 ## Start-up states
 

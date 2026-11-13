@@ -14,15 +14,18 @@
 
 use async_trait::async_trait;
 use secmonk_model::{
-    BasedOn, Finding, Inventory, JobFinish, JobKind, JobRow, MirrorTable, NewJob, RowsBatch,
+    BasedOn, Component, Finding, Inventory, JobFinish, JobKind, JobRow, MirrorTable, NewJob,
+    RowsBatch,
 };
 use serde_json::{Map, Value};
 
 pub mod jobs;
 mod migrations;
 pub mod mirror_schema;
+pub mod node;
 pub mod sqlite;
 
+pub use node::{MirrorNodeStore, NodeCacheStore};
 pub use sqlite::{SqliteStore, StoreOptions};
 
 /// Schema version written to `PRAGMA user_version` and `store_meta.schema` (for humans; sqlx's
@@ -81,6 +84,15 @@ pub struct AssetReuseFacts {
     pub latest_scan_id: Option<i64>,
     /// Whether the latest scan was partial.
     pub latest_scan_partial: bool,
+}
+
+/// A current component of a stored asset with its state id ([`StateStore::current_components`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct StoredComponent {
+    /// `component.id` (what a finding's `component_id` names).
+    pub id: i64,
+    /// The component as stored (`source_path` is the asset's first path; `meta` is the shared `component.meta`).
+    pub component: Component,
 }
 
 /// A source's sync state (`source_sync` row).
@@ -210,6 +222,44 @@ pub trait StateStore: Send + Sync {
 
     /// Whether anything was ever written (drives the API's `no-db`).
     async fn is_initialized(&self) -> StoreResult<bool>;
+
+    // --- reads for the mirror-node services (`secmonk-engine::node`); defaulted so other implementors compile.
+    // A store that does not implement them answers `Invalid` ("not supported"): the re-match after a sync is then
+    // skipped with a warning, and a state-only node cannot run on it.
+
+    /// Every asset id, sorted.
+    async fn asset_ids(&self) -> StoreResult<Vec<String>> {
+        Err(StoreError::Invalid(
+            "asset_ids: not supported by this store".into(),
+        ))
+    }
+
+    /// The asset's current components (port of `engine/inventory.current_components`: seen in the latest complete
+    /// scan or a later partial one; every component ever seen when no scan is complete), ordered by category then
+    /// name.
+    async fn current_components(&self, asset_id: &str) -> StoreResult<Vec<StoredComponent>> {
+        let _ = asset_id;
+        Err(StoreError::Invalid(
+            "current_components: not supported by this store".into(),
+        ))
+    }
+
+    /// Every stored finding of the asset (any status), ordered by component id then vuln id.
+    async fn asset_findings(&self, asset_id: &str) -> StoreResult<Vec<Finding>> {
+        let _ = asset_id;
+        Err(StoreError::Invalid(
+            "asset_findings: not supported by this store".into(),
+        ))
+    }
+
+    /// Assets that have a finding (any status) whose `vuln_id` or one of whose `advisory_ids` is in `ids`
+    /// (sorted, distinct). `advisory_ids` is a JSON payload column: it is decoded, not filtered in SQL (R3).
+    async fn assets_with_findings_on(&self, ids: &[String]) -> StoreResult<Vec<String>> {
+        let _ = ids;
+        Err(StoreError::Invalid(
+            "assets_with_findings_on: not supported by this store".into(),
+        ))
+    }
 }
 
 /// The vulnerability mirror.

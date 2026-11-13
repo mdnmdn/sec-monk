@@ -3178,6 +3178,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
+ "log",
  "once_cell",
  "rustls-pki-types",
  "rustls-webpki",
@@ -3338,12 +3339,36 @@ name = "secmonk-api"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "http",
  "percent-encoding",
+ "rustls-pki-types",
+ "secmonk-auth",
  "secmonk-engine",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "secmonk-auth"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "getrandom 0.3.4",
+ "hex",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "subtle",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.2.1+spec-1.1.0",
  "tracing",
 ]
 
@@ -3371,6 +3396,7 @@ dependencies = [
  "secmonk-host",
  "tauri",
  "tauri-build",
+ "tempfile",
  "tracing",
 ]
 
@@ -3405,11 +3431,15 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "futures-util",
+ "getrandom 0.3.4",
+ "http",
  "secmonk-api",
+ "secmonk-auth",
  "secmonk-config",
  "secmonk-engine",
  "secmonk-model",
  "secmonk-modhost",
+ "secmonk-node",
  "secmonk-probe",
  "secmonk-proto",
  "secmonk-runtime",
@@ -3417,6 +3447,7 @@ dependencies = [
  "secmonk-sources",
  "secmonk-store",
  "secmonk-traits",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
@@ -3461,6 +3492,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "secmonk-node"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "futures-util",
+ "http",
+ "percent-encoding",
+ "reqwest",
+ "secmonk-api",
+ "secmonk-auth",
+ "secmonk-engine",
+ "secmonk-model",
+ "secmonk-traits",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "secmonk-probe"
 version = "0.1.0"
 dependencies = [
@@ -3500,6 +3552,7 @@ dependencies = [
  "futures-util",
  "hex",
  "reqwest",
+ "rustix",
  "secmonk-config",
  "secmonk-model",
  "secmonk-safeio",

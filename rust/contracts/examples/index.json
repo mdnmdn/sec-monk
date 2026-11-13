@@ -316,6 +316,11 @@
     {
       "example": "api/error-no-db.json",
       "schema": "api/error.schema.json"
+    },
+    {
+      "example": "node/match-components-request.json",
+      "schema": "node/match-components-request.schema.json",
+      "note": "sample: synthetic"
     }
   ]
 }

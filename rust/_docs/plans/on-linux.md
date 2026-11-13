@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: linux
 tags: [plan, linux, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/README.md, decisions/0009-platform-targets.md]
 ---
@@ -41,3 +41,9 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
       until it finishes: measure, then decide whether `PR_SET_PDEATHSIG` (needs `unsafe` `pre_exec`) is worth it.
 - [ ] **The ui where possible.** WebKitGTK 4.1 window: `secmonk://localhost/` origin, the preparing panel, `data_dir/webview`
       created 0700 and nothing under `~/.local/share/<id>`, external links through `opener` (xdg-open), devtools in a debug build.
+
+## Added by the server-mode and IPC work (2026-11-13)
+
+- [ ] **Server mode on a real Linux box.** `secmonk-server` with TLS from a real certificate (`tls_cert`, `tls_key`), a systemd unit (user, `Restart`, `NoNewPrivileges`; sample not written **(verify)**), the release archive from [release](../tech/release.md) unpacked and started, API key creation and the `/auth/token` login from a browser and from `curl` ([ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)).
+- [ ] **A real two-node follow over TLS.** A mirror node serving `feed` and a state-only or follower node with `[node.upstream]` (`ca_cert` for a private CA): sync, `feed/since` after a gap, `resync`, `match` through `RemoteNode` ([ADR-0013](../decisions/0013-mirror-nodes-and-source-versions.md), [node-api](../tech/node-api.md)); only loopback and in-process tests ran **(verify)**.
+- [ ] **Shared `[paths] tools` first-download race.** Two processes (server and desktop, or two nodes) pointing `[paths] tools` at one directory start with no uv installed: check that the first download does not corrupt or double-install the pinned uv **(verify)**.

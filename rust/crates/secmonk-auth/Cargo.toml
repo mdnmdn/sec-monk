@@ -1,0 +1,27 @@
+[package]
+name = "secmonk-auth"
+description = "API keys (hashed key file), HS256 JWTs, scopes and rate limits of the sec-monk server mode (ADR-0014)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+base64.workspace = true
+getrandom.workspace = true
+hex.workspace = true
+hmac.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

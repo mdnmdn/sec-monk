@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [contracts, web-ui, api, rust]
-updated: 2026-11-11
-verified: 2026-11-11
+updated: 2026-11-13
+verified: 2026-11-13
 code: [rust/crates/secmonk-api/src/, rust/crates/secmonk-engine/src/error.rs, rust/crates/secmonk-host/src/gate.rs]
 fixtures: rust/contracts/examples/api/
 related: [tech/contracts.md, tech/architecture.md, tech/engine-service.md, decisions/0007-serve-current-ui-custom-protocol.md]
@@ -110,6 +110,96 @@ hint are today's (`no database at <state path>`, "Create the local vulnerability
 | Body | POST `/api/jobs`: `Content-Type: application/json` (415), ≤ 64 KiB (413), a JSON object (400) |
 | Headers out | CSP of `server.py`, `nosniff`, `no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Cache-Control: no-store` (static: `no-cache`) |
 | Static files | inside `static_dir` only, regular files, MIME by extension with `charset=utf-8` for text/js/svg |
+
+## Server mode: authentication, scopes, mounts
+
+Server mode (`secmonk_api::Server` in front of the router, served by `secmonk_api::serve` or `serve_until`; design:
+[node-server-design §3-§4](../plans/node-server-design.md)). Off on loopback by default, required on any other
+address ([`check_exposure`](../../crates/secmonk-api/src/http_server.rs): non-loopback needs auth, and TLS or
+`insecure_http`). The window (Tauri bridge) never authenticates.
+
+| Path | Auth | Rule |
+|---|---|---|
+| `/`, `/index.html`, `/rust-ui/*`, `/static/*` | public | the overlay page and scripts (embedded from `rust/ui`) and the UI files; same CSP |
+| `GET /auth/info` | public | `{"auth": false}`, or with auth on `{"auth": true, "providers": [...], "login_methods": [...]}` |
+| `POST /auth/token` | public | body `{"method": "<name>", ...params}` (≤ 4 KiB; `method` defaults to `api_key`, so `{"api_key": "smk_…"}` works) or `Authorization: ApiKey smk_…` → 200 `{token, token_type: "Bearer", expires_at (unix s), scopes}`, `Cache-Control: no-store`. Any credential failure → 401 `{"error":"invalid credentials"}` + `WWW-Authenticate: Bearer` (same body whatever the reason); throttled → 429; unreadable body → 400; auth off → 404 |
+| `/api/*` | principal | `GET` needs `ui:read`, `POST` needs `ui:actions` (`admin` implies all); `X-SecMonk-Request: 1` still required; body ≤ 64 KiB |
+| a mount prefix (`/node/v1/`) | principal, **always** | no CSRF header; the server enforces the mount's `required_scope` (403) before calling it; body ≤ 4 MiB (413). With auth off every mount route answers 403 `{"error":"the node API needs authentication: enable [server] auth"}` |
+
+`Authorization: Bearer <jwt>` or `ApiKey <key>`. A `Bearer` token is a session of this server only when it is a JWT
+whose (unverified, then verified) `iss` is `secmonk`; any other `Bearer` token goes through the provider chain (an
+OIDC provider can claim it). Providers see a `RequestContext` with the `Authorization` value, the client address,
+the method, the path and every header (`HeaderLookup`). Statuses come from `AuthError::http_status`: missing or
+invalid credential 401 (`authentication required` / `invalid credentials`, `WWW-Authenticate: Bearer`); missing scope
+403 `{"error":"forbidden","hint":"the API key lacks the scope …"}`; rate limit or throttle 429 with `Retry-After: 60`
+(`RETRY_AFTER_S`); keys file unloadable 503 `authentication unavailable` (below).
+
+**Sessions**: HS256 JWTs with a `kid` header (first 8 hex chars of the SHA-256 of the secret). `JwtSigner::new(secret,
+ttl).with_previous(vec![old_secret])` signs with the current key and still verifies tokens of the previous ones, so the
+secret rotates without logging everyone out; a token without `kid` (first version) is checked against the current key
+only. Every request revalidates the session with its provider: a revoked or expired key ends its sessions, and the
+session's scopes are the **intersection** of the token's `scp` and the key's current scopes (a scope removed from the
+key is gone from its live sessions; a session never gains scopes). Signing keys are zeroed on drop.
+
+**Keys file reload**: the API-key provider looks at `api_keys.toml` at most once per second (`KEYS_CHECK_INTERVAL`;
+one request does it, the others never wait) and re-reads it when its fingerprint changed (device, inode, length,
+mtime, taken from the opened handle). Readers use the current snapshot. A file that fails to load (bad TOML, bad
+mode, duplicate names) **fails closed**: API-key requests, logins and API-key sessions answer 503 until it loads again,
+with an error logged at once and then at most every 30 s; a revocation by hand edit is never ignored.
+
+**Failed-authentication throttle** (`LoginThrottle`), on `POST /auth/token` and on every credential presented to
+`/api/*` and the mounts (a missing credential does not count):
+
+| Bucket | Limit | Effect |
+|---|---|---|
+| client address + credential id (the API key id, or the session token's subject, when well-formed) | 10 failures / 5 min | that id is refused (429) from that address for 5 min; other keys of the address keep working |
+| client address | 100 failures / 5 min | the address is refused (429) for 5 min |
+
+A success forgets the pair's failures but never lifts an active block. Each failure is one `warn` line on target
+`audit` (client, provider, reason class such as `unknown_key` / `expired` / `revoked`, path); never the credential.
+
+**Client address and trusted proxies**: `Server::with_trusted_proxies(TrustedProxies::parse(["10.0.0.0/8",
+"192.0.2.7"])?)` (`[server] trusted_proxies`; IP addresses and CIDR blocks, a bad entry is an error naming it). When the
+TCP peer is a trusted proxy, the client is the right-most `X-Forwarded-For` entry that is not a trusted proxy;
+otherwise the header is ignored. The client address keys the throttle and the audit lines.
+
+**Connections** (`ServerOptions`): accept first, then check the caps and close an excess connection at once (no
+answer; an idle socket never holds a slot it was not given):
+
+| Limit | Loopback (`ServerOptions::new`) | Server mode (`ServerOptions::server_mode`) |
+|---|---|---|
+| connections at once (`max_connections`) | 64 | 512 |
+| per client address (`max_per_ip`, TCP peer; trusted proxies exempt) | 16 | 16 |
+| TLS handshake (`handshake_timeout`) | 5 s | 5 s |
+| request head + body (`read_timeout`, after the handshake) | 10 s | 10 s |
+| response write | 30 s | 30 s |
+
+`serve_until(server, opts, on_bound, CancellationToken)` stops accepting when the token is cancelled, gives the
+connections in flight up to 10 s (`SHUTDOWN_GRACE`), aborts the rest and returns; `serve` runs until the process ends.
+
+**HTTP framing** (one request per connection, `Connection: close`): origin-form targets only (`/…`, else 400); any
+`Transfer-Encoding` → 501 (no chunked bodies); `Content-Length` sent twice or not all digits → 400; a header line
+without a colon, with whitespace before the colon or folded → 400; `Host` sent twice or with a character outside the
+authority grammar (`/ ? # @`, whitespace, control, non-ASCII) → 400. The body limit is taken from the path of the
+parsed request URI, the one the router sees.
+
+One `tracing` line per authenticated request on target `audit` (key id, provider, client, method, path without
+query, status; Debug-quoted so a path cannot forge log lines); never the header, token, key or body.
+
+**Mounts**: `trait Mount { fn prefix(&self) -> &'static str; fn required_scope(&self, method, path) ->
+Option<RequiredScope> /* default Some(Authenticated) */; async fn handle(&self, req, principal: Option<Principal>) ->
+Response }` (`secmonk_api::Mount`). `RequiredScope::Scope(s)` needs `s` (403 otherwise), `Authenticated` and `None`
+(not a route of the mount, wrong method) need any principal and let the mount answer 404 / 405. The server
+authenticates, rate-limits and checks the scope first; over HTTP `handle` always gets `Some(principal)` (the `Option`
+stays for in-process callers) and builds answers with `json_response` / `error_response` / `ApiError`.
+
+**Host check** (`HostPolicy::http_server`): loopback names, the bind address, and `[server] allow_hosts`; allow_hosts
+names are accepted on any port or none (reverse proxy, `https://scan.example/`); on a wildcard bind (`0.0.0.0`, `::`)
+any IP literal with the listen port too.
+
+**Tauri bridge** (`secmonk_api::handle_bridge(&Router, BridgeRequest) -> BridgeResponse`): the `secmonk_api` command of
+`rust/ui/README.md`; only `/api/` paths (403 otherwise), `Host` fixed to the router's local authority, no auth,
+text (`text/*`, JSON, JavaScript) in `body`, anything else in `body_base64`.
 
 ## Errors
 

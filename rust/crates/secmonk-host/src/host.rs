@@ -101,6 +101,10 @@ pub struct Host {
     /// The engine behind the API (coerces to `Arc<dyn EngineService>`).
     #[cfg(feature = "engine")]
     pub engine: Arc<secmonk_engine::SecmonkEngine>,
+    /// The node services to serve (`[node] serve` non-empty): the service puts them behind the `/node/v1` mount
+    /// once the host is ready.
+    #[cfg(feature = "engine")]
+    pub node: Option<crate::node::NodeServices>,
     /// `run/instance.lock`, held until the host is dropped.
     _instance_lock: std::fs::File,
 }
@@ -131,6 +135,22 @@ fn sqlite_file(url: &str) -> Result<PathBuf, HostError> {
     })
 }
 
+/// The node plan carried through startup (nothing in the probe-only build).
+#[cfg(feature = "engine")]
+type Plan = crate::node::NodePlan;
+#[cfg(not(feature = "engine"))]
+type Plan = ();
+
+#[cfg(feature = "engine")]
+fn plan_of(config: &Config) -> Result<Plan, HostError> {
+    Ok(crate::node::NodePlan::from_config(config)?)
+}
+
+#[cfg(not(feature = "engine"))]
+fn plan_of(_config: &Config) -> Result<Plan, HostError> {
+    Ok(())
+}
+
 impl Host {
     /// Start everything, first run included: download and verify the pinned uv, install Python and the module
     /// venv inside `data_dir`, open the stores, start the modules, build the engine.
@@ -141,12 +161,35 @@ impl Host {
         progress: Progress,
         allow_actions: bool,
     ) -> Result<Host, HostError> {
+        // a role combination that cannot work is refused before anything is downloaded
+        let plan = plan_of(&config)?;
+        Self::start_planned(config, plan, progress, allow_actions).await
+    }
+
+    /// [`Host::start`] with the node plan already decided ([`crate::node::NodePlan::from_config`], computed once by
+    /// the caller).
+    #[cfg(feature = "engine")]
+    pub async fn start_with_plan(
+        config: Arc<Config>,
+        plan: crate::node::NodePlan,
+        progress: Progress,
+        allow_actions: bool,
+    ) -> Result<Host, HostError> {
+        Self::start_planned(config, plan, progress, allow_actions).await
+    }
+
+    async fn start_planned(
+        config: Arc<Config>,
+        plan: Plan,
+        progress: Progress,
+        allow_actions: bool,
+    ) -> Result<Host, HostError> {
         config.layout().create()?;
         let lock = take_instance_lock(&config.layout())?;
         progress(Phase::Uv);
         let runtime = Arc::new(UvRuntime::new(UvSettings::from_config(&config)));
         runtime.ensure_uv().await?;
-        Self::start_locked(config, runtime, progress, lock, allow_actions).await
+        Self::start_locked(config, plan, runtime, progress, lock, allow_actions).await
     }
 
     /// [`Host::start`] from the Python phase on, over any [`PythonRuntime`] (tests, offline images). The runtime
@@ -156,19 +199,23 @@ impl Host {
         runtime: Arc<dyn PythonRuntime>,
         progress: Progress,
     ) -> Result<Host, HostError> {
+        let plan = plan_of(&config)?;
         config.layout().create()?;
         let lock = take_instance_lock(&config.layout())?;
-        Self::start_locked(config, runtime, progress, lock, true).await
+        Self::start_locked(config, plan, runtime, progress, lock, true).await
     }
 
     async fn start_locked(
         config: Arc<Config>,
+        plan: Plan,
         runtime: Arc<dyn PythonRuntime>,
         progress: Progress,
         instance_lock: std::fs::File,
         allow_actions: bool,
     ) -> Result<Host, HostError> {
         let layout = config.layout();
+        #[cfg(not(feature = "engine"))]
+        let _ = plan;
         // 1. interpreter and module venv
         progress(Phase::Python);
         runtime.ensure().await?;
@@ -265,8 +312,18 @@ impl Host {
         }
         let probe = Arc::new(probe);
 
-        // 5. sources and engine steps: native sources first (a name served twice is taken from the first, so
-        // `[sources.implementation] <name> = "rust"` wins over py-sources), then the Python source modules
+        // 5. sources and engine steps: the followed feed first, then the native sources (a name served twice is
+        // taken from the first, so a followed name, then `[sources.implementation] <name> = "rust"`, win over
+        // py-sources), then the Python source modules. The node roles (`[node]`) are composed over py-engine.
+        let steps = handle("py-engine").map(|h| Arc::new(PyEngine::new(h)));
+        let procmon = handle("py-procmon").map(|h| Arc::new(PyEngine::new(h)));
+        #[cfg(feature = "engine")]
+        let composed = match &steps {
+            Some(py) => Some(crate::node::compose(&config, &plan, &store, py, &|name| {
+                std::env::var(name).ok()
+            })?),
+            None => None,
+        };
         #[cfg(feature = "engine")]
         let mut sources: Vec<Arc<dyn Source>> = {
             let served: Vec<String> = registry
@@ -275,7 +332,12 @@ impl Host {
                 .flat_map(|e| e.manifest.provides.sources.iter().flatten())
                 .map(|i| i.name.clone())
                 .collect();
-            crate::engine::native_sources(&config, &store, &served)?
+            let mut all: Vec<Arc<dyn Source>> = composed
+                .iter()
+                .flat_map(|c| c.front_sources.iter().cloned())
+                .collect();
+            all.extend(crate::engine::native_sources(&config, &store, &served)?);
+            all
         };
         #[cfg(not(feature = "engine"))]
         let mut sources: Vec<Arc<dyn Source>> = Vec::new();
@@ -286,8 +348,6 @@ impl Host {
                 .filter_map(|e| handle(&e.manifest.name))
                 .map(|h| Arc::new(PySource::new(h)) as Arc<dyn Source>),
         );
-        let steps = handle("py-engine").map(|h| Arc::new(PyEngine::new(h)));
-        let procmon = handle("py-procmon").map(|h| Arc::new(PyEngine::new(h)));
 
         // eager modules start now, so a broken install fails the start instead of the first request
         for e in registry.eager() {
@@ -306,7 +366,8 @@ impl Host {
             store: &store,
             probe: &probe,
             sources: &sources,
-            steps: steps.as_ref(),
+            steps: composed.as_ref().map(|c| c.steps.clone()),
+            node_store: composed.as_ref().and_then(|c| c.node_store.clone()),
             allow_actions,
             procmon: procmon.as_ref(),
             modules: registry
@@ -327,6 +388,8 @@ impl Host {
             store,
             #[cfg(feature = "engine")]
             engine,
+            #[cfg(feature = "engine")]
+            node: composed.and_then(|c| c.services),
             _instance_lock: instance_lock,
         })
     }

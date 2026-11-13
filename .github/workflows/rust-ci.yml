@@ -1,0 +1,193 @@
+# CI for the Rust prototype (rust/) and its Python modules project (rust/python). Checks: AGENTS.md, "Setup and checks".
+# Release builds are gated by the same fmt/clippy/test set (the `checks` job in release.yml).
+#
+# Jobs
+#   rust          fmt, clippy and tests of the workspace without the desktop app; the venv-gated tests run (uv sync)
+#   headless      the desktop crate without Tauri compiles; the probe and the mirror node do not pull in the store or engine
+#   deny          cargo-deny bans (rust/deny.toml, the dependency rules of architecture.md §2)
+#   desktop       clippy of the Tauri app (WebKitGTK packages)
+#   python        pytest and ruff of rust/python
+#   ui            node --test of the UI overlay (no dependencies)
+
+name: Rust CI
+
+on:
+  push:
+    paths:
+      - "rust/**"
+      - "src/**"
+      - ".github/workflows/rust-ci.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+      - "src/**"
+      - ".github/workflows/rust-ci.yml"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: "0"
+  # Mirrors rust/rust-toolchain.toml (channel): the components and targets below go to this exact toolchain.
+  RUST_TOOLCHAIN: "1.98.0"
+
+jobs:
+  rust:
+    name: Rust fmt, clippy, tests
+    runs-on: ubuntu-22.04
+    env:
+      SECMONK_REQUIRE_VENV: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: rust-checks
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Python modules environment (venv-gated tests)
+        working-directory: rust/python
+        run: uv sync --locked
+
+      - name: Format
+        working-directory: rust
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy --workspace --exclude secmonk-desktop --all-targets -- -D warnings
+
+      - name: Tests
+        working-directory: rust
+        run: cargo test --workspace --exclude secmonk-desktop
+
+  headless:
+    name: Headless build and dependency rules
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: rust-headless
+
+      - name: Desktop crate without Tauri (engine and probe only)
+        working-directory: rust
+        run: cargo check -p secmonk-desktop --no-default-features --features engine,probe
+
+      - name: The probe does not reach the store
+        working-directory: rust
+        run: |
+          set -euo pipefail
+          tree="$(cargo tree -p secmonk-probe -e normal)"
+          if grep -q 'secmonk-store v' <<<"$tree"; then
+            echo "secmonk-probe reaches secmonk-store (architecture.md §2):" >&2
+            echo "$tree" | grep -B3 'secmonk-store v' >&2 || true
+            exit 1
+          fi
+
+      - name: The mirror node does not reach the engine or the store
+        working-directory: rust
+        run: |
+          set -euo pipefail
+          tree="$(cargo tree -p secmonk-node --no-default-features -e normal)"
+          if grep -Eq 'secmonk-(engine|store) v' <<<"$tree"; then
+            echo "secmonk-node reaches secmonk-engine or secmonk-store:" >&2
+            echo "$tree" | grep -E -B3 'secmonk-(engine|store) v' >&2 || true
+            exit 1
+          fi
+
+  deny:
+    name: cargo-deny bans
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: cargo-deny check bans
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          command: check bans
+          manifest-path: rust/Cargo.toml
+
+  desktop:
+    name: Desktop app clippy (WebKitGTK)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install WebKitGTK and Tauri system packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
+            libappindicator3-dev librsvg2-dev libxdo-dev libssl-dev
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: rust-desktop
+
+      - name: Clippy (secmonk-desktop)
+        working-directory: rust
+        run: cargo clippy -p secmonk-desktop --all-targets -- -D warnings
+
+  python:
+    name: Python modules (pytest, ruff)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Sync
+        working-directory: rust/python
+        run: uv sync --locked
+
+      - name: Tests
+        working-directory: rust/python
+        run: uv run pytest -q
+
+      - name: Ruff
+        working-directory: rust/python
+        run: uv run ruff check
+
+  ui:
+    name: UI overlay tests (node)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: node --test
+        run: node --test rust/ui/test/*.test.mjs

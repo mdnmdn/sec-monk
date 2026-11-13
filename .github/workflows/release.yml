@@ -1,0 +1,422 @@
+# Release workflow for the Rust prototype (rust/). Design: rust/_docs/tech/release.md.
+#
+# Products
+#   desktop  Tauri app secmonk-desktop (rust/apps/desktop/src-tauri), built with the tauri-cli v2.
+#   server   secmonk-server (crate secmonk-host), packaged with the Python modules (rust/python), the root Python project they depend on, the UI and an archive config.
+#
+# Gate: the `checks` job (fmt, clippy, tests without the desktop app) must pass before any build starts. rust-ci.yml runs the full set on every push.
+#
+# Signing and notarization are NOT configured. The secrets below are placeholders; nothing reads them yet.
+#   macOS:    APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+#   Updater:  TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+#   Windows:  WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop:
+        description: Build the desktop app (Tauri bundles)
+        type: boolean
+        default: true
+      server:
+        description: Build the headless server archives
+        type: boolean
+        default: true
+      linux:
+        description: Include Linux targets
+        type: boolean
+        default: true
+      macos:
+        description: Include macOS targets
+        type: boolean
+        default: true
+      windows:
+        description: Include Windows targets
+        type: boolean
+        default: true
+      tag:
+        description: Release tag (for example v0.1.0). Empty means artifacts only, no release.
+        type: string
+        default: ""
+      draft:
+        description: Create the release as a draft (tag set only)
+        type: boolean
+        default: true
+      prerelease:
+        description: Mark the release as a prerelease (tag set only)
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  # Mirrors rust/rust-toolchain.toml (channel). Components and targets go to this exact toolchain.
+  RUST_TOOLCHAIN: "1.98.0"
+  # tauri-cli minor that matches the tauri crate in rust/Cargo.lock (tauri 2.12.5). Update with the tauri lock entry.
+  TAURI_CLI_VERSION: "~2.12"
+
+jobs:
+  plan:
+    name: Plan build matrices
+    runs-on: ubuntu-latest
+    outputs:
+      desktop: ${{ steps.plan.outputs.desktop }}
+      desktop_count: ${{ steps.plan.outputs.desktop_count }}
+      server: ${{ steps.plan.outputs.server }}
+      server_count: ${{ steps.plan.outputs.server_count }}
+    steps:
+      - name: Compute matrices from inputs
+        id: plan
+        shell: bash
+        env:
+          # On a tag push there are no inputs: everything is built.
+          WANT_DESKTOP: ${{ github.event_name == 'push' || inputs.desktop }}
+          WANT_SERVER: ${{ github.event_name == 'push' || inputs.server }}
+          WANT_LINUX: ${{ github.event_name == 'push' || inputs.linux }}
+          WANT_MACOS: ${{ github.event_name == 'push' || inputs.macos }}
+          WANT_WINDOWS: ${{ github.event_name == 'push' || inputs.windows }}
+        run: |
+          set -euo pipefail
+
+          # macos-13 is retired: x86_64 macOS is cross-compiled on the arm64 runner (macos-14).
+          DESKTOP_ALL='[
+            {"kind":"linux","os":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","bundles":"deb,appimage"},
+            {"kind":"macos","os":"macos-14","target":"aarch64-apple-darwin","bundles":"app,dmg"},
+            {"kind":"macos","os":"macos-14","target":"x86_64-apple-darwin","bundles":"app,dmg"},
+            {"kind":"windows","os":"windows-latest","target":"x86_64-pc-windows-msvc","bundles":"msi,nsis"}
+          ]'
+          SERVER_ALL='[
+            {"kind":"linux","os":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu"},
+            {"kind":"linux","os":"ubuntu-24.04-arm","target":"aarch64-unknown-linux-gnu"},
+            {"kind":"macos","os":"macos-14","target":"aarch64-apple-darwin"},
+            {"kind":"macos","os":"macos-14","target":"x86_64-apple-darwin"},
+            {"kind":"windows","os":"windows-latest","target":"x86_64-pc-windows-msvc"}
+          ]'
+
+          # Keep the entries whose platform flag is set; wrap them as a matrix object.
+          select_platforms() {
+            jq -c \
+              --argjson linux "$WANT_LINUX" --argjson macos "$WANT_MACOS" --argjson windows "$WANT_WINDOWS" '
+              {include: [.[] | select(
+                (.kind == "linux" and $linux) or (.kind == "macos" and $macos) or (.kind == "windows" and $windows))]}
+            ' <<<"$1"
+          }
+
+          DESKTOP='{"include":[]}'
+          SERVER='{"include":[]}'
+          if [ "$WANT_DESKTOP" = "true" ]; then DESKTOP="$(select_platforms "$DESKTOP_ALL")"; fi
+          if [ "$WANT_SERVER" = "true" ]; then SERVER="$(select_platforms "$SERVER_ALL")"; fi
+
+          {
+            echo "desktop=$DESKTOP"
+            echo "desktop_count=$(jq '.include | length' <<<"$DESKTOP")"
+            echo "server=$SERVER"
+            echo "server_count=$(jq '.include | length' <<<"$SERVER")"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Desktop matrix: $DESKTOP"
+          echo "Server matrix:  $SERVER"
+
+  checks:
+    name: Checks (fmt, clippy, tests without desktop)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: release-checks
+
+      - name: Format, clippy and tests
+        working-directory: rust
+        env:
+          CARGO_INCREMENTAL: "0"
+        run: |
+          set -euo pipefail
+          cargo fmt --all --check
+          cargo clippy --workspace --exclude secmonk-desktop --all-targets -- -D warnings
+          cargo test --workspace --exclude secmonk-desktop
+
+  build-desktop:
+    name: Desktop ${{ matrix.target }}
+    needs: [plan, checks]
+    if: needs.plan.outputs.desktop_count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.desktop) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Read workspace version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version *= *"\(.*\)".*/\1/p}' rust/Cargo.toml | head -n 1)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux system packages (WebKitGTK for Tauri)
+        if: matrix.kind == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev \
+            build-essential curl wget file libxdo-dev
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          # The pinned toolchain gets the target: cross-compiled targets (x86_64 macOS on the arm64 runner) need it here.
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: desktop-${{ matrix.target }}
+
+      - name: Cache tauri-cli binary
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/bin/cargo-tauri
+            ~/.cargo/bin/cargo-tauri.exe
+          key: tauri-cli-${{ env.TAURI_CLI_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install tauri-cli v2 (pinned minor)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v cargo-tauri >/dev/null 2>&1; then
+            cargo install tauri-cli --version "$TAURI_CLI_VERSION" --locked
+          fi
+          cargo tauri --version
+
+      - name: Build desktop bundles
+        shell: bash
+        env:
+          # Signing is not configured; placeholders (unused):
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TARGET: ${{ matrix.target }}
+          BUNDLES: ${{ matrix.bundles }}
+        run: |
+          set -euo pipefail
+          # The installed app needs its own Python project (the engine modules) and the UI. tauri.bundle.conf.json
+          # adds them as resources next to the executable (on Windows the install directory): the UI from
+          # src/secmonk/web/static and python-project/ staged here; the app points [modules] python_project at it
+          # and installs it non-editable (apps/desktop/src-tauri/src/bundle.rs). It also ships secmonk-server as a
+          # sidecar: the window executable has no console on Windows, so secmonk-server(.exe) is the CLI there.
+          PY="$(command -v python3 || command -v python)"
+          "$PY" rust/scripts/stage_python_project.py rust/target/bundle-python
+          EXT=""
+          if [ "$RUNNER_OS" = "Windows" ]; then EXT=".exe"; fi
+          (cd rust && cargo build --release --locked -p secmonk-host --bin secmonk-server --target "$TARGET")
+          mkdir -p rust/apps/desktop/src-tauri/binaries
+          cp "rust/target/$TARGET/release/secmonk-server$EXT" \
+            "rust/apps/desktop/src-tauri/binaries/secmonk-server-$TARGET$EXT"
+          (cd rust/apps/desktop/src-tauri && \
+            cargo tauri build --config tauri.bundle.conf.json --target "$TARGET" --bundles "$BUNDLES" -- --locked)
+
+      - name: Collect bundles
+        id: collect
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          OUT="rust/target/$TARGET/release/bundle"
+          mkdir -p dist
+
+          # macOS .app: a tarball keeps symlinks and permissions that upload-artifact could drop.
+          for app in "$OUT"/macos/*.app; do
+            [ -d "$app" ] || continue
+            base="$(basename "$app")"
+            tar -C "$OUT/macos" -czf "dist/${base%.app}-$VERSION-$TARGET.app.tar.gz" "$base"
+          done
+
+          find "$OUT" -maxdepth 2 -type f \
+            \( -name '*.dmg' -o -name '*.msi' -o -name '*-setup.exe' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec cp {} dist/ \;
+
+          ls -la dist
+          test -n "$(ls -A dist)"
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  build-server:
+    name: Server ${{ matrix.target }}
+    needs: [plan, checks]
+    if: needs.plan.outputs.server_count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.server) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Read workspace version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version *= *"\(.*\)".*/\1/p}' rust/Cargo.toml | head -n 1)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branch)
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: rust -> target
+          key: server-${{ matrix.target }}
+
+      - name: Build secmonk-server
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cd rust
+          cargo build --release --locked -p secmonk-host --bin secmonk-server --target "$TARGET"
+
+      - name: Stage and archive
+        id: archive
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          NAME="secmonk-server-$VERSION-$TARGET"
+          EXT=""
+          if [ "$RUNNER_OS" = "Windows" ]; then EXT=".exe"; fi
+
+          rm -rf stage dist
+          STAGE="stage/$NAME"
+          mkdir -p "$STAGE/rust" dist
+
+          cp "rust/target/$TARGET/release/secmonk-server$EXT" "$STAGE/"
+          cp rust/README.md "$STAGE/README-server.md"
+
+          # The Python modules project (rust/python) has a uv path dependency on the repository root ("../.."), so
+          # the archive keeps the repository layout: the root project (pyproject.toml, uv.lock, README.md for the
+          # build backend, src/secmonk with its data files and the UI static files) at the archive root and the
+          # modules project under rust/python. No virtualenv, caches or tests.
+          # One staging script for the server archive and the desktop bundle (rust/scripts/stage_python_project.py).
+          PY="$(command -v python3 || command -v python)"
+          "$PY" rust/scripts/stage_python_project.py stage/python
+          cp -R stage/python/. "$STAGE/"
+          rm -rf stage/python
+          test -f "$STAGE/rust/python/pyproject.toml"
+          test -d "$STAGE/src/secmonk/web/static"
+
+          # The archive-level configuration (found as ./sec-monk.toml when the server runs from the archive root).
+          # The overlay of the UI (login, transport) is embedded in the binary: nothing else to package.
+          cat > "$STAGE/sec-monk.toml" <<'TOML'
+          # sec-monk server archive: paths are relative to this file (the archive root).
+          # README-server.md has the quick start; every key is documented in rust/_docs/tech/configuration.md of the repository.
+          config_version = 1
+          # data_dir is left at its default (the per-user data directory); set it to keep state elsewhere:
+          # data_dir = "/var/lib/sec-monk"
+
+          [modules]
+          python_project = "rust/python"
+
+          [ui]
+          static_dir = "src/secmonk/web/static"
+          TOML
+
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ARCH="$NAME.zip"
+            (cd stage && 7z a -tzip "../dist/$ARCH" "$NAME" >/dev/null)
+          else
+            ARCH="$NAME.tar.gz"
+            tar -C stage -czf "dist/$ARCH" "$NAME"
+          fi
+
+          (
+            cd dist
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$ARCH" > "$ARCH.sha256"
+            else
+              shasum -a 256 "$ARCH" > "$ARCH.sha256"
+            fi
+          )
+
+          ls -la dist
+          test -n "$(ls -A dist)"
+
+      - name: Upload server artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: server-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub release
+    needs: [plan, checks, build-desktop, build-server]
+    # Never after a cancellation or a failed job: a partial set is not published.
+    if: >-
+      !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      && (inputs.tag != '' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: "*"
+          merge-multiple: true
+          path: dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          # A tag push is a draft and never a prerelease; a manual run follows the inputs.
+          draft: ${{ github.event_name == 'push' || inputs.draft }}
+          prerelease: ${{ github.event_name != 'push' && inputs.prerelease }}
+          files: dist/*

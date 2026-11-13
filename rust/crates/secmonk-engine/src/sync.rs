@@ -98,6 +98,8 @@ impl Inner {
         let registry = self.sources();
         let mut entries: Vec<Value> = Vec::new();
         let (mut skipped, mut repaired) = (0u64, 0u64);
+        // node services: the versions before the job (the re-match after it asks what changed since them)
+        let versions_before = self.versions_before_sync(job).await;
         for name in &plan.sources {
             job.say(format!("syncing {name}…"));
             let t0 = Instant::now();
@@ -108,7 +110,13 @@ impl Inner {
                         options: options.clone(),
                         secrets: api_key.clone().map(|k| SyncSecrets { api_key: Some(k) }),
                     };
-                    self.sync_one(job, src, params).await
+                    let snapshot = self.snapshot_before(name).await;
+                    let out = self.sync_one(job, src, params).await;
+                    if out.status == "ok" {
+                        self.record_versions(job, name, src, versions_before.as_ref(), snapshot)
+                            .await;
+                    }
+                    out
                 }
                 None => Outcome::default().error(format!("KeyError: unknown source {name:?}")),
             };
@@ -140,6 +148,9 @@ impl Inner {
             job.say(format!(
                 "mirror: {skipped} replayed batch(es) skipped, {repaired} source(s) repaired from the staging export"
             ));
+        }
+        if let Some(before) = versions_before {
+            self.rematch_after_sync(job, before).await;
         }
         if let Err(e) = self.deps.mirror.checkpoint().await {
             tracing::warn!(error = %e, "mirror checkpoint after the sync failed");

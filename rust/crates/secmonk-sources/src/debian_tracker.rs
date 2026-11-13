@@ -43,6 +43,7 @@ pub const NAME: &str = "debian-tracker";
 pub const IMPORTER: crate::Importer = crate::Importer {
     name: NAME,
     default_rust: true,
+    importer_version: "rust/1",
     new: |view| Arc::new(DebianTrackerSource::new(view)),
 };
 /// Description (as the Python source's).

@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The main window may call the secmonk_api command (the /api/ requests of the UI, answered in process) and nothing else.",
+  "local": true,
+  "windows": ["main"],
+  "permissions": ["allow-secmonk-api"]
+}

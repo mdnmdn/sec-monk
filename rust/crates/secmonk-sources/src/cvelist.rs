@@ -48,6 +48,7 @@ pub const NAME: &str = "cvelist";
 pub const IMPORTER: crate::Importer = crate::Importer {
     name: NAME,
     default_rust: false,
+    importer_version: "rust/1",
     new: |view| Arc::new(CvelistSource::new(view)),
 };
 /// Description (as the Python source's).

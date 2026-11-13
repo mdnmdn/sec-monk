@@ -11,7 +11,7 @@ use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 
 use super::SqliteStore;
-use crate::{AssetReuseFacts, StateStore, StoreError, StoreResult, dumps, jobs};
+use crate::{AssetReuseFacts, StateStore, StoreError, StoreResult, StoredComponent, dumps, jobs};
 
 /// Python truthiness of a JSON value.
 fn truthy(v: &Value) -> bool {
@@ -475,6 +475,121 @@ impl StateStore for SqliteStore {
 
     async fn is_initialized(&self) -> StoreResult<bool> {
         is_initialized(&self.state.read).await
+    }
+
+    async fn asset_ids(&self) -> StoreResult<Vec<String>> {
+        Ok(sqlx::query_scalar("SELECT id FROM asset ORDER BY id")
+            .fetch_all(&self.state.read)
+            .await?)
+    }
+
+    async fn current_components(&self, asset_id: &str) -> StoreResult<Vec<StoredComponent>> {
+        let rows = sqlx::query(
+            "SELECT c.id, c.name, c.version, c.category, c.ecosystem, c.purl, c.cpe, c.vendor, c.meta,
+                    ac.source_path
+             FROM asset_component ac JOIN component c ON c.id = ac.component_id
+             WHERE ac.asset_id = ? AND ac.last_scan_id >= COALESCE(
+                 (SELECT MAX(id) FROM scan WHERE asset_id = ? AND partial = 0), 0)
+             ORDER BY c.category, c.name",
+        )
+        .bind(asset_id)
+        .bind(asset_id)
+        .fetch_all(&self.state.read)
+        .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        for r in &rows {
+            let Some(category) = enum_col(r, "category")? else {
+                return Err(StoreError::Corrupt("component.category is NULL".into()));
+            };
+            let meta = match opt_json(r, "meta")? {
+                Some(Value::Object(m)) => m,
+                _ => Map::new(),
+            };
+            out.push(StoredComponent {
+                id: r.try_get("id")?,
+                component: Component {
+                    name: r.try_get("name")?,
+                    version: r.try_get("version")?,
+                    category,
+                    purl: r.try_get("purl")?,
+                    cpe: r.try_get("cpe")?,
+                    vendor: r.try_get("vendor")?,
+                    ecosystem: r.try_get("ecosystem")?,
+                    source_path: r.try_get("source_path")?,
+                    meta,
+                },
+            });
+        }
+        Ok(out)
+    }
+
+    async fn asset_findings(&self, asset_id: &str) -> StoreResult<Vec<Finding>> {
+        let rows = sqlx::query(
+            "SELECT component_id, vuln_id, advisory_ids, matched_by, confidence, fixed_version, severity,
+                    cvss_score, epss, kev, priority, status, first_seen, last_seen, fixed_at, triage, triage_source
+             FROM finding WHERE asset_id = ? ORDER BY component_id, vuln_id",
+        )
+        .bind(asset_id)
+        .fetch_all(&self.state.read)
+        .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        for r in &rows {
+            let advisory_ids = match opt_json(r, "advisory_ids")? {
+                Some(Value::Array(a)) => a
+                    .into_iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect(),
+                _ => Vec::new(),
+            };
+            let Some(status) = enum_col(r, "status")? else {
+                return Err(StoreError::Corrupt("finding.status is NULL".into()));
+            };
+            out.push(Finding {
+                component_id: r.try_get("component_id")?,
+                vuln_id: r.try_get("vuln_id")?,
+                advisory_ids,
+                matched_by: r.try_get("matched_by")?,
+                confidence: r.try_get("confidence")?,
+                fixed_version: r.try_get("fixed_version")?,
+                severity: r.try_get("severity")?,
+                cvss_score: r.try_get("cvss_score")?,
+                epss: r.try_get("epss")?,
+                kev: r.try_get::<Option<i64>, _>("kev")?.unwrap_or(0) != 0,
+                priority: r.try_get("priority")?,
+                status,
+                first_seen: r.try_get("first_seen")?,
+                last_seen: r.try_get("last_seen")?,
+                fixed_at: r.try_get("fixed_at")?,
+                triage: r.try_get("triage")?,
+                triage_source: r.try_get("triage_source")?,
+            });
+        }
+        Ok(out)
+    }
+
+    async fn assets_with_findings_on(&self, ids: &[String]) -> StoreResult<Vec<String>> {
+        let want: std::collections::HashSet<&str> = ids.iter().map(String::as_str).collect();
+        if want.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows = sqlx::query("SELECT asset_id, vuln_id, advisory_ids FROM finding")
+            .fetch_all(&self.state.read)
+            .await?;
+        let mut out = std::collections::BTreeSet::new();
+        for r in &rows {
+            let asset: String = r.try_get("asset_id")?;
+            if out.contains(&asset) {
+                continue;
+            }
+            let vuln: String = r.try_get("vuln_id")?;
+            let hit = want.contains(vuln.as_str())
+                || matches!(opt_json(r, "advisory_ids")?, Some(Value::Array(a))
+                    if a.iter().any(|v| v.as_str().is_some_and(|s| want.contains(s))));
+            if hit {
+                out.insert(asset);
+            }
+        }
+        Ok(out.into_iter().collect())
     }
 }
 

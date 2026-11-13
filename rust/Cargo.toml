@@ -45,6 +45,8 @@ secmonk-probe = { path = "crates/secmonk-probe" }
 secmonk-engine = { path = "crates/secmonk-engine" }
 secmonk-api = { path = "crates/secmonk-api" }
 secmonk-sources = { path = "crates/secmonk-sources" }
+secmonk-auth = { path = "crates/secmonk-auth" }
+secmonk-node = { path = "crates/secmonk-node" }
 
 # serialization; preserve_order keeps JSON key order identical to Python's json.dumps of a dict
 serde = { version = "1.0.228", features = ["derive"] }
@@ -85,6 +87,14 @@ percent-encoding = "2.3"
 opener = "0.8"
 tauri = "2"
 tauri-build = "2"
+
+# auth and TLS (secmonk-auth, secmonk-api server, secmonk-node client): ADR-0014
+hmac = "0.13.0"
+base64 = "0.22.1"
+getrandom = "0.3.4"
+subtle = "2.6.1"
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["logging", "tls12", "aws_lc_rs"] }
+rustls-pki-types = { version = "1.16.0", features = ["std"] }
 
 # misc
 regex = "1.13.1"

@@ -137,20 +137,27 @@ async fn connections_are_limited_and_a_freed_slot_serves_the_next() {
     let a = TcpStream::connect(addr).await.unwrap();
     let b = TcpStream::connect(addr).await.unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
-    let mut c = TcpStream::connect(addr).await.unwrap();
     let req = format!(
         "GET /api/meta HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nX-SecMonk-Request: 1\r\n\r\n",
         addr.port()
     );
-    c.write_all(req.as_bytes()).await.unwrap();
-    assert!(
-        c.read_to_end_within(Duration::from_millis(500))
-            .await
-            .is_none(),
-        "no answer while both slots are taken"
-    );
-    drop(a); // a slot frees: the third client is served
-    let got = c.read_to_end_within(Duration::from_secs(3)).await.unwrap();
+    // past the cap a connection is accepted and closed at once (no answer, no waiting in the backlog)
+    let mut c = TcpStream::connect(addr).await.unwrap();
+    let _ = c.write_all(req.as_bytes()).await;
+    // closed without an answer (a clean EOF, or a reset when our request was still unread)
+    let got = tokio::time::timeout(Duration::from_secs(2), async {
+        let mut buf = Vec::new();
+        let _ = c.read_to_end(&mut buf).await;
+        buf
+    })
+    .await
+    .expect("closed at once, not left waiting");
+    assert!(got.is_empty(), "no answer while both slots are taken");
+    drop(a); // a slot frees: the next client is served
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let mut d = TcpStream::connect(addr).await.unwrap();
+    d.write_all(req.as_bytes()).await.unwrap();
+    let got = d.read_to_end_within(Duration::from_secs(3)).await.unwrap();
     assert!(String::from_utf8_lossy(&got).starts_with("HTTP/1.1 200"));
     drop(b);
 }

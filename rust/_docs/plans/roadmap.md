@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, rust, roadmap, migration]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/backlog.md, plans/prototype.md, tech/architecture.md, tech/component-lifecycle.md, decisions/0002-rust-core-python-modules.md, decisions/0010-source-staging-adapter.md]
 ---
@@ -128,8 +128,9 @@ Order in one line: **R0** then **R1 and R2 in parallel** (R1 first item `kev`, a
 | | |
 |---|---|
 | Goal | Probes on other hosts, one or several engines. |
-| Items | `secmonk-probe` over SSH exec stdio; TLS/WSS dial-out probes with enrollment (engine CA, one-time tokens); headless server with authentication and roles; job cancel from the UI, several jobs at once, event push; federation in the desktop UI; OS overlay clients documented. Embedded overlay and RDP only on request. |
+| Items | `secmonk-probe` over SSH exec stdio; TLS/WSS dial-out probes with enrollment (engine CA, one-time tokens); headless server with authentication and roles (done 2026-11-13 for the server and API-key/JWT part: scopes, no roles yet, see below); job cancel from the UI, several jobs at once, event push; federation in the desktop UI; OS overlay clients documented. Embedded overlay and RDP only on request. |
 | Order, why | SSH stdio first (no new trust root); dial-out next; auth before any non-loopback listener; federation last. |
+| Status 2026-11-13 | **Done**: `secmonk-server` / `secmonk-desktop --serve` with TLS, API keys exchanged for JWTs, scopes, rate limits and the provider chain ([rust ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)); mirror nodes `/node/v1` (feed, match, vulninfo), `RemoteNode` and the feed follower, phases P0-P4 of the proposal ([rust ADR-0013](../decisions/0013-mirror-nodes-and-source-versions.md), [node-api](../tech/node-api.md)); release workflow for desktop bundles and server archives ([release](../tech/release.md)). **Remains**: roles beyond scopes; more auth providers (OIDC, mTLS, proxy header: the chain is ready); a push channel for `match.changes`; P5 (filtered replicas, a match cache on the mirror, signed rows, Bloom-filtered or digest `changes`, hash-prefix mode); py-engine reports reading summaries through `VulnInfo` on state-only nodes; the lifecycle-cause guardrail; code signing and notarization; a desktop bundle that carries the Python modules; SSH stdio and dial-out probes, enrollment and federation as above. |
 | Entry | R3 probe binary (items 1-4), R4 signed probe, R2 step 3 (engine-side classify/match on ingest from remote probes). |
 | Exit | A scan of a remote Linux host through SSH stdio returns the same inventory as a local run; enrollment, revocation and a compromised-probe test pass; two engines visible in one desktop window with namespaced assets. |
 | Effort (estimate) | XL: about 19 person-weeks (proposal packages 18-24), calendar 6-8 weeks with agents. |

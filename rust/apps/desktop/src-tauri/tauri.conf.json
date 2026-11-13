@@ -7,7 +7,7 @@
   "app": {
     "withGlobalTauri": false,
     "windows": [],
-    "security": { "csp": null, "capabilities": [] }
+    "security": { "csp": null, "capabilities": ["main"] }
   },
   "bundle": {
     "active": true,

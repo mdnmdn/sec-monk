@@ -10,6 +10,7 @@
 pub mod finding;
 pub mod inventory;
 pub mod job;
+pub mod node;
 pub mod nullable;
 pub mod rows;
 pub mod snapshot;

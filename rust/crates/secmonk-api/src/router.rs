@@ -12,6 +12,7 @@ use serde_json::Value;
 
 use crate::error::{ApiError, discover_error, docker_error, kubeconfigs_error};
 use crate::host::HostPolicy;
+use crate::overlay;
 use crate::policy;
 use crate::query::Query;
 use crate::routes::{Capture, RouteId, lookup};
@@ -20,6 +21,12 @@ use crate::static_files::{Refused, StaticDir};
 /// `web/server.py` `CSP`, byte for byte.
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; \
 connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
+
+/// [`CSP`] for pages served to the desktop window (the custom scheme): `connect-src` also allows Tauri's IPC
+/// channel (`ipc:` on macOS/Linux, `http://ipc.localhost` on Windows), which the overlay's `transport.js` uses
+/// for the single `secmonk_api` command (rust ADR-0014). Nothing else differs from the browser policy.
+pub const CSP_WINDOW: &str = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; \
+connect-src 'self' ipc: http://ipc.localhost; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
 pub const CSRF_HEADER: &str = "x-secmonk-request";
 /// Largest POST body (`MAX_BODY`).
 pub const MAX_BODY: usize = 64 * 1024;
@@ -63,10 +70,18 @@ impl Router {
 
     /// Answer one request. Never panics on input; every response carries the security headers.
     pub async fn handle(&self, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
-        match self.dispatch(&req).await {
+        let mut r = match self.dispatch(&req).await {
             Ok(r) => r,
             Err(e) => error_response(&e),
+        };
+        if matches!(self.opts.host_policy, HostPolicy::Scheme { .. }) {
+            // the window's pages may reach Tauri IPC; the HTTP bindings keep the browser policy
+            r.headers_mut().insert(
+                header::CONTENT_SECURITY_POLICY,
+                header::HeaderValue::from_static(CSP_WINDOW),
+            );
         }
+        r
     }
 
     async fn dispatch(&self, req: &Request<Vec<u8>>) -> ApiResult<Response<Vec<u8>>> {
@@ -113,7 +128,7 @@ impl Router {
 
     /// The authority must name this server (`_host_ok`). Both the URI authority and a `Host` header are checked
     /// when present; one of them must exist.
-    fn check_host(&self, req: &Request<Vec<u8>>) -> ApiResult<()> {
+    pub fn check_host(&self, req: &Request<Vec<u8>>) -> ApiResult<()> {
         let from_uri = req.uri().authority().map(|a| a.as_str());
         let from_header = header_str(req, "host");
         let ok = (from_uri.is_some() || from_header.is_some())
@@ -138,13 +153,34 @@ impl Router {
     }
 
     fn static_response(&self, path: &str) -> ApiResult<Response<Vec<u8>>> {
+        // the overlay page replaces static_dir/index.html (same scripts plus the transport)
+        let overlay_index = || {
+            Ok(response(
+                StatusCode::OK,
+                "text/html; charset=utf-8",
+                overlay::INDEX_HTML.as_bytes().to_vec(),
+                true,
+                &[],
+            ))
+        };
         let rel = if path == "/" || path == "/index.html" {
-            "index.html"
+            return overlay_index();
         } else if let Some(rest) = path.strip_prefix("/static/") {
             rest
+        } else if let Some(name) = path.strip_prefix("/rust-ui/") {
+            return match overlay::file(name) {
+                Some((ct, body)) => Ok(response(
+                    StatusCode::OK,
+                    ct,
+                    body.as_bytes().to_vec(),
+                    true,
+                    &[],
+                )),
+                None => Err(ApiError::not_found("not found")),
+            };
         } else if looks_like_page(path) {
             // History-mode deep link (the UI uses hash routing, the fallback is harmless).
-            "index.html"
+            return overlay_index();
         } else {
             return Err(ApiError::not_found("not found"));
         };
@@ -412,7 +448,8 @@ pub fn response(
         .expect("static header names and values are valid")
 }
 
-fn json_response(status: StatusCode, v: &Value) -> Response<Vec<u8>> {
+/// A JSON response with the security headers (`Cache-Control: no-store`).
+pub fn json_response(status: StatusCode, v: &Value) -> Response<Vec<u8>> {
     response(
         status,
         "application/json; charset=utf-8",

@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [architecture, rust, tauri, python, modules, desktop]
-updated: 2026-11-11
-verified: 2026-11-11
+updated: 2026-11-13
+verified: 2026-11-13
 code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/crates/secmonk-sources/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
 related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
@@ -71,7 +71,9 @@ rust/
     secmonk-probe            local probe service: collector allowlist, dispatch to Probe impls
     secmonk-sources          native vulnerability sources (IMPORTERS: kev, epss, euvd): feeds -> row batches over a read-only MirrorView
     secmonk-engine           engine service: jobs, sync, scan, reuse rule, run history, payload facade
+    secmonk-auth             API keys, session JWTs, provider chain, scopes, limits; no I/O beyond its files
     secmonk-api              engine<->ui route table, validation, ApiError, static files, security headers
+    secmonk-node             /node/v1 binding (behind feature `server`), RemoteNode client, FeedSource follower
     secmonk-host             composition root: Host::start, preparing Gate, Service, logging, secmonk-headless
   apps/desktop/src-tauri     secmonk-desktop: thin shell over secmonk-host: custom scheme, window (tray later)
   python/                    uv project secmonk-modules: serve --stdio, adapters, conformance tests
@@ -95,7 +97,9 @@ rust/
 | `secmonk-probe` | traits, model, proto, modhost | **store**, engine, sources | compiler + CI `cargo tree -p secmonk-probe` must not list `secmonk-store` |
 | `secmonk-sources` | traits, model, safeio, reqwest (rustls, the workspace client), tokio, flate2 (the epss gzip feed), serde (euvd: a bounded visitor over feed records) | **store**, modhost, engine (reads the mirror only through `MirrorView`) | compiler |
 | `secmonk-engine` | traits, store, model, proto, safeio | **modhost** (gets trait objects; `modhost`, `runtime`, `config` only as dev-dependencies of the gated `tests/real_modules.rs` and `tests/native_<source>.rs`), api | compiler + `deny.toml` (dev wrapper) |
-| `secmonk-api` | engine (its service types and errors), http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
+| `secmonk-auth` | serde, toml, hmac, sha2, base64, getrandom, subtle (plus hex, serde_json, thiserror, tracing) | **store**, **engine**, **api** | `deny.toml` (`wrappers = [secmonk-api, secmonk-node, secmonk-host]`) |
+| `secmonk-api` | engine (its service types and errors), auth, http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
+| `secmonk-node` | traits, model, auth (feature `server`), reqwest (rustls), and `secmonk-api` only under feature `server` | **store**, **engine**, **modhost** (engine only as a dev-dependency of its tests) | `deny.toml` (`wrappers = [secmonk-host]`) + rust-ci `cargo tree -p secmonk-node --no-default-features` must not list `secmonk-engine` or `secmonk-store` |
 | `secmonk-host` | everything; with `engine` off only config, runtime, modhost, probe, traits, model, proto, safeio | — | composition root (the only crate that names modhost and engine together) |
 | `secmonk-desktop` | host, config, api, tauri + opener (feature `ui`) | store, modhost directly | thin shell |
 
@@ -121,7 +125,7 @@ compiles Tauri or a webview.
 | Feature (crate) | Default | Pulls in | Off means |
 |---|---|---|---|
 | `ui` (`secmonk-desktop`) | on | implies `engine`; `tauri`, `tauri-build` (build dependency, `build.rs` checks `CARGO_FEATURE_UI`), `opener` | headless binary: no window, no webview, no WebKitGTK; the same binary runs `secmonk_host::headless` |
-| `engine` (`secmonk-desktop`, `secmonk-host`) | on | `secmonk-engine`, `secmonk-store`, `secmonk-api`; the module set including `py-engine` / `py-sources` | probe-only build: exits 2 with a message ("nothing to serve yet"); the shape of later remote probes |
+| `engine` (`secmonk-desktop`, `secmonk-host`) | on | `secmonk-engine`, `secmonk-store`, `secmonk-api`, `secmonk-auth`, `secmonk-node`; the module set including `py-engine` / `py-sources` | probe-only build: exits 2 with a message ("nothing to serve yet"); the shape of later remote probes |
 | `probe` (`secmonk-desktop`, `secmonk-host`) | on | `py-probe` wired into `ProbeService` (collectors, discovery, docker/k8s listings) | engine with an empty collector allowlist |
 | `codec` (`secmonk-proto`) | on | `tokio-util` codec, `bytes` | message types only (no framing) |
 
@@ -185,7 +189,7 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 
 `rust/crates/secmonk-host` is the composition root, the only crate that names both the module host and the engine
 (features `engine` and `probe`, see [§2](#build-features-per-platform)). Two thin shells run it: `secmonk-desktop`
-(Tauri window) and `secmonk-headless` (loopback HTTP, no window).
+(Tauri window) and `secmonk-server` (HTTP(S), no window; `secmonk-headless` is the same command line under its old name). Server mode adds `secmonk_api::Server` (API-key/JWT auth, mounts) and TLS in front of the same router (see [§6](#6-serving-the-current-ui)); the window answers `/api/` through the Tauri command `secmonk_api`, which calls `secmonk_api::handle_bridge`.
 
 **`Host::start(config, progress)`** (`host.rs`) runs these steps; each reports a `Phase` (`startup.rs`), which is the
 "step N of 5" of the preparing message:
@@ -196,7 +200,20 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 | 2 | `Python` "installing Python" | `ensure()` the managed interpreter; load the registry from `<python_project>/modules` |
 | 3 | `ModuleEnv` "installing the module environment" | `ensure_env` once per env of the available Python modules (`uv sync --frozen`; pinned mode verifies pins first) |
 | 4 | `Databases` "opening the databases" | `SqliteStore::open`: files 0600, migrations; any backend but `sqlite` is `Unsupported` |
-| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; the native importers `[sources.implementation]` selects (`engine::native_sources`), then the `PySource`s; `PyEngine` for `py-engine` and `py-procmon`; `eager` modules started now, so a broken install fails the start; then `engine::build` |
+| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; `PyEngine` for `py-engine` and `py-procmon`; the node roles (`node::compose`, below); the sources in this order: the followed feed (`FollowedSource`), the native importers `[sources.implementation]` selects (`engine::native_sources`), then the `PySource`s; `eager` modules started now, so a broken install fails the start; then `engine::build` |
+
+**Node roles** (`node.rs`, ADR-0013). `NodePlan::from_config` (pure; also run by `Host::start`, `serve` and `Service::node_mount`
+before anything starts) turns `[node]` into `{mirror, serve, follow, remote_matcher}` and refuses: `serve` or
+`upstream.sources` without `mirror = true`, and a followed source that `[sources.implementation]` also names. Then
+`node::compose` wires, over the one `PyEngine` and the stores, and logs `node roles: mirror, serve=[match],
+follow=[kev, osv], matcher=local`:
+
+| Role | Wiring |
+|---|---|
+| mirror (default) | `EngineDeps.node_store = store.mirror_node_store()`: versions are recorded after a sync, stored assets are re-matched |
+| serve | `LocalNode` (mirror node store, `PyEngine` as `Matcher` and `Reporter`, node id from `<paths.auth>/node_id`, 16 random hex, 0600, `node:<hex>`) in `Host.node`; `Service::node_mount()` builds `NodeApi::derived` over a `LazyNode` with only the listed services (others 404), which answers 503 `module-unavailable` "node services are starting" until `Service::run` fills it; `ServeOptions::from_env` carries the mount factory, the desktop window mounts nothing |
+| follow | `RemoteNode` (`node.upstream.url`, key from the variable `api_key_env` names, read in the host only, missing: the start fails; `ca_cert`) and a `FollowedSource` (a `FeedSource` plus a `BatchLocalizer` over `MirrorNodeStore::localize_feed_batch`) placed **before** every other source. It reloads the local versions from `source_versions()` before each sync and drops the version of a source whose local importer differs from the upstream's `feed/status` (a full copy) |
+| `matcher = "remote"` | `StateOnlySteps` over `PyEngine`: `NodeMatcher` (over the `RemoteNode`, `node_cache_store()`, the version oracle, the state store) as `Matcher`; `reports.vuln_detail` / `reports.vuln_search` answered by the upstream's `VulnInfo`; classify, versions and every other report stay `py-engine` |
 
 Spike timings on macOS arm64: uv download ~4 s, Python install 6-8 s, first sync ~4 s, warm start ~27 ms. The first
 headless start on 2026-11-11 (`rust/_data/logs`, with the project's path dependency) took 38 s to `ready`, 25 s of it
@@ -226,11 +243,28 @@ to the engine. The window calls it on `RunEvent::Exit`; the headless server on C
 waits for the starter task. Observed 2026-11-11: both modules logged "stdin closed, exiting" and the host stopped
 within 175 ms of the signal.
 
-**Headless** (`headless.rs`, `bin/secmonk-headless.rs`): `secmonk-headless [--config FILE] [--listen 127.0.0.1:8765]`
-(also what `secmonk-desktop` runs when built without `ui`). Config as for the window; `--listen`, else `[ui]
-http_listen`, else 8765; **loopback addresses only**, port 0 refused (no login exists), `HostPolicy::http` (the full
-Host check of `secmonk ui`), actions allowed (loopback). It always serves `ui.static_dir` (there is no bundle). Prints
-`listening http://ADDR` on stderr. The loopback server (`secmonk_api::serve_http`) serves at most 64 connections at once, drops a response that cannot be written within 30 s, and its accept loop backs off (50 ms doubling, capped) on an accept error instead of spinning. Exit 0 / 1 runtime / 2 usage.
+**The shared command line** (`cli.rs`; `secmonk-server`, `secmonk-headless` and `secmonk-desktop` all use it): `serve`
+(the default of the two server binaries), `apikey create|list|revoke`, `config show`, `version`, `help`; global options
+`--config`, `--set key=value`, and conveniences that are translated into `--set` entries in command-line order
+(`--data-dir`, `--listen`, `--tls-cert`, `--tls-key`, `--allow-actions` / `--no-actions`, `--auth`), so precedence is
+the one of [configuration](configuration.md#overrides). `cli::parse` is pure (unit tests); `cli::run` executes. The
+`apikey` commands (`apikeys.rs`) load the configuration and operate on `auth_keys_file` only (auth dir 0700, file
+0600): no engine, no uv, no Python; the plaintext key goes to stdout once, the warning to stderr. Exit codes 0 / 1
+runtime / 2 usage.
+
+**Server mode** (`serve.rs`): listen = `[server] listen`, else `[ui] http_listen`, else `127.0.0.1:8765`, any address
+(`localhost:PORT` is 127.0.0.1; port 0 refused). Authentication is on when `[server] auth` is `required`, or `auto` on
+a non-loopback address. `build_server(config, engine, jwt_secret_env, mounts)` (testable with a stub engine) checks
+`check_exposure` (usage error, exit 2), builds the `Router` (`HostPolicy::http_server`, `actions = server_allow_actions`,
+`serve_ui = false` points the static directory nowhere so UI files answer 404) and `Server::new(router)
+.with_auth(Authenticator::new(KeyStore::load(keys_file), JwtSigner::new(secret, ttl), rate))`; the secret is
+`SECMONK_JWT_SECRET` (read once, in `ServeOptions::from_env`) else `load_or_create_secret(jwt_secret_file)`. An empty
+key store starts anyway with a warning that names `secmonk-server apikey create --name admin --scope admin`; keys
+created or revoked while it runs are picked up on the next request. `ServeOptions::mount_factory` is the hook for
+extra mounts: it receives the `Service` and returns `Arc<dyn Mount>`s; `ServeOptions::from_env` sets it to `node_mount_factory()` (the `/node/v1` mount, see Node roles). `serve` refuses an invalid node plan with exit 2. `serve` prints
+`listening http(s)://ADDR` on stderr, serves with `secmonk_api::serve` (TLS from `tls_cert`/`tls_key`) and stops the
+modules on Ctrl-C / SIGTERM as before. `headless::listen_addr` (loopback only) remains for the desktop's optional dev
+binding.
 
 **Logging** (`logging.rs`): `tracing-subscriber` writes to `<data_dir>/logs/secmonk-desktop.log.<YYYY-MM-DD>` (the
 day the process started; mode 0600; append; not rotated while running) and to stderr (headless, and debug desktop
@@ -238,14 +272,24 @@ builds). Files older than `[log] keep_days` are removed at start. `RUST_LOG` tak
 lines arrive through `tracing` (target `module`, field `module = <name>`, scrubbed, at most 8 KiB) in the same file.
 There are no per-module files yet: `logs/modules/` is created and stays empty ([backlog](../plans/backlog.md)).
 
-**The desktop shell** (`apps/desktop/src-tauri/src`, feature `ui`): `cli.rs` (`--config`), `static_dir.rs`,
-`window.rs`, `lib.rs`. It loads the config, initializes logging, creates the `Service`, registers the asynchronous
-`secmonk` scheme handler (the router sits in a `OnceLock`; a slow call never blocks the webview thread), and in
+**The desktop shell** (`apps/desktop/src-tauri/src`, feature `ui`): `static_dir.rs`, `window.rs`, `lib.rs`. The
+command line is `secmonk_host::cli`: a subcommand or `--serve` (`secmonk-desktop serve ...`, `apikey ...`, `config
+show`, `version`) runs without Tauri being initialised, exactly the server mode / admin command; no subcommand opens
+the window (`--config`, `--set`, `--data-dir` apply). Without `ui` the binary behaves like `secmonk-server`. The
+window path loads the config, initializes logging, creates the `Service`, registers the asynchronous
+`secmonk` scheme handler (the router sits in a `OnceLock`; a slow call never blocks the webview thread) and the IPC
+command `secmonk_api(request: BridgeRequest) -> BridgeResponse` (`handle_bridge`, `/api/` paths only; a 503 "starting"
+answer while the router is not built; the overlay's transport calls it through `window.__TAURI_INTERNALS__.invoke`,
+`withGlobalTauri` stays false), and in
 `setup` resolves the static directory (**debug builds**: `$SECMONK_STATIC`, then `ui.static_dir`, then the bundle;
 **release builds**: the bundled `static` resource only), builds the router, starts the optional `[ui] http_listen`
 binding, spawns `Service::run` and opens the window at the scheme origin. `frontendDist` points to an empty
-directory: Tauri serves nothing itself. The window has no Tauri capabilities (no IPC); developer tools need a debug
-build and `[ui] devtools`; navigation outside the origin is refused and `http(s)` links go to the system browser.
+directory: Tauri serves nothing itself. The only Tauri capability is `capabilities/main.json`: the permission
+`allow-secmonk-api` (generated by `build.rs` from `AppManifest::commands(&["secmonk_api"])`) for the window `main`;
+nothing else is granted. Tauri treats a registered custom scheme as a local origin (`Webview::is_local_url`:
+`secmonk://localhost`, on Windows `http(s)://secmonk.localhost`), so the page may invoke the command, and a remote
+page could not. Developer tools need a debug build and `[ui] devtools`; navigation outside the origin is refused and
+`http(s)` links go to the system browser.
 Offline mode skips downloads and fails with a clear message when a pinned artifact is missing.
 
 ## 4. Transports
@@ -305,7 +349,8 @@ engine or probe later reuses `Session` unchanged.
 | Headers | The CSP of `web/server.py` (`script-src 'self' 'unsafe-eval'`, `style-src 'self'`, `connect-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'none'`, `form-action 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control` as today. Tauri's `app.security.csp` does not apply to custom scheme responses, so the handler's header is the only policy (spike: the handler sends today's exact header, rejects traversal, answers 403 without the header; the unchanged `ApiSource("")` worked against it with the real Vue files in Node). Rendering in a real webview is **(verify on a GUI session)**: the spike sandbox blocked WebKit. |
 | CSRF header | Every `/api/` request must carry `X-SecMonk-Request: 1` (403 otherwise), kept although the scheme opens no port: one rule for every binding. |
 | Host check | No TCP listener, so no DNS rebinding: the handler only checks that the request authority is the app's own (`localhost` / `secmonk.localhost`). The optional dev HTTP binding (`ui.http_listen`, off by default) applies the full `server.py` Host rules and loopback-only actions. |
-| IPC | The window gets **no Tauri command permissions**: the only channel from the page to Rust is the scheme. Navigation outside the origin is refused; `http(s)` links open in the system browser through the Rust-side `opener` crate (unit-tested classification in `window.rs`; the real opening is a GUI check in [on-macos](../plans/on-macos.md)). The UI needs no IPC (confirmed by the spike). |
+| IPC | The window has exactly one Tauri command, `secmonk_api` ([rust ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)), granted to the `main` window only (`apps/desktop/src-tauri/capabilities/main.json`, permission `allow-secmonk-api`); it carries the `/api/` requests of the UI to `handle_bridge`. `CSP_WINDOW` (pages served to the window only) adds Tauri's IPC origins, `ipc:` and `http://ipc.localhost`, to `connect-src`; browser and server pages keep `connect-src 'self'`. Navigation outside the origin is refused; `http(s)` links open in the system browser through the Rust-side `opener` crate (unit-tested classification in `window.rs`; the real opening is a GUI check in [on-macos](../plans/on-macos.md)). The UI needs no IPC (confirmed by the spike). |
+| Server mode | `secmonk_api::Server` (auth layer + mounts) over `serve` (plain TCP or TLS with rustls/aws-lc-rs, PEM files); `/auth/*`, scopes and mounts: [api-contract](api-contract.md#server-mode-authentication-scopes-mounts). The window uses `handle_bridge` instead of the network. |
 | No build step | The Vue app stays classic scripts with vendored Vue (Python [ADR-0009](../../../_docs/decisions/0009-web-ui-vendored-libraries.md)); no inline scripts or static `style=""`. |
 
 ## 7. Data flow of a scan job

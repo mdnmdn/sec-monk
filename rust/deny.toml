@@ -35,6 +35,17 @@ name = "secmonk-modhost"
 # secmonk-host is the composition root; secmonk-engine only as a dev-dependency (gated real-module test)
 wrappers = ["secmonk-host", "secmonk-desktop", "secmonk-engine"]
 
+# API keys, JWTs and scopes (ADR-0014): the HTTP binding, the mirror node's binding and the composition root only.
+# (dev-dependencies count too: graph.exclude-dev is false.)
+[[bans.deny]]
+name = "secmonk-auth"
+wrappers = ["secmonk-api", "secmonk-node", "secmonk-host"]
+
+# The /node/v1 binding and remote clients (ADR-0013): wired by the composition root only, never a dev-dependency elsewhere.
+[[bans.deny]]
+name = "secmonk-node"
+wrappers = ["secmonk-host"]
+
 [licenses]
 # The prototype is unpublished; license review happens before the first release build (verify).
 allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC",
