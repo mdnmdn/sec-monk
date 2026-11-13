@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sec-monk</title>
+  <link rel="icon" type="image/png" href="/static/img/favicon-32.png">
+  <link rel="stylesheet" href="/static/css/secmonk.css">
+  <link rel="stylesheet" href="/rust-ui/rust-ui.css">
+  <!-- Vue and Vue Router vendored in static/vendor (ADR-0009, scripts/vendor_web.py): no network needed. -->
+  <script src="/static/vendor/vue@3.5.13/vue.global.prod.js"></script>
+  <script src="/static/vendor/vue-router@4.5.0/vue-router.global.prod.js"></script>
+  <!-- Rust overlay: transport (Tauri invoke / HTTP + Bearer) must run before the app code so its fetch wrapper is in place. -->
+  <script src="/rust-ui/transport.js"></script>
+  <script src="/rust-ui/login.js"></script>
+  <script src="/static/js/secmonk-ui.js"></script>
+  <script src="/static/js/secmonk-views.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak></div>
+  <div id="secmonk-login" hidden></div>
+  <noscript>sec-monk needs JavaScript.</noscript>
+  <script src="/rust-ui/boot.js"></script>
+</body>
+</html>
