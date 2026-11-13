@@ -6,7 +6,7 @@ type: tech
 context: tech
 status: implemented
 tags: [architecture, rust, tauri, python, modules, desktop]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/crates/secmonk-sources/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
 related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
@@ -185,7 +185,7 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 
 `rust/crates/secmonk-host` is the composition root, the only crate that names both the module host and the engine
 (features `engine` and `probe`, see [§2](#build-features-per-platform)). Two thin shells run it: `secmonk-desktop`
-(Tauri window) and `secmonk-headless` (loopback HTTP, no window).
+(Tauri window) and `secmonk-headless` (loopback HTTP, no window). Server mode adds `secmonk_api::Server` (API-key/JWT auth, mounts) and TLS in front of the same router (see [§6](#6-serving-the-current-ui)); the window answers `/api/` through `secmonk_api::handle_bridge`.
 
 **`Host::start(config, progress)`** (`host.rs`) runs these steps; each reports a `Phase` (`startup.rs`), which is the
 "step N of 5" of the preparing message:
@@ -306,6 +306,7 @@ engine or probe later reuses `Session` unchanged.
 | CSRF header | Every `/api/` request must carry `X-SecMonk-Request: 1` (403 otherwise), kept although the scheme opens no port: one rule for every binding. |
 | Host check | No TCP listener, so no DNS rebinding: the handler only checks that the request authority is the app's own (`localhost` / `secmonk.localhost`). The optional dev HTTP binding (`ui.http_listen`, off by default) applies the full `server.py` Host rules and loopback-only actions. |
 | IPC | The window gets **no Tauri command permissions**: the only channel from the page to Rust is the scheme. Navigation outside the origin is refused; `http(s)` links open in the system browser through the Rust-side `opener` crate (unit-tested classification in `window.rs`; the real opening is a GUI check in [on-macos](../plans/on-macos.md)). The UI needs no IPC (confirmed by the spike). |
+| Server mode | `secmonk_api::Server` (auth layer + mounts) over `serve` (plain TCP or TLS with rustls/aws-lc-rs, PEM files); `/auth/*`, scopes and mounts: [api-contract](api-contract.md#server-mode-authentication-scopes-mounts). The window uses `handle_bridge` instead of the network. |
 | No build step | The Vue app stays classic scripts with vendored Vue (Python [ADR-0009](../../../_docs/decisions/0009-web-ui-vendored-libraries.md)); no inline scripts or static `style=""`. |
 
 ## 7. Data flow of a scan job

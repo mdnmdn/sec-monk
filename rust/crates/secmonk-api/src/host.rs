@@ -15,6 +15,9 @@ pub enum HostPolicy {
     Http {
         port: u16,
         names: HashSet<String>,
+        /// Names from `allow_hosts` (server mode): accepted on any port or none, as behind a proxy or a
+        /// port mapping (`https://scan.example/` reaches `:8765`). Rebinding needs a name we did not list.
+        any_port: HashSet<String>,
         wildcard: bool,
     },
 }
@@ -36,8 +39,21 @@ impl HostPolicy {
         Self::Http {
             port,
             names,
+            any_port: HashSet::new(),
             wildcard: bind == "0.0.0.0" || bind == "::",
         }
+    }
+
+    /// The server-mode form of [`HostPolicy::http`]: the same rules, but each `allow_hosts` name (the public DNS
+    /// name of the server) is also accepted without a port or with another one (reverse proxy, port mapping).
+    /// For a non-loopback bind (a concrete address or `0.0.0.0` / `::`) the accepted names are therefore the
+    /// loopback names, the bind address, `allow_hosts`, and, on a wildcard bind only, any IP literal.
+    pub fn http_server(bind_host: &str, port: u16, allow_hosts: &[String]) -> Self {
+        let mut p = Self::http(bind_host, port, allow_hosts);
+        if let Self::Http { any_port, .. } = &mut p {
+            any_port.extend(allow_hosts.iter().map(|h| h.trim().to_ascii_lowercase()));
+        }
+        p
     }
 
     /// Is this `host[:port]` authority acceptable?
@@ -50,10 +66,17 @@ impl HostPolicy {
             Self::Http {
                 port,
                 names,
+                any_port,
                 wildcard,
             } => {
                 let (name, p) = split_host(authority);
-                if p != Some(u32::from(*port)) || name.is_empty() {
+                if name.is_empty() {
+                    return false;
+                }
+                if any_port.contains(&name) {
+                    return true;
+                }
+                if p != Some(u32::from(*port)) {
                     return false;
                 }
                 names.contains(&name) || (*wildcard && name.parse::<IpAddr>().is_ok())
@@ -66,6 +89,14 @@ impl HostPolicy {
         match self {
             Self::Scheme { scheme } => format!("{scheme}://localhost"),
             Self::Http { port, .. } => format!("http://127.0.0.1:{port}"),
+        }
+    }
+
+    /// An authority this policy accepts for requests made in process (the Tauri bridge).
+    pub fn local_authority(&self) -> String {
+        match self {
+            Self::Scheme { .. } => "localhost".to_owned(),
+            Self::Http { port, .. } => format!("127.0.0.1:{port}"),
         }
     }
 
@@ -147,5 +178,23 @@ mod tests {
             w.allows("10.0.0.5:8765") && w.allows("box.lan:8765") && !w.allows("evil.example:8765")
         );
         assert!(!w.is_loopback_only() && p.is_loopback_only());
+    }
+
+    #[test]
+    fn server_mode_allow_hosts_ignore_the_port() {
+        let s = HostPolicy::http_server("0.0.0.0", 8765, &["Scan.Example".into()]);
+        assert!(
+            s.allows("scan.example")
+                && s.allows("scan.example:443")
+                && s.allows("scan.example:8765")
+        );
+        assert!(
+            s.allows("127.0.0.1:8765") && s.allows("localhost:8765") && s.allows("10.1.1.1:8765")
+        );
+        assert!(
+            !s.allows("localhost") && !s.allows("evil.example") && !s.allows("evil.example:8765")
+        );
+        let c = HostPolicy::http_server("192.168.1.5", 8765, &[]);
+        assert!(c.allows("192.168.1.5:8765") && !c.allows("192.168.1.6:8765"));
     }
 }

@@ -6,7 +6,7 @@ type: tech
 context: tech
 status: implemented
 tags: [contracts, web-ui, api, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 code: [rust/crates/secmonk-api/src/, rust/crates/secmonk-engine/src/error.rs, rust/crates/secmonk-host/src/gate.rs]
 fixtures: rust/contracts/examples/api/
@@ -110,6 +110,38 @@ hint are today's (`no database at <state path>`, "Create the local vulnerability
 | Body | POST `/api/jobs`: `Content-Type: application/json` (415), ≤ 64 KiB (413), a JSON object (400) |
 | Headers out | CSP of `server.py`, `nosniff`, `no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Cache-Control: no-store` (static: `no-cache`) |
 | Static files | inside `static_dir` only, regular files, MIME by extension with `charset=utf-8` for text/js/svg |
+
+## Server mode: authentication, scopes, mounts
+
+Server mode (`secmonk_api::Server` in front of the router, served by `secmonk_api::serve`; design:
+[node-server-design §3-§4](../plans/node-server-design.md)). Off on loopback by default, required on any other
+address ([`check_exposure`](../../crates/secmonk-api/src/http_server.rs): non-loopback needs auth, and TLS or
+`insecure_http`). The window (Tauri bridge) never authenticates.
+
+| Path | Auth | Rule |
+|---|---|---|
+| `/`, `/index.html`, `/rust-ui/*`, `/static/*` | public | the overlay page and scripts (embedded from `rust/ui`) and the UI files; same CSP |
+| `GET /auth/info` | public | `{"auth": false}`, or with auth on `{"auth": true, "providers": [...], "login_methods": [...]}` |
+| `POST /auth/token` | public | body `{"method": "<name>", ...params}` (≤ 4 KiB; `method` defaults to `api_key`, so `{"api_key": "smk_…"}` works) or `Authorization: ApiKey smk_…` → 200 `{token, token_type: "Bearer", expires_at (unix s), scopes}`, `Cache-Control: no-store`. Any credential failure → 401 `{"error":"invalid credentials"}` + `WWW-Authenticate: Bearer` (same body whatever the reason); throttled client address → 429; unreadable body → 400; auth off → 404 |
+| `/api/*` | principal | `GET` needs `ui:read`, `POST` needs `ui:actions` (`admin` implies all); `X-SecMonk-Request: 1` still required; body ≤ 64 KiB |
+| a mount prefix (`/node/v1/`) | principal | no CSRF header; body ≤ 4 MiB (413); the mount checks its own scopes |
+
+`Authorization: Bearer <jwt>` or `ApiKey <key>`. Statuses: missing or invalid credential 401 (`authentication
+required` / `invalid credentials`, `WWW-Authenticate: Bearer`); missing scope 403 `{"error":"forbidden","hint":"the
+API key lacks the scope …"}`; per-key rate limit 429 with `Retry-After: 60`. One `tracing` line per authenticated
+request on target `audit` (key id, method, path without query, status); never the header, token, key or body.
+
+**Mounts**: `trait Mount { fn prefix(&self) -> &'static str; async fn handle(&self, req, principal:
+Option<Principal>) -> Response }` (`secmonk_api::Mount`); the server authenticates and rate-limits first, the mount
+gets `None` only when auth is off and builds answers with `json_response` / `error_response` / `ApiError`.
+
+**Host check** (`HostPolicy::http_server`): loopback names, the bind address, and `[server] allow_hosts`; allow_hosts
+names are accepted on any port or none (reverse proxy, `https://scan.example/`); on a wildcard bind (`0.0.0.0`, `::`)
+any IP literal with the listen port too.
+
+**Tauri bridge** (`secmonk_api::handle_bridge(&Router, BridgeRequest) -> BridgeResponse`): the `secmonk_api` command of
+`rust/ui/README.md`; only `/api/` paths (403 otherwise), `Host` fixed to the router's local authority, no auth,
+text (`text/*`, JSON, JavaScript) in `body`, anything else in `body_base64`.
 
 ## Errors
 

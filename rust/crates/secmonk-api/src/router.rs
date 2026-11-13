@@ -12,6 +12,7 @@ use serde_json::Value;
 
 use crate::error::{ApiError, discover_error, docker_error, kubeconfigs_error};
 use crate::host::HostPolicy;
+use crate::overlay;
 use crate::policy;
 use crate::query::Query;
 use crate::routes::{Capture, RouteId, lookup};
@@ -113,7 +114,7 @@ impl Router {
 
     /// The authority must name this server (`_host_ok`). Both the URI authority and a `Host` header are checked
     /// when present; one of them must exist.
-    fn check_host(&self, req: &Request<Vec<u8>>) -> ApiResult<()> {
+    pub fn check_host(&self, req: &Request<Vec<u8>>) -> ApiResult<()> {
         let from_uri = req.uri().authority().map(|a| a.as_str());
         let from_header = header_str(req, "host");
         let ok = (from_uri.is_some() || from_header.is_some())
@@ -138,13 +139,34 @@ impl Router {
     }
 
     fn static_response(&self, path: &str) -> ApiResult<Response<Vec<u8>>> {
+        // the overlay page replaces static_dir/index.html (same scripts plus the transport)
+        let overlay_index = || {
+            Ok(response(
+                StatusCode::OK,
+                "text/html; charset=utf-8",
+                overlay::INDEX_HTML.as_bytes().to_vec(),
+                true,
+                &[],
+            ))
+        };
         let rel = if path == "/" || path == "/index.html" {
-            "index.html"
+            return overlay_index();
         } else if let Some(rest) = path.strip_prefix("/static/") {
             rest
+        } else if let Some(name) = path.strip_prefix("/rust-ui/") {
+            return match overlay::file(name) {
+                Some((ct, body)) => Ok(response(
+                    StatusCode::OK,
+                    ct,
+                    body.as_bytes().to_vec(),
+                    true,
+                    &[],
+                )),
+                None => Err(ApiError::not_found("not found")),
+            };
         } else if looks_like_page(path) {
             // History-mode deep link (the UI uses hash routing, the fallback is harmless).
-            "index.html"
+            return overlay_index();
         } else {
             return Err(ApiError::not_found("not found"));
         };
@@ -412,7 +434,8 @@ pub fn response(
         .expect("static header names and values are valid")
 }
 
-fn json_response(status: StatusCode, v: &Value) -> Response<Vec<u8>> {
+/// A JSON response with the security headers (`Cache-Control: no-store`).
+pub fn json_response(status: StatusCode, v: &Value) -> Response<Vec<u8>> {
     response(
         status,
         "application/json; charset=utf-8",

@@ -298,7 +298,9 @@ fn statics_and_traversal() {
     assert_eq!(index.headers()["content-type"], "text/html; charset=utf-8");
     assert_eq!(index.headers()["cache-control"], "no-cache");
     assert_security_headers(&index, "index");
-    assert_eq!(index.body(), b"<div id=\"app\"></div>");
+    // the overlay page, not static_dir/index.html
+    let html = String::from_utf8(index.body().clone()).unwrap();
+    assert!(html.contains("/rust-ui/transport.js") && html.contains("/static/js/secmonk-views.js"));
     let js = get(&r, "/static/js/boot.js");
     assert_eq!(
         js.headers()["content-type"],
@@ -323,7 +325,7 @@ fn statics_and_traversal() {
     // deep link falls back to the app; a missing file with an extension does not
     assert_eq!(
         block(r.handle(req("GET", "/assets/42", None, b"", None))).body(),
-        b"<div id=\"app\"></div>"
+        index.body()
     );
     assert_eq!(
         block(r.handle(req("GET", "/favicon.ico", None, b"", None))).status(),
