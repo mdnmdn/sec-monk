@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: any
 tags: [plan, rust, migration]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/roadmap.md, tech/architecture.md, tech/component-lifecycle.md, decisions/0002-rust-core-python-modules.md]
 ---
@@ -51,7 +51,11 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 ## 4. Distributed mode
 
 - [ ] `secmonk-probe` binary (`serve --stdio`), static musl build, signed; SSH exec stdio transport.
-- [ ] TLS/WSS dial-out probes with enrollment (engine CA, one-time tokens), headless server with auth and roles.
+- [ ] TLS/WSS dial-out probes with enrollment (engine CA, one-time tokens).
+- [x] Headless server with authentication (2026-11-13): `secmonk-server`, TLS, API keys, JWTs, scopes, rate limits ([rust ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)); mirror-node services P0-P4 ([rust ADR-0013](../decisions/0013-mirror-nodes-and-source-versions.md), [node-api](../tech/node-api.md)).
+- [ ] Roles beyond scopes; more auth providers (OIDC, mTLS, proxy header; the provider chain is ready); a push channel for `match.changes`.
+- [ ] Node P5: ecosystem-filtered replicas, a match cache on the mirror, signed rows, Bloom-filtered or digest `changes`, the hash-prefix mode.
+- [ ] Port the py-engine reports to read summaries through `VulnInfo` on state-only nodes; the lifecycle-cause guardrail.
 - [ ] Federation in the desktop UI (several engines); OS overlay clients documented; RDP / embedded overlay last.
 - [ ] Job cancel from the UI (`jobs.cancel`), several jobs at once, event push instead of polling.
 
@@ -64,6 +68,7 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 ## 6. Runtime and packaging
 
 - [ ] uv linked as crates behind `PythonRuntime` (evaluate only; uv crate API not stable).
+- [x] Release workflow (2026-11-13): desktop bundles and server archives, [release](../tech/release.md). Open there: code signing and notarization, updater signatures, a desktop bundle that carries no Python modules yet.
 - [ ] Release packaging: static UI and Python project as Tauri resources, pinned module hashes (`trust = "pinned"`),
       offline bundle (uv archive + wheels).
 - [ ] Verify uv checksums against GitHub attestations in the release pipeline.

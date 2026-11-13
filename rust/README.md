@@ -10,6 +10,10 @@ in `../src/` stays as it is and is developed side by side; this folder never edi
 Start here: [`_docs/INDEX.md`](_docs/INDEX.md), then [architecture](_docs/tech/architecture.md),
 [contracts](_docs/tech/contracts.md) and the status in [plans/prototype.md](_docs/plans/prototype.md).
 
+Server mode and mirror nodes: [ADR-0013](_docs/decisions/0013-mirror-nodes-and-source-versions.md) (nodes, source versions),
+[ADR-0014](_docs/decisions/0014-server-mode-auth-and-ui-transport.md) (auth, UI transport), [node-api](_docs/tech/node-api.md)
+(`/node/v1`), [release](_docs/tech/release.md) (bundles and server archives).
+
 ## Layout
 
 ```

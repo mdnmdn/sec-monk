@@ -4,7 +4,7 @@ summary: Working design for the server mode of the Rust app (secmonk-server, sec
 read_when: you work on the server mode, authentication, the node API (/node/v1), the UI transport, config overrides or the release workflow of the Rust app
 type: plan
 context: plans
-status: in-progress
+status: done
 tags: [rust, server, auth, distributed, config, release]
 updated: 2026-11-13
 verified: 2026-11-13
@@ -12,6 +12,8 @@ related: [tech/architecture.md, tech/configuration.md, tech/api-contract.md, dec
 ---
 
 # Design brief — server mode, auth, mirror nodes
+
+> Implemented 2026-11-13. Normative details live in [tech/node-api.md](../tech/node-api.md), [tech/api-contract.md](../tech/api-contract.md#server-mode-authentication-scopes-mounts) ("Server mode"), [tech/configuration.md](../tech/configuration.md), [tech/release.md](../tech/release.md) and ADR-0013 / ADR-0014; this brief is the original working design and is not kept in sync.
 
 Source: the proposal [`_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md`](../../../_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md)
 (Rust only) plus the user request of 2026-11-13: run headless with API-key-authenticated APIs, serve the UI over
@@ -28,7 +30,7 @@ desktop app, reuse of installed tools, and a release workflow.
 | `secmonk-desktop` | `apps/desktop/src-tauri` | Tauri window (feature `ui`) | window (default); `--serve` / `serve` runs exactly `secmonk-server` (no window is created) |
 
 Both parse the same command line (`secmonk_host::cli`): `--config FILE`, `--listen ADDR`, `--set key=value`
-(repeatable), `--data-dir DIR`, `--tls-cert FILE`, `--tls-key FILE`, `--allow-actions`.
+(repeatable), `--data-dir DIR`, `--tls-cert FILE`, `--tls-key FILE`, `--allow-actions`, `--no-actions`, `--auth MODE`.
 
 ## 2. Configuration: overrides and paths (secmonk-config)
 
@@ -66,15 +68,17 @@ any_version = false
 listen = "127.0.0.1:8765"
 tls_cert = "…"     # PEM chain; with tls_key the server speaks HTTPS
 tls_key = "…"
+trusted_proxies = []   # reverse proxies whose X-Forwarded-For is trusted (IPs / CIDRs)
 allow_hosts = []   # extra Host header names accepted (public DNS name of the server)
 insecure_http = false   # allow plain HTTP on a non-loopback address (behind a TLS-terminating proxy)
-allow_actions = true    # scans and syncs through the API (still needs the `actions` scope)
+allow_actions = true    # scans and syncs through the API (still needs the `ui:actions` scope)
 auth = "auto"      # "auto": required on non-loopback, off on loopback; "required"; "off" (loopback only)
 serve_ui = true
 
 [auth]
 keys_file = "…"    # default {paths.auth}/api_keys.toml
 jwt_ttl_s = 3600
+rate_per_minute = 600   # token bucket per key id
 jwt_secret_file = "…"   # default {paths.auth}/jwt.key, created 0600 with 32 random bytes
 
 [node]
@@ -98,12 +102,12 @@ sources = []                   # sources followed from the upstream feed instead
 - **JWT** HS256 (`hmac` + `sha2`), claims `iss = "secmonk"`, `sub = key id`, `scp` (scopes, space separated),
   `iat`, `exp` (now + `jwt_ttl_s`), `jti`. Secret from `SECMONK_JWT_SECRET` or `jwt.key`. Revoking a key also
   rejects its JWTs (the verifier checks the key is still active).
-- **Exchange**: `POST /auth/token` with `{"api_key": "smk_…"}` (or `Authorization: ApiKey smk_…`) →
+- **Exchange**: `POST /auth/token` with `{"method": "<name>", ...}` (`api_key` is the default method, so `{"api_key": "smk_…"}` works; or `Authorization: ApiKey smk_…`) →
   `{"token", "token_type": "Bearer", "expires_at", "scopes"}`. Failed attempts are rate-limited per client address.
 - **Requests**: `Authorization: Bearer <jwt>` or `Authorization: ApiKey <key>` (machine clients). The CSRF header
   `X-SecMonk-Request: 1` stays required on `/api/*`; `/node/v1/*` and `/auth/token` are not browser routes and do
   not need it.
-- **What is public**: static UI files (`/`, `/static/*`, `/rust-ui/*`), `GET /auth/info` (`{auth: bool}`). Everything
+- **What is public**: static UI files (`/`, `/static/*`, `/rust-ui/*`), `GET /auth/info` (`{auth, providers, login_methods}`). Everything
   else needs a principal when auth is on.
 - **Quotas**: a token bucket per key id (calls per minute, `[auth] rate_per_minute`, default 600) and per-call caps
   (1 000 components, 500 ids). Audit: one `tracing` line per authenticated call (target `audit`: key id, route,
@@ -156,12 +160,12 @@ HTTP binding (`/node/v1`, JSON, `POST` for calls with a body):
 | `POST /node/v1/match/components` | `match` | `{components: [≤1000]}` → `{results: [{key, matches, lookup_keys}], as_of, coverage}` |
 | `POST /node/v1/match/changes` | `match` | `{since: {source: version}}` → `{sources: {src: {changed_keys, changed_ids} | {resync: reason}}, as_of}` |
 | `POST /node/v1/vulninfo/summaries` | `vulninfo:read` | `{ids: [≤500]}` → `{summaries: [...]}` |
-| `GET /node/v1/vulninfo/detail?id=` · `GET /node/v1/vulninfo/search?q=` | `vulninfo:read` | the `vulns/show` / `vulns/search` payloads |
+| `GET /node/v1/vulninfo/detail?id=&raw=` · `GET /node/v1/vulninfo/search?<params>` | `vulninfo:read` | the `vulns/show` / `vulns/search` payloads |
 | `GET /node/v1/feed/status` | `feed:read` | per source: version, importer version, kind, records |
-| `GET /node/v1/feed/since?source=&version=&page=` | `feed:read` | a page of `secmonk-mirror-rows/1` batches since that version, or `resync` (full snapshot pages) |
+| `GET /node/v1/feed/since?source=&since=&page=&limit=` | `feed:read` | a page of `secmonk-mirror-rows/1` batches since that version, or `resync` (full snapshot pages) |
 
 ## 7. Release workflow
 
 `.github/workflows/release.yml`, `workflow_dispatch` with checkboxes: `desktop`, `server`, `linux`, `macos`,
-`windows`, plus `tag` / `draft`. Desktop bundles via `tauri-cli`; the server is `cargo build --release -p
+`windows`, plus `tag` / `draft`. Desktop bundles via `tauri-cli`; the server is `cargo build --locked --release -p
 secmonk-host --bin secmonk-server`. Artifacts are uploaded per job; a release is created only when `tag` is set.

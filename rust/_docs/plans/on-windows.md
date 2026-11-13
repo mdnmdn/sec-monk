@@ -7,7 +7,7 @@ context: plans
 status: open
 platform: windows
 tags: [plan, windows, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 related: [plans/README.md, decisions/0009-platform-targets.md]
 ---
@@ -56,3 +56,11 @@ related: [plans/README.md, decisions/0009-platform-targets.md]
 - [ ] Native importers: `feed::exists_like_python` maps Windows error codes 2, 3, 21, 123 and 1921 to "path not found" like
       Python's `Path.exists()`; check `--path` with a missing, invalid and looping path on a real Windows machine
       ([source-msrc](../tech/source-msrc.md)).
+
+## Added by the server-mode and IPC work (2026-11-13)
+
+- [ ] **IPC in WebView2.** The page origin is `http://secmonk.localhost`; the `secmonk_api` command goes through `http://ipc.localhost`, which `CSP_WINDOW` lists in `connect-src`: confirm no CSP violation and that `transport.js` picks IPC ([ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)) **(verify)**.
+- [ ] **rustls TLS and `ca_cert` on Windows.** `secmonk-server.exe` with a PEM chain, and a follower with `[node.upstream] ca_cert` for a private CA; the Windows certificate store is not consulted **(verify)**.
+- [ ] **No console for the GUI exe.** `secmonk-desktop.exe` is a windows-subsystem binary: `--serve` prints nothing visible; use `secmonk-server.exe` for the server and read the log in `data_dir\logs` **(verify)**.
+- [ ] **ACLs of `api_keys.toml`, `jwt.key` and `node_id`.** On Unix they are created 0600; there is no equivalent here, so they inherit the folder ACL. Check who can read them and decide on an explicit ACL **(verify)**.
+- [ ] **Release artifacts.** `.zip` of the server, `.msi` and NSIS installers of the desktop app from [release](../tech/release.md): install, start, uninstall; SmartScreen on unsigned builds.

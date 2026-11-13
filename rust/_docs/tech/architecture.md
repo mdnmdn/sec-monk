@@ -71,7 +71,9 @@ rust/
     secmonk-probe            local probe service: collector allowlist, dispatch to Probe impls
     secmonk-sources          native vulnerability sources (IMPORTERS: kev, epss, euvd): feeds -> row batches over a read-only MirrorView
     secmonk-engine           engine service: jobs, sync, scan, reuse rule, run history, payload facade
+    secmonk-auth             API keys, session JWTs, provider chain, scopes, limits; no I/O beyond its files
     secmonk-api              engine<->ui route table, validation, ApiError, static files, security headers
+    secmonk-node             /node/v1 binding (behind feature `server`), RemoteNode client, FeedSource follower
     secmonk-host             composition root: Host::start, preparing Gate, Service, logging, secmonk-headless
   apps/desktop/src-tauri     secmonk-desktop: thin shell over secmonk-host: custom scheme, window (tray later)
   python/                    uv project secmonk-modules: serve --stdio, adapters, conformance tests
@@ -95,7 +97,9 @@ rust/
 | `secmonk-probe` | traits, model, proto, modhost | **store**, engine, sources | compiler + CI `cargo tree -p secmonk-probe` must not list `secmonk-store` |
 | `secmonk-sources` | traits, model, safeio, reqwest (rustls, the workspace client), tokio, flate2 (the epss gzip feed), serde (euvd: a bounded visitor over feed records) | **store**, modhost, engine (reads the mirror only through `MirrorView`) | compiler |
 | `secmonk-engine` | traits, store, model, proto, safeio | **modhost** (gets trait objects; `modhost`, `runtime`, `config` only as dev-dependencies of the gated `tests/real_modules.rs` and `tests/native_<source>.rs`), api | compiler + `deny.toml` (dev wrapper) |
-| `secmonk-api` | engine (its service types and errors), http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
+| `secmonk-auth` | serde, toml, hmac, sha2, base64, getrandom, subtle (plus hex, serde_json, thiserror, tracing) | **store**, **engine**, **api** | `deny.toml` (`wrappers = [secmonk-api, secmonk-node, secmonk-host]`) |
+| `secmonk-api` | engine (its service types and errors), auth, http, percent-encoding | **store**, modhost as direct dependencies (the store is reached only through the engine) | compiler |
+| `secmonk-node` | traits, model, auth (feature `server`), reqwest (rustls), and `secmonk-api` only under feature `server` | **store**, **engine**, **modhost** (engine only as a dev-dependency of its tests) | `deny.toml` (`wrappers = [secmonk-host]`) + rust-ci `cargo tree -p secmonk-node --no-default-features` must not list `secmonk-engine` or `secmonk-store` |
 | `secmonk-host` | everything; with `engine` off only config, runtime, modhost, probe, traits, model, proto, safeio | — | composition root (the only crate that names modhost and engine together) |
 | `secmonk-desktop` | host, config, api, tauri + opener (feature `ui`) | store, modhost directly | thin shell |
 
@@ -121,7 +125,7 @@ compiles Tauri or a webview.
 | Feature (crate) | Default | Pulls in | Off means |
 |---|---|---|---|
 | `ui` (`secmonk-desktop`) | on | implies `engine`; `tauri`, `tauri-build` (build dependency, `build.rs` checks `CARGO_FEATURE_UI`), `opener` | headless binary: no window, no webview, no WebKitGTK; the same binary runs `secmonk_host::headless` |
-| `engine` (`secmonk-desktop`, `secmonk-host`) | on | `secmonk-engine`, `secmonk-store`, `secmonk-api`; the module set including `py-engine` / `py-sources` | probe-only build: exits 2 with a message ("nothing to serve yet"); the shape of later remote probes |
+| `engine` (`secmonk-desktop`, `secmonk-host`) | on | `secmonk-engine`, `secmonk-store`, `secmonk-api`, `secmonk-auth`, `secmonk-node`; the module set including `py-engine` / `py-sources` | probe-only build: exits 2 with a message ("nothing to serve yet"); the shape of later remote probes |
 | `probe` (`secmonk-desktop`, `secmonk-host`) | on | `py-probe` wired into `ProbeService` (collectors, discovery, docker/k8s listings) | engine with an empty collector allowlist |
 | `codec` (`secmonk-proto`) | on | `tokio-util` codec, `bytes` | message types only (no framing) |
 
@@ -345,7 +349,7 @@ engine or probe later reuses `Session` unchanged.
 | Headers | The CSP of `web/server.py` (`script-src 'self' 'unsafe-eval'`, `style-src 'self'`, `connect-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'none'`, `form-action 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control` as today. Tauri's `app.security.csp` does not apply to custom scheme responses, so the handler's header is the only policy (spike: the handler sends today's exact header, rejects traversal, answers 403 without the header; the unchanged `ApiSource("")` worked against it with the real Vue files in Node). Rendering in a real webview is **(verify on a GUI session)**: the spike sandbox blocked WebKit. |
 | CSRF header | Every `/api/` request must carry `X-SecMonk-Request: 1` (403 otherwise), kept although the scheme opens no port: one rule for every binding. |
 | Host check | No TCP listener, so no DNS rebinding: the handler only checks that the request authority is the app's own (`localhost` / `secmonk.localhost`). The optional dev HTTP binding (`ui.http_listen`, off by default) applies the full `server.py` Host rules and loopback-only actions. |
-| IPC | The window gets **no Tauri command permissions**: the only channel from the page to Rust is the scheme. Navigation outside the origin is refused; `http(s)` links open in the system browser through the Rust-side `opener` crate (unit-tested classification in `window.rs`; the real opening is a GUI check in [on-macos](../plans/on-macos.md)). The UI needs no IPC (confirmed by the spike). |
+| IPC | The window has exactly one Tauri command, `secmonk_api` ([rust ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)), granted to the `main` window only (`apps/desktop/src-tauri/capabilities/main.json`, permission `allow-secmonk-api`); it carries the `/api/` requests of the UI to `handle_bridge`. `CSP_WINDOW` (pages served to the window only) adds Tauri's IPC origins, `ipc:` and `http://ipc.localhost`, to `connect-src`; browser and server pages keep `connect-src 'self'`. Navigation outside the origin is refused; `http(s)` links open in the system browser through the Rust-side `opener` crate (unit-tested classification in `window.rs`; the real opening is a GUI check in [on-macos](../plans/on-macos.md)). The UI needs no IPC (confirmed by the spike). |
 | Server mode | `secmonk_api::Server` (auth layer + mounts) over `serve` (plain TCP or TLS with rustls/aws-lc-rs, PEM files); `/auth/*`, scopes and mounts: [api-contract](api-contract.md#server-mode-authentication-scopes-mounts). The window uses `handle_bridge` instead of the network. |
 | No build step | The Vue app stays classic scripts with vendored Vue (Python [ADR-0009](../../../_docs/decisions/0009-web-ui-vendored-libraries.md)); no inline scripts or static `style=""`. |
 
