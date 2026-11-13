@@ -5,7 +5,7 @@
 use std::sync::{Arc, Mutex};
 
 use secmonk_api::Mount;
-use secmonk_config::{Config, NodeService};
+use secmonk_config::{Config, ConfigError, NodeService};
 use secmonk_engine::EngineService;
 use secmonk_node::NodeApi;
 use secmonk_traits::node::{Feed, MatchService, VulnInfo};
@@ -30,6 +30,8 @@ pub struct Service {
     /// Held by [`Service::run`] for its whole duration: the shutdown waits on it, so it never misses a host that
     /// was still being built.
     running: tokio::sync::Mutex<()>,
+    /// The node roles, decided once from `[node]` when the service is built.
+    plan: Result<NodePlan, ConfigError>,
 }
 
 impl std::fmt::Debug for Service {
@@ -49,6 +51,7 @@ impl Service {
     /// [`Service::new`] for a binding with `allow_actions` (false: the engine refuses scans and syncs, like the
     /// router's 403 on a non-loopback listener).
     pub fn with_actions(config: Arc<Config>, allow_actions: bool) -> Arc<Service> {
+        let plan = NodePlan::from_config(&config);
         let startup = StartupCell::new();
         let state_db = Config::sqlite_path(&config.state_url)
             .unwrap_or_else(|| config.data_dir.join("db/state.sqlite3"));
@@ -67,6 +70,7 @@ impl Service {
             node: Arc::new(LazyNode::new()),
             allow_actions,
             running: tokio::sync::Mutex::new(()),
+            plan,
         })
     }
 
@@ -75,22 +79,21 @@ impl Service {
         self.gate.clone()
     }
 
-    /// The `/node/v1` mount for the services `[node] serve` lists (`None`: nothing is served, or the node id file
-    /// cannot be written, which [`crate::serve::serve`] has already reported). The mount can be added to the server
-    /// before the host is ready: its services answer 503 "node services are starting" until then. The desktop
-    /// window does not mount it.
-    pub fn node_mount(&self) -> Option<Arc<dyn Mount>> {
-        let plan = NodePlan::from_config(&self.config).ok()?;
+    /// The node roles decided from `[node]` (computed once; the error is the refused combination).
+    pub fn node_plan(&self) -> Result<&NodePlan, &ConfigError> {
+        self.plan.as_ref()
+    }
+
+    /// The `/node/v1` mount for the services `[node] serve` lists: `Ok(None)` when nothing is served, `Err` when the
+    /// roles are refused or the node id file cannot be used (never swallowed: the server must not start without
+    /// the node API it was configured to offer). The mount can be added to the server before the host is ready:
+    /// its services answer 503 "node services are starting" until then. The desktop window does not mount it.
+    pub fn node_mount(&self) -> Result<Option<Arc<dyn Mount>>, String> {
+        let plan = self.plan.as_ref().map_err(|e| e.to_string())?;
         if plan.serve.is_empty() {
-            return None;
+            return Ok(None);
         }
-        let id = match crate::node::node_id(&self.config) {
-            Ok(id) => id,
-            Err(e) => {
-                tracing::error!("node id: {e}; the node API is not mounted");
-                return None;
-            }
-        };
+        let id = crate::node::node_id(&self.config).map_err(|e| format!("node id: {e}"))?;
         let lazy = &self.node;
         let matcher = plan
             .serves(NodeService::Match)
@@ -101,13 +104,13 @@ impl Service {
         let feed = plan
             .serves(NodeService::Feed)
             .then(|| lazy.clone() as Arc<dyn Feed>);
-        Some(Arc::new(NodeApi::derived(
+        Ok(Some(Arc::new(NodeApi::derived(
             matcher,
             vulninfo,
             feed,
             id,
             plan.mirror,
-        )))
+        ))))
     }
 
     /// Where startup stands.
@@ -124,12 +127,21 @@ impl Service {
     /// [`Service::shutdown`] cancels it.
     pub async fn run(self: Arc<Self>) {
         let _running = self.running.lock().await;
+        let plan = match &self.plan {
+            Ok(p) => p.clone(),
+            Err(e) => {
+                let why = e.to_string();
+                tracing::error!("startup failed: {why}");
+                self.startup.set(StartupState::Failed(why));
+                return;
+            }
+        };
         let started = tokio::select! {
             () = self.cancel.cancelled() => {
                 tracing::info!("startup cancelled");
                 return;
             }
-            r = Host::start(self.config.clone(), self.startup.progress(), self.allow_actions) => r,
+            r = Host::start_with_plan(self.config.clone(), plan, self.startup.progress(), self.allow_actions) => r,
         };
         match started {
             Ok(host) => {
@@ -176,11 +188,11 @@ mod tests {
     #[tokio::test]
     async fn the_node_mount_exists_only_for_a_serving_node_and_answers_starting_first() {
         let off = Service::new(Arc::new(crate::testutil::config_from_toml("")));
-        assert!(off.node_mount().is_none());
+        assert!(off.node_mount().unwrap().is_none());
         let on = Service::new(Arc::new(crate::testutil::config_from_toml(
             "[node]\nserve = [\"match\"]\n",
         )));
-        let mount = on.node_mount().expect("mounted");
+        let mount = on.node_mount().unwrap().expect("mounted");
         assert_eq!(mount.prefix(), "/node/v1/");
         // the host is not ready: the service answers 503, not 404 (it is enabled)
         let req = http::Request::builder()

@@ -20,7 +20,11 @@ use secmonk_model::node::{
 use crate::StoreResult;
 
 /// Snapshot diffs kept per source ([`MirrorNodeStore::snapshot_diff_put`] prunes older ones).
-pub const SNAPSHOT_DIFF_KEEP: usize = 10;
+pub const SNAPSHOT_DIFF_KEEP: u32 = 10;
+
+/// Cached summaries older than this many days are dropped by [`NodeCacheStore::put_summaries`] (a summary in use is
+/// refreshed long before: every change of its record re-fetches it).
+pub const SUMMARY_MAX_AGE_DAYS: u64 = 30;
 
 /// Most records per [`MirrorNodeStore::rows_since`] page.
 pub const MAX_FEED_RECORDS: usize = crate::MAX_ROWS_IDS;
@@ -102,6 +106,8 @@ pub trait MirrorNodeStore: Send + Sync {
     /// per alias, `upsert affected` per row. Batches have page-local `seq` from 1, no generation, at most 5000 ops
     /// and about 2 MiB. Applied to an empty mirror with `apply_rows` they reproduce the records; applied to a mirror
     /// that has older versions of them, pass them through [`localize_feed_batch`](MirrorNodeStore::localize_feed_batch) first.
+    /// A page is read inside one read transaction (one WAL snapshot: a record and its children are consistent);
+    /// pages are not pinned to each other (a record modified between pages comes again with the overlap).
     async fn rows_since(
         &self,
         source: &str,
@@ -113,6 +119,10 @@ pub trait MirrorNodeStore: Send + Sync {
     /// A page of a snapshot source's table (`kev`, `epss`, `debian-tracker`: `kev`, `epss`, `distro_triage` rows)
     /// as upsert-only batches (the follower deletes what is absent, rust ADR-0011), via
     /// [`crate::MirrorStore::rows_page`]; `limit` rows, `1..=MAX_ROWS_PAGE`. Another source is `Invalid`.
+    /// Each page is read inside one read transaction, and the paging is pinned to the served version of the first
+    /// page: the cursor (`s2|<table>|<rowid>|<version>`) carries it, and a page asked with a cursor of another
+    /// version (a new import completed between pages) is `Stale`: the follower restarts from the first page
+    /// instead of mixing two snapshots. A cursor of the former `s1|` format is `Stale` too.
     async fn rows_snapshot(
         &self,
         source: &str,
@@ -133,7 +143,7 @@ pub trait MirrorNodeStore: Send + Sync {
 pub trait NodeCacheStore: Send + Sync {
     /// Replace, in one transaction, everything stored for each result's component key by the result (matches and
     /// lookup keys), stamped with `as_of`. A component with no match is stored as a marker so that "answered,
-    /// nothing" differs from "never asked".
+    /// nothing" differs from "never asked". A match with an empty `vuln_id` (the marker's) is `Invalid`.
     async fn put_component_results(
         &self,
         results: &[ComponentResult],
@@ -157,7 +167,8 @@ pub trait NodeCacheStore: Send + Sync {
     /// distinct).
     async fn components_by_vuln_ids(&self, ids: &[String]) -> StoreResult<Vec<String>>;
 
-    /// Store summaries (replacing the stored ones), `fetched_at` = now.
+    /// Store summaries (replacing the stored ones), `fetched_at` = now; in the same transaction, drop the summaries
+    /// fetched more than [`SUMMARY_MAX_AGE_DAYS`] days ago.
     async fn put_summaries(&self, summaries: &[VulnSummary]) -> StoreResult<()>;
 
     /// The stored summaries of the ids that have one, in input order.
@@ -168,4 +179,15 @@ pub trait NodeCacheStore: Send + Sync {
 
     /// Set a named value.
     async fn node_sync_set(&self, name: &str, value: &str) -> StoreResult<()>;
+
+    /// Set several named values in one transaction (all or none): the node matcher saves its epoch, resync map
+    /// and versions together.
+    async fn node_sync_set_many(&self, values: &[(&str, &str)]) -> StoreResult<()>;
+
+    /// The stored lookup keys (`component_lookup`, as the match service returned them) of each of `keys` that has
+    /// any; a component never answered, or answered without keys, is absent.
+    async fn stored_lookup_keys(
+        &self,
+        keys: &[String],
+    ) -> StoreResult<BTreeMap<String, Vec<String>>>;
 }

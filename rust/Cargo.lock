@@ -3350,6 +3350,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-rustls",
+ "tokio-util",
  "tracing",
 ]
 
@@ -3493,6 +3494,7 @@ name = "secmonk-node"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "futures-util",
  "http",
  "percent-encoding",
@@ -3548,6 +3550,7 @@ dependencies = [
  "futures-util",
  "hex",
  "reqwest",
+ "rustix",
  "secmonk-config",
  "secmonk-model",
  "secmonk-safeio",

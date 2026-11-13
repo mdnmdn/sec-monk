@@ -16,6 +16,11 @@ use secmonk_model::Category;
 use secmonk_model::node::{ComponentIdentity, pkg_key, prod_key};
 use serde_json::Value;
 
+/// The version of [`component_lookup_keys`], part of the matcher version (`super::matcher_version`): clients store
+/// the keys a service returned and use them to decide which answers a change concerns, so a change of the keys
+/// must invalidate them. **Bump with any change to `component_lookup_keys`.**
+pub const KEYS_VERSION: u32 = 1;
+
 /// `purl.PURL_TO_OSV`.
 fn purl_to_osv(kind: &str) -> Option<&'static str> {
     Some(match kind {

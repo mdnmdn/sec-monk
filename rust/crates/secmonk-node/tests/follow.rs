@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use secmonk_model::node::{
-    FeedMode, FeedPage, FeedSinceRequest, FeedStatus, MATCHER_VERSION, SourceVersion, VersionKind,
+    FeedMode, FeedPage, FeedSinceRequest, FeedStatus, SourceVersion, VersionKind,
 };
 use secmonk_model::{JsonMap, MirrorTable, RowOp, RowsBatch, SyncOptions, SyncParams};
 use secmonk_node::{BatchLocalizer, FeedSource};
@@ -16,6 +16,9 @@ use secmonk_traits::{
     StreamMsg, SyncEnd, WireError,
 };
 use serde_json::{Value, json};
+
+/// The matcher version the fakes serve.
+const TEST_MATCHER: &str = "py-engine/test";
 
 fn obj(v: Value) -> JsonMap {
     v.as_object().cloned().unwrap()
@@ -98,7 +101,7 @@ impl Feed for ScriptedFeed {
     async fn status(&self) -> StepResult<FeedStatus> {
         Ok(FeedStatus {
             node_id: None,
-            matcher: MATCHER_VERSION.into(),
+            matcher: TEST_MATCHER.into(),
             sources: vec![],
         })
     }

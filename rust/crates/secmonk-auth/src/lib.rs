@@ -16,12 +16,15 @@ mod provider;
 mod scope;
 mod timefmt;
 
-pub use auth::{ApiKeyProvider, Authenticator};
+pub use auth::{ApiKeyProvider, Authenticator, KEYS_CHECK_INTERVAL};
 pub use error::AuthError;
-pub use jwt::{Claims, IssuedToken, JwtSigner, load_or_create_secret, secret_from_env_value};
+pub use jwt::{
+    Claims, ISSUER, IssuedToken, JwtSigner, key_id, load_or_create_secret, peek_issuer,
+    secret_from_env_value,
+};
 pub use keys::{API_KEY_PROVIDER, ApiKey, AuthVia, KeyRecord, KeyStore, Principal, parse_api_key};
 pub use limit::{LoginThrottle, RateLimiter};
-pub use provider::{AuthProvider, RequestContext};
+pub use provider::{AuthProvider, HeaderLookup, RequestContext, Subject};
 pub use scope::{Scope, Scopes};
 pub use timefmt::{format_rfc3339, parse_rfc3339};
 

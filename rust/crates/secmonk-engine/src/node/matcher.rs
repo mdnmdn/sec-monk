@@ -17,7 +17,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use secmonk_model::node::{
     AsOf, ComponentIdentity, ComponentMatch, ComponentResult, MAX_COMPONENTS, MAX_IDS,
-    MatchComponentsRequest, SourceChanges, Versions, VulnSummary,
+    MatchComponentsRequest, Versions, VulnSummary,
 };
 use secmonk_model::time::now_iso;
 use secmonk_model::{
@@ -28,9 +28,13 @@ use secmonk_store::{NodeCacheStore, StateStore};
 use secmonk_traits::node::{MatchService, VulnInfo};
 use secmonk_traits::{CallCtx, ErrorCode, Matcher, StepResult, VersionOracle, WireError};
 use serde_json::json;
+use tokio::sync::Mutex;
 
+use super::MAX_VIEW_LIMIT;
+use super::changes::{ChangeSummary, affected_components, in_family};
 use super::keys::component_lookup_keys;
 use super::local::store_wire;
+use super::versions::matcher_version;
 
 /// `node_sync` name of the versions the cache is current at (JSON [`AsOf`]).
 pub const SYNC_AS_OF: &str = "match.as_of";
@@ -38,6 +42,9 @@ pub const SYNC_AS_OF: &str = "match.as_of";
 pub const SYNC_EPOCH: &str = "match.epoch";
 /// `node_sync` name of the epoch of the last `resync` per source (JSON object source -> epoch).
 pub const SYNC_RESYNC: &str = "match.resync";
+/// `node_sync` name of this node's own matcher version when the cache was last made current (its lookup keys and
+/// matching code; a change starts a new epoch like a change of the service's matcher).
+pub const SYNC_LOCAL: &str = "match.local";
 /// The stamp of an answer invalidated because its component was hit while not in the stored inventory.
 const INVALID_STAMP: &str = "invalidated#0";
 /// Rows in `view` when the params name no limit (py-engine's default).
@@ -60,36 +67,6 @@ pub struct PollStats {
     pub as_of: AsOf,
 }
 
-/// Which components a `resync` of a source concerns (proposal §3.3).
-enum Family {
-    /// Enrichment only (`kev`, `epss`): no match set changes, summaries are fetched again.
-    Enrichment,
-    /// Components with a lookup key starting with one of these prefixes.
-    Prefixes(Vec<String>),
-    /// Every component.
-    All,
-}
-
-fn family(source: &str) -> Family {
-    match source.split_once(':') {
-        Some(("osv", eco)) => Family::Prefixes(vec![format!("pkg:{}/", eco.to_lowercase())]),
-        _ => match source {
-            "kev" | "epss" => Family::Enrichment,
-            "osv" => Family::Prefixes(vec!["pkg:".into()]),
-            "debian-tracker" => Family::Prefixes(vec!["pkg:debian".into()]),
-            _ => Family::All,
-        },
-    }
-}
-
-fn in_family(source: &str, keys: &[String]) -> bool {
-    match family(source) {
-        Family::Enrichment => false,
-        Family::All => true,
-        Family::Prefixes(p) => keys.iter().any(|k| p.iter().any(|p| k.starts_with(p))),
-    }
-}
-
 fn stamp(matcher: &str, epoch: u64) -> String {
     format!("{matcher}#{epoch}")
 }
@@ -110,7 +87,14 @@ struct CacheState {
 }
 
 impl CacheState {
-    fn fresh(&self, as_of: Option<&AsOf>, ident: &ComponentIdentity) -> bool {
+    /// Whether an answer stamped `as_of` is current for a component whose lookup keys are `keys` (the stored ones
+    /// when there are, else `component_lookup_keys(ident)`).
+    fn fresh(
+        &self,
+        as_of: Option<&AsOf>,
+        ident: &ComponentIdentity,
+        stored: Option<&Vec<String>>,
+    ) -> bool {
         let Some((m, e)) = as_of.and_then(|a| parse_stamp(&a.matcher)) else {
             return false;
         };
@@ -126,8 +110,15 @@ impl CacheState {
         if stale_sources.is_empty() {
             return true;
         }
-        let keys = component_lookup_keys(ident);
-        !stale_sources.iter().any(|s| in_family(s, &keys))
+        let computed;
+        let keys: &[String] = match stored {
+            Some(k) => k,
+            None => {
+                computed = component_lookup_keys(ident);
+                &computed
+            }
+        };
+        !stale_sources.iter().any(|s| in_family(s, keys))
     }
 }
 
@@ -138,6 +129,10 @@ pub struct NodeMatcher {
     cache: Arc<dyn NodeCacheStore>,
     oracle: Arc<dyn VersionOracle>,
     state: Arc<dyn StateStore>,
+    /// This node's own matcher version (lookup keys, scoring code): saved as [`SYNC_LOCAL`].
+    local_version: String,
+    /// One poll at a time: two concurrent polls would read the same saved state and race on the epoch.
+    poll_lock: Mutex<()>,
 }
 
 impl std::fmt::Debug for NodeMatcher {
@@ -170,16 +165,64 @@ impl NodeMatcher {
             cache,
             oracle,
             state,
+            local_version: matcher_version().to_owned(),
+            poll_lock: Mutex::new(()),
         }
+    }
+
+    /// This node's own matcher version (default: [`matcher_version`](super::matcher_version) of this build). When
+    /// it differs from the one saved with the cache, the next poll starts a new epoch: every cached answer is
+    /// asked again (the lookup keys and the code that reads them may have changed).
+    #[must_use]
+    pub fn with_local_version(mut self, version: impl Into<String>) -> NodeMatcher {
+        self.local_version = version.into();
+        self
+    }
+
+    /// The lookup keys of `idents` (component key -> keys): the stored ones (as the service returned them) when
+    /// there are, else [`component_lookup_keys`].
+    async fn lookup_keys(
+        &self,
+        idents: &BTreeMap<String, ComponentIdentity>,
+    ) -> StepResult<BTreeMap<String, Vec<String>>> {
+        let keys: Vec<String> = idents.keys().cloned().collect();
+        let mut stored = self
+            .cache
+            .stored_lookup_keys(&keys)
+            .await
+            .map_err(store_wire)?;
+        Ok(idents
+            .iter()
+            .map(|(k, ident)| {
+                let lk = stored
+                    .remove(k)
+                    .unwrap_or_else(|| component_lookup_keys(ident));
+                (k.clone(), lk)
+            })
+            .collect())
     }
 
     async fn sync_get(&self, name: &str) -> StepResult<Option<String>> {
         self.cache.node_sync_get(name).await.map_err(store_wire)
     }
 
-    async fn sync_set(&self, name: &str, value: &str) -> StepResult<()> {
+    /// Save the cache state in one transaction (all or nothing).
+    async fn save_state(
+        &self,
+        epoch: u64,
+        resync: &BTreeMap<String, u64>,
+        as_of: &str,
+    ) -> StepResult<()> {
+        let epoch = epoch.to_string();
+        let resync =
+            serde_json::to_string(resync).map_err(|e| WireError::internal("SerializeError", e))?;
         self.cache
-            .node_sync_set(name, value)
+            .node_sync_set_many(&[
+                (SYNC_EPOCH, &epoch),
+                (SYNC_RESYNC, &resync),
+                (SYNC_AS_OF, as_of),
+                (SYNC_LOCAL, &self.local_version),
+            ])
             .await
             .map_err(store_wire)
     }
@@ -270,8 +313,15 @@ impl NodeMatcher {
     /// again, the summaries of changed ids fetched again, a `resync` recorded per source (see the module doc), the
     /// new versions saved. The first poll (nothing saved) only saves the versions and starts a new epoch: nothing
     /// cached before can be trusted.
+    ///
+    /// Polls run one at a time (a mutex), and the epoch, the resync map, the versions and this node's own matcher
+    /// version are saved together in one transaction **after** every call to the service succeeded: a poll that
+    /// fails half-way leaves the saved state as it was (the next poll asks the same changes again; answers stored
+    /// before the failure are current anyway, they were computed after the changes).
     pub async fn poll_changes(&self) -> StepResult<PollStats> {
+        let _one = self.poll_lock.lock().await;
         let (stored, mut st) = self.cache_state().await?;
+        let saved_local = self.sync_get(SYNC_LOCAL).await?;
         let resp = self
             .service
             .changes(secmonk_model::node::ChangesRequest {
@@ -289,76 +339,62 @@ impl NodeMatcher {
         let matcher_changed = stored
             .as_ref()
             .is_none_or(|a| a.matcher != new_as_of.matcher);
-        if matcher_changed {
+        let local_changed =
+            stored.is_some() && saved_local.as_deref() != Some(self.local_version.as_str());
+        if matcher_changed || local_changed {
             // nothing answered under another matcher is current: a new epoch, every source counts as resynced
             st.epoch += 1;
-            st.resync.clear();
-            self.sync_set(SYNC_EPOCH, &st.epoch.to_string()).await?;
-            self.sync_set(SYNC_RESYNC, "{}").await?;
-            self.sync_set(SYNC_AS_OF, &save_as_of).await?;
             stats.resynced = resp.sources.keys().cloned().collect();
             if stored.is_some() {
-                // a matcher change: the stored inventory is asked again under the new matcher
+                // the stored inventory is asked again under the new matcher (before anything is saved)
                 let inv = self.inventory().await?;
                 let idents: Vec<ComponentIdentity> = inv.values().cloned().collect();
                 self.ask(&idents, st.epoch).await?;
                 stats.hit_keys = inv.into_keys().collect();
             }
+            self.save_state(st.epoch, &BTreeMap::new(), &save_as_of)
+                .await?;
             return Ok(stats);
         }
-        let mut hit: BTreeSet<String> = BTreeSet::new();
-        let mut changed_ids: BTreeSet<String> = BTreeSet::new();
-        let mut resynced: Vec<String> = Vec::new();
-        for (source, ch) in &resp.sources {
-            match ch {
-                SourceChanges::Unchanged => {}
-                SourceChanges::Changed {
-                    changed_keys,
-                    changed_ids: ids,
-                } => {
-                    hit.extend(
-                        self.cache
-                            .components_by_lookup_keys(changed_keys)
-                            .await
-                            .map_err(store_wire)?,
-                    );
-                    hit.extend(
-                        self.cache
-                            .components_by_vuln_ids(ids)
-                            .await
-                            .map_err(store_wire)?,
-                    );
-                    changed_ids.extend(ids.iter().cloned());
-                }
-                SourceChanges::Resync(_) => resynced.push(source.clone()),
-            }
-        }
-        let needs_inventory = !hit.is_empty() || !resynced.is_empty();
+        let changes = ChangeSummary::of(&resp.sources);
+        // cached answers hit by a changed key or id (components of the inventory or not)
+        let by_keys: Vec<String> = changes.keys.iter().cloned().collect();
+        let by_ids: Vec<String> = changes.ids.iter().cloned().collect();
+        let mut cached_hit: BTreeSet<String> = self
+            .cache
+            .components_by_lookup_keys(&by_keys)
+            .await
+            .map_err(store_wire)?
+            .into_iter()
+            .collect();
+        let with_changed_ids: BTreeSet<String> = self
+            .cache
+            .components_by_vuln_ids(&by_ids)
+            .await
+            .map_err(store_wire)?
+            .into_iter()
+            .collect();
+        cached_hit.extend(with_changed_ids.iter().cloned());
+        let resynced: Vec<String> = changes.resynced.iter().map(|(s, _)| s.clone()).collect();
+        let needs_inventory = !cached_hit.is_empty() || !resynced.is_empty();
         let inv = if needs_inventory {
             self.inventory().await?
         } else {
             BTreeMap::new()
         };
-        let mut enrichment = false;
         if !resynced.is_empty() {
             st.epoch += 1;
-            for s in &resynced {
-                match family(s) {
-                    Family::Enrichment => enrichment = true,
-                    _ => {
-                        st.resync.insert(s.clone(), st.epoch);
-                        for (k, ident) in &inv {
-                            if in_family(s, &component_lookup_keys(ident)) {
-                                hit.insert(k.clone());
-                            }
-                        }
-                    }
-                }
+            for s in changes.match_resyncs() {
+                st.resync.insert(s.to_owned(), st.epoch);
             }
         }
+        let lookup = self.lookup_keys(&inv).await?;
+        let asked: BTreeSet<String> = affected_components(&changes, &lookup, &with_changed_ids);
         // hit components not in the stored inventory: invalidated (re-asked when a scan needs them)
-        let (asked, gone): (Vec<String>, Vec<String>) =
-            hit.into_iter().partition(|k| inv.contains_key(k));
+        let gone: Vec<String> = cached_hit
+            .into_iter()
+            .filter(|k| !inv.contains_key(k))
+            .collect();
         if !gone.is_empty() {
             let invalid: Vec<ComponentResult> = gone
                 .iter()
@@ -383,7 +419,7 @@ impl NodeMatcher {
             asked.iter().filter_map(|k| inv.get(k).cloned()).collect();
         self.ask(&idents, st.epoch).await?;
         // summaries: the changed ids this node holds, or every matched id after an enrichment resync
-        let refresh: Vec<String> = if enrichment {
+        let refresh: Vec<String> = if changes.enrichment_resync() {
             let keys: Vec<String> = inv.keys().cloned().collect();
             let mut ids = BTreeSet::new();
             for ms in self
@@ -395,12 +431,11 @@ impl NodeMatcher {
             {
                 ids.extend(ms.into_iter().map(|m| m.vuln_id));
             }
-            ids.extend(changed_ids.iter().cloned());
+            ids.extend(changes.ids.iter().cloned());
             ids.into_iter().collect()
         } else {
-            let ids: Vec<String> = changed_ids.iter().cloned().collect();
             self.cache
-                .cached_summaries(&ids)
+                .cached_summaries(&by_ids)
                 .await
                 .map_err(store_wire)?
                 .into_iter()
@@ -408,16 +443,10 @@ impl NodeMatcher {
                 .collect()
         };
         stats.summaries = self.fetch_summaries(&refresh).await?;
-        self.sync_set(SYNC_EPOCH, &st.epoch.to_string()).await?;
-        self.sync_set(
-            SYNC_RESYNC,
-            &serde_json::to_string(&st.resync).unwrap_or_else(|_| "{}".into()),
-        )
-        .await?;
-        self.sync_set(SYNC_AS_OF, &save_as_of).await?;
+        self.save_state(st.epoch, &st.resync, &save_as_of).await?;
         stats.invalidated = gone.len() as u64;
-        stats.hit_keys = asked;
-        stats.changed_ids = changed_ids.into_iter().collect();
+        stats.hit_keys = asked.into_iter().collect();
+        stats.changed_ids = by_ids;
         stats.resynced = resynced;
         Ok(stats)
     }
@@ -440,11 +469,19 @@ impl NodeMatcher {
             .component_as_of(&keys)
             .await
             .map_err(store_wire)?;
+        let stored = if st.resync.is_empty() {
+            BTreeMap::new()
+        } else {
+            self.cache
+                .stored_lookup_keys(&keys)
+                .await
+                .map_err(store_wire)?
+        };
         let mut seen = BTreeSet::new();
         let stale: Vec<ComponentIdentity> = items
             .iter()
             .filter(|i| seen.insert(i.key.clone()))
-            .filter(|i| !st.fresh(as_of.get(&i.key), &i.ident))
+            .filter(|i| !st.fresh(as_of.get(&i.key), &i.ident, stored.get(&i.key)))
             .map(|i| i.ident.clone())
             .collect();
         self.ask(&stale, st.epoch).await?;
@@ -738,8 +775,10 @@ fn check_params(min_confidence: f64, view_limit: Option<u32>) -> StepResult<()> 
     if !(0.0..=1.0).contains(&min_confidence) {
         return Err(WireError::invalid_params("min_confidence: expected 0..1"));
     }
-    if view_limit.is_some_and(|l| l > 5000) {
-        return Err(WireError::invalid_params("view_limit: expected 0..5000"));
+    if view_limit.is_some_and(|l| l > MAX_VIEW_LIMIT) {
+        return Err(WireError::invalid_params(format!(
+            "view_limit: expected 0..{MAX_VIEW_LIMIT}"
+        )));
     }
     Ok(())
 }
@@ -749,19 +788,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn families_follow_the_proposal() {
-        let k = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        assert!(in_family("osv:PyPI", &k(&["pkg:pypi/requests"])));
-        assert!(!in_family("osv:PyPI", &k(&["pkg:npm/x", "prod:requests"])));
-        assert!(in_family("osv", &k(&["pkg:npm/x"])));
-        assert!(!in_family("osv", &k(&["prod:x"])));
-        assert!(in_family("debian-tracker", &k(&["pkg:debian:12/openssl"])));
-        assert!(!in_family(
-            "debian-tracker",
-            &k(&["pkg:ubuntu:22.04/openssl"])
-        ));
-        assert!(!in_family("kev", &k(&["prod:x"])));
-        assert!(in_family("nvd", &k(&["pkg:npm/x"])));
+    fn stamps_parse() {
         assert_eq!(parse_stamp("py-engine/1#3"), Some(("py-engine/1", 3)));
         assert_eq!(parse_stamp("x"), None);
     }

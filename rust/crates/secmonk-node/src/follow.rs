@@ -45,6 +45,8 @@ pub const MAX_BYTES: usize = 2 * 1024 * 1024;
 pub const MAX_PAGES: u64 = 1_000_000;
 /// Longest error / progress text kept.
 const MAX_MESSAGE: usize = 500;
+/// Restarts of a snapshot run whose upstream moved to a new version between pages (`stale` answer).
+pub const MAX_RESTARTS: u32 = 3;
 
 /// Turns an upstream batch into the operations to apply on this mirror (the host adapts
 /// `MirrorNodeStore::localize_feed_batch`). The result may exceed one batch.
@@ -149,6 +151,83 @@ fn snapshot_tables(source: &str) -> &'static [MirrorTable] {
     }
 }
 
+/// Whether a row (or a key) belongs to `source`: its `source` column is exactly the followed source.
+fn of_source(m: &JsonMap, source: &str) -> bool {
+    m.get("source").and_then(Value::as_str) == Some(source)
+}
+
+/// What an upstream page may carry for the followed `source` (upstream rows are untrusted, BP 11): a page of the
+/// wrong mode for the source is refused, and so is any operation outside
+///
+/// - **delta** (record sources): `upsert` of `vulnerability`, `alias`, `affected`, `raw_record` and the replace-unit
+///   marker `delete affected {source, vuln_id}`;
+/// - **snapshot** (kev, epss, debian-tracker): `upsert` of the source's own snapshot tables and `raw_record`;
+///
+/// with `source` = the followed source on every row, key and batch. Never `source_sync`, `source_applied`, another
+/// table, another source's rows or a delete in a snapshot. The whole page is refused before any of it is queued.
+fn check_page(source: &str, page: &FeedPage) -> Result<(), String> {
+    let own = snapshot_tables(source);
+    let snapshot = page.mode == FeedMode::Snapshot;
+    if snapshot && own.is_empty() {
+        return Err(format!(
+            "upstream answered a snapshot page for the record source {source:?}; refused"
+        ));
+    }
+    if !snapshot && !own.is_empty() {
+        return Err(format!(
+            "upstream answered a delta page for the snapshot source {source:?}; refused"
+        ));
+    }
+    for b in &page.batches {
+        if b.source != source {
+            return Err(format!(
+                "upstream page of {source:?} carries a batch of source {:?}; refused",
+                short(&b.source)
+            ));
+        }
+        for op in &b.ops {
+            let ok = match op {
+                RowOp::Upsert { table, row } => {
+                    let allowed = if snapshot {
+                        own.contains(table) || *table == MirrorTable::RawRecord
+                    } else {
+                        matches!(
+                            table,
+                            MirrorTable::Vulnerability
+                                | MirrorTable::Alias
+                                | MirrorTable::Affected
+                                | MirrorTable::RawRecord
+                        )
+                    };
+                    allowed && of_source(row, source)
+                }
+                RowOp::Delete {
+                    table: MirrorTable::Affected,
+                    key,
+                } if !snapshot => {
+                    key.len() == 2
+                        && of_source(key, source)
+                        && key.get("vuln_id").and_then(Value::as_str).is_some()
+                }
+                RowOp::Delete { .. } => false,
+            };
+            if !ok {
+                let (kind, table) = match op {
+                    RowOp::Upsert { table, .. } => ("upsert", table),
+                    RowOp::Delete { table, .. } => ("delete", table),
+                };
+                return Err(format!(
+                    "upstream {} page of {source:?} carries a {kind} of {} that a follower does not accept \
+                     (wrong table, operation or source); refused",
+                    if snapshot { "snapshot" } else { "delta" },
+                    table.as_str()
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// One text per row key, from the row (or the key map) and the table's key columns.
 fn key_text(cols: &[&str], m: &JsonMap) -> String {
     let mut s = String::new();
@@ -231,6 +310,7 @@ struct Run {
     page_limit: Option<u32>,
     page: Option<String>,
     pages: u64,
+    restarts: u32,
     phase: Phase,
     cutter: Cutter,
     out: VecDeque<RowsBatch>,
@@ -294,6 +374,23 @@ impl Run {
         };
         let page: FeedPage = match self.feed.since(req).await {
             Ok(p) => p,
+            // the upstream's snapshot moved to a new version between two pages: start again from the first page
+            // (what was queued are upserts; the deletes are computed from the new pass alone)
+            Err(e)
+                if e.code == ErrorCode::Stale
+                    && self.page.is_some()
+                    && self.restarts < MAX_RESTARTS =>
+            {
+                self.restarts += 1;
+                self.page = None;
+                self.seen.clear();
+                self.first_version = None;
+                self.progress(format!(
+                    "{}: the upstream changed version while paging; restarting ({}/{MAX_RESTARTS})",
+                    self.source, self.restarts
+                ));
+                return Ok(());
+            }
             Err(e) => {
                 self.fail(format!("upstream feed: {}", e.error));
                 return Ok(());
@@ -311,35 +408,47 @@ impl Run {
             self.fail("upstream repeated its page cursor; stopping".into());
             return Ok(());
         }
+        if let Err(m) = check_page(&self.source, &page) {
+            self.fail(m);
+            return Ok(());
+        }
         if let Ok(mut m) = self.importers.lock() {
             m.insert(self.source.clone(), page.version.importer.clone());
         }
+        let FeedPage {
+            version,
+            mode,
+            batches,
+            next_page,
+            ..
+        } = page;
         if self.first_version.is_none() {
-            self.first_version = Some(page.version.clone());
+            self.first_version = Some(version);
         }
-        let snapshot = page.mode == FeedMode::Snapshot;
+        let snapshot = mode == FeedMode::Snapshot;
         self.snapshot |= snapshot;
-        for batch in &page.batches {
+        let n_batches = batches.len();
+        // batches and their operations are consumed, not copied
+        for batch in batches {
             let ops = if snapshot {
-                batch.ops.clone()
+                batch.ops
             } else {
-                self.localizer.localize(batch).await?
+                self.localizer.localize(&batch).await?
             };
             for op in ops {
-                if snapshot && !self.track(&op) {
-                    return Ok(());
+                if snapshot {
+                    self.track(&op);
                 }
                 self.push_op(op);
             }
         }
         self.progress(format!(
-            "{}: page {} ({} batches, {})",
+            "{}: page {} ({n_batches} batches, {})",
             self.source,
             self.pages,
-            page.batches.len(),
             if snapshot { "snapshot" } else { "delta" }
         ));
-        match page.next_page {
+        match next_page {
             Some(next) => self.page = Some(next),
             None => {
                 self.phase = if self.snapshot {
@@ -352,15 +461,9 @@ impl Run {
         Ok(())
     }
 
-    /// Remember the key of a snapshot upsert; `false` (the run failed) for a row that cannot be diffed.
-    fn track(&mut self, op: &RowOp) -> bool {
+    /// Remember the key of a snapshot upsert (the page was checked: only keyed snapshot tables and `raw_record`).
+    fn track(&mut self, op: &RowOp) {
         if let RowOp::Upsert { table, row } = op {
-            if *table == MirrorTable::Affected {
-                self.fail(
-                    "upstream snapshot page carries affected rows, which have no key to diff; refused".into(),
-                );
-                return false;
-            }
             let cols = key_columns(*table);
             if !cols.is_empty() {
                 self.seen
@@ -369,7 +472,6 @@ impl Run {
                     .insert(key_text(cols, row));
             }
         }
-        true
     }
 
     /// The deletes of a snapshot: stored keys the snapshot did not have (after the guard).
@@ -578,6 +680,7 @@ impl Source for FeedSource {
             page_limit: self.page_limit,
             page: None,
             pages: 0,
+            restarts: 0,
             phase: Phase::Pages,
             out: VecDeque::new(),
             first_version: None,

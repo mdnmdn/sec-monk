@@ -7,13 +7,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use secmonk_api::{
-    HostPolicy, Mount, Router, RouterOptions, Server, ServerOptions, StaticDir, TlsFiles,
-    check_exposure,
+    CancellationToken, HostPolicy, Mount, Router, RouterOptions, Server, ServerOptions, StaticDir,
+    TlsFiles, TrustedProxies, check_exposure, serve_until,
 };
 use secmonk_auth::{
     Authenticator, JwtSigner, KeyStore, load_or_create_secret, secret_from_env_value,
 };
-use secmonk_config::{AuthMode, Config, is_loopback_listen};
+use secmonk_config::{AuthMode, Config, is_loopback_addr};
 use secmonk_engine::EngineService;
 
 use crate::Service;
@@ -25,8 +25,8 @@ pub const DEFAULT_LISTEN: &str = "127.0.0.1:8765";
 /// `[auth] jwt_secret_file`.
 pub const JWT_SECRET_ENV: &str = "SECMONK_JWT_SECRET";
 
-/// Builds the extra API mounts (the node API) once the [`Service`] exists.
-pub type MountFactory = Box<dyn Fn(&Service) -> Vec<Arc<dyn Mount>> + Send + Sync>;
+/// Builds the extra API mounts (the node API) once the [`Service`] exists; an error stops the server from starting.
+pub type MountFactory = Box<dyn Fn(&Service) -> Result<Vec<Arc<dyn Mount>>, String> + Send + Sync>;
 
 /// What the caller adds to the server mode.
 #[derive(Default)]
@@ -63,7 +63,7 @@ impl ServeOptions {
 
 /// The mount factory of the server mode: the `/node/v1` mount when `[node] serve` is not empty.
 pub fn node_mount_factory() -> MountFactory {
-    Box::new(|service: &Service| service.node_mount().into_iter().collect())
+    Box::new(|service: &Service| Ok(service.node_mount()?.into_iter().collect()))
 }
 
 /// Why the server cannot start: a usage error (exit 2) or a runtime error (exit 1).
@@ -132,12 +132,13 @@ pub fn parse_listen(value: &str) -> Result<SocketAddr, String> {
     Ok(addr)
 }
 
-/// Whether authentication is on: `required`, or `auto` on a non-loopback address. (`off` on a non-loopback address
-/// is refused when the configuration loads.)
+/// Whether authentication is on: `required`; or `auto` on a non-loopback address, or on loopback when `[node] serve`
+/// is not empty (the node API is never served without authentication). (`off` on a non-loopback address, or
+/// together with `[node] serve`, is refused when the configuration loads.)
 pub fn auth_required(config: &Config, listen: &SocketAddr) -> bool {
     match config.server_auth {
         AuthMode::Required => true,
-        AuthMode::Auto => !is_loopback_listen(&listen.to_string()),
+        AuthMode::Auto => !is_loopback_addr(listen) || !config.node_serve.is_empty(),
         AuthMode::Off => false,
     }
 }
@@ -154,6 +155,9 @@ pub fn build_server(
     let runtime = |m: String| ServeError::Runtime(m);
     let listen = parse_listen(&configured_listen(config)).map_err(ServeError::Usage)?;
     let auth_on = auth_required(config, &listen);
+    if auth_on && config.server_auth == AuthMode::Auto && is_loopback_addr(&listen) {
+        tracing::info!("authentication is on: [node] serve is not empty (server.auth = \"auto\")");
+    }
     let tls = match (&config.server_tls_cert, &config.server_tls_key) {
         (Some(cert), Some(key)) => Some(TlsFiles {
             cert: cert.clone(),
@@ -183,6 +187,9 @@ pub fn build_server(
         },
     ));
     let mut server = Server::new(router);
+    let proxies = TrustedProxies::parse(&config.server_trusted_proxies)
+        .map_err(|e| ServeError::Usage(format!("server.trusted_proxies: {e}")))?;
+    server = server.with_trusted_proxies(proxies);
     let mut active_keys = 0;
     if auth_on {
         crate::apikeys::ensure_auth_dirs(config).map_err(runtime)?;
@@ -232,27 +239,21 @@ async fn shutdown_signal() {
 
 /// Run the server until Ctrl-C / SIGTERM. Returns the exit code (0 ok, 1 runtime error, 2 usage error).
 pub async fn serve(prog: &str, config: Arc<Config>, opts: ServeOptions) -> i32 {
-    // the node roles are validated before anything starts (exit 2), and the node id file is created now so a
-    // failure is reported here
-    match crate::node::NodePlan::from_config(&config) {
-        Ok(plan) if !plan.serve.is_empty() => {
-            if let Err(e) = crate::node::node_id(&config) {
-                eprintln!("{prog}: node id: {e}");
-                return 1;
-            }
-        }
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("{prog}: {e}");
-            return 2;
-        }
-    }
     let service = Service::with_actions(config.clone(), config.server_allow_actions);
-    let mounts = opts
-        .mount_factory
-        .as_ref()
-        .map(|f| f(&service))
-        .unwrap_or_default();
+    // the node roles are validated before anything starts (exit 2); the node id file is created now (in the
+    // mount factory) so a failure is reported here, never swallowed
+    if let Err(e) = service.node_plan() {
+        eprintln!("{prog}: {e}");
+        return 2;
+    }
+    let mounts = match opts.mount_factory.as_ref().map(|f| f(&service)) {
+        None => Vec::new(),
+        Some(Ok(m)) => m,
+        Some(Err(e)) => {
+            eprintln!("{prog}: {e}");
+            return 1;
+        }
+    };
     let prepared = match build_server(
         &config,
         service.engine(),
@@ -288,29 +289,42 @@ pub async fn serve(prog: &str, config: Arc<Config>, opts: ServeOptions) -> i32 {
     );
     let starter = tokio::spawn(service.clone().run());
     let listen = prepared.listen;
-    let server = secmonk_api::serve(
+    let stop = CancellationToken::new();
+    let server = serve_until(
         prepared.server,
         ServerOptions {
             tls: prepared.tls,
-            ..ServerOptions::new(listen)
+            ..ServerOptions::server_mode(listen)
         },
         |a| eprintln!("listening {scheme}://{a}"),
+        stop.clone(),
     );
+    tokio::pin!(server);
+    let failed = |prog: &str, e: std::io::Error| {
+        eprintln!("{prog}: cannot serve on {listen}: {e}");
+        1
+    };
     let code = tokio::select! {
-        r = server => match r {
+        r = &mut server => match r {
             Ok(()) => 0,
-            Err(e) => {
-                eprintln!("{prog}: cannot serve on {listen}: {e}");
-                1
-            }
+            Err(e) => failed(prog, e),
         },
         () = shutdown_signal() => {
             tracing::info!("signal received: stopping");
-            0
+            // stop accepting, let the requests in flight finish (bounded), then stop the host
+            stop.cancel();
+            match server.await {
+                Ok(()) => 0,
+                Err(e) => failed(prog, e),
+            }
         }
     };
     service.shutdown().await;
-    let _ = starter.await;
+    if let Err(e) = starter.await {
+        tracing::error!("the startup task ended abnormally: {e}");
+        eprintln!("{prog}: the startup task ended abnormally: {e}");
+        return if code == 0 { 1 } else { code };
+    }
     code
 }
 
@@ -407,6 +421,26 @@ mod tests {
         assert_eq!(configured_listen(&c), "127.0.0.1:9");
         let c = temp_config(d.path(), &["server.auth=\"required\""]);
         assert!(auth_required(&c, &a));
+        // a serving node forces authentication on loopback; "off" with it is a config error
+        let c = temp_config(d.path(), &["node.serve=[\"feed\"]"]);
+        assert!(auth_required(&c, &a));
+        let off = secmonk_config::parse(
+            "[server]\nauth = \"off\"\n[node]\nserve = [\"feed\"]\n",
+            std::path::Path::new("x.toml"),
+        )
+        .unwrap();
+        let e = secmonk_config::resolve(
+            off,
+            secmonk_config::ConfigOrigin::Flag,
+            None,
+            &secmonk_config::LoadOptions {
+                cwd: d.path().into(),
+                user_data_root: Some(d.path().join("data")),
+                ..Default::default()
+            },
+        )
+        .unwrap_err();
+        assert!(e.to_string().contains("node.serve"), "{e}");
     }
 
     #[test]

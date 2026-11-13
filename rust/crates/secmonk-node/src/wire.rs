@@ -1,7 +1,10 @@
-//! What the server binding and the client share: the wire code <-> HTTP status table and the query-string helpers.
+//! What the server binding and the client share: the wire code <-> HTTP status table ([`status_of`],
+//! [`wire_error_of_status`]: `http` only) and the query-string helpers. [`api_error_of_wire`] (an `ApiError`
+//! body) exists with the `server` feature only.
 
 use http::StatusCode;
 use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
+#[cfg(feature = "server")]
 use secmonk_api::ApiError;
 use secmonk_traits::{ErrorCode, WireError};
 
@@ -38,6 +41,7 @@ pub fn status_of(code: &ErrorCode) -> StatusCode {
 /// The body of a failed call. The wire `code` always travels (the client maps it back); the text of an `internal`
 /// (or unknown-code) error is replaced by a generic one, the original goes to the log: internals are not for the
 /// network.
+#[cfg(feature = "server")]
 pub fn api_error_of_wire(e: &WireError) -> ApiError {
     let status = status_of(&e.code);
     let hidden = status == StatusCode::INTERNAL_SERVER_ERROR;
@@ -147,6 +151,7 @@ mod tests {
         assert!(parse_query(None).is_empty());
     }
 
+    #[cfg(feature = "server")]
     #[test]
     fn status_mapping_round_trips_the_wire_code() {
         for k in ErrorCode::KNOWN {

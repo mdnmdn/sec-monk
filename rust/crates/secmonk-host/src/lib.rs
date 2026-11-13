@@ -25,7 +25,7 @@ pub mod logging;
 pub mod startup;
 
 #[cfg(feature = "engine")]
-pub mod apikeys;
+pub(crate) mod apikeys;
 #[cfg(feature = "engine")]
 pub mod cli;
 #[cfg(feature = "engine")]
@@ -37,7 +37,7 @@ pub mod headless;
 #[cfg(feature = "engine")]
 pub mod node;
 #[cfg(feature = "engine")]
-pub mod serve;
+pub(crate) mod serve;
 #[cfg(feature = "engine")]
 pub mod service;
 #[cfg(all(test, feature = "engine"))]

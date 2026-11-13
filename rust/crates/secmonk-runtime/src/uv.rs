@@ -144,12 +144,12 @@ struct InstallMarker {
 /// The pinned-uv runtime.
 #[derive(Debug, Clone)]
 pub struct UvRuntime {
-    settings: UvSettings,
-    host_env: fn(&str) -> Option<OsString>,
+    pub(crate) settings: UvSettings,
+    pub(crate) host_env: fn(&str) -> Option<OsString>,
     /// env -> project, recorded by `ensure_env` (pinned mode re-verifies the project before every start).
     projects: Arc<Mutex<BTreeMap<String, PathBuf>>>,
     /// The uv chosen by `ensure_uv`.
-    in_use: Arc<Mutex<Option<UvInUse>>>,
+    pub(crate) in_use: Arc<Mutex<Option<UvInUse>>>,
 }
 
 fn real_env(k: &str) -> Option<OsString> {
@@ -207,90 +207,13 @@ impl UvRuntime {
             .clone()
     }
 
-    fn record(&self, path: &Path, version: &str, source: UvSource) {
+    pub(crate) fn record(&self, path: &Path, version: &str, source: UvSource) {
         tracing::info!(uv = %path.display(), version, source = ?source, "uv in use");
         *self.in_use.lock().unwrap_or_else(|p| p.into_inner()) = Some(UvInUse {
             path: path.to_path_buf(),
             version: version.to_string(),
             source,
         });
-    }
-
-    /// `<uv> --version` must report the configured version (unless `any_version`). Returns the version.
-    async fn check_external(&self, uv: &Path) -> RuntimeResult<String> {
-        if !uv.is_file() {
-            return Err(RuntimeError::io(
-                uv,
-                std::io::Error::new(std::io::ErrorKind::NotFound, "no such uv binary"),
-            ));
-        }
-        let out = tokio::time::timeout(
-            Duration::from_secs(30),
-            tokio::process::Command::new(uv)
-                .arg("--version")
-                .env_clear()
-                .env("UV_NO_CONFIG", "1")
-                .stdin(Stdio::null())
-                .kill_on_drop(true)
-                .output(),
-        )
-        .await
-        .map_err(|_| RuntimeError::Step {
-            step: "uv --version".into(),
-            code: None,
-            stderr: "timed out".into(),
-        })?
-        .map_err(|e| RuntimeError::io(uv, e))?;
-        if !out.status.success() {
-            return Err(RuntimeError::Step {
-                step: "uv --version".into(),
-                code: out.status.code(),
-                stderr: secmonk_safeio::scrub_text(&String::from_utf8_lossy(&out.stderr)),
-            });
-        }
-        let found = parse_uv_version(&String::from_utf8_lossy(&out.stdout));
-        let expected = &self.settings.uv_version;
-        if !self.settings.uv_any_version && found.as_deref() != Some(expected.as_str()) {
-            return Err(RuntimeError::UvVersion {
-                path: uv.to_path_buf(),
-                found: found.unwrap_or_else(|| "unknown".into()),
-                expected: expected.clone(),
-            });
-        }
-        Ok(found.unwrap_or_else(|| "unknown".into()))
-    }
-
-    /// `[uv] path`: the configured binary, or `uv` on `PATH` (`auto`, falling back to the managed download when
-    /// absent or of another version). `Ok(None)`: use the managed download.
-    async fn external_uv(&self) -> RuntimeResult<Option<PathBuf>> {
-        match &self.settings.uv_path {
-            None => Ok(None),
-            Some(UvPath::File(f)) => {
-                let v = self.check_external(f).await?;
-                self.record(f, &v, UvSource::Configured);
-                Ok(Some(f.clone()))
-            }
-            Some(UvPath::Auto) => {
-                let path = (self.host_env)("PATH");
-                let Some(f) = path
-                    .as_deref()
-                    .and_then(|p| find_on_path(&exe_name("uv"), p))
-                else {
-                    tracing::info!("uv.path = auto: no uv on PATH, using the managed download");
-                    return Ok(None);
-                };
-                match self.check_external(&f).await {
-                    Ok(v) => {
-                        self.record(&f, &v, UvSource::Path);
-                        Ok(Some(f))
-                    }
-                    Err(e) => {
-                        tracing::info!(uv = %f.display(), error = %e, "uv on PATH not usable, using the managed download");
-                        Ok(None)
-                    }
-                }
-            }
-        }
     }
 
     /// The interpreter of venv `env`.
@@ -455,43 +378,12 @@ impl UvRuntime {
     }
 }
 
-fn exe_name(base: &str) -> String {
+pub(crate) fn exe_name(base: &str) -> String {
     if cfg!(windows) {
         format!("{base}.exe")
     } else {
         base.to_string()
     }
-}
-
-/// `uv 0.13.7 (abc123 2026-11-01)` -> `0.13.7`.
-fn parse_uv_version(out: &str) -> Option<String> {
-    let mut it = out.split_whitespace();
-    (it.next()? == "uv").then(|| it.next().map(str::to_string))?
-}
-
-/// The first executable regular file called `name` in the directories of `path` (a `PATH` value). Relative
-/// directories are skipped: a `PATH` entry that depends on the working directory is not trusted.
-pub fn find_on_path(name: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
-    std::env::split_paths(path)
-        .filter(|d| d.is_absolute())
-        .map(|d| d.join(name))
-        .find(|f| is_executable(f))
-}
-
-fn is_executable(f: &Path) -> bool {
-    let Ok(md) = std::fs::metadata(f) else {
-        return false;
-    };
-    if !md.is_file() {
-        return false;
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        md.permissions().mode() & 0o111 != 0
-    }
-    #[cfg(not(unix))]
-    true
 }
 
 /// Whether a module venv already records `python_version` with an interpreter that still exists: the interpreter
@@ -1109,29 +1001,46 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[test]
-    fn path_lookup_skips_relative_and_non_executable_entries() {
+    #[tokio::test]
+    async fn the_first_successful_external_check_is_cached() {
         let d = tempfile::tempdir().unwrap();
-        let (a, b) = (d.path().join("a"), d.path().join("b"));
-        std::fs::create_dir_all(&a).unwrap();
-        std::fs::write(a.join("uv"), b"#!/bin/sh\n").unwrap(); // not executable
-        let good = fake_uv(&b, "1.0.0");
-        let joined =
-            std::env::join_paths([PathBuf::from("relative/dir"), a.clone(), b.clone()]).unwrap();
-        assert_eq!(find_on_path("uv", &joined), Some(good));
-        assert_eq!(find_on_path("uvx", &joined), None);
-        assert_eq!(find_on_path("uv", std::ffi::OsStr::new("")), None);
+        let log = d.path().join("calls.log");
+        let uv = script(
+            &d.path().join("bin"),
+            "uv",
+            &format!("echo call >> {}\necho 'uv 0.0.0-test (x)'", log.display()),
+        );
+        let mut s = settings(&d.path().join("data"), None, None);
+        s.uv_path = Some(UvPath::File(uv.clone()));
+        let rt = UvRuntime::new(s);
+        assert_eq!(rt.ensure_uv().await.unwrap(), uv);
+        assert_eq!(rt.ensure_uv().await.unwrap(), uv);
+        assert_eq!(std::fs::read_to_string(&log).unwrap().lines().count(), 1);
     }
 
-    #[test]
-    fn uv_version_output_is_parsed() {
-        assert_eq!(
-            parse_uv_version("uv 0.13.7 (abc 2026-11-01)\n").as_deref(),
-            Some("0.13.7")
-        );
-        assert_eq!(parse_uv_version("uv 0.13.7").as_deref(), Some("0.13.7"));
-        assert_eq!(parse_uv_version("pip 24.0"), None);
-        assert_eq!(parse_uv_version(""), None);
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_group_writable_configured_uv_is_refused_and_a_path_one_is_skipped() {
+        use std::os::unix::fs::PermissionsExt;
+        let d = tempfile::tempdir().unwrap();
+        let bin = d.path().join("bin");
+        let uv = fake_uv(&bin, "0.0.0-test");
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o775)).unwrap();
+        let mut s = settings(&d.path().join("data"), None, None);
+        s.uv_path = Some(UvPath::File(uv));
+        assert!(matches!(
+            UvRuntime::new(s).ensure_uv().await,
+            Err(RuntimeError::UntrustedUv { .. })
+        ));
+        // `auto` falls back to the managed download instead
+        let a = fake_archive(d.path());
+        let sha = sha256_file(&a).unwrap();
+        TEST_PATH.with(|p| *p.borrow_mut() = Some(bin.into_os_string()));
+        let mut s = settings(&d.path().join("data2"), Some(a), Some(sha));
+        s.uv_path = Some(UvPath::Auto);
+        let rt = UvRuntime::with_host_env(s, path_env);
+        rt.ensure_uv().await.unwrap();
+        assert_eq!(rt.uv_in_use().unwrap().source, UvSource::Managed);
     }
 
     #[cfg(unix)]
@@ -1164,7 +1073,12 @@ mod tests {
         fake_install(&rt, &p, "secmonk-modules", TrustMode::Dev);
         let info = rt.ensure().await.unwrap();
         assert_eq!(info.python_version, "3.13");
-        assert!(!std::fs::read_to_string(&log).unwrap().contains("python"));
+        // (the external uv check is cached: possibly no call at all, so no log file)
+        assert!(
+            !std::fs::read_to_string(&log)
+                .unwrap_or_default()
+                .contains("python")
+        );
         // another python version in the marker does not count
         let mut s2 = rt.settings().clone();
         s2.python_version = "3.12".into();

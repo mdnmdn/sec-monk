@@ -452,35 +452,8 @@ impl MirrorStore for SqliteStore {
         source: &str,
         ids: &[String],
     ) -> StoreResult<Vec<Map<String, Value>>> {
-        let id = table
-            .id_column()
-            .ok_or_else(|| StoreError::Invalid(format!("{}: no id column", table.as_str())))?;
-        if ids.len() > crate::MAX_ROWS_IDS {
-            return Err(StoreError::Invalid(format!(
-                "rows_by_id: {} ids (at most {})",
-                ids.len(),
-                crate::MAX_ROWS_IDS
-            )));
-        }
-        if ids.is_empty() {
-            return Ok(Vec::new());
-        }
-        let t = spec(table);
-        // table and column names come from the closed enum and the allowlist, never from input
-        let marks = vec!["?"; ids.len()].join(", ");
-        let sql = format!(
-            "SELECT rowid, {} FROM {} WHERE source = ? AND \"{id}\" IN ({marks}) ORDER BY rowid",
-            select_list(&t),
-            table.as_str()
-        );
-        let mut q = sqlx::query(sqlx::AssertSqlSafe(sql)).bind(source);
-        for i in ids {
-            q = q.bind(i);
-        }
-        let rows = q.fetch_all(&self.mirror.read).await?;
-        rows.iter()
-            .map(|r| decode_row(&t, r).map(|(_, m)| m))
-            .collect()
+        let mut conn = self.mirror.read.acquire().await?;
+        rows_by_id_on(&mut conn, table, source, ids).await
     }
 
     async fn rows_page(
@@ -490,31 +463,8 @@ impl MirrorStore for SqliteStore {
         after: Option<u64>,
         limit: usize,
     ) -> StoreResult<(Vec<Map<String, Value>>, Option<u64>)> {
-        if limit == 0 || limit > crate::MAX_ROWS_PAGE {
-            return Err(StoreError::Invalid(format!(
-                "rows_page: limit {limit} (1..={})",
-                crate::MAX_ROWS_PAGE
-            )));
-        }
-        let t = spec(table);
-        let sql = rows_page_sql(table);
-        let after = i64::try_from(after.unwrap_or(0))
-            .map_err(|_| StoreError::Invalid("rows_page: cursor out of range".into()))?;
-        let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
-            .bind(source)
-            .bind(after)
-            .bind(i64::try_from(limit).unwrap_or(i64::MAX))
-            .fetch_all(&self.mirror.read)
-            .await?;
-        let mut out = Vec::with_capacity(rows.len());
-        let mut last = None;
-        for r in &rows {
-            let (rowid, m) = decode_row(&t, r)?;
-            last = Some(rowid);
-            out.push(m);
-        }
-        let next = if out.len() == limit { last } else { None };
-        Ok((out, next))
+        let mut conn = self.mirror.read.acquire().await?;
+        rows_page_on(&mut conn, table, source, after, limit).await
     }
 
     async fn is_initialized(&self) -> StoreResult<bool> {
@@ -530,6 +480,79 @@ impl MirrorStore for SqliteStore {
             .await?;
         Ok(())
     }
+}
+
+/// `MirrorStore::rows_by_id` on one connection (the node feed reads a page inside one read transaction).
+pub(super) async fn rows_by_id_on(
+    conn: &mut sqlx::SqliteConnection,
+    table: MirrorTable,
+    source: &str,
+    ids: &[String],
+) -> StoreResult<Vec<Map<String, Value>>> {
+    let id = table
+        .id_column()
+        .ok_or_else(|| StoreError::Invalid(format!("{}: no id column", table.as_str())))?;
+    if ids.len() > crate::MAX_ROWS_IDS {
+        return Err(StoreError::Invalid(format!(
+            "rows_by_id: {} ids (at most {})",
+            ids.len(),
+            crate::MAX_ROWS_IDS
+        )));
+    }
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let t = spec(table);
+    // table and column names come from the closed enum and the allowlist, never from input
+    let marks = vec!["?"; ids.len()].join(", ");
+    let sql = format!(
+        "SELECT rowid, {} FROM {} WHERE source = ? AND \"{id}\" IN ({marks}) ORDER BY rowid",
+        select_list(&t),
+        table.as_str()
+    );
+    let mut q = sqlx::query(sqlx::AssertSqlSafe(sql)).bind(source);
+    for i in ids {
+        q = q.bind(i);
+    }
+    let rows = q.fetch_all(&mut *conn).await?;
+    rows.iter()
+        .map(|r| decode_row(&t, r).map(|(_, m)| m))
+        .collect()
+}
+
+/// `MirrorStore::rows_page` on one connection.
+pub(super) async fn rows_page_on(
+    conn: &mut sqlx::SqliteConnection,
+    table: MirrorTable,
+    source: &str,
+    after: Option<u64>,
+    limit: usize,
+) -> StoreResult<(Vec<Map<String, Value>>, Option<u64>)> {
+    if limit == 0 || limit > crate::MAX_ROWS_PAGE {
+        return Err(StoreError::Invalid(format!(
+            "rows_page: limit {limit} (1..={})",
+            crate::MAX_ROWS_PAGE
+        )));
+    }
+    let t = spec(table);
+    let sql = rows_page_sql(table);
+    let after = i64::try_from(after.unwrap_or(0))
+        .map_err(|_| StoreError::Invalid("rows_page: cursor out of range".into()))?;
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
+        .bind(source)
+        .bind(after)
+        .bind(i64::try_from(limit).unwrap_or(i64::MAX))
+        .fetch_all(&mut *conn)
+        .await?;
+    let mut out = Vec::with_capacity(rows.len());
+    let mut last = None;
+    for r in &rows {
+        let (rowid, m) = decode_row(&t, r)?;
+        last = Some(rowid);
+        out.push(m);
+    }
+    let next = if out.len() == limit { last } else { None };
+    Ok((out, next))
 }
 
 /// The statement of `rows_page`: a scan of the rowid range after the cursor, the source filtered per row. `+source`

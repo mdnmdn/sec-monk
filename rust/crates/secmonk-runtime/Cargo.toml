@@ -34,3 +34,7 @@ dirs.workspace = true
 
 [lints]
 workspace = true
+
+[target.'cfg(unix)'.dependencies]
+# safe getuid for the trusted-location check of an external uv
+rustix.workspace = true

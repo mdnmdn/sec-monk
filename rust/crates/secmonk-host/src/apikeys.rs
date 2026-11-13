@@ -1,7 +1,6 @@
 //! The `apikey` commands over `Config.auth_keys_file`: create, list, revoke. They touch the keys file only (no
 //! engine, no uv, no Python); a running server picks changes up on its next request.
 
-use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use secmonk_auth::{KeyRecord, KeyStore, Scopes};
@@ -20,12 +19,38 @@ pub(crate) fn ensure_auth_dirs(config: &Config) -> Result<(), String> {
     Ok(())
 }
 
-fn open(config: &Config) -> Result<KeyStore, String> {
+/// Run `f` on the loaded store while holding an exclusive lock on `<keys_file>.lock`, so concurrent CLI
+/// invocations cannot lose each other's updates (load, modify, save is one critical section).
+fn locked<T>(
+    config: &Config,
+    f: impl FnOnce(&mut KeyStore) -> Result<T, String>,
+) -> Result<T, String> {
     ensure_auth_dirs(config)?;
-    KeyStore::load(&config.auth_keys_file).map_err(|e| e.to_string())
+    let mut lock_name = config.auth_keys_file.clone().into_os_string();
+    lock_name.push(".lock");
+    let lock_path = std::path::PathBuf::from(lock_name);
+    let mut open = std::fs::OpenOptions::new();
+    open.read(true).write(true).create(true).truncate(false);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        open.mode(0o600);
+    }
+    let lock = open
+        .open(&lock_path)
+        .map_err(|e| format!("{}: {e}", lock_path.display()))?;
+    lock.lock()
+        .map_err(|e| format!("lock {}: {e}", lock_path.display()))?;
+    let mut store = KeyStore::load(&config.auth_keys_file).map_err(|e| e.to_string())?;
+    let out = f(&mut store);
+    let _ = lock.unlock();
+    out
 }
 
-/// Create a key, save the file (0600) and return the plaintext key, to be shown once.
+/// The longest key lifetime accepted (100 years), in days.
+pub const MAX_EXPIRES_DAYS: u64 = 36_500;
+
+/// Create a key, save the file (0600) and return the plaintext key, to be shown once. `expires_days` is 1..=36500.
 pub fn create(
     config: &Config,
     name: &str,
@@ -33,33 +58,41 @@ pub fn create(
     expires_days: Option<u64>,
 ) -> Result<String, String> {
     let scopes = Scopes::parse(scopes.iter().map(String::as_str)).map_err(|e| e.to_string())?;
-    let expires =
-        expires_days.map(|d| SystemTime::now() + Duration::from_secs(d.saturating_mul(86_400)));
-    let mut store = open(config)?;
-    let key = store
-        .create(name, scopes, expires)
-        .map_err(|e| e.to_string())?;
-    store.save().map_err(|e| e.to_string())?;
-    Ok(key)
+    let expires = match expires_days {
+        None => None,
+        Some(d) if (1..=MAX_EXPIRES_DAYS).contains(&d) => Some(
+            SystemTime::now()
+                .checked_add(Duration::from_secs(d * 86_400))
+                .ok_or("the expiry is out of range")?,
+        ),
+        Some(d) => {
+            return Err(format!(
+                "expires-days {d} is out of range (1..={MAX_EXPIRES_DAYS})"
+            ));
+        }
+    };
+    locked(config, |store| {
+        let key = store
+            .create(name, scopes, expires)
+            .map_err(|e| e.to_string())?;
+        store.save().map_err(|e| e.to_string())?;
+        Ok(key)
+    })
 }
 
 /// The key table: id, name, scopes, created, expires, revoked. Never a key or a hash.
 pub fn list(config: &Config) -> Result<String, String> {
-    let store = open(config)?;
-    Ok(format_table(store.list()))
+    let store = locked(config, |s| Ok(s.list().to_vec()))?;
+    Ok(format_table(&store))
 }
 
 /// Revoke by id or name and save; returns the id.
 pub fn revoke(config: &Config, id_or_name: &str) -> Result<String, String> {
-    let mut store = open(config)?;
-    let id = store.revoke(id_or_name).map_err(|e| e.to_string())?;
-    store.save().map_err(|e| e.to_string())?;
-    Ok(id)
-}
-
-/// The path of the keys file (for messages).
-pub fn keys_path(config: &Config) -> &Path {
-    &config.auth_keys_file
+    locked(config, |store| {
+        let id = store.revoke(id_or_name).map_err(|e| e.to_string())?;
+        store.save().map_err(|e| e.to_string())?;
+        Ok(id)
+    })
 }
 
 /// Render the records as aligned columns (one line per key, a header first; a note when there is none).
@@ -128,7 +161,7 @@ mod tests {
             table.contains("admin") && table.contains("match,ui:read")
                 || table.contains("ui:read,match")
         );
-        let hash = std::fs::read_to_string(keys_path(&config)).unwrap();
+        let hash = std::fs::read_to_string(&config.auth_keys_file).unwrap();
         for secret in [&key, &key2] {
             assert!(!table.contains(secret.as_str()));
             let tail = secret.rsplit('_').next().unwrap();
@@ -151,10 +184,40 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
-            assert_eq!(mode(keys_path(&config)), 0o600);
+            let mode =
+                |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode(&config.auth_keys_file), 0o600);
             assert_eq!(mode(&config.layout().auth()), 0o700);
         }
+    }
+
+    #[test]
+    fn expires_days_is_validated() {
+        let d = tempfile::tempdir().unwrap();
+        let config = temp_config(d.path(), &[]);
+        for bad in [0, 36_501, u64::MAX] {
+            assert!(create(&config, "k", &["match".into()], Some(bad)).is_err());
+        }
+        assert!(create(&config, "k", &["match".into()], Some(36_500)).is_ok());
+    }
+
+    #[test]
+    fn concurrent_creates_lose_no_key() {
+        let d = tempfile::tempdir().unwrap();
+        let config = std::sync::Arc::new(temp_config(d.path(), &[]));
+        let hs: Vec<_> = (0..8)
+            .map(|i| {
+                let c = config.clone();
+                std::thread::spawn(move || {
+                    create(&c, &format!("k{i}"), &["match".into()], None).unwrap()
+                })
+            })
+            .collect();
+        for h in hs {
+            h.join().unwrap();
+        }
+        let table = list(&config).unwrap();
+        assert_eq!(table.lines().count(), 9, "{table}");
     }
 
     #[test]

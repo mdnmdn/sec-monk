@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Category, Component, JsonMap, RowsBatch};
 
-/// Version of the matcher (the engine's matching rules and version comparison). **A change invalidates every
-/// match a client stored**, even when no vulnerability data changed (proposal §3.2 rule 6): a client that holds
-/// answers computed under another matcher version re-sends all its components. Bump it with any change of the
-/// engine that can change a match set (a fix in version comparison, a new rule, a new matching mode).
-pub const MATCHER_VERSION: &str = "py-engine/1";
+// The matcher version (the engine's matching rules, version comparison and lookup keys) is not a constant of the
+// model: it is computed by the build that serves it (`secmonk_engine::node::matcher_version`,
+// `py-engine/<secmonk version>+keys/<KEYS_VERSION>`). **A change invalidates every match a client stored**, even
+// when no vulnerability data changed (proposal §3.2 rule 6): a client that holds answers computed under another
+// matcher version re-sends all its components.
 
 /// Most components in one `match.components` request.
 pub const MAX_COMPONENTS: usize = 1000;
@@ -302,7 +302,7 @@ pub fn parse_since_token(token: &str) -> Option<(&str, &str)> {
 /// The versions of a node: its matcher and its sources.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Versions {
-    /// [`MATCHER_VERSION`] of the node.
+    /// The matcher version of the node (`secmonk_engine::node::matcher_version`).
     pub matcher: String,
     /// Per source name.
     pub sources: BTreeMap<String, SourceVersion>,
@@ -535,7 +535,7 @@ pub struct FeedStatus {
     /// The serving node, if it has an id.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_id: Option<String>,
-    /// [`MATCHER_VERSION`] of the node.
+    /// The matcher version of the node (`secmonk_engine::node::matcher_version`).
     pub matcher: String,
     /// Per source, sorted by name.
     pub sources: Vec<SourceVersion>,
@@ -596,7 +596,7 @@ pub struct NodeInfo {
     pub node_id: String,
     /// Roles it serves (`feed`, `match`, `vulninfo`).
     pub roles: Vec<String>,
-    /// [`MATCHER_VERSION`] of the node.
+    /// The matcher version of the node (`secmonk_engine::node::matcher_version`).
     pub matcher: String,
     /// Whether it has a mirror.
     pub mirror: bool,
@@ -712,7 +712,7 @@ mod tests {
             status: Some("ok".into()),
         };
         let v = Versions::new(
-            MATCHER_VERSION,
+            "py-engine/test",
             [sv("nvd", Some("2026-01-01T00:00:00Z")), sv("osv", None)],
         );
         let since = v.since();

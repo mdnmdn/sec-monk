@@ -13,6 +13,16 @@ related: [plans/node-server-design.md, decisions/0007-serve-current-ui-custom-pr
 
 # ADR-0014 — Server mode, auth, UI transport
 
+**Status note 2026-11-13** (review hardening; the decision stands): a `Bearer` token is a local session only when its
+`iss` is `secmonk`, other `Bearer` tokens go to the provider chain, and providers see the method, path and headers;
+session JWTs carry a `kid` and the signer verifies previous keys (rotation without logout); a session's scopes are the
+intersection of its token and the key's current scopes; a keys file that fails to reload fails closed (503) instead of
+keeping the old keys; failed credentials are throttled per client and key id (10 / 5 min) and per client (100 / 5 min)
+on logins and on every protected route, behind `[server] trusted_proxies` for `X-Forwarded-For`; mounts are never
+reachable without a principal and the server enforces their scopes; the listener caps connections per address and
+overall, times out TLS handshakes separately, rejects ambiguous framing and shuts down gracefully. Details:
+[api-contract "Server mode"](../tech/api-contract.md#server-mode-authentication-scopes-mounts).
+
 ## Context
 
 Until 2026-11-12 the Rust app served its API on a custom scheme (the window) and, for development, on a loopback port

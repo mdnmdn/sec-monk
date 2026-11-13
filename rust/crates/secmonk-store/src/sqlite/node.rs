@@ -15,9 +15,11 @@ use sqlx::sqlite::{SqlitePool, SqliteRow};
 use sqlx::{Row, SqliteConnection};
 
 use super::SqliteStore;
-use super::mirror::{decode_row, select_list};
+use super::mirror::{decode_row, rows_by_id_on, rows_page_on, select_list};
 use crate::mirror_schema::spec;
-use crate::node::{MAX_FEED_RECORDS, MirrorNodeStore, NodeCacheStore, SNAPSHOT_DIFF_KEEP};
+use crate::node::{
+    MAX_FEED_RECORDS, MirrorNodeStore, NodeCacheStore, SNAPSHOT_DIFF_KEEP, SUMMARY_MAX_AGE_DAYS,
+};
 use crate::{MAX_ROWS_IDS, MAX_ROWS_PAGE, MirrorStore, StoreError, StoreResult};
 
 /// Ids per `IN (...)` list.
@@ -479,7 +481,7 @@ impl MirrorNodeStore for SqliteStore {
              (SELECT rowid FROM snapshot_diff WHERE source = ?1 ORDER BY rowid DESC LIMIT ?2)",
         )
         .bind(&d.source)
-        .bind(i64::try_from(SNAPSHOT_DIFF_KEEP).unwrap_or(10))
+        .bind(i64::from(SNAPSHOT_DIFF_KEEP))
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
@@ -542,6 +544,8 @@ impl MirrorNodeStore for SqliteStore {
         limit: usize,
     ) -> StoreResult<(Vec<RowsBatch>, Option<String>)> {
         let limit = limit.clamp(1, MAX_FEED_RECORDS);
+        // one read transaction for the page: the records and their children come from one WAL snapshot
+        let mut tx = self.mirror.read.begin().await?;
         let t = spec(MirrorTable::Vulnerability);
         let cols = select_list(&t);
         let lim = i64::try_from(limit).unwrap_or(i64::MAX);
@@ -569,7 +573,7 @@ impl MirrorNodeStore for SqliteStore {
                     .bind(after.as_ref().map(|a| a.0.clone()))
                     .bind(after.map(|a| a.1).unwrap_or_default())
                     .bind(lim)
-                    .fetch_all(&self.mirror.read)
+                    .fetch_all(&mut *tx)
                     .await?;
                 (rows, |m| {
                     format!(
@@ -592,7 +596,7 @@ impl MirrorNodeStore for SqliteStore {
                     .bind(source)
                     .bind(after)
                     .bind(lim)
-                    .fetch_all(&self.mirror.read)
+                    .fetch_all(&mut *tx)
                     .await?;
                 (rows, |m| {
                     format!("i1|{}", m.get("id").and_then(Value::as_str).unwrap_or(""))
@@ -613,18 +617,18 @@ impl MirrorNodeStore for SqliteStore {
             .filter_map(|m| m.get("id").and_then(Value::as_str).map(str::to_owned))
             .collect();
         let mut affected = group(
-            self.rows_by_id(MirrorTable::Affected, source, &ids).await?,
+            rows_by_id_on(&mut tx, MirrorTable::Affected, source, &ids).await?,
             "vuln_id",
         );
         let mut aliases = group(
-            self.rows_by_id(MirrorTable::Alias, source, &ids).await?,
+            rows_by_id_on(&mut tx, MirrorTable::Alias, source, &ids).await?,
             "vuln_id",
         );
         let mut raw = group(
-            self.rows_by_id(MirrorTable::RawRecord, source, &ids)
-                .await?,
+            rows_by_id_on(&mut tx, MirrorTable::RawRecord, source, &ids).await?,
             "record_id",
         );
+        tx.rollback().await?;
         let mut cut = Cutter::new(source);
         for v in vulns {
             let id = v
@@ -658,27 +662,28 @@ impl MirrorNodeStore for SqliteStore {
     ) -> StoreResult<(Vec<RowsBatch>, Option<String>)> {
         let tables = snapshot_tables(source)?;
         let limit = limit.clamp(1, MAX_ROWS_PAGE);
-        let (idx, after) = match page {
-            None => (0usize, None),
-            Some(p) => {
-                let mut it = p.splitn(3, '|');
-                match (it.next(), it.next(), it.next()) {
-                    (Some("s1"), Some(i), Some(a)) => (
-                        i.parse::<usize>().map_err(|_| bad_cursor())?,
-                        match a.parse::<u64>().map_err(|_| bad_cursor())? {
-                            0 => None,
-                            n => Some(n),
-                        },
-                    ),
-                    _ => return Err(bad_cursor()),
-                }
+        let cursor = match page {
+            None => None,
+            Some(p) => Some(SnapshotCursor::parse(p)?),
+        };
+        // one read transaction: the version check and the rows come from one WAL snapshot
+        let mut tx = self.mirror.read.begin().await?;
+        let version = served_version(&mut tx, source).await?.unwrap_or_default();
+        let (idx, after) = match cursor {
+            None => (0, None),
+            Some(c) if c.version != version => {
+                return Err(StoreError::Stale(format!(
+                    "{source}: the snapshot changed version while it was paged; restart from the first page"
+                )));
             }
+            Some(c) => (c.table, c.after),
         };
         let table = *tables.get(idx).ok_or_else(bad_cursor)?;
-        let (rows, next_rowid) = MirrorStore::rows_page(self, table, source, after, limit).await?;
+        let (rows, next_rowid) = rows_page_on(&mut tx, table, source, after, limit).await?;
+        tx.rollback().await?;
         let next = match next_rowid {
-            Some(r) => Some(format!("s1|{idx}|{r}")),
-            None if idx + 1 < tables.len() => Some(format!("s1|{}|0", idx + 1)),
+            Some(r) => Some(SnapshotCursor::text(idx, r, &version)),
+            None if idx + 1 < tables.len() => Some(SnapshotCursor::text(idx + 1, 0, &version)),
             None => None,
         };
         let mut cut = Cutter::new(source);
@@ -773,6 +778,59 @@ fn bad_cursor() -> StoreError {
     StoreError::Invalid("rows_snapshot: bad page cursor".into())
 }
 
+/// The page cursor of `rows_snapshot`: `s2|<table index>|<rowid after>|<served version>` (version last: it may
+/// contain anything). The version pins the paging to the snapshot the first page came from.
+struct SnapshotCursor {
+    table: usize,
+    after: Option<u64>,
+    version: String,
+}
+
+impl SnapshotCursor {
+    fn text(table: usize, after: u64, version: &str) -> String {
+        format!("s2|{table}|{after}|{version}")
+    }
+
+    fn parse(p: &str) -> StoreResult<SnapshotCursor> {
+        let mut it = p.splitn(4, '|');
+        match (it.next(), it.next(), it.next(), it.next()) {
+            (Some("s2"), Some(i), Some(a), Some(v)) => Ok(SnapshotCursor {
+                table: i.parse().map_err(|_| bad_cursor())?,
+                after: match a.parse::<u64>().map_err(|_| bad_cursor())? {
+                    0 => None,
+                    n => Some(n),
+                },
+                version: v.to_owned(),
+            }),
+            // a cursor of the previous format carries no version: the follower restarts
+            (Some("s1"), _, _, _) => Err(StoreError::Stale(
+                "rows_snapshot: a cursor without a version; restart from the first page".into(),
+            )),
+            _ => Err(bad_cursor()),
+        }
+    }
+}
+
+/// The served version of `source` (the rule of `MirrorNodeStore::source_versions`), read on `conn`.
+async fn served_version(conn: &mut SqliteConnection, source: &str) -> StoreResult<Option<String>> {
+    let recorded: Option<String> =
+        sqlx::query_scalar("SELECT version FROM source_version WHERE source = ?")
+            .bind(source)
+            .fetch_optional(&mut *conn)
+            .await?
+            .flatten();
+    if recorded.is_some() {
+        return Ok(recorded);
+    }
+    Ok(
+        sqlx::query_scalar("SELECT cursor FROM source_sync WHERE source = ? AND status = 'ok'")
+            .bind(source)
+            .fetch_optional(&mut *conn)
+            .await?
+            .flatten(),
+    )
+}
+
 #[derive(Debug)]
 struct VRow {
     source: String,
@@ -846,6 +904,15 @@ impl NodeCacheStore for SqliteStore {
     ) -> StoreResult<()> {
         let as_of = serde_json::to_string(&as_of.as_of())
             .map_err(|e| StoreError::Invalid(format!("as_of: {e}")))?;
+        if let Some(r) = results
+            .iter()
+            .find(|r| r.matches.iter().any(|m| m.vuln_id.is_empty()))
+        {
+            return Err(StoreError::Invalid(format!(
+                "component_match: an empty vuln_id for {:?} (the marker of \"no match\")",
+                r.key
+            )));
+        }
         let mut tx = self.state.write.begin().await?;
         for r in results {
             sqlx::query("DELETE FROM component_match WHERE component_key = ?")
@@ -973,6 +1040,12 @@ impl NodeCacheStore for SqliteStore {
             .execute(&mut *tx)
             .await?;
         }
+        // summaries not refreshed for SUMMARY_MAX_AGE_DAYS days go: the cache does not grow forever
+        let cutoff = apply_overlap(&now, SUMMARY_MAX_AGE_DAYS * 86_400);
+        sqlx::query("DELETE FROM vuln_summary WHERE fetched_at < ?")
+            .bind(cutoff)
+            .execute(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(())
     }
@@ -1018,5 +1091,41 @@ impl NodeCacheStore for SqliteStore {
         .execute(&self.state.write)
         .await?;
         Ok(())
+    }
+
+    async fn node_sync_set_many(&self, values: &[(&str, &str)]) -> StoreResult<()> {
+        let mut tx = self.state.write.begin().await?;
+        for (name, value) in values {
+            sqlx::query(
+                "INSERT INTO node_sync(name, value) VALUES (?, ?)
+                 ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+            )
+            .bind(*name)
+            .bind(*value)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn stored_lookup_keys(
+        &self,
+        keys: &[String],
+    ) -> StoreResult<BTreeMap<String, Vec<String>>> {
+        let rows = fetch_in(
+            &self.state.read,
+            "SELECT component_key, lookup_key FROM component_lookup WHERE component_key IN ({IN})
+             ORDER BY component_key, lookup_key",
+            keys,
+        )
+        .await?;
+        let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for r in &rows {
+            out.entry(r.try_get("component_key")?)
+                .or_default()
+                .push(r.try_get("lookup_key")?);
+        }
+        Ok(out)
     }
 }

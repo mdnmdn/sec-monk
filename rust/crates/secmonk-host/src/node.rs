@@ -102,6 +102,11 @@ impl NodePlan {
                  [sources.implementation]: remove one of them"
             )));
         }
+        if plan.remote_matcher && plan.mirror {
+            tracing::warn!(
+                "node.matcher = \"remote\" with node.mirror = true: the local mirror is not used for matching"
+            );
+        }
         Ok(plan)
     }
 
@@ -156,40 +161,64 @@ fn valid_id(s: &str) -> bool {
     s.len() == 16 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
-/// The 16 hex digits in `path`, created with random ones (mode 0600, never overwriting a valid file) when missing
-/// or unusable.
+/// The 16 hex digits in `path`. A missing file is created atomically (temp file with mode 0600, hard-linked into
+/// place, so a reader never sees a partial file and a concurrent creator wins cleanly). An existing but empty or
+/// invalid file is never deleted: it may be a concurrent creator's, so it is re-read a few times, then an error.
 fn read_or_create_node_id(path: &Path) -> std::io::Result<String> {
     use std::io::Write as _;
-    for _ in 0..3 {
-        if let Ok(text) = std::fs::read_to_string(path) {
-            let id = text.trim();
-            if valid_id(id) {
-                return Ok(id.to_owned());
-            }
-            // a damaged file: replace it
-            let _ = std::fs::remove_file(path);
-        }
-        let mut bytes = [0u8; 8];
-        getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
-        let id: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-        let mut open = std::fs::OpenOptions::new();
-        open.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            open.mode(0o600);
-        }
-        match open.open(path) {
-            Ok(mut f) => {
-                f.write_all(format!("{id}\n").as_bytes())?;
+    match std::fs::read_to_string(path) {
+        Ok(text) => {
+            if let Some(id) = valid_content(&text) {
                 return Ok(id);
             }
-            // another process created it between our read and create: read theirs
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-            Err(e) => return Err(e),
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            let mut bytes = [0u8; 8];
+            getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
+            let id: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+            let tmp = path.with_extension(format!("tmp-{}-{id}", std::process::id()));
+            let mut open = std::fs::OpenOptions::new();
+            open.write(true).create_new(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                open.mode(0o600);
+            }
+            let mut f = open.open(&tmp)?;
+            let written = f
+                .write_all(format!("{id}\n").as_bytes())
+                .and_then(|()| f.sync_all());
+            drop(f);
+            let linked = written.and_then(|()| std::fs::hard_link(&tmp, path));
+            let _ = std::fs::remove_file(&tmp);
+            match linked {
+                Ok(()) => return Ok(id),
+                // another process linked its file first: read theirs below
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+                Err(e) => return Err(e),
+            }
+        }
+        Err(e) => return Err(e),
+    }
+    for attempt in 0..5 {
+        if attempt > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        if let Some(id) = std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| valid_content(&t))
+        {
+            return Ok(id);
         }
     }
-    Err(std::io::Error::other("cannot create a stable node id"))
+    Err(std::io::Error::other(
+        "the node id file is empty or invalid (not replaced automatically: remove it to generate a new identity)",
+    ))
+}
+
+fn valid_content(text: &str) -> Option<String> {
+    let id = text.trim();
+    valid_id(id).then(|| id.to_owned())
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -490,15 +519,21 @@ impl FollowedSource {
             .source_versions()
             .await
             .map_err(|e| WireError::new(ErrorCode::Internal, format!("StoreError: {e}")))?;
-        // the upstream's importers; when it cannot be asked the sync fails with the same error, so ignore it here
-        let upstream: BTreeMap<String, String> = match self.upstream.status().await {
-            Ok(s) => s
-                .sources
-                .into_iter()
-                .map(|v| (v.source, v.importer))
-                .collect(),
-            Err(_) => BTreeMap::new(),
-        };
+        // the upstream's importers: without them the importer guard (proposal §3.2 rule 2) cannot run, so an
+        // upstream that cannot be asked fails the sync here instead of sending a local version blindly
+        let upstream: BTreeMap<String, String> = self
+            .upstream
+            .status()
+            .await
+            .map_err(|e| {
+                let mut w = WireError::new(e.code, format!("upstream feed status: {}", e.error));
+                w.hint = e.hint;
+                w
+            })?
+            .sources
+            .into_iter()
+            .map(|v| (v.source, v.importer))
+            .collect();
         let mut map = BTreeMap::new();
         for v in local {
             let Some(version) = v.version else { continue };
@@ -809,14 +844,40 @@ mod tests {
             let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
             assert_eq!(mode, 0o600);
         }
-        // another data directory gets another id; a damaged file is replaced
+        // another data directory gets another id; a damaged file is an error, never deleted
         let d2 = tempfile::tempdir().unwrap();
         let c2 = crate::testutil::temp_config(d2.path(), &[]);
         assert_ne!(node_id(&c2).unwrap(), a);
         std::fs::write(&path, "not an id").unwrap();
+        assert!(node_id(&c).is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "not an id");
+        std::fs::write(&path, "").unwrap();
+        assert!(node_id(&c).is_err());
+        std::fs::remove_file(&path).unwrap();
         let fresh = node_id(&c).unwrap();
         assert!(valid_id(fresh.strip_prefix("node:").unwrap()));
         assert_eq!(node_id(&c).unwrap(), fresh);
+    }
+
+    #[test]
+    fn concurrent_node_id_creation_agrees() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("node_id");
+        let ids: Vec<String> = (0..8)
+            .map(|_| {
+                let p = path.clone();
+                std::thread::spawn(move || read_or_create_node_id(&p).unwrap())
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .collect();
+        assert!(ids.iter().all(|i| *i == ids[0]), "{ids:?}");
+        assert_eq!(
+            std::fs::read_dir(d.path()).unwrap().count(),
+            1,
+            "no temp files left"
+        );
     }
 
     // --- fakes -------------------------------------------------------------------------------------------------
@@ -949,14 +1010,61 @@ mod tests {
             .record_complete_version("kev", "v-kev2", "rust/1", VersionKind::Snapshot)
             .await
             .unwrap();
-        let down = FollowedSource::new(vec!["kev".into()], Arc::new(Fake::default()), nodes, view);
+        let down = FollowedSource::new(
+            vec!["kev".into()],
+            Arc::new(Fake::default()),
+            nodes,
+            view.clone(),
+        );
         down.refresh().await.unwrap();
         assert_eq!(
             down.versions.read().unwrap().get("kev").map(String::as_str),
             Some("v-kev2")
         );
         assert!(f.native() && f.sources().len() == 2);
+        // an upstream whose status cannot be read fails the sync (no local version is sent unguarded)
+        let blind = FollowedSource::new(
+            vec!["kev".into()],
+            Arc::new(DownFeed),
+            store.mirror_node_store(),
+            view,
+        );
+        let e = blind.refresh().await.unwrap_err();
+        assert_eq!(e.code, ErrorCode::HostUnreachable);
+        assert!(e.error.contains("upstream feed status"), "{}", e.error);
+        let e = blind
+            .sync(
+                SyncParams {
+                    source: "kev".into(),
+                    options: Default::default(),
+                    secrets: None,
+                },
+                CallCtx::default(),
+            )
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(e.code, ErrorCode::HostUnreachable);
         store.close().await;
+    }
+
+    /// A feed whose node cannot be reached.
+    struct DownFeed;
+
+    #[async_trait]
+    impl Feed for DownFeed {
+        async fn status(&self) -> StepResult<FeedStatus> {
+            Err(WireError::new(
+                ErrorCode::HostUnreachable,
+                "connection refused",
+            ))
+        }
+        async fn since(&self, _req: FeedSinceRequest) -> StepResult<FeedPage> {
+            Err(WireError::new(
+                ErrorCode::HostUnreachable,
+                "connection refused",
+            ))
+        }
     }
 
     #[tokio::test]

@@ -1,23 +1,33 @@
 //! [`RemoteNode`]: the three node services over HTTPS (`/node/v1`) with an API key exchanged for a JWT.
 //!
-//! The key is sent only to `POST {base}/auth/token`; the JWT is cached and renewed [`REFRESH_MARGIN`] before its
-//! `expires_at`, or on a 401 (the call is then repeated once). Neither is ever logged or put in an error. Plain
+//! The key is sent only to `POST {base}/auth/token`; the JWT is cached and renewed [`REFRESH_MARGIN`] before it
+//! expires, or on a 401 (the call is then repeated once). Neither is ever logged or put in an error. Plain
 //! `http://` is accepted for loopback hosts only. Redirects are never followed. Response bodies are read with a
 //! limit ([`MAX_RESPONSE_BYTES`]). Calls with more than `MAX_COMPONENTS` components or `MAX_IDS` ids are split
 //! and their answers merged.
+//!
+//! **Token lifetime.** The server sends `expires_at` (its clock) and no issue time, so the lifetime is measured on
+//! the local monotonic clock from the moment the answer arrived: `expires_at - local now`, clamped by the JWT's own
+//! `exp - iat` (its payload is decoded without verifying, for the timing only), so a client clock ahead of or
+//! behind the server's neither renews forever nor keeps an expired token. **Single flight**: one exchange at a
+//! time; callers that wait for it take its result, an error included (each of them gets the error; the next
+//! call tries again).
+//!
+//! **Busy.** A 429 (or 503) with `Retry-After: <seconds>` is a `busy` error whose `data` is
+//! `{"retry_after_s": n}` and whose hint names the delay; the client does not sleep on its own.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use http::Method;
-use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue};
+use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue, RETRY_AFTER};
 use secmonk_model::node::{
     ChangesRequest, ChangesResponse, FeedPage, FeedSinceRequest, FeedStatus, MAX_COMPONENTS,
     MAX_IDS, MatchComponentsRequest, MatchComponentsResponse, NodeInfo, SummariesRequest,
-    SummariesResponse, Versions,
+    SummariesResponse, VersionKind, Versions,
 };
 use secmonk_traits::node::{Feed, MatchService, VulnInfo};
 use secmonk_traits::{ErrorCode, StepResult, WireError};
@@ -63,8 +73,52 @@ impl std::fmt::Debug for RemoteConfig {
 
 struct Token {
     value: String,
-    /// Unix seconds.
-    expires_at: u64,
+    /// When it expires, on the local monotonic clock.
+    deadline: Instant,
+}
+
+/// The token cache and the outcome of the last exchange (single flight, see the module doc).
+#[derive(Default)]
+struct TokenState {
+    token: Option<Token>,
+    /// Exchanges finished (with any outcome).
+    attempts: u64,
+    /// The error of the last exchange, when it failed (handed to the callers that waited for it).
+    last_error: Option<WireError>,
+}
+
+/// The lifetime of a token received at local unix time `now_local`: `expires_at - now_local`, clamped by the JWT's
+/// own `exp - iat` when its payload says (a client clock off the server's must not stretch it).
+fn token_lifetime(expires_at: u64, now_local: u64, jwt: &str) -> Duration {
+    let by_server = expires_at.saturating_sub(now_local);
+    let by_claims = jwt_claims_lifetime(jwt);
+    Duration::from_secs(by_claims.map_or(by_server, |c| by_server.min(c)))
+}
+
+/// `exp - iat` of a JWT's payload, decoded **without verifying** (only the timing is read; the server verifies).
+fn jwt_claims_lifetime(jwt: &str) -> Option<u64> {
+    use base64::Engine as _;
+    let payload = jwt.split('.').nth(1)?;
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(payload.trim_end_matches('='))
+        .ok()?;
+    let v: Value = serde_json::from_slice(&bytes).ok()?;
+    let exp = v.get("exp")?.as_u64()?;
+    let iat = v.get("iat")?.as_u64()?;
+    exp.checked_sub(iat)
+}
+
+/// `Retry-After` in seconds (the delta-seconds form; an HTTP date is ignored).
+fn retry_after_secs(h: Option<&HeaderValue>) -> Option<u64> {
+    h?.to_str().ok()?.trim().parse().ok()
+}
+
+/// A `busy` error carrying the delay the node asked for.
+fn busy_after(mut e: WireError, secs: u64) -> WireError {
+    e.code = ErrorCode::Busy;
+    e.hint = Some(format!("the node asks to retry after {secs} s"));
+    e.data = Some(Box::new(json!({"retry_after_s": secs})));
+    e
 }
 
 /// A remote node: [`MatchService`], [`VulnInfo`] and [`Feed`] over HTTPS.
@@ -72,7 +126,10 @@ pub struct RemoteNode {
     base: String,
     api_key: String,
     client: reqwest::Client,
-    token: Mutex<Option<Token>>,
+    /// The cached token and the last exchange's outcome (a short lock, never held across a request).
+    token: std::sync::Mutex<TokenState>,
+    /// Held for the duration of one exchange: the single flight.
+    exchange_lock: Mutex<()>,
     margin: Duration,
     exchanges: AtomicU64,
 }
@@ -197,7 +254,8 @@ impl RemoteNode {
             base: cfg.base_url.trim_end_matches('/').to_owned(),
             api_key: cfg.api_key,
             client,
-            token: Mutex::new(None),
+            token: std::sync::Mutex::new(TokenState::default()),
+            exchange_lock: Mutex::new(()),
             margin: REFRESH_MARGIN,
             exchanges: AtomicU64::new(0),
         })
@@ -223,25 +281,64 @@ impl RemoteNode {
     // -------------------------------------------------------------------------------------------------------
     // auth
 
-    /// A valid token: the cached one, or a fresh exchange.
+    fn state(&self) -> std::sync::MutexGuard<'_, TokenState> {
+        self.token.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
+    /// The cached token when it is valid for longer than the margin.
+    fn cached(&self) -> Option<String> {
+        let st = self.state();
+        st.token
+            .as_ref()
+            .filter(|t| Instant::now() + self.margin < t.deadline)
+            .map(|t| t.value.clone())
+    }
+
+    /// A valid token: the cached one, or the result of one exchange shared by every caller waiting for it.
     async fn token(&self) -> StepResult<String> {
-        let mut guard = self.token.lock().await;
-        if let Some(t) = guard.as_ref()
-            && t.expires_at > now_s() + self.margin.as_secs()
-        {
-            return Ok(t.value.clone());
+        if let Some(t) = self.cached() {
+            return Ok(t);
         }
-        let t = self.exchange().await?;
-        let value = t.value.clone();
-        *guard = Some(t);
-        Ok(value)
+        let seen = self.state().attempts;
+        let _flight = self.exchange_lock.lock().await;
+        {
+            let st = self.state();
+            // another caller exchanged while this one waited: take its outcome
+            if st.attempts != seen {
+                if let Some(e) = &st.last_error {
+                    return Err(e.clone());
+                }
+                if let Some(t) = &st.token {
+                    return Ok(t.value.clone());
+                }
+            }
+        }
+        if let Some(t) = self.cached() {
+            return Ok(t);
+        }
+        let result = self.exchange().await;
+        let mut st = self.state();
+        st.attempts += 1;
+        match result {
+            Ok(t) => {
+                let value = t.value.clone();
+                st.token = Some(t);
+                st.last_error = None;
+                Ok(value)
+            }
+            Err(e) => {
+                st.token = None;
+                st.last_error = Some(e.clone());
+                Err(e)
+            }
+        }
     }
 
     /// Forget `used` (only when it is still the cached one: another call may have renewed it already).
-    async fn invalidate(&self, used: &str) {
-        let mut guard = self.token.lock().await;
-        if guard.as_ref().is_some_and(|t| t.value == used) {
-            *guard = None;
+    fn invalidate(&self, used: &str) {
+        let mut st = self.state();
+        if st.token.as_ref().is_some_and(|t| t.value == used) {
+            st.token = None;
         }
     }
 
@@ -258,8 +355,16 @@ impl RemoteNode {
             .await
             .map_err(|e| transport_error(e, "token exchange"))?;
         let status = resp.status().as_u16();
+        let retry_after = retry_after_secs(resp.headers().get(RETRY_AFTER));
         let bytes = read_limited(resp, MAX_ERROR_BODY).await?;
+        let received = now_s();
+        let arrived = Instant::now();
         if status != 200 {
+            if matches!(status, 429 | 503)
+                && let Some(secs) = retry_after
+            {
+                return Err(busy_after(wire_error_of_status(status, &bytes), secs));
+            }
             let mut e = wire_error_of_status(status, &bytes);
             if status == 401 {
                 e = WireError::new(
@@ -285,7 +390,11 @@ impl RemoteNode {
         let expires_at = v.get("expires_at").and_then(Value::as_u64).ok_or_else(|| {
             WireError::internal("ProtocolError", "token response without expires_at")
         })?;
-        Ok(Token { value, expires_at })
+        let lifetime = token_lifetime(expires_at, received, &value);
+        Ok(Token {
+            value,
+            deadline: arrived + lifetime,
+        })
     }
 
     // -------------------------------------------------------------------------------------------------------
@@ -297,7 +406,7 @@ impl RemoteNode {
         url: &str,
         body: Option<&[u8]>,
         token: &str,
-    ) -> StepResult<(u16, Vec<u8>)> {
+    ) -> StepResult<(u16, Vec<u8>, Option<u64>)> {
         let mut auth = HeaderValue::from_str(&format!("Bearer {token}"))
             .map_err(|_| WireError::internal("ProtocolError", "the token is not a header value"))?;
         auth.set_sensitive(true);
@@ -315,13 +424,14 @@ impl RemoteNode {
             .await
             .map_err(|e| transport_error(e, "node request"))?;
         let status = resp.status().as_u16();
+        let retry_after = retry_after_secs(resp.headers().get(RETRY_AFTER));
         let limit = if status == 200 {
             MAX_RESPONSE_BYTES
         } else {
             MAX_ERROR_BODY
         };
         let bytes = read_limited(resp, limit).await?;
-        Ok((status, bytes))
+        Ok((status, bytes, retry_after))
     }
 
     /// One call with the token handling: a 401 renews the token and repeats the call once.
@@ -340,13 +450,18 @@ impl RemoteNode {
         let mut renewed = false;
         loop {
             let token = self.token().await?;
-            let (status, bytes) = self
+            let (status, bytes, retry_after) = self
                 .send_once(&method, &url, body.as_deref(), &token)
                 .await?;
             if status == 401 && !renewed {
                 renewed = true;
-                self.invalidate(&token).await;
+                self.invalidate(&token);
                 continue;
+            }
+            if matches!(status, 429 | 503)
+                && let Some(secs) = retry_after
+            {
+                return Err(busy_after(wire_error_of_status(status, &bytes), secs));
             }
             if status != 200 {
                 return Err(wire_error_of_status(status, &bytes));
@@ -433,10 +548,44 @@ impl MatchService for RemoteNode {
             let body = json!({"components": chunk, "min_confidence": min_confidence});
             let body = strip_null(body);
             let r: MatchComponentsResponse = self.post("match/components", &body).await?;
+            if let Some(res) = r
+                .results
+                .iter()
+                .find(|res| res.matches.iter().any(|m| m.vuln_id.is_empty()))
+            {
+                return Err(WireError::internal(
+                    "ProtocolError",
+                    format!(
+                        "match/components: a match without a vuln_id for {:?}",
+                        res.key.chars().take(200).collect::<String>()
+                    ),
+                ));
+            }
             match &mut merged {
                 None => merged = Some(r),
                 Some(m) => {
-                    // the first chunk's versions are the oldest (versions only move forward): the safe stamp
+                    // the answer is stamped with the OLDEST version of each source over the chunks (a source that
+                    // moved between two chunks: some answers are older, and a stamp must never claim newer data
+                    // than every answer has). Record versions (timestamps) compare as text; a snapshot version
+                    // (a label) that differs keeps the first chunk's, the one asked first. The matcher stays the
+                    // first chunk's: a change shows in the next `match.changes`.
+                    for (name, v) in r.as_of.sources {
+                        match m.as_of.sources.get_mut(&name) {
+                            None => {
+                                m.as_of.sources.insert(name, v);
+                            }
+                            Some(cur) => {
+                                let older = match (&cur.version, &v.version) {
+                                    (_, None) => true,
+                                    (None, Some(_)) => false,
+                                    (Some(a), Some(b)) => v.kind == VersionKind::Record && b < a,
+                                };
+                                if older {
+                                    *cur = v;
+                                }
+                            }
+                        }
+                    }
                     m.results.extend(r.results);
                     m.coverage.sources =
                         union_sorted(std::mem::take(&mut m.coverage.sources), r.coverage.sources);

@@ -16,6 +16,12 @@ use crate::{AuthError, Result};
 
 const PREFIX: &str = "smk_";
 
+/// Largest keys file read (a few thousand keys); a bigger one is refused rather than read into memory.
+const MAX_KEYS_FILE: u64 = 4 * 1024 * 1024;
+
+/// What an unknown key id is compared against, so that it costs the same as a known one.
+const DUMMY_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+
 /// How a request carried its credential.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -35,8 +41,8 @@ pub const API_KEY_PROVIDER: &str = "api_key";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Principal {
     /// Stable subject id within its provider (the API key id; safe for logs). Rate limits and audit use
-    /// `provider:key_id`.
-    pub key_id: String,
+    /// `provider:subject`.
+    pub subject: String,
     /// The provider that authenticated the subject ([`crate::AuthProvider::name`], `api_key` for API keys).
     pub provider: String,
     /// Key name.
@@ -131,51 +137,102 @@ struct KeyFile {
     keys: Vec<KeyRecord>,
 }
 
+/// Identity of the keys file as seen at load or save time: a change of any part means "re-read". The inode
+/// catches an atomic replace within the same mtime second; the length catches an in-place edit that keeps it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Fingerprint {
+    dev: u64,
+    ino: u64,
+    len: u64,
+    mtime: Option<SystemTime>,
+}
+
+impl Fingerprint {
+    pub(crate) fn of(meta: &std::fs::Metadata) -> Fingerprint {
+        #[cfg(unix)]
+        let (dev, ino) = {
+            use std::os::unix::fs::MetadataExt;
+            (meta.dev(), meta.ino())
+        };
+        #[cfg(not(unix))]
+        let (dev, ino) = (0, 0);
+        Fingerprint {
+            dev,
+            ino,
+            len: meta.len(),
+            mtime: meta.modified().ok(),
+        }
+    }
+
+    /// The fingerprint of the file at `path` now (`None`: missing or unreadable).
+    pub(crate) fn of_path(path: &Path) -> Option<Fingerprint> {
+        std::fs::metadata(path).ok().map(|m| Fingerprint::of(&m))
+    }
+}
+
 /// The keys file in memory.
 #[derive(Debug, Clone, Default)]
 pub struct KeyStore {
     path: Option<PathBuf>,
     keys: Vec<KeyRecord>,
-    loaded_mtime: Option<SystemTime>,
-}
-
-fn mtime(path: &Path) -> Option<SystemTime> {
-    std::fs::metadata(path).and_then(|m| m.modified()).ok()
+    loaded: Option<Fingerprint>,
 }
 
 impl KeyStore {
-    /// Load the store. A missing file is an empty store; a group/other-writable file is refused (unix).
+    /// Load the store. A missing file is an empty store; a group/other-writable file is refused (unix). The
+    /// permissions and the fingerprint are taken from the opened handle, so they describe the bytes read.
     pub fn load(path: impl Into<PathBuf>) -> Result<KeyStore> {
+        use std::io::Read;
         let path = path.into();
-        match std::fs::read_to_string(&path) {
-            Ok(text) => {
-                fsutil::check_mode(&path, 0o022)?;
-                let file: KeyFile = toml::from_str(&text)
-                    .map_err(|e| AuthError::Format(format!("{}: {e}", path.display())))?;
-                let mut seen = std::collections::HashSet::new();
-                for k in &file.keys {
-                    if !seen.insert(k.name.as_str()) {
-                        return Err(AuthError::Format(format!(
-                            "{}: duplicate key name {:?}",
-                            path.display(),
-                            k.name
-                        )));
-                    }
-                }
-                let loaded_mtime = mtime(&path);
-                Ok(KeyStore {
+        let mut file = match std::fs::File::open(&path) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(KeyStore {
                     path: Some(path),
-                    keys: file.keys,
-                    loaded_mtime,
-                })
+                    keys: Vec::new(),
+                    loaded: None,
+                });
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(KeyStore {
-                path: Some(path),
-                keys: Vec::new(),
-                loaded_mtime: None,
-            }),
-            Err(e) => Err(AuthError::io(format!("read {}", path.display()), e)),
+            Err(e) => return Err(AuthError::io(format!("read {}", path.display()), e)),
+        };
+        let meta = file
+            .metadata()
+            .map_err(|e| AuthError::io(format!("stat {}", path.display()), e))?;
+        fsutil::check_meta_mode(&path, &meta, 0o022)?;
+        if !meta.is_file() {
+            return Err(AuthError::Format(format!(
+                "{}: not a regular file",
+                path.display()
+            )));
         }
+        let mut text = String::new();
+        (&mut file)
+            .take(MAX_KEYS_FILE + 1)
+            .read_to_string(&mut text)
+            .map_err(|e| AuthError::io(format!("read {}", path.display()), e))?;
+        if text.len() as u64 > MAX_KEYS_FILE {
+            return Err(AuthError::Format(format!(
+                "{}: larger than {MAX_KEYS_FILE} bytes",
+                path.display()
+            )));
+        }
+        let file: KeyFile = toml::from_str(&text)
+            .map_err(|e| AuthError::Format(format!("{}: {e}", path.display())))?;
+        let mut seen = std::collections::HashSet::new();
+        for k in &file.keys {
+            if !seen.insert(k.name.as_str()) {
+                return Err(AuthError::Format(format!(
+                    "{}: duplicate key name {:?}",
+                    path.display(),
+                    k.name
+                )));
+            }
+        }
+        Ok(KeyStore {
+            path: Some(path),
+            keys: file.keys,
+            loaded: Some(Fingerprint::of(&meta)),
+        })
     }
 
     /// An in-memory store that cannot be saved (tests, auth disabled).
@@ -188,10 +245,11 @@ impl KeyStore {
         self.path.as_deref()
     }
 
-    /// True when the file's mtime differs from the one seen at load/save time.
+    /// True when the file differs from the one seen at load/save time: device, inode, length or mtime (a file
+    /// that appeared or disappeared counts too).
     pub fn file_changed(&self) -> bool {
         match &self.path {
-            Some(p) => mtime(p) != self.loaded_mtime,
+            Some(p) => Fingerprint::of_path(p) != self.loaded,
             None => false,
         }
     }
@@ -255,7 +313,7 @@ impl KeyStore {
         })
         .map_err(|e| AuthError::Format(format!("serialize keys: {e}")))?;
         fsutil::write_private(&path, text.as_bytes())?;
-        self.loaded_mtime = mtime(&path);
+        self.loaded = Fingerprint::of_path(&path);
         Ok(())
     }
 
@@ -264,8 +322,11 @@ impl KeyStore {
         let (id, secret) = parse_api_key(plaintext)?;
         let computed = hash_secret(&secret);
         let Some(rec) = self.keys.iter().find(|k| k.id == id) else {
-            // Burn a comparison so unknown ids are not noticeably faster.
-            let _ = computed.as_bytes().ct_eq(computed.as_bytes());
+            // Burn the same comparison against a fixed hash so unknown ids are not noticeably faster.
+            let burn = computed
+                .as_bytes()
+                .ct_eq(std::hint::black_box(DUMMY_HASH.as_bytes()));
+            std::hint::black_box(bool::from(burn));
             return Err(AuthError::UnknownKey);
         };
         if !bool::from(computed.as_bytes().ct_eq(rec.hash.as_bytes())) {
@@ -280,7 +341,7 @@ impl KeyStore {
             return Err(AuthError::Expired);
         }
         Ok(Principal {
-            key_id: rec.id.clone(),
+            subject: rec.id.clone(),
             provider: API_KEY_PROVIDER.into(),
             name: rec.name.clone(),
             scopes: rec.scopes.clone(),

@@ -2,18 +2,19 @@
 //!
 //! Order of checks: route (404), method (405 + `Allow`), scope (403), service enabled (404 `service not enabled`),
 //! body / query validation and caps (400 / 413), the call. The server layer in front has authenticated the
-//! request and capped its body ([`secmonk_api::MAX_MOUNT_BODY`]); with auth off the principal is `None` and every
-//! route is allowed. Request bodies are parsed, used and dropped: never stored, never logged (proposal §5).
+//! request, enforced the route's scope ([`Mount::required_scope`]) and capped its body
+//! ([`secmonk_api::MAX_MOUNT_BODY`]); with auth off the server refuses the node API (403), so over HTTP a
+//! principal is always present (`handle` keeps its own scope check as defense in depth). Request bodies are parsed, used and dropped: never stored, never logged (proposal §5).
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use http::{HeaderValue, Method, Request, Response, StatusCode, header};
-use secmonk_api::{ApiError, Mount, error_response, json_response};
+use secmonk_api::{ApiError, Mount, RequiredScope, error_response, json_response};
 use secmonk_auth::{Principal, Scope};
 use secmonk_model::node::{
-    ChangesRequest, FeedSinceRequest, MATCHER_VERSION, MAX_COMPONENTS, MAX_IDS,
-    MatchComponentsRequest, NodeInfo, SummariesRequest,
+    ChangesRequest, FeedSinceRequest, MAX_COMPONENTS, MAX_IDS, MatchComponentsRequest, NodeInfo,
+    SummariesRequest,
 };
 use secmonk_traits::StepResult;
 use secmonk_traits::node::{Feed, MatchService, VulnInfo};
@@ -92,7 +93,8 @@ impl NodeInfoProvider for DerivedInfo {
             let v = m.versions().await?;
             (v.matcher, v.sources.into_values().collect())
         } else {
-            (MATCHER_VERSION.to_owned(), Vec::new())
+            // neither a feed nor a match service: no matcher is served
+            ("none".to_owned(), Vec::new())
         };
         Ok(NodeInfo {
             node_id: self.node_id.clone(),
@@ -367,6 +369,20 @@ impl Mount for NodeApi {
         PREFIX
     }
 
+    /// The server enforces the route's scope before [`Mount::handle`] (403); an unknown route or a wrong method
+    /// only needs a principal, so `handle` answers 404 / 405.
+    fn required_scope(&self, method: &Method, path: &str) -> Option<RequiredScope> {
+        let route = Route::parse(path.strip_prefix(PREFIX)?)?;
+        if *method != route.method() {
+            return Some(RequiredScope::Authenticated);
+        }
+        Some(
+            route
+                .scope()
+                .map_or(RequiredScope::Authenticated, RequiredScope::Scope),
+        )
+    }
+
     async fn handle(
         &self,
         req: Request<Vec<u8>>,
@@ -386,6 +402,8 @@ impl Mount for NodeApi {
             }
             return r;
         }
+        // defense in depth: the server already enforced `required_scope` and never calls a mount without a
+        // principal (`None` only reaches here from in-process callers, e.g. host tests)
         if let (Some(p), Some(need)) = (&principal, route.scope())
             && !p.scopes.contains(need)
         {
@@ -404,7 +422,7 @@ impl Mount for NodeApi {
         // the audit line: who, which call, how many; never a body, a query or an id
         tracing::info!(
             target: "audit",
-            key = %principal.as_ref().map_or("-", |p| p.key_id.as_str()),
+            key = ?principal.as_ref().map_or("-", |p| p.subject.as_str()),
             route = route.name(),
             status = response.status().as_u16(),
             count,

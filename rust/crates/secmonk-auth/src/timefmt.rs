@@ -1,6 +1,28 @@
 //! Tiny RFC 3339 (UTC, seconds) formatter and parser.
+//!
+//! The civil-date math (Howard Hinnant's `days_from_civil` / `civil_from_days`) also exists in
+//! `secmonk-model/src/time.rs` and `secmonk-sources/src/nvd.rs`; this crate does not depend on secmonk-model, so it
+//! keeps its own single copy here.
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+const SECS_PER_DAY: u64 = 86_400;
+const SECS_PER_HOUR: u64 = 3600;
+const SECS_PER_MINUTE: u64 = 60;
+
+fn is_leap(y: i64) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+}
+
+fn days_in_month(y: i64, m: u32) -> u32 {
+    match m {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap(y) => 29,
+        2 => 28,
+        _ => 0,
+    }
+}
 
 fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let z = z + 719_468;
@@ -31,18 +53,19 @@ pub fn format_rfc3339(t: SystemTime) -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let days = (secs / 86_400) as i64;
-    let rem = secs % 86_400;
+    let days = (secs / SECS_PER_DAY) as i64;
+    let rem = secs % SECS_PER_DAY;
     let (y, m, d) = civil_from_days(days);
     format!(
         "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
-        rem / 3600,
-        rem % 3600 / 60,
-        rem % 60
+        rem / SECS_PER_HOUR,
+        rem % SECS_PER_HOUR / SECS_PER_MINUTE,
+        rem % SECS_PER_MINUTE
     )
 }
 
-/// Parse `YYYY-MM-DDTHH:MM:SSZ` (UTC only) into a time.
+/// Parse `YYYY-MM-DDTHH:MM:SSZ` (UTC only) into a time. Impossible dates (`02-30`, `02-29` of a common year,
+/// `04-31`) and leap seconds are refused.
 pub fn parse_rfc3339(s: &str) -> Option<SystemTime> {
     let b = s.as_bytes();
     if b.len() != 20
@@ -65,14 +88,23 @@ pub fn parse_rfc3339(s: &str) -> Option<SystemTime> {
     };
     let (y, mo, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
     let (h, mi, se) = (num(11..13)?, num(14..16)?, num(17..19)?);
-    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || se > 60 {
+    if !(1..=12).contains(&mo)
+        || d < 1
+        || d > days_in_month(i64::from(y), mo)
+        || h > 23
+        || mi > 59
+        || se > 59
+    {
         return None;
     }
     let days = days_from_civil(y as i64, mo, d);
     if days < 0 {
         return None;
     }
-    let secs = days as u64 * 86_400 + h as u64 * 3600 + mi as u64 * 60 + se as u64;
+    let secs = days as u64 * SECS_PER_DAY
+        + u64::from(h) * SECS_PER_HOUR
+        + u64::from(mi) * SECS_PER_MINUTE
+        + u64::from(se);
     Some(UNIX_EPOCH + Duration::from_secs(secs))
 }
 
@@ -107,5 +139,30 @@ mod tests {
         assert_eq!(parse_rfc3339("2024-02-29 12:34:56Z"), None);
         assert_eq!(parse_rfc3339("2024-13-29T12:34:56Z"), None);
         assert_eq!(parse_rfc3339("+024-02-29T12:34:56Z"), None);
+    }
+
+    #[test]
+    fn rejects_impossible_dates() {
+        for bad in [
+            "2023-02-29T00:00:00Z",
+            "2024-02-30T00:00:00Z",
+            "2100-02-29T00:00:00Z",
+            "2024-04-31T00:00:00Z",
+            "2024-06-31T00:00:00Z",
+            "2024-01-00T00:00:00Z",
+            "2024-01-01T24:00:00Z",
+            "2024-01-01T00:60:00Z",
+            "2024-01-01T00:00:60Z",
+        ] {
+            assert_eq!(parse_rfc3339(bad), None, "{bad}");
+        }
+        for good in [
+            "2024-02-29T00:00:00Z",
+            "2000-02-29T00:00:00Z",
+            "2023-12-31T23:59:59Z",
+            "2024-01-31T00:00:00Z",
+        ] {
+            assert!(parse_rfc3339(good).is_some(), "{good}");
+        }
     }
 }

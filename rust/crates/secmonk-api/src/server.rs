@@ -1,39 +1,65 @@
 //! The server layer in front of the [`Router`]: authentication (API key to JWT exchange, Bearer / ApiKey
-//! requests, scopes, rate limit, audit) and mount points for extra APIs (the node API under `/node/v1/`).
+//! requests, scopes, rate limit, failed-authentication throttle, audit) and mount points for extra APIs (the node
+//! API under `/node/v1/`).
 //!
 //! Order of checks for a request: method, `Host` (the router's rules), `/auth/*`, then paths that need a caller
 //! (`/api/*` and the mounts) authenticate when auth is on; everything else (the UI files) is public and goes to the
-//! router as it is. With auth off (loopback) every request is served as before and mounts get `None` as principal.
+//! router as it is. With auth off (loopback) `/api/*` is served as before, and **mounts answer 403**: a mount is
+//! never reachable without a principal.
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 
 use async_trait::async_trait;
-use http::{Method, Request, Response, StatusCode, header};
-use secmonk_auth::{AuthError, Authenticator, Principal, RequestContext, Scope};
+use http::{HeaderMap, Method, Request, Response, StatusCode, header};
+use secmonk_auth::{AuthError, Authenticator, HeaderLookup, Principal, RequestContext, Scope};
 use serde_json::{Value, json};
 
 use crate::error::ApiError;
+use crate::proxies::TrustedProxies;
 use crate::router::{MAX_BODY, Router, error_response, json_response};
 
 /// Largest body of a mounted API request (`/node/v1/match/components` carries up to 1 000 components).
 pub const MAX_MOUNT_BODY: usize = 4 * 1024 * 1024;
 /// Largest body of `POST /auth/token`.
 pub const MAX_TOKEN_BODY: usize = 4 * 1024;
+/// `Retry-After` (seconds) of a 429 (rate limit or throttle).
+pub const RETRY_AFTER_S: &str = "60";
+/// The 403 body of a mount route when authentication is off.
+pub const MOUNT_NEEDS_AUTH: &str = "the node API needs authentication: enable [server] auth";
+
+/// What a mount route requires of the caller, checked by the [`Server`] before the mount is called.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RequiredScope {
+    /// The principal must hold this scope (403 otherwise).
+    Scope(Scope),
+    /// Any authenticated principal.
+    Authenticated,
+}
 
 /// An API served under a path prefix, behind the server's authentication.
 ///
-/// The server authenticates the request first (a mount never sees an unauthenticated one when auth is on) and
-/// applies the per-key rate limit; the mount does its own scope checks with the `principal` (`None` only when
-/// auth is off). Requests need no `X-SecMonk-Request` header: mounts are not browser routes. The body is capped
-/// at [`MAX_MOUNT_BODY`] before the mount is called. Build answers with [`json_response`] and [`error_response`].
+/// The server authenticates the request first, applies the per-key rate limit and the scope that
+/// [`Mount::required_scope`] names (401 / 403 / 429 before the mount is called), and caps the body at
+/// [`MAX_MOUNT_BODY`]. A mount is **never** reached without a principal: with auth off its routes answer 403
+/// ([`MOUNT_NEEDS_AUTH`]), so `handle` always gets `Some(principal)` (the `Option` stays for compatibility).
+/// Requests need no `X-SecMonk-Request` header: mounts are not browser routes. Build answers with
+/// [`json_response`] and [`error_response`].
 #[async_trait]
 pub trait Mount: Send + Sync {
     /// The path prefix, with both slashes (`"/node/v1/"`).
     fn prefix(&self) -> &'static str;
 
-    /// Answer one authenticated request.
+    /// The scope a request needs. `None` (a path that is not a route of the mount, a wrong method) and
+    /// [`RequiredScope::Authenticated`] both mean "any principal": the mount then answers (404, 405, ...). The
+    /// default asks only for authentication.
+    fn required_scope(&self, method: &Method, path: &str) -> Option<RequiredScope> {
+        let _ = (method, path);
+        Some(RequiredScope::Authenticated)
+    }
+
+    /// Answer one authenticated request (`principal` is always `Some`).
     async fn handle(
         &self,
         req: Request<Vec<u8>>,
@@ -41,11 +67,21 @@ pub trait Mount: Send + Sync {
     ) -> Response<Vec<u8>>;
 }
 
+/// [`HeaderLookup`] over an `http` header map (first value, valid text only).
+struct Headers<'a>(&'a HeaderMap);
+
+impl HeaderLookup for Headers<'_> {
+    fn header(&self, name: &str) -> Option<&str> {
+        self.0.get(name).and_then(|v| v.to_str().ok())
+    }
+}
+
 /// Router + authentication + mounts. Build it once, share it in an `Arc`, serve it with [`crate::serve`].
 pub struct Server {
     router: Arc<Router>,
     auth: Option<Arc<Authenticator>>,
     mounts: Vec<Arc<dyn Mount>>,
+    proxies: TrustedProxies,
 }
 
 impl std::fmt::Debug for Server {
@@ -56,6 +92,7 @@ impl std::fmt::Debug for Server {
                 "mounts",
                 &self.mounts.iter().map(|m| m.prefix()).collect::<Vec<_>>(),
             )
+            .field("trusted_proxies", &self.proxies)
             .finish_non_exhaustive()
     }
 }
@@ -67,6 +104,7 @@ impl Server {
             router,
             auth: None,
             mounts: Vec::new(),
+            proxies: TrustedProxies::default(),
         }
     }
 
@@ -84,6 +122,15 @@ impl Server {
         self
     }
 
+    /// Trust `X-Forwarded-For` from these peers (`[server] trusted_proxies`, parsed with
+    /// [`TrustedProxies::parse`]): the client address of throttles and audit is then the right-most untrusted
+    /// entry. Trusted proxies are also exempt from the per-address connection cap.
+    #[must_use]
+    pub fn with_trusted_proxies(mut self, proxies: TrustedProxies) -> Self {
+        self.proxies = proxies;
+        self
+    }
+
     pub fn router(&self) -> &Arc<Router> {
         &self.router
     }
@@ -92,7 +139,13 @@ impl Server {
         self.auth.is_some()
     }
 
-    /// The largest body the HTTP reader accepts for a request to `path` (checked before the body is read).
+    /// The trusted proxies.
+    pub fn trusted_proxies(&self) -> &TrustedProxies {
+        &self.proxies
+    }
+
+    /// The largest body the HTTP reader accepts for a request to `path` (checked before the body is read; pass
+    /// the path of the parsed request URI, the one the router sees).
     pub fn body_limit(&self, path: &str) -> usize {
         if path == "/auth/token" {
             MAX_TOKEN_BODY
@@ -107,7 +160,13 @@ impl Server {
         self.mounts.iter().find(|m| path.starts_with(m.prefix()))
     }
 
-    /// Answer one request. `client` is the peer address (for the login throttle). Never panics on input.
+    /// The client address of a request from `peer`: the peer, or the forwarded client behind a trusted proxy.
+    pub fn client_ip(&self, peer: Option<SocketAddr>, headers: &HeaderMap) -> Option<IpAddr> {
+        peer.map(|p| self.proxies.client_ip(p.ip(), headers))
+    }
+
+    /// Answer one request. `client` is the TCP peer address (throttles, audit; resolved through the trusted
+    /// proxies). Never panics on input.
     pub async fn handle(
         &self,
         req: Request<Vec<u8>>,
@@ -121,10 +180,13 @@ impl Server {
             return error_response(&e);
         }
         let path = req.uri().path().to_owned();
+        let ip = self
+            .client_ip(client, req.headers())
+            .map_or_else(|| "unknown".to_owned(), |a| a.to_string());
         if let Some(rest) = path.strip_prefix("/auth/") {
             return match rest {
                 "info" => self.auth_info(&method),
-                "token" => self.auth_token(&req, &method, client),
+                "token" => self.auth_token(&req, &method, &ip),
                 _ => error_response(&ApiError::not_found("not found")),
             };
         }
@@ -134,8 +196,11 @@ impl Server {
             return self.router.handle(req).await; // the UI files: public
         }
         let principal = match &self.auth {
+            None if mount.is_some() => {
+                return error_response(&ApiError::new(StatusCode::FORBIDDEN, MOUNT_NEEDS_AUTH));
+            }
             None => None,
-            Some(auth) => match self.authenticate(auth, &req, client) {
+            Some(auth) => match authenticate(auth, &req, &method, &path, &ip) {
                 Ok(p) => Some(p),
                 Err(e) => return auth_failure(&e),
             },
@@ -146,10 +211,11 @@ impl Server {
         if let Some(p) = &principal {
             tracing::info!(
                 target: "audit",
-                key = %p.key_id,
-                provider = %p.provider,
+                key = ?p.subject,
+                provider = ?p.provider,
+                client = ?ip,
                 method = %method,
-                path = %path,
+                path = ?path,
                 status = response.status().as_u16(),
                 "request"
             );
@@ -166,6 +232,15 @@ impl Server {
         principal: Option<Principal>,
     ) -> Response<Vec<u8>> {
         if let Some(mount) = mount {
+            let Some(p) = &principal else {
+                // unreachable by construction (handle refuses mounts without auth); fail closed anyway
+                return error_response(&ApiError::new(StatusCode::FORBIDDEN, MOUNT_NEEDS_AUTH));
+            };
+            if let Some(RequiredScope::Scope(need)) = mount.required_scope(method, path)
+                && !p.scopes.contains(need)
+            {
+                return forbidden(need, method, path);
+            }
             if body_too_large(&req, MAX_MOUNT_BODY) {
                 return error_response(&too_large(MAX_MOUNT_BODY));
             }
@@ -178,35 +253,10 @@ impl Server {
                 Scope::UiActions
             };
             if !p.scopes.contains(need) {
-                return error_response(
-                    &ApiError::new(StatusCode::FORBIDDEN, "forbidden").with_hint(format!(
-                        "the API key lacks the scope {need} (needed for {method} {path})"
-                    )),
-                );
+                return forbidden(need, method, path);
             }
         }
         self.router.handle(req).await
-    }
-
-    /// The caller of a protected request, or the 401 / 429 answer.
-    fn authenticate(
-        &self,
-        auth: &Authenticator,
-        req: &Request<Vec<u8>>,
-        client: Option<SocketAddr>,
-    ) -> Result<Principal, AuthError> {
-        let header = match req.headers().get(header::AUTHORIZATION) {
-            None => None,
-            Some(v) => match v.to_str() {
-                Ok(v) => Some(v),
-                Err(_) => return Err(AuthError::Malformed("bad Authorization header".into())),
-            },
-        };
-        let ip = client.map(|a| a.ip().to_string());
-        let ctx = RequestContext::new(header, ip.as_deref());
-        let principal = auth.authenticate_request(&ctx, SystemTime::now())?;
-        auth.check_rate(&principal, Instant::now())?;
-        Ok(principal)
     }
 
     fn auth_info(&self, method: &Method) -> Response<Vec<u8>> {
@@ -224,12 +274,7 @@ impl Server {
         json_response(StatusCode::OK, &body)
     }
 
-    fn auth_token(
-        &self,
-        req: &Request<Vec<u8>>,
-        method: &Method,
-        client: Option<SocketAddr>,
-    ) -> Response<Vec<u8>> {
+    fn auth_token(&self, req: &Request<Vec<u8>>, method: &Method, who: &str) -> Response<Vec<u8>> {
         if method != Method::POST {
             return method_not_allowed();
         }
@@ -243,16 +288,16 @@ impl Server {
             Ok(k) => k,
             Err(e) => return error_response(&e),
         };
-        let who = client.map_or_else(|| "unknown".to_owned(), |a| a.ip().to_string());
+        // failures are audit-logged by the authenticator (client, provider, reason class)
         match auth.login_from(
-            &who,
+            who,
             &method_name,
             &params,
             SystemTime::now(),
             Instant::now(),
         ) {
             Ok(t) => {
-                tracing::info!(target: "audit", client = %who, method = %method_name, "token issued");
+                tracing::info!(target: "audit", client = ?who, method = ?method_name, "token issued");
                 json_response(
                     StatusCode::OK,
                     &json!({
@@ -263,12 +308,41 @@ impl Server {
                     }),
                 )
             }
-            Err(e) => {
-                tracing::warn!(target: "audit", client = %who, method = %method_name, "token exchange refused");
-                auth_failure(&e)
-            }
+            Err(e) => auth_failure(&e),
         }
     }
+}
+
+/// The caller of a protected request (throttled, audit-logged on failure, rate limited), or the error.
+fn authenticate(
+    auth: &Authenticator,
+    req: &Request<Vec<u8>>,
+    method: &Method,
+    path: &str,
+    client: &str,
+) -> Result<Principal, AuthError> {
+    let header = match req.headers().get(header::AUTHORIZATION) {
+        None => None,
+        Some(v) => match v.to_str() {
+            Ok(v) => Some(v),
+            Err(_) => return Err(AuthError::Malformed("bad Authorization header".into())),
+        },
+    };
+    let headers = Headers(req.headers());
+    let ctx = RequestContext::new(header, Some(client))
+        .with_request(method.as_str(), path)
+        .with_headers(&headers);
+    let principal = auth.authenticate_from(&ctx, SystemTime::now(), Instant::now())?;
+    auth.check_rate(&principal, Instant::now())?;
+    Ok(principal)
+}
+
+fn forbidden(need: Scope, method: &Method, path: &str) -> Response<Vec<u8>> {
+    error_response(
+        &ApiError::new(StatusCode::FORBIDDEN, "forbidden").with_hint(format!(
+            "the API key lacks the scope {need} (needed for {method} {path})"
+        )),
+    )
 }
 
 /// The login of `POST /auth/token`: `(method, params)` from a JSON body `{"method": "...", ...}` (`method`
@@ -300,39 +374,25 @@ fn login_params(req: &Request<Vec<u8>>) -> Result<(String, Value), ApiError> {
     Ok((method, value))
 }
 
-/// 401 for every credential failure (the same body whatever the reason), 429 when throttled, 500 otherwise.
+/// The answer to an authentication failure, by [`AuthError::http_status`]: 401 (the same body whatever the
+/// reason, with the `Bearer` challenge), 403, 429 (with `Retry-After`), 503, 500.
 fn auth_failure(e: &AuthError) -> Response<Vec<u8>> {
-    let mut r = match e {
-        AuthError::RateLimited => {
-            let mut r = error_response(&ApiError::new(
-                StatusCode::TOO_MANY_REQUESTS,
-                "rate limited",
-            ));
-            r.headers_mut()
-                .insert(header::RETRY_AFTER, header::HeaderValue::from_static("60"));
-            return r;
+    let status = StatusCode::from_u16(e.http_status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let mut r = error_response(&ApiError::new(status, e.public_message()));
+    match status {
+        StatusCode::UNAUTHORIZED => {
+            r.headers_mut().insert(
+                header::WWW_AUTHENTICATE,
+                header::HeaderValue::from_static("Bearer"),
+            );
         }
-        e if e.is_credential_failure() || matches!(e, AuthError::Missing) => {
-            let msg = if matches!(e, AuthError::Missing) {
-                e.public_message()
-            } else {
-                "invalid credentials"
-            };
-            error_response(&ApiError::new(StatusCode::UNAUTHORIZED, msg))
+        StatusCode::TOO_MANY_REQUESTS => {
+            r.headers_mut().insert(
+                header::RETRY_AFTER,
+                header::HeaderValue::from_static(RETRY_AFTER_S),
+            );
         }
-        AuthError::Forbidden(_) => {
-            error_response(&ApiError::new(StatusCode::FORBIDDEN, "forbidden"))
-        }
-        _ => error_response(&ApiError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "internal error",
-        )),
-    };
-    if r.status() == StatusCode::UNAUTHORIZED {
-        r.headers_mut().insert(
-            header::WWW_AUTHENTICATE,
-            header::HeaderValue::from_static("Bearer"),
-        );
+        _ => {}
     }
     r
 }

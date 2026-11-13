@@ -22,7 +22,7 @@ fn signer() -> JwtSigner {
 
 fn principal(scp: &[&str]) -> Principal {
     Principal {
-        key_id: "abcd0123".into(),
+        subject: "abcd0123".into(),
         provider: "api_key".into(),
         name: "n".into(),
         scopes: scopes(scp),
@@ -325,11 +325,12 @@ fn revoked_key_jwt_rejected_after_reload() {
     let tok = auth.exchange(&plain, now).unwrap().token;
     assert!(auth.authenticate(&format!("Bearer {tok}"), now).is_ok());
 
-    // revoke through another handle on the file; the authenticator picks it up via mtime
-    std::thread::sleep(Duration::from_millis(20));
+    // revoke through another handle on the file; the authenticator picks it up via the fingerprint (an explicit
+    // reload here; requests look at the file at most once per second)
     let mut other = KeyStore::load(&path).unwrap();
     other.revoke("svc").unwrap();
     other.save().unwrap();
+    assert!(auth.reload().unwrap());
     assert!(matches!(
         auth.authenticate(&format!("Bearer {tok}"), now),
         Err(AuthError::Revoked)
@@ -350,7 +351,7 @@ fn revoked_key_jwt_rejected_in_memory() {
     let ghost = signer()
         .issue(
             &Principal {
-                key_id: "ffffffff".into(),
+                subject: "ffffffff".into(),
                 ..principal(&["admin"])
             },
             now_s(now),
@@ -399,26 +400,62 @@ fn rate_limiter_memory_is_bounded() {
 fn login_throttle() {
     let th = LoginThrottle::new();
     let t0 = Instant::now();
+    let c = "1.2.3.4";
     for i in 0..9 {
-        th.record_failure("1.2.3.4", t0 + Duration::from_secs(i));
-        assert!(!th.is_blocked("1.2.3.4", t0 + Duration::from_secs(i)));
+        th.record_failure(c, Some("k1"), t0 + Duration::from_secs(i));
+        assert!(!th.is_blocked(c, Some("k1"), t0 + Duration::from_secs(i)));
     }
-    th.record_failure("1.2.3.4", t0 + Duration::from_secs(9));
-    assert!(th.is_blocked("1.2.3.4", t0 + Duration::from_secs(10)));
-    assert!(!th.is_blocked("5.6.7.8", t0 + Duration::from_secs(10)));
-    assert!(th.is_blocked("1.2.3.4", t0 + Duration::from_secs(300)));
-    assert!(!th.is_blocked("1.2.3.4", t0 + Duration::from_secs(310)));
+    th.record_failure(c, Some("k1"), t0 + Duration::from_secs(9));
+    let t10 = t0 + Duration::from_secs(10);
+    // the key id is blocked from that client only; other ids and other clients go on
+    assert!(th.is_blocked(c, Some("k1"), t10));
+    assert!(!th.is_blocked(c, Some("k2"), t10));
+    assert!(!th.is_blocked(c, None, t10));
+    assert!(!th.is_blocked("5.6.7.8", Some("k1"), t10));
+    // a success does not lift an active block
+    th.record_success(c, Some("k1"), t10);
+    assert!(th.is_blocked(c, Some("k1"), t0 + Duration::from_secs(300)));
+    assert!(!th.is_blocked(c, Some("k1"), t0 + Duration::from_secs(310)));
     // failures spread beyond the window do not add up
     let th = LoginThrottle::new();
     for i in 0..20 {
-        th.record_failure("a", t0 + Duration::from_secs(i * 100));
+        th.record_failure("a", Some("k"), t0 + Duration::from_secs(i * 100));
     }
-    assert!(!th.is_blocked("a", t0 + Duration::from_secs(1900)));
+    assert!(!th.is_blocked("a", Some("k"), t0 + Duration::from_secs(1900)));
+    // a success forgets the pair's failures
+    let th = LoginThrottle::new();
+    for _ in 0..9 {
+        th.record_failure("a", Some("k"), t0);
+    }
+    th.record_success("a", Some("k"), t0);
+    th.record_failure("a", Some("k"), t0);
+    assert!(!th.is_blocked("a", Some("k"), t0));
+}
+
+#[test]
+fn login_throttle_per_client_cap() {
+    let th = LoginThrottle::new();
+    let t0 = Instant::now();
+    // a guesser rotating key ids: 100 failures block the whole address
+    for i in 0..LoginThrottle::CLIENT_MAX_FAILURES {
+        assert!(!th.is_blocked("c", Some(&format!("id{i}")), t0));
+        th.record_failure("c", Some(&format!("id{i}")), t0);
+    }
+    assert!(th.is_blocked("c", Some("fresh"), t0));
+    assert!(th.is_blocked("c", None, t0));
+    assert!(!th.is_blocked("other", None, t0));
+    th.record_success("c", Some("fresh"), t0);
+    assert!(
+        th.is_blocked("c", None, t0),
+        "success never clears the client block"
+    );
 }
 
 #[test]
 fn exchange_from_throttles_bad_logins() {
-    let auth = Authenticator::new(KeyStore::in_memory(), signer(), 600);
+    let mut store = KeyStore::in_memory();
+    let good = store.create("good", scopes(&["ui"]), None).unwrap();
+    let auth = Authenticator::new(store, signer(), 600);
     let (bad, _) = ApiKey::generate().unwrap();
     let t0 = Instant::now();
     for _ in 0..10 {
@@ -431,6 +468,49 @@ fn exchange_from_throttles_bad_logins() {
         auth.exchange_from("c", &bad, SystemTime::now(), t0),
         Err(AuthError::RateLimited)
     ));
+    // the burst against one key id does not lock out the other keys of the address
+    assert!(
+        auth.exchange_from("c", &good, SystemTime::now(), t0)
+            .is_ok()
+    );
+}
+
+#[test]
+fn direct_credentials_are_throttled_too() {
+    let mut store = KeyStore::in_memory();
+    let good = store.create("good", scopes(&["ui"]), None).unwrap();
+    let auth = Authenticator::new(store, signer(), 600);
+    let (id, _) = parse_api_key(&good).unwrap();
+    // the right id with a wrong secret, ten times
+    let wrong = format!("smk_{id}_{}", "A".repeat(43));
+    let t0 = Instant::now();
+    let now = SystemTime::now();
+    let hdr = format!("ApiKey {wrong}");
+    let ctx = RequestContext::new(Some(&hdr), Some("10.0.0.1")).with_request("GET", "/api/meta");
+    for _ in 0..10 {
+        assert!(matches!(
+            auth.authenticate_from(&ctx, now, t0),
+            Err(AuthError::InvalidCredentials)
+        ));
+    }
+    // now that id is blocked from that address, even with the right secret
+    let ok = format!("ApiKey {good}");
+    let ctx_ok = RequestContext::new(Some(&ok), Some("10.0.0.1"));
+    assert!(matches!(
+        auth.authenticate_from(&ctx_ok, now, t0),
+        Err(AuthError::RateLimited)
+    ));
+    // and from another address it works
+    let ctx_other = RequestContext::new(Some(&ok), Some("10.0.0.2"));
+    assert!(auth.authenticate_from(&ctx_other, now, t0).is_ok());
+    // a missing credential is not a failure
+    let anon = RequestContext::new(None, Some("10.0.0.3"));
+    for _ in 0..20 {
+        assert!(matches!(
+            auth.authenticate_from(&anon, now, t0),
+            Err(AuthError::Missing)
+        ));
+    }
 }
 
 #[test]
@@ -467,7 +547,7 @@ impl secmonk_auth::AuthProvider for FakeProxy {
         let (scheme, user) = ctx.authorization_parts()?.ok()?;
         scheme.eq_ignore_ascii_case("proxy").then(|| {
             Ok(Principal {
-                key_id: user.to_owned(),
+                subject: user.to_owned(),
                 provider: "proxy".into(),
                 name: user.to_owned(),
                 scopes: scopes(&["ui:read"]),
@@ -484,7 +564,7 @@ impl secmonk_auth::AuthProvider for FakeProxy {
     ) -> secmonk_auth::Result<Principal> {
         let user = params["user"].as_str().unwrap_or_default().to_owned();
         Ok(Principal {
-            key_id: user.clone(),
+            subject: user.clone(),
             provider: "proxy".into(),
             name: user,
             scopes: scopes(&["match"]),
@@ -492,11 +572,18 @@ impl secmonk_auth::AuthProvider for FakeProxy {
             expires_at: None,
         })
     }
-    fn revalidate(&self, subject: &str, _now: SystemTime) -> secmonk_auth::Result<String> {
+    fn revalidate(
+        &self,
+        subject: &str,
+        _now: SystemTime,
+    ) -> secmonk_auth::Result<secmonk_auth::Subject> {
         if *self.revoked.lock().unwrap() {
             Err(secmonk_auth::AuthError::Revoked)
         } else {
-            Ok(subject.to_owned())
+            Ok(secmonk_auth::Subject {
+                name: subject.to_owned(),
+                scopes: scopes(&["match"]),
+            })
         }
     }
 }
@@ -536,7 +623,7 @@ fn provider_chain_supports_another_strategy() {
         .token;
     let p = auth.authenticate(&format!("Bearer {tok}"), now).unwrap();
     assert_eq!(
-        (p.provider.as_str(), p.key_id.as_str(), p.via),
+        (p.provider.as_str(), p.subject.as_str(), p.via),
         ("proxy", "bob", AuthVia::Jwt)
     );
     assert!(p.scopes.contains(Scope::Match));
@@ -549,4 +636,283 @@ fn provider_chain_supports_another_strategy() {
         auth.authenticate_request(&secmonk_auth::RequestContext::default(), now),
         Err(secmonk_auth::AuthError::Missing)
     ));
+}
+
+#[cfg(unix)]
+fn write_keys(path: &std::path::Path, text: &str) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::write(path, text).unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+}
+
+/// A broken keys file fails closed (API keys and their sessions refused) and recovers once fixed.
+#[cfg(unix)]
+#[test]
+fn broken_keys_file_fails_closed() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("api_keys.toml");
+    let mut store = KeyStore::load(&path).unwrap();
+    let plain = store.create("svc", scopes(&["ui"]), None).unwrap();
+    store.save().unwrap();
+    let good_text = std::fs::read_to_string(&path).unwrap();
+    let provider =
+        ApiKeyProvider::new(KeyStore::load(&path).unwrap()).with_check_interval(Duration::ZERO);
+    let auth = Authenticator::with_providers(vec![std::sync::Arc::new(provider)], signer(), 600);
+    let now = SystemTime::now();
+    let tok = auth.exchange(&plain, now).unwrap().token;
+    let bearer = format!("Bearer {tok}");
+    let direct = format!("ApiKey {plain}");
+    assert!(auth.authenticate(&bearer, now).is_ok());
+
+    // a hand edit that breaks the TOML: everything API-key based is refused, not served from the old keys
+    write_keys(&path, "[[key]]\nid = \"broken");
+    for h in [&bearer, &direct] {
+        let e = auth.authenticate(h, now).unwrap_err();
+        assert!(matches!(e, AuthError::Unavailable(_)), "{e:?}");
+        assert_eq!(e.http_status(), 503);
+        assert_eq!(e.public_message(), "authentication unavailable");
+    }
+    assert!(auth.exchange(&plain, now).is_err());
+    assert!(
+        auth.reload().is_err(),
+        "an explicit reload reports the broken file"
+    );
+
+    // fixed: served again
+    write_keys(&path, &good_text);
+    assert!(auth.authenticate(&bearer, now).is_ok());
+    assert!(auth.authenticate(&direct, now).is_ok());
+}
+
+/// The file is looked at most once per interval: a change shows up only after it (or an explicit reload).
+#[cfg(unix)]
+#[test]
+fn keys_file_checked_at_most_once_per_interval() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("api_keys.toml");
+    let mut store = KeyStore::load(&path).unwrap();
+    let plain = store.create("svc", scopes(&["ui"]), None).unwrap();
+    store.save().unwrap();
+    let auth = Authenticator::new(KeyStore::load(&path).unwrap(), signer(), 600);
+    let now = SystemTime::now();
+    let direct = format!("ApiKey {plain}");
+    assert!(auth.authenticate(&direct, now).is_ok());
+    let mut other = KeyStore::load(&path).unwrap();
+    other.revoke("svc").unwrap();
+    other.save().unwrap();
+    // within the interval (the provider was built just now) the old snapshot answers without a stat
+    assert!(auth.authenticate(&direct, now).is_ok());
+    std::thread::sleep(KEYS_CHECK_INTERVAL + Duration::from_millis(50));
+    assert!(matches!(
+        auth.authenticate(&direct, now),
+        Err(AuthError::Revoked)
+    ));
+}
+
+/// The fingerprint is the whole identity: an atomic replace with the same length and the old mtime is seen.
+#[cfg(unix)]
+#[test]
+fn fingerprint_sees_a_replace_with_the_same_mtime() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("api_keys.toml");
+    let mut store = KeyStore::load(&path).unwrap();
+    store.create("aaa", scopes(&["ui"]), None).unwrap();
+    store.save().unwrap();
+    let loaded = KeyStore::load(&path).unwrap();
+    assert!(!loaded.file_changed());
+    let old_mtime = std::fs::metadata(&path).unwrap().modified().unwrap();
+    let text = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("aaa", "bbb");
+    let tmp = dir.path().join("new.toml");
+    write_keys(&tmp, &text);
+    std::fs::File::options()
+        .write(true)
+        .open(&tmp)
+        .unwrap()
+        .set_modified(old_mtime)
+        .unwrap();
+    std::fs::rename(&tmp, &path).unwrap();
+    assert_eq!(
+        std::fs::metadata(&path).unwrap().modified().unwrap(),
+        old_mtime
+    );
+    assert!(loaded.file_changed(), "a new inode is a change");
+}
+
+/// A live session keeps only the scopes its key still has (and never gains new ones).
+#[cfg(unix)]
+#[test]
+fn session_scopes_follow_the_key() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("api_keys.toml");
+    let mut store = KeyStore::load(&path).unwrap();
+    let wide = store
+        .create("wide", scopes(&["ui", "match"]), None)
+        .unwrap();
+    let narrow = store.create("narrow", scopes(&["ui:read"]), None).unwrap();
+    store.save().unwrap();
+    let auth = Authenticator::new(KeyStore::load(&path).unwrap(), signer(), 600);
+    let now = SystemTime::now();
+    let wide_tok = format!("Bearer {}", auth.exchange(&wide, now).unwrap().token);
+    let narrow_tok = format!("Bearer {}", auth.exchange(&narrow, now).unwrap().token);
+
+    // wide loses match and ui:actions; narrow becomes admin
+    let mut recs = KeyStore::load(&path).unwrap().list().to_vec();
+    recs[0].scopes = scopes(&["ui:read"]);
+    recs[1].scopes = scopes(&["admin"]);
+    let mut toml_text = String::new();
+    for r in &recs {
+        toml_text.push_str(&format!(
+            "[[key]]\nid = \"{}\"\nname = \"{}\"\nhash = \"{}\"\nscopes = [{}]\ncreated = \"{}\"\n\n",
+            r.id,
+            r.name,
+            r.hash,
+            r.scopes
+                .iter()
+                .map(|s| format!("\"{}\"", s.as_str()))
+                .collect::<Vec<_>>()
+                .join(", "),
+            r.created
+        ));
+    }
+    write_keys(&path, &toml_text);
+    auth.reload().unwrap();
+
+    let p = auth.authenticate(&wide_tok, now).unwrap();
+    assert_eq!(p.scopes, scopes(&["ui:read"]));
+    let p = auth.authenticate(&narrow_tok, now).unwrap();
+    assert_eq!(
+        p.scopes,
+        scopes(&["ui:read"]),
+        "a session never gains scopes"
+    );
+    assert!(!p.scopes.contains(Scope::Admin));
+}
+
+#[test]
+fn scope_intersection() {
+    let i = |a: &[&str], b: &[&str]| scopes(a).intersection(&scopes(b));
+    assert_eq!(i(&["admin"], &["ui"]), scopes(&["ui"]));
+    assert_eq!(i(&["ui"], &["admin"]), scopes(&["ui"]));
+    assert_eq!(i(&["admin"], &["admin"]), scopes(&["admin"]));
+    assert_eq!(
+        i(&["ui", "match"], &["match", "feed:read"]),
+        scopes(&["match"])
+    );
+    assert!(i(&["ui"], &["match"]).is_empty());
+}
+
+#[test]
+fn jwt_key_rotation_by_kid() {
+    let old = JwtSigner::new(vec![1u8; 32], 3600);
+    let new = JwtSigner::new(vec![2u8; 32], 3600);
+    let rotated = JwtSigner::new(vec![2u8; 32], 3600).with_previous(vec![vec![1u8; 32]]);
+    assert_eq!(old.kid(), key_id(&[1u8; 32]));
+    assert_eq!(old.kid().len(), 8);
+    assert_ne!(old.kid(), new.kid());
+    let t_old = old.issue(&principal(&["ui"]), 1000).unwrap().token;
+    let t_new = rotated.issue(&principal(&["ui"]), 1000).unwrap().token;
+    // the header names the key
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD as B;
+    let header: serde_json::Value =
+        serde_json::from_slice(&B.decode(t_old.split('.').next().unwrap()).unwrap()).unwrap();
+    assert_eq!(header["kid"], old.kid());
+    // the rotated signer accepts both; a signer without the old key refuses the old token
+    assert!(rotated.verify(&t_old, 1500).is_ok());
+    assert!(rotated.verify(&t_new, 1500).is_ok());
+    assert!(matches!(
+        new.verify(&t_old, 1500),
+        Err(AuthError::InvalidCredentials)
+    ));
+    assert!(old.verify(&t_new, 1500).is_err());
+    // the debug output names the kid, never the secret
+    let dbg = format!("{rotated:?}");
+    assert!(dbg.contains(rotated.kid()) && !dbg.contains("[2, 2"));
+}
+
+/// A provider that claims `Bearer` tokens of another issuer (an OIDC access token) and reads a header.
+#[derive(Debug)]
+struct FakeOidc;
+
+impl secmonk_auth::AuthProvider for FakeOidc {
+    fn name(&self) -> &str {
+        "oidc"
+    }
+    fn authenticate(
+        &self,
+        ctx: &secmonk_auth::RequestContext<'_>,
+        _now: SystemTime,
+    ) -> Option<secmonk_auth::Result<Principal>> {
+        let (scheme, tok) = ctx.authorization_parts()?.ok()?;
+        if !scheme.eq_ignore_ascii_case("bearer") || peek_issuer(tok).as_deref() != Some("idp") {
+            return None;
+        }
+        Some(Ok(Principal {
+            subject: ctx.header("x-tenant").unwrap_or("none").to_owned(),
+            provider: "oidc".into(),
+            name: ctx.path.unwrap_or("-").to_owned(),
+            scopes: scopes(&["ui:read"]),
+            via: AuthVia::External,
+            expires_at: None,
+        }))
+    }
+}
+
+#[test]
+fn bearer_tokens_route_by_issuer() {
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD as B;
+    use std::sync::Arc;
+    let mut store = KeyStore::in_memory();
+    let plain = store.create("svc", scopes(&["ui"]), None).unwrap();
+    let auth = Authenticator::with_providers(
+        vec![
+            Arc::new(secmonk_auth::ApiKeyProvider::new(store)),
+            Arc::new(FakeOidc),
+        ],
+        signer(),
+        600,
+    );
+    let now = SystemTime::now();
+    let ours = auth.exchange(&plain, now).unwrap().token;
+    assert_eq!(peek_issuer(&ours).as_deref(), Some(ISSUER));
+    let p = auth.authenticate(&format!("Bearer {ours}"), now).unwrap();
+    assert_eq!((p.provider.as_str(), p.via), ("api_key", AuthVia::Jwt));
+
+    let foreign = format!(
+        "{}.{}.sig",
+        B.encode(r#"{"alg":"RS256"}"#),
+        B.encode(r#"{"iss":"idp","sub":"x"}"#)
+    );
+    let hdr = format!("Bearer {foreign}");
+    let headers: &[(&str, &str)] = &[("X-Tenant", "acme")];
+    let ctx = RequestContext::new(Some(&hdr), Some("1.2.3.4"))
+        .with_request("GET", "/api/meta")
+        .with_headers(&headers);
+    let p = auth.authenticate_request(&ctx, now).unwrap();
+    assert_eq!(
+        (p.provider.as_str(), p.subject.as_str(), p.name.as_str()),
+        ("oidc", "acme", "/api/meta")
+    );
+    // a token nobody claims (not ours, not the IdP's) is refused as a credential failure
+    let nobody = format!(
+        "Bearer {}.{}.sig",
+        B.encode(r#"{"alg":"HS256"}"#),
+        B.encode(r#"{"iss":"elsewhere"}"#)
+    );
+    let e = auth.authenticate(&nobody, now).unwrap_err();
+    assert_eq!(e.http_status(), 401);
+    assert!(peek_issuer("not.a-jwt").is_none() && peek_issuer("a.b.c.d").is_none());
+}
+
+#[test]
+fn error_statuses() {
+    assert_eq!(AuthError::Missing.http_status(), 401);
+    assert_eq!(AuthError::Revoked.http_status(), 401);
+    assert_eq!(AuthError::Forbidden(Scope::Admin).http_status(), 403);
+    assert_eq!(AuthError::RateLimited.http_status(), 429);
+    assert_eq!(AuthError::Format("x".into()).http_status(), 500);
+    assert_eq!(AuthError::UnknownKey.reason_class(), "unknown_key");
 }

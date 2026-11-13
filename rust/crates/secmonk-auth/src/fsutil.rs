@@ -16,9 +16,19 @@ pub(crate) fn random_bytes<const N: usize>() -> Result<[u8; N], AuthError> {
 /// Fail if the file is writable by group/other (`mask = 0o022`) or accessible at all by them (`0o077`).
 #[cfg(unix)]
 pub(crate) fn check_mode(path: &Path, mask: u32) -> Result<(), AuthError> {
-    use std::os::unix::fs::PermissionsExt;
     let meta =
         fs::metadata(path).map_err(|e| AuthError::io(format!("stat {}", path.display()), e))?;
+    check_meta_mode(path, &meta, mask)
+}
+
+/// [`check_mode`] on metadata already taken (from an open handle); `path` is for the message.
+#[cfg(unix)]
+pub(crate) fn check_meta_mode(
+    path: &Path,
+    meta: &fs::Metadata,
+    mask: u32,
+) -> Result<(), AuthError> {
+    use std::os::unix::fs::PermissionsExt;
     let mode = meta.permissions().mode() & 0o777;
     if mode & mask != 0 {
         return Err(AuthError::Format(format!(
@@ -31,6 +41,15 @@ pub(crate) fn check_mode(path: &Path, mask: u32) -> Result<(), AuthError> {
 
 #[cfg(not(unix))]
 pub(crate) fn check_mode(_path: &Path, _mask: u32) -> Result<(), AuthError> {
+    Ok(())
+}
+
+#[cfg(not(unix))]
+pub(crate) fn check_meta_mode(
+    _path: &Path,
+    _meta: &fs::Metadata,
+    _mask: u32,
+) -> Result<(), AuthError> {
     Ok(())
 }
 

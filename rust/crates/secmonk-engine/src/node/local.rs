@@ -5,13 +5,14 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use secmonk_model::node::{
     ChangesRequest, ChangesResponse, ComponentIdentity, ComponentMatch, ComponentResult, Coverage,
-    DEFAULT_OVERLAP_S, FeedMode, FeedPage, FeedSinceRequest, FeedStatus, MATCHER_VERSION,
-    MAX_COMPONENTS, MAX_IDS, MatchComponentsRequest, MatchComponentsResponse, SourceChanges,
-    SourceVersion, SummariesResponse, VersionKind, Versions, apply_overlap, parse_since_token,
+    DEFAULT_OVERLAP_S, FeedMode, FeedPage, FeedSinceRequest, FeedStatus, MAX_COMPONENTS, MAX_IDS,
+    MatchComponentsRequest, MatchComponentsResponse, SourceChanges, SourceVersion,
+    SummariesResponse, VersionKind, Versions, apply_overlap, parse_since_token,
 };
 use secmonk_model::{
     Asset, Component, INVENTORY_SCHEMA, Inventory, JsonMap, MatchParams, MatchResult,
@@ -20,8 +21,11 @@ use secmonk_store::{MirrorNodeStore, StoreError};
 use secmonk_traits::node::{Feed, MatchService, VulnInfo};
 use secmonk_traits::{CallCtx, ErrorCode, Matcher, Reporter, StepError, StepResult, WireError};
 use serde_json::{Value, json};
+use tokio::sync::Semaphore;
 
+use super::MAX_VIEW_LIMIT;
 use super::keys::component_lookup_keys;
+use super::versions::matcher_version;
 
 /// Most changed records one source may answer in `match.changes` before it answers `resync("too many changes")`.
 pub const CHANGES_LIMIT: usize = 20_000;
@@ -30,9 +34,13 @@ pub const FEED_DEFAULT_LIMIT: u32 = 2_000;
 /// Most records or rows a feed request may ask for (the store clamps further: `MAX_FEED_RECORDS` records,
 /// `MAX_ROWS_PAGE` rows per page).
 pub const FEED_MAX_LIMIT: u32 = 10_000;
-/// Most finding rows one ephemeral match returns (py-engine's `view_limit` bound): a chunk with more findings is
-/// split and matched again.
-const VIEW_LIMIT: u32 = 5_000;
+/// Most finding rows one ephemeral match returns ([`MAX_VIEW_LIMIT`]): a chunk with more findings is split and
+/// matched again.
+const VIEW_LIMIT: u32 = MAX_VIEW_LIMIT;
+/// `match.components` calls that may run at once by default (each one is a py-engine match).
+pub const DEFAULT_MATCH_CONCURRENCY: usize = 4;
+/// How long a `match.components` call waits for a slot before it answers `busy`.
+pub const MATCH_PERMIT_WAIT: Duration = Duration::from_secs(2);
 /// The synthetic asset of a `match.components` request.
 pub const MATCH_ASSET_ID: &str = "node:match-components";
 /// Keys of a `SnapshotDiff` that mean "this diff is not known: answer `resync`" (an importer whose diff would cost
@@ -56,8 +64,12 @@ pub struct LocalNodeSettings {
     pub node_id: Option<String>,
     /// Seconds deltas read below the client's version (proposal §3.2 rule 3).
     pub overlap_s: u64,
-    /// The matcher version served ([`MATCHER_VERSION`]).
+    /// The matcher version served (default: [`matcher_version`](super::matcher_version) of this build).
     pub matcher_version: String,
+    /// `match.components` calls that may run at once ([`DEFAULT_MATCH_CONCURRENCY`]; at least 1).
+    pub max_concurrent_matches: usize,
+    /// How long a call waits for a slot before it answers `busy` ([`MATCH_PERMIT_WAIT`]).
+    pub match_wait: Duration,
 }
 
 impl Default for LocalNodeSettings {
@@ -65,7 +77,9 @@ impl Default for LocalNodeSettings {
         LocalNodeSettings {
             node_id: None,
             overlap_s: DEFAULT_OVERLAP_S,
-            matcher_version: MATCHER_VERSION.to_owned(),
+            matcher_version: matcher_version().to_owned(),
+            max_concurrent_matches: DEFAULT_MATCH_CONCURRENCY,
+            match_wait: MATCH_PERMIT_WAIT,
         }
     }
 }
@@ -76,6 +90,8 @@ pub struct LocalNode {
     matcher: Arc<dyn Matcher>,
     reporter: Arc<dyn Reporter>,
     settings: LocalNodeSettings,
+    /// Slots of `match.components` (each one is an engine match: the expensive call of a node).
+    match_slots: Arc<Semaphore>,
 }
 
 impl std::fmt::Debug for LocalNode {
@@ -207,11 +223,13 @@ impl LocalNode {
         reporter: Arc<dyn Reporter>,
         settings: LocalNodeSettings,
     ) -> LocalNode {
+        let match_slots = Arc::new(Semaphore::new(settings.max_concurrent_matches.max(1)));
         LocalNode {
             store,
             matcher,
             reporter,
             settings,
+            match_slots,
         }
     }
 
@@ -300,6 +318,23 @@ impl MatchService for LocalNode {
         if !(0.0..=1.0).contains(&min_confidence) {
             return Err(WireError::invalid_params("min_confidence: expected 0..1"));
         }
+        // at most `max_concurrent_matches` engine matches at once; a caller that waits too long gets `busy`
+        let _slot = match tokio::time::timeout(
+            self.settings.match_wait,
+            self.match_slots.clone().acquire_owned(),
+        )
+        .await
+        {
+            Ok(Ok(permit)) => permit,
+            Ok(Err(_)) | Err(_) => {
+                let mut e = WireError::new(
+                    ErrorCode::Busy,
+                    "the node is matching other requests; retry later",
+                );
+                e.hint = Some("too many match.components calls at once".into());
+                return Err(e);
+            }
+        };
         let as_of = self.current_versions().await?;
         // distinct keys, first occurrence wins; components that the view cannot tell apart (same name, version,
         // category and purl: keys that differ only by vendor) go to separate rounds
@@ -560,8 +595,9 @@ impl Feed for LocalNode {
     }
 
     /// `since` is the follower's version of the source, either the plain upstream version or the token
-    /// `"<importer>@<version>"`; with a token whose importer differs from this node's, the answer is the whole
-    /// source (snapshot mode).
+    /// `"<importer>@<version>"`; with a token whose importer differs from this node's, or none, the answer is every
+    /// record. A record source is always answered in `delta` mode (replace units), a snapshot source (kev, epss,
+    /// debian-tracker) in `snapshot` mode (upserts, pinned to the version of the first page).
     async fn since(&self, req: FeedSinceRequest) -> StepResult<FeedPage> {
         let version = self.feed_version(&req.source).await?;
         let limit = req
@@ -586,25 +622,16 @@ impl Feed for LocalNode {
                         Some((importer, v)) => (importer == version.importer).then_some(v),
                         None => Some(s),
                     });
-                match since {
-                    Some(v) => {
-                        let lower = apply_overlap(v, self.settings.overlap_s);
-                        (
-                            FeedMode::Delta,
-                            self.store
-                                .rows_since(&req.source, Some(&lower), page, limit)
-                                .await
-                                .map_err(store_wire)?,
-                        )
-                    }
-                    None => (
-                        FeedMode::Snapshot,
-                        self.store
-                            .rows_since(&req.source, None, page, limit)
-                            .await
-                            .map_err(store_wire)?,
-                    ),
-                }
+                // always replace units (delta mode): without a version, every record is one; a record source is
+                // never answered as a snapshot (a follower refuses one: `affected` rows have no key to diff)
+                let lower = since.map(|v| apply_overlap(v, self.settings.overlap_s));
+                (
+                    FeedMode::Delta,
+                    self.store
+                        .rows_since(&req.source, lower.as_deref(), page, limit)
+                        .await
+                        .map_err(store_wire)?,
+                )
             }
         };
         Ok(FeedPage {

@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use futures_util::StreamExt;
 use secmonk_engine::node::{
     DIFF_UNKNOWN_KEY, LocalNode, LocalNodeSettings, NodeMatcher, component_lookup_keys,
+    default_importer_module, matcher_version,
 };
 use secmonk_engine::{EngineConfig, EngineDeps, EngineService, SecmonkEngine};
 use secmonk_model::node::*;
@@ -352,7 +353,7 @@ async fn match_components_regroups_the_ephemeral_findings_per_component() {
     assert_eq!(calls, [(3, Some(5_000)), (1, Some(5_000))]);
     assert_eq!(r.coverage.sources, ["kev", "nvd", "osv"]);
     assert_eq!(r.coverage.ecosystems, ["PyPI", "npm"]);
-    assert_eq!(r.as_of.matcher, MATCHER_VERSION);
+    assert_eq!(r.as_of.matcher, matcher_version());
     // too many components
     let many = vec![ident("x", None, None); MAX_COMPONENTS + 1];
     let e = node
@@ -427,13 +428,13 @@ async fn changes_answer_every_branch() {
     let steps = Steps::new(store.clone(), &[], 5_000);
     let node = local(&store, &steps);
     let v0 = node.versions().await.unwrap();
-    assert_eq!(v0.matcher, MATCHER_VERSION);
+    assert_eq!(v0.matcher, matcher_version());
 
     // same versions: unchanged
     let r = node
         .changes(ChangesRequest {
             since: since(&v0),
-            matcher: Some(MATCHER_VERSION.into()),
+            matcher: Some(matcher_version().into()),
         })
         .await
         .unwrap();
@@ -659,7 +660,7 @@ async fn feed_serves_deltas_and_snapshots() {
     assert_eq!(p.mode, FeedMode::Delta);
     assert_eq!(vulns_of(&p), ["GHSA-1"]);
     assert!(p.next_page.is_some());
-    // another importer, or no version: the whole source
+    // another importer, or no version: every record, still as replace units (a record source is never a snapshot)
     for since in [Some("rust/1@2024-03-01T10:30:00Z".to_owned()), None] {
         let p = node
             .since(FeedSinceRequest {
@@ -670,7 +671,7 @@ async fn feed_serves_deltas_and_snapshots() {
             })
             .await
             .unwrap();
-        assert_eq!(p.mode, FeedMode::Snapshot);
+        assert_eq!(p.mode, FeedMode::Delta);
         assert_eq!(vulns_of(&p), ["GHSA-1", "GHSA-2"]);
     }
     // a snapshot source: always the whole table
@@ -907,8 +908,12 @@ async fn a_complete_sync_records_versions_and_snapshot_diffs() {
     assert_eq!(job["status"], "ok", "{}", log_text(&job));
     let osv = version_of(&store, "osv").await;
     assert_eq!(osv.version.as_deref(), Some("2024-02-01T10:00:00Z"));
-    assert_eq!(osv.importer, "python/1");
-    assert_eq!(version_of(&store, "osv:PyPI").await.importer, "python/1");
+    assert_eq!(osv.importer, default_importer_module());
+    assert!(osv.importer.starts_with("python/"));
+    assert_eq!(
+        version_of(&store, "osv:PyPI").await.importer,
+        default_importer_module()
+    );
     let kev = version_of(&store, "kev").await;
     assert_eq!(
         (kev.version.as_deref(), kev.kind),
@@ -1205,7 +1210,7 @@ impl VulnInfo for FakeInfo {
 
 fn versions(osv: &str) -> Versions {
     Versions::new(
-        MATCHER_VERSION,
+        matcher_version(),
         [SourceVersion {
             source: "osv:PyPI".into(),
             version: Some(osv.into()),

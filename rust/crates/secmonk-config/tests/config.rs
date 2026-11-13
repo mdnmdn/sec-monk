@@ -593,6 +593,9 @@ fn new_sections_are_validated() {
     assert!(bad(&mut o, &["auth.jwt_ttl_s=0"]).contains("jwt_ttl_s"));
     assert!(bad(&mut o, &["node.upstream.url=ftp://x"]).contains("http(s)"));
     assert!(bad(&mut o, &["uv.pathh=1"]).contains("uv.pathh"));
+    assert!(bad(&mut o, &["server.trusted_proxies=[\"nope\"]"]).contains("trusted_proxies"));
+    assert!(bad(&mut o, &["server.trusted_proxies=[\"10.0.0.0/33\"]"]).contains("trusted_proxies"));
+    assert!(bad(&mut o, &["server.auth=off", "node.serve=[\"feed\"]"]).contains("node.serve"));
     // loopback with auth off is fine
     o.cli_overrides = vec!["server.listen=127.0.0.1:1".into(), "server.auth=off".into()];
     assert!(load(&o).is_ok());
@@ -677,4 +680,24 @@ fn effective_toml_round_trips() {
     let raw = parse(&text, Path::new("effective.toml")).unwrap();
     assert_eq!(raw.node.matcher, Some(MatcherMode::Remote));
     assert_eq!(raw.python.version.as_deref(), Some("3.13"));
+}
+
+#[test]
+fn trusted_proxies_and_loopback_helpers() {
+    let d = tempfile::tempdir().unwrap();
+    let mut o = base(d.path());
+    o.cli_overrides =
+        vec!["server.trusted_proxies=[\"10.0.0.1\", \"192.168.0.0/16\", \"fd00::/8\"]".into()];
+    let c = load(&o).unwrap();
+    assert_eq!(
+        c.server_trusted_proxies,
+        ["10.0.0.1", "192.168.0.0/16", "fd00::/8"]
+    );
+    assert!(effective_toml(&c).contains("trusted_proxies"));
+
+    let a = |s: &str| is_loopback_addr(&s.parse().unwrap());
+    assert!(a("127.0.0.1:1") && a("127.9.9.9:1") && a("[::1]:1") && a("[::ffff:127.0.0.1]:1"));
+    assert!(!a("0.0.0.0:1") && !a("10.0.0.1:1") && !a("[::]:1") && !a("[::ffff:10.0.0.1]:1"));
+    assert!(is_loopback_listen("localhost:1") && is_loopback_listen("[::ffff:127.0.0.1]:1"));
+    assert!(!is_loopback_listen("0.0.0.0:1"));
 }

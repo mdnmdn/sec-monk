@@ -7,14 +7,21 @@ rust-version.workspace = true
 publish.workspace = true
 license.workspace = true
 
+[features]
+default = ["server"]
+# The `/node/v1` binding (`NodeApi`): pulls `secmonk-api` (and through it the API router and the engine). A client
+# only (`RemoteNode`, `FeedSource`, the wire error mapping) builds with `default-features = false`.
+server = ["dep:secmonk-api", "dep:secmonk-auth"]
+
 [dependencies]
 async-trait.workspace = true
+base64.workspace = true                 # decoding the JWT payload for its timing claims (never verified client side)
 futures-util.workspace = true
 http.workspace = true
 percent-encoding.workspace = true
 reqwest.workspace = true                # the workspace's rustls client (as secmonk-sources and secmonk-runtime)
-secmonk-api.workspace = true            # Mount, json_response, error_response, ApiError (the server binding only)
-secmonk-auth.workspace = true           # Principal, Scope
+secmonk-api = { workspace = true, optional = true }    # Mount, json_response, error_response, ApiError (server)
+secmonk-auth = { workspace = true, optional = true }   # Principal, Scope (server)
 secmonk-model.workspace = true
 secmonk-traits.workspace = true
 serde.workspace = true
@@ -28,3 +35,7 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "net"
 
 [lints]
 workspace = true
+
+[[test]]
+name = "e2e"
+required-features = ["server"]

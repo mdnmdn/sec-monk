@@ -8,6 +8,9 @@ use secmonk_model::*;
 use secmonk_store::*;
 use serde_json::{Value, json};
 
+/// The matcher version the fakes serve.
+const TEST_MATCHER: &str = "py-engine/test";
+
 async fn open(dir: &std::path::Path) -> SqliteStore {
     SqliteStore::open(
         &dir.join("state.sqlite3"),
@@ -283,7 +286,7 @@ async fn versions_follow_complete_imports_only() {
         Some("2026-10-20T00:00:00.000")
     );
     assert_eq!(v(&vs, "nvd").importer, "rust/1");
-    let versions = Versions::new(MATCHER_VERSION, vs);
+    let versions = Versions::new(TEST_MATCHER, vs);
     assert_eq!(versions.since()["nvd"], "rust/1@2026-10-20T00:00:00.000");
     assert!(!versions.since().contains_key("kev"));
 
@@ -688,7 +691,7 @@ async fn node_cache_keeps_answers_lookups_and_summaries() {
     let s = open(d.path()).await;
     let cache = s.node_cache_store();
     let versions = Versions::new(
-        MATCHER_VERSION,
+        TEST_MATCHER,
         [SourceVersion {
             source: "nvd".into(),
             version: Some("v1".into()),

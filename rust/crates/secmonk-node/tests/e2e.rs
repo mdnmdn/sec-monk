@@ -17,15 +17,18 @@ use secmonk_engine::{EngineInfo, SkeletonEngine};
 use secmonk_model::Category;
 use secmonk_model::node::{
     ChangesRequest, ChangesResponse, ComponentIdentity, ComponentResult, Coverage, FeedMode,
-    FeedPage, FeedSinceRequest, FeedStatus, MATCHER_VERSION, MAX_COMPONENTS, MAX_IDS,
-    MatchComponentsRequest, MatchComponentsResponse, SourceChanges, SourceVersion,
-    SummariesResponse, VersionKind, Versions, VulnSummary,
+    FeedPage, FeedSinceRequest, FeedStatus, MAX_COMPONENTS, MAX_IDS, MatchComponentsRequest,
+    MatchComponentsResponse, SourceChanges, SourceVersion, SummariesResponse, VersionKind,
+    Versions, VulnSummary,
 };
 use secmonk_node::{NodeApi, RemoteConfig, RemoteNode};
 use secmonk_traits::node::{Feed, MatchService, VulnInfo};
 use secmonk_traits::{ErrorCode, StepResult, WireError};
 use serde_json::{Value, json};
 use tokio::net::TcpListener;
+
+/// The matcher version the fakes serve.
+const TEST_MATCHER: &str = "py-engine/test";
 
 // ------------------------------------------------------------------------------------------------------------
 // fakes
@@ -43,7 +46,7 @@ fn version(source: &str) -> SourceVersion {
 }
 
 fn versions() -> Versions {
-    Versions::new(MATCHER_VERSION, [version("nvd"), version("kev")])
+    Versions::new(TEST_MATCHER, [version("nvd"), version("kev")])
 }
 
 #[derive(Default)]
@@ -152,7 +155,7 @@ impl Feed for FakeFeed {
     async fn status(&self) -> StepResult<FeedStatus> {
         Ok(FeedStatus {
             node_id: Some("node:test".into()),
-            matcher: MATCHER_VERSION.into(),
+            matcher: TEST_MATCHER.into(),
             sources: vec![version("kev"), version("nvd")],
         })
     }
@@ -726,7 +729,7 @@ async fn remote_node_calls_every_service() {
         .await
         .unwrap();
     assert_eq!(r.results.len(), 2);
-    assert_eq!(r.as_of.matcher, MATCHER_VERSION);
+    assert_eq!(r.as_of.matcher, TEST_MATCHER);
     let c = n
         .changes(ChangesRequest {
             since: [("nvd".to_owned(), "rust/1@x".to_owned())].into(),

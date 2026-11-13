@@ -105,15 +105,16 @@ the host then fails the start ("py-engine is not enabled").
 | `[server] allow_hosts` | list of names, `[]` | Extra accepted `Host` names. |
 | `[server] insecure_http` | bool, `false` | Plain HTTP on a non-loopback address (behind a TLS-terminating proxy). |
 | `[server] allow_actions` | bool, `true` | Scans and syncs through the API. |
-| `[server] auth` | `"auto"` \| `"required"` \| `"off"`, `"auto"` | `auto`: required on a non-loopback address, off on loopback. `off` with a non-loopback `listen` is refused. |
+| `[server] auth` | `"auto"` \| `"required"` \| `"off"`, `"auto"` | `auto`: required on a non-loopback address **or when `[node] serve` is not empty** (the node API is never served unauthenticated; logged), off on plain loopback. `off` with a non-loopback `listen`, or with a non-empty `[node] serve`, is refused (`ConfigError::Invalid`). Loopback means `127.0.0.0/8`, `::1` and IPv4-mapped IPv6 (`secmonk_config::is_loopback_addr`, the one definition). |
 | `[server] serve_ui` | bool, `true` | Serve the UI files. |
+| `[server] trusted_proxies` | list of IPs / CIDRs, `[]` | Reverse proxies whose `X-Forwarded-For` is trusted for the client address (rate limiting, lockout). Validated syntactically at load (`10.0.0.1`, `10.0.0.0/8`, `fd00::/8`); an invalid entry is refused. Empty: the socket peer is always the client. Passed to `secmonk_api::Server::with_trusted_proxies` (`TrustedProxies::parse`) by the server mode. |
 | `[auth] keys_file` | path, `{paths.auth}/api_keys.toml` | API keys. |
 | `[auth] jwt_ttl_s` | int > 0, `3600` | JWT lifetime. |
 | `[auth] jwt_secret_file` | path, `{paths.auth}/jwt.key` | JWT signing secret. |
 | `[auth] rate_per_minute` | int > 0, `600` | Calls per minute per key. |
 | `[node] mirror` | bool, `true` | This node has a mirror part: the engine records source versions after a sync and re-matches stored assets. `false` with a non-empty `serve` or `upstream.sources` is refused at start (exit 2 for `serve`). |
-| `[node] serve` | list of `"feed"` \| `"match"` \| `"vulninfo"`, `[]` | Node API services offered (sorted, deduplicated); an unknown value is refused. Only the listed services are mounted at `/node/v1` (others 404), by `secmonk-server` / `--serve`, never by the window; the node id is kept in `{paths.auth}/node_id`. Needs `mirror = true`. |
-| `[node] matcher` | `"local"` \| `"remote"`, `"local"` | `remote`: match through `node.upstream` (requires `node.upstream.url`); vulnerability detail and search also come from the upstream. |
+| `[node] serve` | list of `"feed"` \| `"match"` \| `"vulninfo"`, `[]` | Node API services offered (sorted, deduplicated); an unknown value is refused. Only the listed services are mounted at `/node/v1` (others 404), by `secmonk-server` / `--serve`, never by the window; the node id is kept in `{paths.auth}/node_id`. Needs `mirror = true`. A non-empty `serve` turns authentication on (see `[server] auth`). |
+| `[node] matcher` | `"local"` \| `"remote"`, `"local"` | `remote`: match through `node.upstream` (requires `node.upstream.url`); vulnerability detail and search also come from the upstream. Allowed together with `mirror = true` (the mirror still serves and follows), but the local mirror is then unused for matching: a warning is logged. |
 | `[node.upstream] url` | http(s) URL, unset | Required by `matcher = "remote"` and by a non-empty `sources`. |
 | `[node.upstream] api_key_env` | string, `"SECMONK_UPSTREAM_API_KEY"` | Variable holding the upstream API key (the name only is configuration); read by the host at start, a missing or empty variable fails the start when `sources` or `matcher = "remote"` need the upstream. |
 | `[node.upstream] ca_cert` | path, unset | PEM to trust (self-signed upstream). |
@@ -246,7 +247,12 @@ Windows `MAX_PATH` limits deep venv paths, so keep `data_dir` short; SmartScreen
 Nothing is downloaded or probed twice: the verified uv lives in `paths.tools`, so data dirs that point `[paths] tools`
 (and `python`, `uv_cache`) at one directory share a single download (concurrent first starts of two data dirs can race
 on `uv-<v>.partial`; start one first). A uv you already have is used with `[uv] path` (a file, or `"auto"` for `PATH`);
-it is not checksum-pinned, only version-checked, so point it at a binary you trust. The managed interpreter is found
+it is not checksum-pinned, only version-checked, so point it at a binary you trust. **Trust model of an external uv**:
+it is trusted by its location and its `--version` string only (a `PATH` uv has no checksum). On unix the file (symlinks
+resolved) and its directory must be owned by you or root and not writable by group or others, else a configured
+`[uv] path` is refused (`RuntimeError::UntrustedUv`) and an `auto` `PATH` uv is skipped for the managed download. The
+first successful check is cached for the life of the process (no `uv --version` per call; a binary swapped later is
+not noticed until restart). The managed interpreter is found
 once: later starts skip `uv python find` while a module venv records it.
 
 ## Start-up states

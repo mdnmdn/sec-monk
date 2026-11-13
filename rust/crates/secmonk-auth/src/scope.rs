@@ -25,6 +25,16 @@ pub enum Scope {
 }
 
 impl Scope {
+    /// Every scope.
+    pub const ALL: [Scope; 6] = [
+        Scope::UiRead,
+        Scope::UiActions,
+        Scope::FeedRead,
+        Scope::Match,
+        Scope::VulninfoRead,
+        Scope::Admin,
+    ];
+
     /// The wire name.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -110,6 +120,19 @@ impl Scopes {
         } else {
             Err(AuthError::Forbidden(scope))
         }
+    }
+
+    /// The scopes granted by both sets (with `admin` implication: `admin` ∩ `ui` = `ui`).
+    pub fn intersection(&self, other: &Scopes) -> Scopes {
+        if self.0.contains(&Scope::Admin) && other.0.contains(&Scope::Admin) {
+            return Scopes(BTreeSet::from([Scope::Admin]));
+        }
+        Scopes(
+            Scope::ALL
+                .into_iter()
+                .filter(|s| self.contains(*s) && other.contains(*s))
+                .collect(),
+        )
     }
 
     /// Iterate the explicitly listed scopes.

@@ -5,9 +5,11 @@
 //!   (`MirrorNodeStore::record_complete_version`); a snapshot source also records what changed between the previous
 //!   and the new version (`SnapshotDiff`);
 //! - **re-match after the sync**: `LocalNode::changes` since the versions before the job; the stored assets with a
-//!   current component whose lookup keys meet a changed key, or with a finding on a changed id, are matched again
-//!   (persisted, as `assets/match`); a `resync` of any source re-matches every asset. A failure is a warning in the
-//!   job log, never a failed sync.
+//!   current component that [`affected_components`] selects (a lookup key meets a changed key, or a resynced
+//!   source's family covers it), or with a finding on a changed id, are matched again (persisted, as
+//!   `assets/match`). A `resync` of `kev` / `epss` changes no match set: only the assets with findings are matched
+//!   again (their KEV / EPSS facts and priority are read from the mirror at match time). A failure is a warning in
+//!   the job log, never a failed sync.
 //!
 //! **Snapshot diffs.** `kev` and `debian-tracker` compare a hash of every row before and after the run (rows read
 //! with `MirrorStore::rows_page`; only the hashes of the previous rows are kept in memory) and record the changed
@@ -15,26 +17,26 @@
 //! nearly every row every day, and a source above [`SNAPSHOT_DIFF_MAX_ROWS`] rows costs too much to compare: their
 //! diff is recorded with the single key [`DIFF_UNKNOWN_KEY`], and `match.changes` answers `resync` for them.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use secmonk_model::node::{
-    ChangesRequest, SnapshotDiff, SourceChanges, VersionKind, Versions, pkg_key,
+    ChangesRequest, ComponentIdentity, SnapshotDiff, VersionKind, Versions, pkg_key,
 };
 use secmonk_model::time::now_iso;
-use secmonk_model::{JsonMap, MirrorTable};
+use secmonk_model::{FindingStatus, JsonMap, MirrorTable};
 use secmonk_traits::node::MatchService;
 use secmonk_traits::{Matcher, Reporter, Source};
 use serde_json::Value;
 
+use super::changes::{ChangeSummary, affected_components};
 use super::keys::component_lookup_keys;
 use super::local::{DIFF_UNKNOWN_KEY, LocalNode, LocalNodeSettings, base_source};
+use super::versions::default_importer_module;
 use crate::engine::Inner;
 use crate::jobs::Job;
 
-/// Importer version recorded for a module source (`py-sources`) that declares none.
-pub const DEFAULT_IMPORTER_MODULE: &str = "python/1";
 /// Importer version recorded for a native source (`Source::native`) that declares none.
 pub const DEFAULT_IMPORTER_NATIVE: &str = "rust/1";
 /// Above this many rows a snapshot source records an unknown diff instead of comparing its rows.
@@ -158,7 +160,7 @@ impl Inner {
             if src.native() {
                 DEFAULT_IMPORTER_NATIVE.into()
             } else {
-                DEFAULT_IMPORTER_MODULE.into()
+                default_importer_module().to_owned()
             }
         });
         let names: Vec<String> = match store.source_versions().await {
@@ -266,28 +268,8 @@ impl Inner {
             })
             .await
             .map_err(|e| e.error)?;
-        let mut keys: BTreeSet<String> = BTreeSet::new();
-        let mut ids: BTreeSet<String> = BTreeSet::new();
-        let mut resync: Vec<String> = Vec::new();
-        let mut changed = 0usize;
-        for (s, c) in &resp.sources {
-            match c {
-                SourceChanges::Unchanged => {}
-                SourceChanges::Changed {
-                    changed_keys,
-                    changed_ids,
-                } => {
-                    changed += 1;
-                    keys.extend(changed_keys.iter().cloned());
-                    ids.extend(changed_ids.iter().cloned());
-                }
-                SourceChanges::Resync(r) => {
-                    changed += 1;
-                    resync.push(format!("{s} ({r})"));
-                }
-            }
-        }
-        if changed == 0 || (resync.is_empty() && keys.is_empty() && ids.is_empty()) {
+        let changes = ChangeSummary::of(&resp.sources);
+        if changes.changed_sources == 0 || changes.is_empty() {
             return Ok(());
         }
         let state = &self.deps.state;
@@ -295,41 +277,61 @@ impl Inner {
         if assets.is_empty() {
             return Ok(());
         }
-        let selected: Vec<String> = if resync.is_empty() {
-            let ids: Vec<String> = ids.iter().cloned().collect();
-            let mut hit: BTreeSet<String> = state
-                .assets_with_findings_on(&ids)
-                .await
-                .map_err(|e| e.to_string())?
-                .into_iter()
-                .collect();
-            for a in &assets {
-                if hit.contains(a) {
-                    continue;
-                }
-                let comps = state
-                    .current_components(a)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                let touched = comps.iter().any(|c| {
-                    let ident =
-                        secmonk_model::node::ComponentIdentity::from_component(&c.component);
-                    component_lookup_keys(&ident)
-                        .iter()
-                        .any(|k| keys.contains(k))
-                });
-                if touched {
-                    hit.insert(a.clone());
-                }
-            }
-            hit.into_iter().collect()
-        } else {
+        if !changes.resynced.is_empty() {
             job.say(format!(
-                "re-match after the sync: resync of {}: every asset",
-                resync.join(", ")
+                "re-match after the sync: resync of {}",
+                changes
+                    .resynced
+                    .iter()
+                    .map(|(s, r)| format!("{s} ({r})"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ));
-            assets.clone()
-        };
+        }
+        let ids: Vec<String> = changes.ids.iter().cloned().collect();
+        let with_changed_ids: BTreeSet<String> = state
+            .assets_with_findings_on(&ids)
+            .await
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .collect();
+        let enrichment = changes.enrichment_resync();
+        let none = BTreeSet::new();
+        let mut selected: Vec<String> = Vec::new();
+        for a in &assets {
+            if with_changed_ids.contains(a) {
+                selected.push(a.clone());
+                continue;
+            }
+            // this node is the match service: its lookup keys are `component_lookup_keys`
+            let comps = state
+                .current_components(a)
+                .await
+                .map_err(|e| e.to_string())?;
+            let lookup: BTreeMap<String, Vec<String>> = comps
+                .iter()
+                .map(|c| {
+                    let ident = ComponentIdentity::from_component(&c.component);
+                    (ident.key(), component_lookup_keys(&ident))
+                })
+                .collect();
+            if !affected_components(&changes, &lookup, &none).is_empty() {
+                selected.push(a.clone());
+                continue;
+            }
+            // kev / epss resync: no match set changed, but the facts of findings (kev, epss, priority) are read
+            // from the mirror at match time: re-match the assets that have findings, not every asset
+            if enrichment
+                && state
+                    .asset_findings(a)
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .iter()
+                    .any(|f| f.status != FindingStatus::Fixed)
+            {
+                selected.push(a.clone());
+            }
+        }
         let mut failed = 0usize;
         for a in &selected {
             if let Err(e) = self
@@ -341,10 +343,11 @@ impl Inner {
             }
         }
         job.say(format!(
-            "re-match after the sync: {changed} source(s) changed ({} key(s), {} id(s)); {} of {} asset(s) \
+            "re-match after the sync: {} source(s) changed ({} key(s), {} id(s)); {} of {} asset(s) \
              re-matched{}",
-            keys.len(),
-            ids.len(),
+            changes.changed_sources,
+            changes.keys.len(),
+            changes.ids.len(),
             selected.len() - failed,
             assets.len(),
             if failed > 0 {
