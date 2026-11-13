@@ -546,7 +546,7 @@ pub fn rows_page_sql(table: MirrorTable) -> String {
 }
 
 /// The quoted writable columns of a table, in spec order.
-fn select_list(t: &TableSpec) -> String {
+pub(super) fn select_list(t: &TableSpec) -> String {
     t.columns
         .iter()
         .map(|c| format!("\"{c}\""))
@@ -557,7 +557,7 @@ fn select_list(t: &TableSpec) -> String {
 /// A row of `SELECT rowid, <writable columns>`: its rowid and its columns as JSON (text as strings, integers and
 /// reals as numbers, JSON columns parsed). A JSON column whose text does not parse is `Invalid` (the store only
 /// writes JSON it serialized itself).
-fn decode_row(
+pub(super) fn decode_row(
     t: &TableSpec,
     r: &sqlx::sqlite::SqliteRow,
 ) -> StoreResult<(u64, Map<String, Value>)> {

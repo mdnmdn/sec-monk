@@ -32,6 +32,7 @@ pub const NAME: &str = "kev";
 pub const IMPORTER: crate::Importer = crate::Importer {
     name: NAME,
     default_rust: true,
+    importer_version: "rust/1",
     new: |view| Arc::new(KevSource::new(view)),
 };
 /// Description (as the Python source's).

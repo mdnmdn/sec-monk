@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.secmonk.invalid/node/match-components-request.schema.json",
+  "title": "match.components request (secmonk-model::node::MatchComponentsRequest)",
+  "type": "object",
+  "properties": {
+    "components": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "category": {
+            "enum": ["os", "os-package", "library", "application", "system-app", "package", "runtime", "executable"]
+          },
+          "purl": { "type": "string" },
+          "cpe": { "type": "string" },
+          "vendor": { "type": "string" },
+          "ecosystem": { "type": "string" },
+          "meta": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "source_package", "source_version", "product", "product_source", "product_alts",
+                "vendor_alts", "vendor_hint", "brew_kind", "brew_name", "patched_cves", "confidence"
+              ]
+            }
+          }
+        },
+        "required": ["name", "category"],
+        "additionalProperties": false
+      }
+    },
+    "min_confidence": { "type": "number" }
+  },
+  "required": ["components"],
+  "additionalProperties": false
+}

@@ -6,8 +6,8 @@ type: tech
 context: tech
 status: implemented
 tags: [data-model, sqlite, store, migrations, rust]
-updated: 2026-11-11
-verified: 2026-11-11
+updated: 2026-11-13
+verified: 2026-11-13
 code: [rust/crates/secmonk-store/src/, rust/crates/secmonk-store/migrations/]
 fixtures: rust/crates/secmonk-store/tests/golden/
 related: [decisions/0005-schema-v3-store-sqlx.md, decisions/0006-python-read-only-db-access.md, decisions/0010-source-staging-adapter.md, decisions/0011-native-sources.md, tech/contracts.md, tech/configuration.md, tech/source-kev.md, tech/source-epss.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
@@ -37,11 +37,13 @@ Schema v2 is the Python one (`src/secmonk/db.py` `SCHEMA`, explained in
 |---|---|---|
 | `source_sync` | unchanged | `source` |
 | `raw_record` | unchanged | `(source, record_id)` |
-| `vulnerability` | unchanged | `(source, id)`; index `id` |
+| `vulnerability` | + index `ix_vuln_source_modified(source, modified)` (migration `0004`: per-record deltas) | `(source, id)`; index `id` |
 | `alias` | `kind` gets `NOT NULL DEFAULT 'alias'` | `(vuln_id, alias, source)`; index `alias` |
 | `affected` | + index `(source, vuln_id)` (row deletes of the source stream) | `rowid_` autoincrement (kept for R2) |
 | `kev`, `epss`, `distro_triage` | unchanged | as v2 |
 | `store_meta` | new: `key TEXT PK, value TEXT` (`schema`, `created_at`, `app_version`) | `key` |
+| `source_version` | new (migration `0004`): `source TEXT PK, version, importer, kind, completed_at`: the version the last COMPLETE import reached ([node versions](#node-versions)) | `source` |
+| `snapshot_diff` | new (migration `0004`): `source, version, prev_version, created_at, ids TEXT, keys TEXT` (JSON lists of changed vulnerability ids and lookup keys); the newest 10 per source are kept | `(source, version)` |
 | `source_applied` | new (migration `0002`): `source TEXT PK, seq INTEGER NOT NULL, applied_at TEXT`: the last row batch applied per source, written in the batch's transaction; migration `0003` adds `generation TEXT` (the staging generation of that seq; NULL = recorded before W4.4, which costs one repair; `native-rust` for a source synced by its native importer, rust ADR-0011) | `source` |
 
 No promoted columns: the only JSON query on mirror data in v2 (`msrc.py` on `affected.extra.document`) runs inside the
@@ -57,6 +59,10 @@ source's staging database ([rust ADR-0010](../decisions/0010-source-staging-adap
 | `asset_component` | unchanged | |
 | `finding` | unchanged | Lifecycle and `suppressed` stickiness as v2. |
 | `job` | + `log_lines INTEGER NOT NULL DEFAULT 0` | The list reads it instead of `json_array_length(log)`. Status values reserve `queued`, `cancelled` (not written by the prototype). |
+| `component_match` | new (migration `0002`, node cache): `component_key, vuln_id, advisory_ids (JSON), matched_by, confidence, fixed_version, triage, triage_source, as_of (JSON {matcher, since})`; a component that matched nothing is one row with `vuln_id = ''` | Match sets answered by a match service, per component key (`component.key`; no foreign key). PK `(component_key, vuln_id)`. |
+| `component_lookup` | new (migration `0002`): `component_key, lookup_key`; index `lookup_key` | The lookup keys (`pkg:<ecosystem>/<package>`, `prod:<product>`) a match used: `match.changes` keys select the components to re-match. |
+| `vuln_summary` | new (migration `0002`): `id PK, data (JSON VulnSummary), fetched_at` | Summaries fetched from a remote mirror (state-only node). |
+| `node_sync` | new (migration `0002`): `name PK, value` | Named values of the sync with an upstream (the last `since` map). |
 | `store_meta` | new: as in the mirror, plus `initialized` | `initialized` is set by the first write of a sync row, an asset or a job; it drives the API's `no-db` answer. |
 
 Promoted values (R4): `scan.partial`/`partial_reason` mirror `scan.meta.partial`/`partial_reason`; `component.product`,
@@ -72,6 +78,9 @@ and the collectors).
 | `MirrorStore` | `apply_rows(&RowsBatch) -> ApplyStats {upserts, deleted, skipped}` (one transaction; table and column allowlists in `mirror_schema.rs`; the whole batch is validated before the transaction, so a bad op writes nothing; at most 5000 ops, the schema's `maxItems`; **source binding**: every row and key carries `source == batch.source`, and for `kev` / `epss`, whose keys have no `source`, an update or delete touches only the batch source's rows, while the owning source may replace another's row, as FIRST EPSS scores replace EUVD's in Python; **idempotent**: the batch's `seq` and `generation` are recorded in `source_applied` in the same transaction and a batch at or below that seq is skipped, `skipped = true`; **generation-bound**: a batch with a `generation` other than the recorded one, or with `acked_through` above the applied seq (none = 0), writes nothing and answers `needs_repair = true`; a batch without a generation keeps the plain seq rule), `applied_seq(source)`, `applied_state(source) -> AppliedState {seq, generation}`, `reset_applied_seq(source)` (tests, manual recovery, and the switch of a source from `py-sources` to its native importer: rust ADR-0011), `begin_repair(source) -> Box<dyn MirrorRepair>` (one transaction on the write connection: deletes the source's rows in every mirror table, `source_sync` `<source>:*` included; `apply(&RowsBatch)` per export batch, same allowlists and binding, no seq check; `commit(high_water, generation) -> RepairStats {deleted, upserts, batches}` records the applied state; dropping it rolls back), `sync_state(source)`, `count_rows(table, source)` and `row_keys(table, source)` (reads of the rows whose `source` column is the source, primary keys in key order, `Invalid` for `affected`: the `MirrorView` of the native importers), `rows_by_id(table, source, ids)` (the rows whose id column, `MirrorTable::id_column`, is one of at most 500 ids, every writable column in spec order, JSON columns parsed; `Invalid` for `source_sync`) and `rows_page(table, source, after, limit)` (the same rows in rowid order after a rowid cursor, at most 5 000, with the next cursor; [rust ADR-0012](../decisions/0012-native-importer-row-reads-and-registry.md)), `is_initialized()`, `checkpoint()` (`wal_checkpoint(TRUNCATE)` on both files) |
 | `StateStore` | `save_inventory(&Inventory, job_id) -> scan_id` (port of `engine/inventory.save_inventory` **without** its `classify` call: the engine classifies on ingest), `asset_exists`, `asset_reuse_facts(asset_id) -> {name, platform, meta, last_seen, latest_scan_id, latest_scan_partial}`, `update_asset_meta`, `update_asset_reused(asset_id, name, meta)` (the reuse rule's write: name, meta, `last_seen` in one statement, no scan row), `latest_scan_id`, `replace_findings(asset_id, &[Finding], &BasedOn)` (stale check, `StoreError::Stale`), `job_insert` / `job_finish` / `job_rows(kind, limit)` / `job_row` / `job_mark_interrupted` (ports of `db.py`, `JOB_KEEP` 200, `JOB_LOG_LINES` 300), `is_initialized()` |
 | `SqliteStore` | the SQLite backend of both traits: `open(state_path, mirror_path, &StoreOptions)` / `open_urls(state_url, mirror_url, ..)` creates the files 0600, runs the migrations, stamps `user_version` and `store_meta`, holds the write pools and the read-only pools (`read_pool()`: extension point for the API read queries, added later as trait methods), `state_path()` / `mirror_path()`, `close()` (called last by `Host::shutdown`) |
+
+| `MirrorNodeStore` | (new trait, `secmonk-store/src/node.rs`, implemented by `SqliteStore`; `SqliteStore::mirror_node_store()` gives an `Arc<dyn MirrorNodeStore>`) `source_versions()`, `record_complete_version(source, version, importer, kind)`, `changed_vulns(source, since_modified, overlap_s, limit)`, `lookup_keys_for_vulns(ids)`, `summaries(ids)`, `covered_ecosystems()`, `snapshot_diff_put` / `snapshot_diffs_since(source, since_version)`, `rows_since(source, since_modified, page, limit)`, `rows_snapshot(source, page, limit)`, `localize_feed_batch(&RowsBatch)`: see [Node versions](#node-versions) |
+| `NodeCacheStore` | (new trait, same file; `SqliteStore::node_cache_store()`) `put_component_results(&[ComponentResult], &Versions)` (replaces each key's rows, one transaction), `component_matches(keys)`, `component_as_of(keys)`, `components_by_lookup_keys(keys)`, `components_by_vuln_ids(ids)` (matches on the canonical id or any advisory id), `put_summaries`, `cached_summaries(ids)`, `node_sync_get` / `node_sync_set` |
 
 Every write operation runs inside one transaction. `save_inventory` is golden-tested against the Python function
 (`tests/golden/save_inventory.json`, generated by `gen_save_inventory.py`: two inventories, duplicate keys, a
@@ -98,13 +107,38 @@ NULL) write `epss`. The native epss importer emits no delete (the Python source 
 the FIRST file lacks stays ([source-epss](source-epss.md#ownership-with-euvd-rows)). The export repair of a source
 deletes only rows with its `source`; the other source's rows of the shared table stay.
 
+## Node versions
+
+Mirror nodes ([proposal](../../../_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md) §3.2, [plan](../plans/node-server-design.md) §6;
+types in `secmonk-model::node`, traits in `secmonk-traits::node`).
+
+- **Served version** of a source (`source_versions()`): `source_version.version` when a complete import recorded one
+  (`record_complete_version`, called by the engine after an `ok` run only; `partial` and `error` never move it), else
+  `source_sync.cursor` when `source_sync.status = 'ok'` (importers write `ok` | `partial` | `error`), else none. The
+  importer version is the recorded one, else `unknown`; native importers declare `Importer::importer_version`
+  (`rust/1`) in the `secmonk_sources::IMPORTERS` table. A client keeps `"<importer>@<version>"` per source. Qualified
+  `source_sync` rows (`osv:PyPI`) are their own entries.
+- **Deltas**: `changed_vulns` reads `modified > since - overlap` (timestamp text shifted by `time::shift_iso`, same
+  shape, so it compares as text); `lookup_keys_for_vulns` turns ids into `pkg:` / `prod:` keys from `affected`;
+  `rows_since` pages (keyset on `(modified, id)`, or `id` for a full copy) over the records and emits one **replace
+  unit** per record: `delete affected {source, vuln_id}` (marker), `upsert vulnerability`, `upsert raw_record`, `upsert
+  alias`*, `upsert affected`*. The store deletes one `affected` row per delete op, so a follower runs the batch through
+  `localize_feed_batch` first (marker -> one delete per stored `affected` row of the record, plus a delete of each stored
+  alias the unit does not upsert); on an empty mirror `apply_rows` alone reproduces the records (round-trip test).
+- **Snapshot sources** (`kev`, `epss`, `debian-tracker`): `rows_snapshot` pages the table through `rows_page` (upserts
+  only; the follower deletes absent rows, rust ADR-0011); `snapshot_diff_*` keep what changed between versions.
+- **Summaries** merge the rows of every source for the id and its aliases (nvd, cvelist first; cvss from the first row
+  with a score), plus KEV and EPSS.
+- Not carried by a delta: records deleted from the mirror (resync), and `raw_record` rows whose `record_id` differs from
+  the vulnerability id (per-document sources such as msrc).
+
 ## SQL library and migrations
 
 | Choice | Pick | Notes |
 |---|---|---|
 | Driver and pools | **sqlx 0.9** (`sqlite` feature, tokio, runtime-checked queries, no compile-time macros; later `postgres`, `mysql`) | Chosen by the spike (2026-11-11): +1.24 MB release size vs +1.09 MB for rusqlite, ~6 s slower dev build. Avoid `sqlx::Any`. sqlx and rusqlite **cannot coexist** in one build (`links = "sqlite3"` conflict): a fallback to `rusqlite` + `refinery` replaces sqlx entirely, behind the same traits. |
 | Statement building | **sea-query** for dialect-specific upserts and placeholders | Hand-written SQL only in SQLite-specific migrations. |
-| Migrations | **sqlx migrate** without the `macros` feature: the SQL files are embedded with `include_str!` and passed to `Migrator::with_migrations` (`src/migrations.rs`), directories `migrations/{state,mirror}/{sqlite,postgres,mysql}/NNNN_name.sql` | Table `_sqlx_migrations` (checksummed) replaces `PRAGMA user_version` (which the store still sets to 3 for humans, never lowering it). A database with an applied migration the app does not know is refused (`VersionMissing`, R7; tested). Each database has `sqlite/0001_schema_v3.sql` (the v3 DDL in full); the mirror also has `sqlite/0002_source_applied.sql` and `sqlite/0003_source_applied_generation.sql` (a v2 import is a backlog item). `store_meta` keys: `schema`, `created_at`, `app_version`, `initialized`. |
+| Migrations | **sqlx migrate** without the `macros` feature: the SQL files are embedded with `include_str!` and passed to `Migrator::with_migrations` (`src/migrations.rs`), directories `migrations/{state,mirror}/{sqlite,postgres,mysql}/NNNN_name.sql` | Table `_sqlx_migrations` (checksummed) replaces `PRAGMA user_version` (which the store still sets to 3 for humans, never lowering it). A database with an applied migration the app does not know is refused (`VersionMissing`, R7; tested). Each database has `sqlite/0001_schema_v3.sql` (the v3 DDL in full); the mirror also has `sqlite/0002_source_applied.sql` `sqlite/0003_source_applied_generation.sql` and `sqlite/0004_node_versions.sql`; the state database also has `sqlite/0002_node_cache.sql` (a v2 import is a backlog item). `store_meta` keys: `schema`, `created_at`, `app_version`, `initialized`. |
 
 ## Dialect-portable rules (for PostgreSQL / MySQL later)
 

@@ -38,6 +38,10 @@ pub struct Importer {
     /// Whether the source defaults to this implementation (`[sources.implementation]` unset). `true` only once the
     /// source's differential test against `py-sources` is green (rust ADR-0011 §6).
     pub default_rust: bool,
+    /// The importer version served in a node's source version (`<importer>@<upstream version>`, rust/_docs/tech/data-model.md
+    /// "Node versions"): `rust/<n>`. Bump `<n>` when a change makes the importer write different rows for the same
+    /// upstream data (a normalization fix, a new column filled), so followers resync that source.
+    pub importer_version: &'static str,
     /// The source over a read-only view of the mirror.
     pub new: fn(Arc<dyn MirrorView>) -> Arc<dyn Source>,
 }

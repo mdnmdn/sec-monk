@@ -21,8 +21,10 @@ use serde_json::{Map, Value};
 pub mod jobs;
 mod migrations;
 pub mod mirror_schema;
+pub mod node;
 pub mod sqlite;
 
+pub use node::{MirrorNodeStore, NodeCacheStore};
 pub use sqlite::{SqliteStore, StoreOptions};
 
 /// Schema version written to `PRAGMA user_version` and `store_meta.schema` (for humans; sqlx's

@@ -14,6 +14,7 @@ use crate::{SCHEMA_VERSION, StoreError, StoreResult, migrations};
 
 mod bind;
 mod mirror;
+mod node;
 #[doc(hidden)]
 pub use mirror::rows_page_sql;
 mod state;

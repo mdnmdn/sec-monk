@@ -29,6 +29,7 @@ pub use secmonk_model::{
 pub use secmonk_proto::{CollectorInfo, ErrorCode, SourceInfo, WireError};
 
 pub mod collect;
+pub mod node;
 
 /// Error of every trait method.
 pub type StepError = WireError;
