@@ -531,6 +531,11 @@ mod tests {
         assert_eq!(s, 403);
         // a key revoked while the server runs stops working
         crate::apikeys::revoke(&c, "ro").unwrap();
+        // the server looks at the keys file at most once per KEYS_CHECK_INTERVAL
+        tokio::time::sleep(
+            secmonk_auth::KEYS_CHECK_INTERVAL + std::time::Duration::from_millis(200),
+        )
+        .await;
         let (s, _) = http(
             port,
             &get(port, "/api/meta", Some(&format!("ApiKey {reader}"))),
