@@ -8,7 +8,7 @@ status: implemented
 tags: [config, uv, python, data-dir, rust]
 updated: 2026-11-13
 verified: 2026-11-13
-code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-sources/src/lib.rs]
+code: [rust/crates/secmonk-config/src/, rust/crates/secmonk-runtime/src/, rust/crates/secmonk-host/src/startup.rs, rust/crates/secmonk-host/src/engine.rs, rust/crates/secmonk-host/src/node.rs, rust/crates/secmonk-sources/src/lib.rs]
 fixtures: rust/crates/secmonk-runtime/tests/fixtures/
 related: [decisions/0008-config-file-and-data-dir.md, decisions/0004-pinned-uv-in-data-dir.md, decisions/0011-native-sources.md, tech/architecture.md, tech/data-model.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
@@ -111,13 +111,13 @@ the host then fails the start ("py-engine is not enabled").
 | `[auth] jwt_ttl_s` | int > 0, `3600` | JWT lifetime. |
 | `[auth] jwt_secret_file` | path, `{paths.auth}/jwt.key` | JWT signing secret. |
 | `[auth] rate_per_minute` | int > 0, `600` | Calls per minute per key. |
-| `[node] mirror` | bool, `true` | This node has a mirror part. |
-| `[node] serve` | list of `"feed"` \| `"match"` \| `"vulninfo"`, `[]` | Node API services offered (sorted, deduplicated); an unknown value is refused. |
-| `[node] matcher` | `"local"` \| `"remote"`, `"local"` | `remote`: match through `node.upstream` (requires `node.upstream.url`). |
+| `[node] mirror` | bool, `true` | This node has a mirror part: the engine records source versions after a sync and re-matches stored assets. `false` with a non-empty `serve` or `upstream.sources` is refused at start (exit 2 for `serve`). |
+| `[node] serve` | list of `"feed"` \| `"match"` \| `"vulninfo"`, `[]` | Node API services offered (sorted, deduplicated); an unknown value is refused. Only the listed services are mounted at `/node/v1` (others 404), by `secmonk-server` / `--serve`, never by the window; the node id is kept in `{paths.auth}/node_id`. Needs `mirror = true`. |
+| `[node] matcher` | `"local"` \| `"remote"`, `"local"` | `remote`: match through `node.upstream` (requires `node.upstream.url`); vulnerability detail and search also come from the upstream. |
 | `[node.upstream] url` | http(s) URL, unset | Required by `matcher = "remote"` and by a non-empty `sources`. |
-| `[node.upstream] api_key_env` | string, `"SECMONK_UPSTREAM_API_KEY"` | Variable holding the upstream API key (the name only is configuration). |
+| `[node.upstream] api_key_env` | string, `"SECMONK_UPSTREAM_API_KEY"` | Variable holding the upstream API key (the name only is configuration); read by the host at start, a missing or empty variable fails the start when `sources` or `matcher = "remote"` need the upstream. |
 | `[node.upstream] ca_cert` | path, unset | PEM to trust (self-signed upstream). |
-| `[node.upstream] sources` | list of source names, `[]` | Sources followed from the upstream feed. |
+| `[node.upstream] sources` | list of source names, `[]` | Sources followed from the upstream feed (they go ahead of the native and Python sources); needs `mirror = true`; a name also set in `[sources.implementation]` is refused. |
 | `[log] level`, `keep_days` | `"info"`, `7` | `tracing` filter (`RUST_LOG` takes precedence); log files older than `keep_days` are deleted at start. |
 
 ## Overrides

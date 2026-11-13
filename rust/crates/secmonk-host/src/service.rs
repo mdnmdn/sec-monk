@@ -4,12 +4,16 @@
 
 use std::sync::{Arc, Mutex};
 
-use secmonk_config::Config;
+use secmonk_api::Mount;
+use secmonk_config::{Config, NodeService};
 use secmonk_engine::EngineService;
+use secmonk_node::NodeApi;
+use secmonk_traits::node::{Feed, MatchService, VulnInfo};
 use tokio_util::sync::CancellationToken;
 
 use crate::gate::Gate;
 use crate::host::Host;
+use crate::node::{LazyNode, NodePlan};
 use crate::startup::{StartupCell, StartupState};
 
 /// A host that starts in the background.
@@ -19,6 +23,8 @@ pub struct Service {
     startup: StartupCell,
     host: Mutex<Option<Arc<Host>>>,
     cancel: CancellationToken,
+    /// The node services behind the `/node/v1` mount, filled when the host is ready.
+    node: Arc<LazyNode>,
     /// The binding's actions setting, also given to the engine (`EngineConfig::allow_actions`).
     allow_actions: bool,
     /// Held by [`Service::run`] for its whole duration: the shutdown waits on it, so it never misses a host that
@@ -58,6 +64,7 @@ impl Service {
             startup,
             host: Mutex::new(None),
             cancel: CancellationToken::new(),
+            node: Arc::new(LazyNode::new()),
             allow_actions,
             running: tokio::sync::Mutex::new(()),
         })
@@ -66,6 +73,41 @@ impl Service {
     /// The engine service for the API router (the gate: preparing, then the real engine).
     pub fn engine(&self) -> Arc<dyn EngineService> {
         self.gate.clone()
+    }
+
+    /// The `/node/v1` mount for the services `[node] serve` lists (`None`: nothing is served, or the node id file
+    /// cannot be written, which [`crate::serve::serve`] has already reported). The mount can be added to the server
+    /// before the host is ready: its services answer 503 "node services are starting" until then. The desktop
+    /// window does not mount it.
+    pub fn node_mount(&self) -> Option<Arc<dyn Mount>> {
+        let plan = NodePlan::from_config(&self.config).ok()?;
+        if plan.serve.is_empty() {
+            return None;
+        }
+        let id = match crate::node::node_id(&self.config) {
+            Ok(id) => id,
+            Err(e) => {
+                tracing::error!("node id: {e}; the node API is not mounted");
+                return None;
+            }
+        };
+        let lazy = &self.node;
+        let matcher = plan
+            .serves(NodeService::Match)
+            .then(|| lazy.clone() as Arc<dyn MatchService>);
+        let vulninfo = plan
+            .serves(NodeService::Vulninfo)
+            .then(|| lazy.clone() as Arc<dyn VulnInfo>);
+        let feed = plan
+            .serves(NodeService::Feed)
+            .then(|| lazy.clone() as Arc<dyn Feed>);
+        Some(Arc::new(NodeApi::derived(
+            matcher,
+            vulninfo,
+            feed,
+            id,
+            plan.mirror,
+        )))
     }
 
     /// Where startup stands.
@@ -96,6 +138,9 @@ impl Service {
                     // the shutdown began while the host was being built: stop it here, it is never served
                     host.shutdown().await;
                 } else {
+                    if let Some(n) = &host.node {
+                        self.node.set(n.clone());
+                    }
                     self.gate
                         .set_engine(host.engine.clone() as Arc<dyn EngineService>);
                     *self.host.lock().unwrap_or_else(|p| p.into_inner()) = Some(host);
@@ -127,6 +172,36 @@ impl Service {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn the_node_mount_exists_only_for_a_serving_node_and_answers_starting_first() {
+        let off = Service::new(Arc::new(crate::testutil::config_from_toml("")));
+        assert!(off.node_mount().is_none());
+        let on = Service::new(Arc::new(crate::testutil::config_from_toml(
+            "[node]\nserve = [\"match\"]\n",
+        )));
+        let mount = on.node_mount().expect("mounted");
+        assert_eq!(mount.prefix(), "/node/v1/");
+        // the host is not ready: the service answers 503, not 404 (it is enabled)
+        let req = http::Request::builder()
+            .method("POST")
+            .uri("/node/v1/match/changes")
+            .body(br#"{"since":{}}"#.to_vec())
+            .unwrap();
+        let resp = mount.handle(req, None).await;
+        assert_eq!(
+            resp.status(),
+            503,
+            "{}",
+            String::from_utf8_lossy(resp.body())
+        );
+        // a service that is not listed is not there
+        let req = http::Request::builder()
+            .uri("/node/v1/feed/status")
+            .body(Vec::new())
+            .unwrap();
+        assert_eq!(mount.handle(req, None).await.status(), 404);
+    }
 
     #[tokio::test]
     async fn shutdown_refuses_requests_first_and_a_late_start_never_serves() {

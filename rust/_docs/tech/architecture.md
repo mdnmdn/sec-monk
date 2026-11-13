@@ -7,7 +7,7 @@ context: tech
 status: implemented
 tags: [architecture, rust, tauri, python, modules, desktop]
 updated: 2026-11-13
-verified: 2026-11-11
+verified: 2026-11-13
 code: [rust/Cargo.toml, rust/deny.toml, rust/crates/secmonk-host/src/, rust/crates/secmonk-sources/src/, rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-modhost/src/]
 related: [tech/contracts.md, tech/api-contract.md, tech/data-model.md, tech/configuration.md, tech/component-lifecycle.md, tech/engine-service.md, tech/source-kev.md, tech/source-epss.md, decisions/0011-native-sources.md, decisions/0001-rust-workspace-single-process-tauri.md, decisions/0002-rust-core-python-modules.md, plans/backlog.md, tech/source-euvd.md, decisions/0012-native-importer-row-reads-and-registry.md]
 ---
@@ -196,7 +196,20 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 | 2 | `Python` "installing Python" | `ensure()` the managed interpreter; load the registry from `<python_project>/modules` |
 | 3 | `ModuleEnv` "installing the module environment" | `ensure_env` once per env of the available Python modules (`uv sync --frozen`; pinned mode verifies pins first) |
 | 4 | `Databases` "opening the databases" | `SqliteStore::open`: files 0600, migrations; any backend but `sqlite` is `Unsupported` |
-| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; the native importers `[sources.implementation]` selects (`engine::native_sources`), then the `PySource`s; `PyEngine` for `py-engine` and `py-procmon`; `eager` modules started now, so a broken install fails the start; then `engine::build` |
+| 5 | `Modules` "starting the modules" | one `ModuleHandle` per Python module with the hello settings (`module_dir`, `process`, `min_confidence`, `db_read`); probe service over `py-probe`; `PyEngine` for `py-engine` and `py-procmon`; the node roles (`node::compose`, below); the sources in this order: the followed feed (`FollowedSource`), the native importers `[sources.implementation]` selects (`engine::native_sources`), then the `PySource`s; `eager` modules started now, so a broken install fails the start; then `engine::build` |
+
+**Node roles** (`node.rs`, ADR-0013). `NodePlan::from_config` (pure; also run by `Host::start`, `serve` and `Service::node_mount`
+before anything starts) turns `[node]` into `{mirror, serve, follow, remote_matcher}` and refuses: `serve` or
+`upstream.sources` without `mirror = true`, and a followed source that `[sources.implementation]` also names. Then
+`node::compose` wires, over the one `PyEngine` and the stores, and logs `node roles: mirror, serve=[match],
+follow=[kev, osv], matcher=local`:
+
+| Role | Wiring |
+|---|---|
+| mirror (default) | `EngineDeps.node_store = store.mirror_node_store()`: versions are recorded after a sync, stored assets are re-matched |
+| serve | `LocalNode` (mirror node store, `PyEngine` as `Matcher` and `Reporter`, node id from `<paths.auth>/node_id`, 16 random hex, 0600, `node:<hex>`) in `Host.node`; `Service::node_mount()` builds `NodeApi::derived` over a `LazyNode` with only the listed services (others 404), which answers 503 `module-unavailable` "node services are starting" until `Service::run` fills it; `ServeOptions::from_env` carries the mount factory, the desktop window mounts nothing |
+| follow | `RemoteNode` (`node.upstream.url`, key from the variable `api_key_env` names, read in the host only, missing: the start fails; `ca_cert`) and a `FollowedSource` (a `FeedSource` plus a `BatchLocalizer` over `MirrorNodeStore::localize_feed_batch`) placed **before** every other source. It reloads the local versions from `source_versions()` before each sync and drops the version of a source whose local importer differs from the upstream's `feed/status` (a full copy) |
+| `matcher = "remote"` | `StateOnlySteps` over `PyEngine`: `NodeMatcher` (over the `RemoteNode`, `node_cache_store()`, the version oracle, the state store) as `Matcher`; `reports.vuln_detail` / `reports.vuln_search` answered by the upstream's `VulnInfo`; classify, versions and every other report stay `py-engine` |
 
 Spike timings on macOS arm64: uv download ~4 s, Python install 6-8 s, first sync ~4 s, warm start ~27 ms. The first
 headless start on 2026-11-11 (`rust/_data/logs`, with the project's path dependency) took 38 s to `ready`, 25 s of it
@@ -244,7 +257,7 @@ a non-loopback address. `build_server(config, engine, jwt_secret_env, mounts)` (
 `SECMONK_JWT_SECRET` (read once, in `ServeOptions::from_env`) else `load_or_create_secret(jwt_secret_file)`. An empty
 key store starts anyway with a warning that names `secmonk-server apikey create --name admin --scope admin`; keys
 created or revoked while it runs are picked up on the next request. `ServeOptions::mount_factory` is the hook for
-extra mounts (the node API): it receives the `Service` and returns `Arc<dyn Mount>`s. `serve` prints
+extra mounts: it receives the `Service` and returns `Arc<dyn Mount>`s; `ServeOptions::from_env` sets it to `node_mount_factory()` (the `/node/v1` mount, see Node roles). `serve` refuses an invalid node plan with exit 2. `serve` prints
 `listening http(s)://ADDR` on stderr, serves with `secmonk_api::serve` (TLS from `tls_cert`/`tls_key`) and stops the
 modules on Ctrl-C / SIGTERM as before. `headless::listen_addr` (loopback only) remains for the desktop's optional dev
 binding.

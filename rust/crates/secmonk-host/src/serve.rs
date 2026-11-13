@@ -56,9 +56,14 @@ impl ServeOptions {
             jwt_secret_env: std::env::var(JWT_SECRET_ENV)
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
-            mount_factory: None,
+            mount_factory: Some(node_mount_factory()),
         }
     }
+}
+
+/// The mount factory of the server mode: the `/node/v1` mount when `[node] serve` is not empty.
+pub fn node_mount_factory() -> MountFactory {
+    Box::new(|service: &Service| service.node_mount().into_iter().collect())
 }
 
 /// Why the server cannot start: a usage error (exit 2) or a runtime error (exit 1).
@@ -197,7 +202,7 @@ pub fn build_server(
             config.auth_rate_per_minute,
         )));
     }
-    // node mounts: added by the node work package, through `ServeOptions::mount_factory`
+    // node mounts (`Service::node_mount`, through `ServeOptions::mount_factory`)
     for m in mounts {
         server = server.with_mount(m);
     }
@@ -227,6 +232,21 @@ async fn shutdown_signal() {
 
 /// Run the server until Ctrl-C / SIGTERM. Returns the exit code (0 ok, 1 runtime error, 2 usage error).
 pub async fn serve(prog: &str, config: Arc<Config>, opts: ServeOptions) -> i32 {
+    // the node roles are validated before anything starts (exit 2), and the node id file is created now so a
+    // failure is reported here
+    match crate::node::NodePlan::from_config(&config) {
+        Ok(plan) if !plan.serve.is_empty() => {
+            if let Err(e) = crate::node::node_id(&config) {
+                eprintln!("{prog}: node id: {e}");
+                return 1;
+            }
+        }
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("{prog}: {e}");
+            return 2;
+        }
+    }
     let service = Service::with_actions(config.clone(), config.server_allow_actions);
     let mounts = opts
         .mount_factory

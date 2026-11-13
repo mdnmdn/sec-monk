@@ -101,7 +101,10 @@ pub(crate) struct Parts<'a> {
     pub(crate) store: &'a SqliteStore,
     pub(crate) probe: &'a Arc<ProbeService>,
     pub(crate) sources: &'a [Arc<dyn Source>],
-    pub(crate) steps: Option<&'a Arc<PyEngine>>,
+    /// The engine steps: `py-engine`, or the state-only composite over it (`None`: py-engine is not enabled).
+    pub(crate) steps: Option<Arc<dyn secmonk_traits::EngineSteps>>,
+    /// `EngineDeps::node_store` (the mirror part of the node).
+    pub(crate) node_store: Option<Arc<dyn secmonk_store::MirrorNodeStore>>,
     pub(crate) procmon: Option<&'a Arc<PyEngine>>,
     /// The binding's actions setting (`EngineConfig::allow_actions`).
     pub(crate) allow_actions: bool,
@@ -139,14 +142,14 @@ pub(crate) fn build(p: Parts<'_>) -> Result<Arc<SecmonkEngine>, HostError> {
         config,
         state: Arc::new(p.store.clone()),
         mirror: Arc::new(p.store.clone()),
-        steps: steps.clone(),
+        steps,
         procmon: p
             .procmon
             .map(|m| m.clone() as Arc<dyn secmonk_traits::Reporter>),
         sources: p.sources.to_vec(),
         probe: p.probe.clone(),
         modules: Some(Arc::new(ModuleStates { modules: p.modules })),
-        node_store: None,
+        node_store: p.node_store,
     }))
 }
 

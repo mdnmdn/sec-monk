@@ -7,7 +7,8 @@
 //! 3. build the module registry from the manifests and the hello settings (`module_dir`, `process`,
 //!    `min_confidence`, `db_read` grants);
 //! 4. build the probe service (collector allowlist) over `PyCollector`;
-//! 5. build the sources and the engine steps from the adapters;
+//! 5. build the sources and the engine steps from the adapters, and the mirror-node roles ([`node`]: serve, follow,
+//!    state-only matching) from `[node]`;
 //! 6. construct the engine.
 //!
 //! First start takes a while, so a [`Service`] serves a "preparing" state through the API meanwhile ([`Gate`]):
@@ -33,6 +34,8 @@ pub(crate) mod engine;
 pub mod gate;
 #[cfg(feature = "engine")]
 pub mod headless;
+#[cfg(feature = "engine")]
+pub mod node;
 #[cfg(feature = "engine")]
 pub mod serve;
 #[cfg(feature = "engine")]

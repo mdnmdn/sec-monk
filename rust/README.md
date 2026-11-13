@@ -119,6 +119,28 @@ only (`default-members`), so a machine without WebKitGTK builds and tests everyt
 | Linux desktop | the same, with WebKitGTK 4.1 installed |
 | Linux headless | `cargo build -p secmonk-host --bin secmonk-server`, or `cargo build -p secmonk-desktop --no-default-features --features engine,probe` (no Tauri in the graph; the same command line) |
 
+## Mirror nodes
+
+A node can be a state node, a mirror, or both ([ADR-0013](_docs/decisions/0013-mirror-nodes-and-source-versions.md)),
+chosen in `sec-monk.toml` (keys in [configuration](_docs/tech/configuration.md), API in
+[node-api](_docs/tech/node-api.md)):
+
+```toml
+[node]
+mirror = true                 # default: record source versions, re-match after a sync
+serve  = ["feed", "match"]    # offer /node/v1 services (secmonk-server only; needs API keys with the scopes)
+matcher = "local"             # "remote": state-only node, match through [node.upstream]
+
+[node.upstream]
+url = "https://mirror.example:8765"
+api_key_env = "SECMONK_UPSTREAM_API_KEY"   # the key itself is never in the file
+sources = ["kev", "osv"]      # follow these sources from the upstream feed
+```
+
+The start log says which roles are active (`node roles: mirror, serve=[match], follow=[kev, osv], matcher=local`);
+an impossible combination (serving without a mirror, a followed source also forced in
+`[sources.implementation]`) is refused before anything starts.
+
 ## Checks
 
 ```bash

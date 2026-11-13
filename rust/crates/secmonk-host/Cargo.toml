@@ -10,7 +10,7 @@ license.workspace = true
 [features]
 default = ["engine", "probe"]
 # `engine`: the stores, the engine service and the API binding (headless server). Off: probe + module host only.
-engine = ["dep:secmonk-engine", "dep:secmonk-store", "dep:secmonk-api", "dep:secmonk-sources", "dep:secmonk-auth"]
+engine = ["dep:secmonk-engine", "dep:secmonk-store", "dep:secmonk-api", "dep:secmonk-sources", "dep:secmonk-auth", "dep:secmonk-node", "dep:getrandom"]
 # `probe`: wire py-probe (collectors, discovery, docker/k8s listings) into the probe service. Off: empty allowlist.
 probe = []
 
@@ -45,10 +45,13 @@ tracing-subscriber.workspace = true
 secmonk-api = { workspace = true, optional = true }
 secmonk-auth = { workspace = true, optional = true }
 secmonk-engine = { workspace = true, optional = true }
+secmonk-node = { workspace = true, optional = true }
+getrandom = { workspace = true, optional = true }
 secmonk-store = { workspace = true, optional = true }
 secmonk-sources = { workspace = true, optional = true }
 
 [dev-dependencies]
+http.workspace = true
 tempfile.workspace = true
 
 [lints]
