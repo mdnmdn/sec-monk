@@ -1129,3 +1129,48 @@ impl NodeCacheStore for SqliteStore {
         Ok(out)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::StoreOptions;
+
+    fn summary(id: &str) -> VulnSummary {
+        serde_json::from_value(json!({"id": id, "aliases": [], "kev": false, "sources": ["nvd"]}))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn old_summaries_are_pruned_when_new_ones_are_stored() {
+        let d = tempfile::tempdir().unwrap();
+        let s = SqliteStore::open(
+            &d.path().join("state.sqlite3"),
+            &d.path().join("mirror.sqlite3"),
+            &StoreOptions::default(),
+        )
+        .await
+        .unwrap();
+        s.put_summaries(&[summary("CVE-OLD"), summary("CVE-KEPT")])
+            .await
+            .unwrap();
+        // CVE-OLD was fetched 31 days ago, CVE-KEPT 29 days ago
+        for (id, days) in [("CVE-OLD", 31u64), ("CVE-KEPT", 29)] {
+            sqlx::query("UPDATE vuln_summary SET fetched_at = ? WHERE id = ?")
+                .bind(apply_overlap(&now_iso(), days * 86_400))
+                .bind(id)
+                .execute(&s.state.write)
+                .await
+                .unwrap();
+        }
+        s.put_summaries(&[summary("CVE-NEW")]).await.unwrap();
+        let ids: Vec<String> = s
+            .cached_summaries(&["CVE-OLD".into(), "CVE-KEPT".into(), "CVE-NEW".into()])
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect();
+        assert_eq!(ids, ["CVE-KEPT", "CVE-NEW"]);
+        s.close().await;
+    }
+}

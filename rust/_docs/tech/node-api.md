@@ -15,7 +15,11 @@ related: [plans/node-server-design.md, tech/api-contract.md, tech/data-model.md,
 # Node API
 
 Crate `secmonk-node` (depends on traits, model, `secmonk-api` for the `Mount` trait, `secmonk-auth` for `Scope`; never
-on the store, the engine implementation or the module host: the host injects the services). Proposal:
+on the store, the engine implementation or the module host: the host injects the services). The server binding is the
+default cargo feature **`server`** (it pulls `secmonk-api`, whose router links the engine); the client side
+(`RemoteNode`, `FeedSource`, `wire::status_of` / `wire_error_of_status`) builds with `default-features = false` and then
+depends on neither `secmonk-api`, `secmonk-auth`, the engine, the store nor sqlx (`cargo tree -p secmonk-node
+--no-default-features -e normal`). `wire::api_error_of_wire` and the `e2e` test need `server`. Proposal:
 [`_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md`](../../../_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md)
 §3 and §5; design: [node-server-design §3, §6](../plans/node-server-design.md). Types: `secmonk_model::node`; traits:
 `secmonk_traits::node` (`MatchService`, `VulnInfo`, `Feed`).
@@ -77,14 +81,25 @@ service enabled (404 `{"error":"service not enabled"}`) → body / query validat
 - **TLS**: the workspace's `reqwest` (rustls). `ca_cert` is an extra PEM certificate added as a trust root
   (`add_root_certificate`; ≤ 1 MiB), for a self-signed or private-CA node; the system roots still apply.
 - **Auth**: `POST {base}/auth/token` with `{"method":"api_key","api_key":…}`; the JWT is cached and renewed
-  `REFRESH_MARGIN` (60 s) before `expires_at` (`with_refresh_margin` changes it), or on a 401, in which case the call is
-  repeated **once** (a second 401 is the answer). One exchange at a time (the cache is behind an async mutex).
+  `REFRESH_MARGIN` (60 s) before it expires (`with_refresh_margin` changes it), or on a 401, in which case the call is
+  repeated **once** (a second 401 is the answer). **Lifetime**: the server sends `expires_at` (its clock) and no issue
+  time, so the client measures on its monotonic clock (`Instant`) from the answer's arrival: `expires_at - local now`,
+  clamped by the JWT's own `exp - iat` (the payload is base64-decoded **without verifying**, only for the timing), so a
+  local clock off the server's neither renews on every call nor keeps an expired token. **Single flight**: one exchange
+  at a time (an async mutex held only around the exchange; the cache itself is a short sync lock); callers that waited
+  for it take its outcome, an error included (each gets the error; the next call tries again, no thundering herd).
   The key goes only to `/auth/token`; the token header is marked sensitive; neither appears in `Debug`, logs or errors.
+- **Busy**: a 429 or 503 with `Retry-After: <seconds>` (on a call or on the exchange) is a `busy` `WireError` with
+  `data = {"retry_after_s": n}` and a hint naming the delay; the client does not sleep by itself (an HTTP-date
+  `Retry-After` is ignored).
 - **Limits**: response bodies are read in chunks and refused above `MAX_RESPONSE_BYTES` (32 MiB; error bodies 64 KiB),
   also by `Content-Length`. `timeout` is the connect and the total request timeout.
 - **Chunking**: `match_components` above 1000 components and `summaries` above 500 ids are split; the answers are merged
-  in request order. The merged `as_of` is the **first** chunk's (versions only move forward, so it is the oldest, the
-  safe stamp for a client that later asks `changes`); `coverage` is the union. An empty request is one call.
+  in request order. The merged `as_of` keeps, **per source, the oldest version** over the chunks (a source that moved
+  between two chunks: a stamp must never claim newer data than every answer has): record versions (timestamps) compare
+  as text, a snapshot version (a label) that differs keeps the first chunk's (asked first), an unknown version wins;
+  the matcher is the first chunk's (a change shows in the next `match.changes`). `coverage` is the union. An empty
+  request is one call. A match with an empty `vuln_id` (the cache's "no match" marker) is a protocol error.
 - **Errors** (`WireError`): network failure or certificate refusal → `host-unreachable` (the text carries the cause
   chain, no URL); timeout → `timeout`; the node's body `code` when it is a known wire code; else by status: 400 / 413 →
   `invalid-params`, 401 → `unauthorized`, 403 → `forbidden`, 404 → `not-found` (these three are `ErrorCode::Other`:
@@ -106,6 +121,13 @@ overrides, `options.full` sends none) and streams batches of generation `native-
 seq + 1** (1 after another generation), at most 5000 operations / about 2 MiB each. `ack` is a no-op and `export` is
 refused, like every native importer ([ADR-0011](../decisions/0011-native-sources.md)).
 
+- **Upstream rows are untrusted** (checked before anything of a page is queued): a record source takes **delta** pages
+  only, a snapshot source (kev, epss, debian-tracker) **snapshot** pages only. A delta page may carry `upsert` of
+  `vulnerability`, `alias`, `affected`, `raw_record` and the marker `delete affected {source, vuln_id}`; a snapshot page
+  `upsert` of the source's own tables and `raw_record`. Every row, key and batch must have `source` = the followed
+  source. Anything else (`source_sync`, `source_applied`, another table, another source's rows, any other delete, a
+  delete in a snapshot) refuses the **whole page**: the run ends `error` with an `error` `source_sync` row (the version
+  does not move).
 - **Delta pages**: each upstream batch goes through the localizer (the `delete affected {source, vuln_id}` marker becomes
   one delete per local `affected` row plus deletes of stale aliases); the localized operations are re-cut, across page
   boundaries, into batches of ≤ 5000 operations.
@@ -115,8 +137,11 @@ refused, like every native importer ([ADR-0011](../decisions/0011-native-sources
   pages carry; the key columns are those of `mirror_schema`). The memory cost is one key text per row seen. The deletes
   come after the upserts, so a cut stream leaves old rows that the next sync removes. The snapshot guard of the Python
   sources applies unless `options.full`: an empty snapshot, or under half of the stored rows, deletes nothing and ends the
-  run `error`. `raw_record` rows are upserted and never deleted (as kev.rs); `affected` rows in a snapshot page are
-  refused (no natural key).
+  run `error`. `raw_record` rows are upserted and never deleted (as kev.rs). **Consistent pages**: the server reads each
+  page in one read transaction and pins snapshot paging to the version of the first page (the cursor
+  `s2|<table>|<rowid>|<version>` carries it); when a new import completed between two pages it answers `stale` (409),
+  and the follower **restarts from the first page** (its seen-keys set is reset, so the deletes come from the new pass
+  alone; queued upserts of the old pass are harmless), at most `MAX_RESTARTS` (3) times, then the run ends `error`.
 - **End**: the last operation is the `source_sync` row: `cursor` = the upstream version **of the first page** (records
   modified while the run pages come again next time through the overlap), `records` = the upstream's count, status
   `ok`; `source_versions()` then serves the same version further down. The `SyncEnd` entry's message names the upstream
@@ -134,7 +159,8 @@ refused, like every native importer ([ADR-0011](../decisions/0011-native-sources
   (P5).
 - A delta carries no record deleted upstream (resync); `FeedSource` with `options.full` re-reads every record but does not
   remove local records the upstream lost.
-- A snapshot page of a *record* source (`affected` rows) is refused; only the key-diffable snapshot tables are replaced.
+- A record source is served in delta mode only, also without a version (every record as a replace unit); a follower
+  refuses a snapshot page for it. Records the upstream lost are not removed locally (see above).
 - The importer of the *local* rows is not compared with the upstream's: the host decides whether to pass a local version
   (a different importer means a resync, proposal §3.2 rule 2).
 - `options.limit` and `options.ecosystems` are ignored by `FeedSource` (the upstream's pages are not a subset knob).
@@ -145,5 +171,8 @@ refused, like every native importer ([ADR-0011](../decisions/0011-native-sources
 scope enforcement, caps, 405 / 404, disabled service, error mapping), `RemoteNode` against it (every service, chunking,
 token exchange and renewal after expiry, 401 retry, bad key, unreachable) and over TLS with the `secmonk-api` fixture
 certificate as `ca_cert`. `tests/follow.rs`: `FeedSource` over a scripted feed, fake view and fake localizer (delta,
-re-cut, seq, snapshot replace, guard, upstream failures). The test server uses `secmonk-engine`'s `SkeletonEngine` as the
+re-cut, seq, snapshot replace, guard, upstream failures, the page checks of every refused shape, the restart of a
+snapshot that changed version). `src/client.rs` unit tests: the token lifetime and its JWT clamp, `Retry-After`, the
+oldest-version merge, and against a minimal loopback HTTP server the single-flight exchange (five callers, one
+exchange, its error for each) and a 429 as `busy`. The test server uses `secmonk-engine`'s `SkeletonEngine` as the
 router's engine (dev-dependency only).

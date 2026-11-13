@@ -114,12 +114,17 @@ Module `secmonk_engine::node` (public), the in-process side of the mirror nodes
 | Item | What it does |
 |---|---|
 | `component_lookup_keys(&ComponentIdentity) -> Vec<String>` | Port of the candidate derivation of `engine/match.py` (+ `purl.py`, `classify.normalize_product_name`): a **superset** of the `affected` rows the matcher reads. Package route (an ecosystem and `library` / `os-package` / `runtime`): `pkg:<eco>/<name>` for the `normalize_name` name, the plain name, the purl's OSV name (`group:artifact`, `@scope/name`), the purl name, `meta.source_package`, `meta.brew_name`. Product route (everything else): `prod:<candidate>` for `meta.product`, `product_alts`, `brew_name` without `@N`, the normalized name (vendors ignored). An ecosystem known only from the purl gives both families. Every key is lowercase (`pkg_key` / `prod_key`, also used by the mirror's `lookup_keys_for_vulns`). |
-| `LocalNode::new(Arc<dyn MirrorNodeStore>, Arc<dyn Matcher>, Arc<dyn Reporter>, LocalNodeSettings {node_id, overlap_s, matcher_version})` | `MatchService`, `VulnInfo`, `Feed` of a node with a mirror. |
-| `NodeMatcher::new(Arc<dyn MatchService>, Arc<dyn VulnInfo>, Arc<dyn NodeCacheStore>, Arc<dyn VersionOracle>, Arc<dyn StateStore>)` | `Matcher` of a state-only node; `poll_changes() -> StepResult<PollStats {hit_keys, changed_ids, resynced, invalidated, summaries, as_of}>`. |
+| `KEYS_VERSION` (`u32`, 1) | The version of `component_lookup_keys`, part of the matcher version: **bump it with any change to `component_lookup_keys`**. Golden: `rust/golden/node/lookup-keys.expected.json` (recorded by `rust/python/scripts/lookup_keys_golden.py` from the Python matcher's own candidate functions on classified components); the `keys` unit test asserts a superset for every component. |
+| `matcher_version()` / `default_importer_module()` / `secmonk_version()` | The versions of this build: `py-engine/<secmonk version>+keys/<KEYS_VERSION>` and `python/<secmonk version>`. The `py-engine` hello carries only the module wrapper's version and the engine never sees it, so the `secmonk` package version is read **at build time** from the root `pyproject.toml` (`include_str!`; a change rebuilds). A release of the Python matcher bumps that version and with it every client's cache. |
+| `LocalNode::new(Arc<dyn MirrorNodeStore>, Arc<dyn Matcher>, Arc<dyn Reporter>, LocalNodeSettings {node_id, overlap_s, matcher_version, max_concurrent_matches, match_wait})` | `MatchService`, `VulnInfo`, `Feed` of a node with a mirror. `matcher_version` defaults to `matcher_version()`; at most `max_concurrent_matches` (`DEFAULT_MATCH_CONCURRENCY`, 4) `match.components` calls run at once (a semaphore); a call that waits longer than `match_wait` (`MATCH_PERMIT_WAIT`, 2 s) answers `busy` (HTTP 409 by the wire table). |
+| `NodeMatcher::new(Arc<dyn MatchService>, Arc<dyn VulnInfo>, Arc<dyn NodeCacheStore>, Arc<dyn VersionOracle>, Arc<dyn StateStore>)` `.with_local_version(v)` | `Matcher` of a state-only node; `poll_changes() -> StepResult<PollStats {hit_keys, changed_ids, resynced, invalidated, summaries, as_of}>`. Its own matcher version (default `matcher_version()`) is saved with the cache (`match.local`). |
+| `ChangeSummary::of(&sources)`, `affected_components(&ChangeSummary, components, with_changed_ids)`, `family` / `in_family` | **One** "what changed -> which components" rule for both consumers (the re-match after a sync and `NodeMatcher::poll_changes`): a component is affected when a lookup key is a changed key, it has a match on a changed id, or a resynced source's family covers its keys (`kev` / `epss` cover none: enrichment). |
+| `CachedVulnInfo::new(Arc<dyn NodeCacheStore>, Arc<dyn VulnInfo>)` | `VulnInfo` of a state-only node: summaries from `vuln_summary`, misses asked of the service (chunks of 500, only the asked ids cached), `detail` / `search` passed through uncached. Not wired yet (see [ADR-0013 status note](../decisions/0013-mirror-nodes-and-source-versions.md)). |
+| `MAX_VIEW_LIMIT` (5 000) | `view_limit` bound shared by `LocalNode` (per ephemeral match) and `NodeMatcher` (refuses more). |
 
 **`match.components` from an ephemeral match.** At most `MAX_COMPONENTS`; distinct keys go into one synthetic
 inventory (asset `node:match-components`, the components rebuilt from their identity) matched by the engine's
-`Matcher` in **ephemeral** mode with `view_limit` 5 000 and the request's `min_confidence` (default 0: all). The view
+`Matcher` in **ephemeral** mode with `view_limit` `MAX_VIEW_LIMIT` (5 000) and the request's `min_confidence` (default 0: all). The view
 rows (`reports.finding_dict`) carry the component's name, version, category and purl, not its key: components that
 these four cannot tell apart (keys that differ by vendor only) go into separate rounds, and a chunk whose
 `stats.findings` exceeds its view is split in two and matched again, so every finding comes back. Rows are regrouped
@@ -136,14 +141,15 @@ base source (`osv:PyPI` reads `osv`, a superset) since the client's version minu
 the client names that the node no longer has: `resync("source removed")`. `summaries` caps at `MAX_IDS` and lists
 `missing`; `detail` / `search` are `reports.vuln_detail` / `reports.vuln_search` (the `/api/vulns/show` and
 `/api/vulns/search` payloads; an unknown id is `unknown-vuln`). **Feed**: `status` = versions + node id; `since` of a
-record source is a delta (`rows_since` from `since` minus the overlap) when `since` is a plain version or a
-`"<importer>@<version>"` token of this node's importer, else the whole source (`rows_since(None)`, mode snapshot); a
-snapshot source is always `rows_snapshot`; `limit` defaults to 2 000, at most 10 000 (the store clamps further: 500
+record source is always mode **delta**: from `since` minus the overlap when `since` is a plain version or a
+`"<importer>@<version>"` token of this node's importer, else every record (`rows_since(None)`, still replace units: a
+follower refuses a snapshot page of a record source); a snapshot source is always `rows_snapshot` (each page one read
+transaction, pinned to the version of the first page: a cursor of another version answers `stale`); `limit` defaults to 2 000, at most 10 000 (the store clamps further: 500
 records, 5 000 rows per page); a base source without its own entry (`osv`) is served at the oldest version of its
 qualified entries.
 
 **Versions after a sync.** `Source::importer_version(source)` (defaulted, `None`) names the importer; else
-`python/1` for a module source, `rust/1` for a native one. After an `ok` run the engine records, for the source and each
+`default_importer_module()` (`python/<secmonk version>`) for a module source, `rust/1` for a native one. After an `ok` run the engine records, for the source and each
 qualified row (`osv:PyPI`) whose `source_sync` status is `ok` and has a cursor, `record_complete_version(name, cursor,
 importer, VersionKind::default_for(name))`; `partial` and `error` runs record nothing. A snapshot source whose version
 moved also stores a `SnapshotDiff` from the version before the job: `kev` and `debian-tracker` hash every row before and
@@ -152,9 +158,12 @@ after the run (`MirrorStore::rows_page`, only the previous hashes kept) and reco
 300 000 rows record a diff whose only key is `*` (`DIFF_UNKNOWN_KEY`), which `match.changes` answers with `resync`.
 
 **Re-match after a sync** (proposal P0). The job snapshots the versions at its start; after the last source it asks
-`LocalNode::changes(before)`. A `resync` of any source re-matches every stored asset; otherwise the assets with a current
-component whose `component_lookup_keys` meet a changed key, or with a finding (any status, canonical or advisory id) on
-a changed id, are matched again (persisted, the `assets/match` path). The job log says how many; a failure is a
+`LocalNode::changes(before)` and selects the assets with `affected_components` (this node is the match service, so a
+component's keys are `component_lookup_keys`): a current component whose keys meet a changed key or that a resynced
+source's family covers (`osv:PyPI` re-matches the assets with PyPI components, `nvd` every asset), or a finding (any
+status, canonical or advisory id) on a changed id. A `resync` of `kev` / `epss` is **enrichment**: no match set
+changes, but a finding's KEV, EPSS and priority are read from the mirror at match time, so only the assets that have
+open or suppressed findings are matched again, not every asset. Matched again = persisted, the `assets/match` path. The job log says how many; a failure is a
 warning, never a failed sync. The state reads are defaulted `StateStore` methods (`asset_ids`, `current_components`,
 `asset_findings`, `assets_with_findings_on`; `SqliteStore` implements them, another store answers `invalid-params`
 and the step is skipped with a warning).
@@ -170,8 +179,13 @@ the `view` is the open rows in `queries.findings` order. **Freshness**: answers 
 `poll_changes` re-asks the stored-inventory components hit by changed keys or ids, invalidates hit keys that are not in
 the inventory, and on a `resync` raises the epoch and records it for the source; an answer is current when its matcher
 is the service's and no source whose family covers the component (`osv:<Eco>` -> `pkg:<eco>/…`, `debian-tracker` ->
-`pkg:debian…`, `kev` / `epss` -> none, others -> all) was resynced after its epoch. A matcher change, or the first
-poll, starts a new epoch. `kev` / `epss` resyncs refresh the summaries of every matched id.
+`pkg:debian…`, `kev` / `epss` -> none, others -> all) was resynced after its epoch. A component's keys are the
+**stored** ones (`component_lookup`, as the service returned them, `NodeCacheStore::stored_lookup_keys`), else
+`component_lookup_keys` (a component never answered): one truth, the server's. A matcher change (the service's, or this
+node's own `match.local`), or the first poll, starts a new epoch. `kev` / `epss` resyncs refresh the summaries of every
+matched id. **One poll at a time** (a `tokio::sync::Mutex`); the epoch, the resync map, the versions and the local
+matcher version are saved together in one transaction (`node_sync_set_many`) **after** every call to the service
+succeeded: a poll that fails half-way leaves them as they were, and the next poll asks the same changes again.
 
 Differences from py-engine's persisted match (state-only node): facts come from the merged summary of the canonical
 id, not from `_vuln_facts` over the alias set; no re-keying of findings whose canonical id drifted (`_rekey`);

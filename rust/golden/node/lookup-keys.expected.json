@@ -1,0 +1,424 @@
+[
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "PyPI",
+   "name": "Flask_Login",
+   "purl": "pkg:pypi/flask-login@0.6.0",
+   "version": "0.6.0"
+  },
+  "keys": [
+   "pkg:pypi/flask-login"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "PyPI",
+   "name": "requests",
+   "purl": "pkg:pypi/requests@2.31.0",
+   "version": "2.31.0"
+  },
+  "keys": [
+   "pkg:pypi/requests"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "npm",
+   "name": "@angular/core",
+   "purl": "pkg:npm/%40angular/core@17.0.0",
+   "version": "17.0.0"
+  },
+  "keys": [
+   "pkg:npm/@angular/core"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "npm",
+   "name": "left-pad",
+   "purl": "pkg:npm/left-pad@1.3.0",
+   "version": "1.3.0"
+  },
+  "keys": [
+   "pkg:npm/left-pad"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "Maven",
+   "name": "org.apache.logging.log4j:log4j-core",
+   "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+   "version": "2.14.1"
+  },
+  "keys": [
+   "pkg:maven/org.apache.logging.log4j:log4j-core"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "Go",
+   "name": "github.com/BurntSushi/toml",
+   "purl": "pkg:golang/github.com/BurntSushi/toml@v1.2.0",
+   "version": "v1.2.0"
+  },
+  "keys": [
+   "pkg:go/github.com/burntsushi/toml"
+  ]
+ },
+ {
+  "component": {
+   "category": "runtime",
+   "ecosystem": "Go",
+   "meta": {
+    "product": "stdlib",
+    "product_source": "normalized-name"
+   },
+   "name": "stdlib",
+   "purl": "pkg:golang/stdlib@1.21.0",
+   "version": "1.21.0"
+  },
+  "keys": [
+   "pkg:go/stdlib"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "crates.io",
+   "name": "tokio",
+   "purl": "pkg:cargo/tokio@1.0.0",
+   "version": "1.0.0"
+  },
+  "keys": [
+   "pkg:crates.io/tokio"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "RubyGems",
+   "name": "rails",
+   "purl": "pkg:gem/rails@7.0.0",
+   "version": "7.0.0"
+  },
+  "keys": [
+   "pkg:rubygems/rails"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "NuGet",
+   "name": "Newtonsoft.Json",
+   "purl": "pkg:nuget/Newtonsoft.Json@12.0.1",
+   "version": "12.0.1"
+  },
+  "keys": [
+   "pkg:nuget/newtonsoft.json"
+  ]
+ },
+ {
+  "component": {
+   "category": "library",
+   "ecosystem": "Packagist",
+   "name": "symfony/http-kernel",
+   "purl": "pkg:composer/symfony/http-kernel@5.4.0",
+   "version": "5.4.0"
+  },
+  "keys": [
+   "pkg:packagist/symfony/http-kernel"
+  ]
+ },
+ {
+  "component": {
+   "category": "runtime",
+   "cpe": "cpe:2.3:a:electronjs:electron:28.0.0:*:*:*:*:*:*:*",
+   "ecosystem": "npm",
+   "meta": {
+    "product": "electron",
+    "product_source": "alias-table"
+   },
+   "name": "electron",
+   "purl": "pkg:npm/electron@28.0.0",
+   "vendor": "electronjs",
+   "version": "28.0.0"
+  },
+  "keys": [
+   "pkg:npm/electron"
+  ]
+ },
+ {
+  "component": {
+   "category": "os-package",
+   "ecosystem": "Debian:12",
+   "meta": {
+    "source_package": "openssl",
+    "source_version": "3.0.11-1~deb12u1"
+   },
+   "name": "libssl3",
+   "purl": "pkg:deb/debian/libssl3@3.0.11-1~deb12u1?arch=amd64&distro=debian-12",
+   "version": "3.0.11-1~deb12u1"
+  },
+  "keys": [
+   "pkg:debian:12/libssl3",
+   "pkg:debian:12/openssl"
+  ]
+ },
+ {
+  "component": {
+   "category": "os-package",
+   "ecosystem": "Ubuntu:22.04",
+   "meta": {
+    "source_package": "glibc"
+   },
+   "name": "libc6",
+   "purl": "pkg:deb/ubuntu/libc6@2.35-0ubuntu3?distro=ubuntu-22.04",
+   "version": "2.35-0ubuntu3"
+  },
+  "keys": [
+   "pkg:ubuntu:22.04/glibc",
+   "pkg:ubuntu:22.04/libc6"
+  ]
+ },
+ {
+  "component": {
+   "category": "os-package",
+   "ecosystem": "Alpine:v3.19",
+   "meta": {
+    "source_package": "openssl"
+   },
+   "name": "libcrypto3",
+   "purl": "pkg:apk/alpine/libcrypto3@3.1.4-r1?distro=alpine-3.19.0",
+   "version": "3.1.4-r1"
+  },
+  "keys": [
+   "pkg:alpine:v3.19/libcrypto3",
+   "pkg:alpine:v3.19/openssl"
+  ]
+ },
+ {
+  "component": {
+   "category": "os-package",
+   "ecosystem": "Red Hat:9",
+   "meta": {
+    "source_package": "openssl"
+   },
+   "name": "openssl-libs",
+   "purl": "pkg:rpm/redhat/openssl-libs@3.0.7-25.el9?distro=rhel-9.3",
+   "version": "3.0.7-25.el9"
+  },
+  "keys": [
+   "pkg:red hat:9/openssl",
+   "pkg:red hat:9/openssl-libs"
+  ]
+ },
+ {
+  "component": {
+   "category": "package",
+   "cpe": "cpe:2.3:a:openssl:openssl:3.2.0:*:*:*:*:*:*:*",
+   "meta": {
+    "brew_kind": "formula",
+    "brew_name": "openssl@3",
+    "product": "openssl",
+    "product_source": "brew-seed"
+   },
+   "name": "openssl@3",
+   "purl": "pkg:brew/openssl%403@3.2.0",
+   "vendor": "openssl",
+   "version": "3.2.0"
+  },
+  "keys": [
+   "prod:openssl"
+  ]
+ },
+ {
+  "component": {
+   "category": "package",
+   "cpe": "cpe:2.3:a:curl:curl:8.5.0:*:*:*:*:*:*:*",
+   "meta": {
+    "brew_kind": "formula",
+    "brew_name": "curl",
+    "product": "curl",
+    "product_source": "brew-seed",
+    "vendor_alts": [
+     "haxx"
+    ]
+   },
+   "name": "curl",
+   "purl": "pkg:brew/curl@8.5.0",
+   "vendor": "curl",
+   "version": "8.5.0"
+  },
+  "keys": [
+   "prod:curl"
+  ]
+ },
+ {
+  "component": {
+   "category": "package",
+   "meta": {
+    "brew_kind": "cask",
+    "brew_name": "docker-compose",
+    "product": "compose",
+    "product_alts": [
+     "docker_compose"
+    ],
+    "product_source": "normalized-name"
+   },
+   "name": "docker-compose",
+   "version": "2.24.0"
+  },
+  "keys": [
+   "prod:compose",
+   "prod:docker compose",
+   "prod:docker-compose"
+  ]
+ },
+ {
+  "component": {
+   "category": "application",
+   "cpe": "cpe:2.3:a:google:chrome:120.0.6099.109:*:*:*:*:*:*:*",
+   "meta": {
+    "product": "chrome",
+    "product_source": "alias-table"
+   },
+   "name": "Google Chrome",
+   "vendor": "google",
+   "version": "120.0.6099.109"
+  },
+  "keys": [
+   "prod:chrome",
+   "prod:google chrome"
+  ]
+ },
+ {
+  "component": {
+   "category": "application",
+   "cpe": "cpe:2.3:a:microsoft:visual_studio_code:1.95.0:*:*:*:*:*:*:*",
+   "meta": {
+    "product": "visual studio code",
+    "product_source": "alias-table"
+   },
+   "name": "Visual Studio Code",
+   "vendor": "microsoft",
+   "version": "1.95.0"
+  },
+  "keys": [
+   "prod:visual studio code"
+  ]
+ },
+ {
+  "component": {
+   "category": "application",
+   "meta": {
+    "product": "7 zip 23.01",
+    "product_source": "normalized-name"
+   },
+   "name": "7-Zip 23.01 (x64)",
+   "vendor": "Igor Pavlov",
+   "version": "23.01"
+  },
+  "keys": [
+   "prod:7 zip 23.01"
+  ]
+ },
+ {
+  "component": {
+   "category": "application",
+   "cpe": "cpe:2.3:a:notepad-plus-plus:notepad-plus-plus:8.6:*:*:*:*:*:*:*",
+   "meta": {
+    "product": "notepad-plus-plus",
+    "product_source": "alias-table"
+   },
+   "name": "Notepad++ (64-bit x64)",
+   "vendor": "Notepad++ Team",
+   "version": "8.6"
+  },
+  "keys": [
+   "prod:notepad++",
+   "prod:notepad-plus-plus"
+  ]
+ },
+ {
+  "component": {
+   "category": "system-app",
+   "meta": {
+    "product": "internet explorer",
+    "product_source": "normalized-name"
+   },
+   "name": "Internet_Explorer",
+   "vendor": "Microsoft",
+   "version": "11.0"
+  },
+  "keys": [
+   "prod:internet explorer"
+  ]
+ },
+ {
+  "component": {
+   "category": "os",
+   "cpe": "cpe:2.3:o:apple:macos:14.4:*:*:*:*:*:*:*",
+   "meta": {
+    "product": "macos",
+    "product_source": "alias-table"
+   },
+   "name": "macOS",
+   "vendor": "apple",
+   "version": "14.4"
+  },
+  "keys": [
+   "prod:macos"
+  ]
+ },
+ {
+  "component": {
+   "category": "runtime",
+   "meta": {
+    "product": "openjdk runtime",
+    "product_source": "normalized-name"
+   },
+   "name": "OpenJDK Runtime",
+   "vendor": "Oracle",
+   "version": "17.0.2"
+  },
+  "keys": [
+   "prod:openjdk runtime"
+  ]
+ },
+ {
+  "component": {
+   "category": "runtime",
+   "cpe": "cpe:2.3:a:python:python:3.11.4:*:*:*:*:*:*:*",
+   "meta": {
+    "product": "python",
+    "product_source": "alias-table"
+   },
+   "name": "python",
+   "vendor": "python",
+   "version": "3.11.4"
+  },
+  "keys": [
+   "prod:python"
+  ]
+ },
+ {
+  "component": {
+   "category": "executable",
+   "meta": {
+    "product": "nginx",
+    "product_source": "normalized-name"
+   },
+   "name": "nginx",
+   "version": "1.25.3"
+  },
+  "keys": [
+   "prod:nginx"
+  ]
+ }
+]

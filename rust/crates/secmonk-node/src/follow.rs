@@ -7,7 +7,8 @@
 //!   `MirrorNodeStore::localize_feed_batch`: the per-record `delete affected {source, vuln_id}` marker becomes one
 //!   delete per local `affected` row, plus deletes of local aliases the record no longer has); the localized
 //!   operations are re-cut into batches of at most [`MAX_OPS`] operations / about [`MAX_BYTES`] bytes.
-//! - **snapshot pages** (kev, epss, debian-tracker): upserts only. The full replace is the native importers' own
+//! - **snapshot pages** (kev, epss, debian-tracker): upserts only (a record source is always served in delta mode,
+//!   every record a replace unit when there is no local version). The full replace is the native importers' own
 //!   mechanism (kev.rs): upserts for every upstream row, and a `delete` for every locally stored row whose key
 //!   the upstream snapshot did not have, computed through [`MirrorView::row_keys`] once the last page is read (a
 //!   set of the keys seen, one text per row, is the memory cost). The deletes follow the upserts, so a stream cut
@@ -15,6 +16,14 @@
 //!   the Python sources applies unless `options.full`: an empty snapshot, or one under half of the stored rows,
 //!   is refused (nothing is deleted, the run ends `error`). `raw_record` rows are upserted, never deleted (as
 //!   kev.rs does); `affected` rows in a snapshot page are refused (they have no natural key to diff).
+//!
+//! **Upstream rows are untrusted.** Every page is checked before any of it is queued (`check_page`): a record
+//! source takes delta pages only, a snapshot source snapshot pages only; a delta page may carry `upsert` of
+//! `vulnerability`, `alias`, `affected`, `raw_record` and the `delete affected {source, vuln_id}` marker; a snapshot
+//! page `upsert` of the source's own tables and `raw_record`; every row, key and batch has `source` = the followed
+//! source. Anything else (`source_sync`, `source_applied`, another table or source, a delete in a snapshot) refuses
+//! the whole page: the run ends `error`, the version does not move. A snapshot whose upstream completes a new
+//! import between two pages answers `stale`: the run restarts from the first page (at most [`MAX_RESTARTS`] times).
 //!
 //! The run ends with the `source_sync` row of the upstream's version **as of the first page** (records modified
 //! while the run pages are re-sent next time by the overlap), so `source_versions()` serves the same version

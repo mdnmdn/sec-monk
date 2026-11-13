@@ -55,7 +55,11 @@ Every port follows the [standard process](../tech/component-lifecycle.md) (golde
 - [x] Headless server with authentication (2026-11-13): `secmonk-server`, TLS, API keys, JWTs, scopes, rate limits ([rust ADR-0014](../decisions/0014-server-mode-auth-and-ui-transport.md)); mirror-node services P0-P4 ([rust ADR-0013](../decisions/0013-mirror-nodes-and-source-versions.md), [node-api](../tech/node-api.md)).
 - [ ] Roles beyond scopes; more auth providers (OIDC, mTLS, proxy header; the provider chain is ready); a push channel for `match.changes`.
 - [ ] Node P5: ecosystem-filtered replicas, a match cache on the mirror, signed rows, Bloom-filtered or digest `changes`, the hash-prefix mode.
-- [ ] Port the py-engine reports to read summaries through `VulnInfo` on state-only nodes; the lifecycle-cause guardrail.
+- [ ] **Node P3 left (2026-11-13)**: on a state-only node the py-engine report payloads (findings list summaries, KEV /
+  EPSS details) still read the local mirror; port them to Rust over `VulnInfo::summaries` (`CachedVulnInfo` exists:
+  node cache + remote fallback) and wire it in the host ([rust ADR-0013 status note](../decisions/0013-mirror-nodes-and-source-versions.md)).
+- [ ] Node guardrail 5 (deferred 2026-11-13): lifecycle changes carry a cause (scan id or mirror `as_of`), with the
+  findings-history table (proposal §8).
 - [ ] Federation in the desktop UI (several engines); OS overlay clients documented; RDP / embedded overlay last.
 - [ ] Job cancel from the UI (`jobs.cancel`), several jobs at once, event push instead of polling.
 

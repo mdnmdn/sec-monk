@@ -569,23 +569,7 @@ impl MatchService for RemoteNode {
                     // than every answer has). Record versions (timestamps) compare as text; a snapshot version
                     // (a label) that differs keeps the first chunk's, the one asked first. The matcher stays the
                     // first chunk's: a change shows in the next `match.changes`.
-                    for (name, v) in r.as_of.sources {
-                        match m.as_of.sources.get_mut(&name) {
-                            None => {
-                                m.as_of.sources.insert(name, v);
-                            }
-                            Some(cur) => {
-                                let older = match (&cur.version, &v.version) {
-                                    (_, None) => true,
-                                    (None, Some(_)) => false,
-                                    (Some(a), Some(b)) => v.kind == VersionKind::Record && b < a,
-                                };
-                                if older {
-                                    *cur = v;
-                                }
-                            }
-                        }
-                    }
+                    merge_oldest(&mut m.as_of, r.as_of);
                     m.results.extend(r.results);
                     m.coverage.sources =
                         union_sorted(std::mem::take(&mut m.coverage.sources), r.coverage.sources);
@@ -606,6 +590,29 @@ impl MatchService for RemoteNode {
     async fn versions(&self) -> StepResult<Versions> {
         let info = self.info().await?;
         Ok(Versions::new(&info.matcher, info.sources))
+    }
+}
+
+/// Merge the versions of a later chunk's answer into `into`, keeping per source the OLDEST version (see
+/// `match_components`): a record version (a timestamp) compares as text, a snapshot version that differs keeps
+/// `into`'s (asked first), an unknown version (`None`) is the oldest. The matcher stays `into`'s.
+fn merge_oldest(into: &mut Versions, later: Versions) {
+    for (name, v) in later.sources {
+        match into.sources.get_mut(&name) {
+            None => {
+                into.sources.insert(name, v);
+            }
+            Some(cur) => {
+                let older = match (&cur.version, &v.version) {
+                    (_, None) => true,
+                    (None, Some(_)) => false,
+                    (Some(a), Some(b)) => v.kind == VersionKind::Record && b < a,
+                };
+                if older {
+                    *cur = v;
+                }
+            }
+        }
     }
 }
 
@@ -737,6 +744,231 @@ mod tests {
         let mut c = cfg("https://m.example");
         c.ca_cert = Some("/nonexistent/ca.pem".into());
         assert!(RemoteNode::new(c).is_err());
+    }
+
+    fn jwt(claims: Value) -> String {
+        use base64::Engine as _;
+        let e = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        format!(
+            "{}.{}.sig",
+            e.encode(br#"{"alg":"HS256","typ":"JWT"}"#),
+            e.encode(claims.to_string())
+        )
+    }
+
+    #[test]
+    fn token_lifetime_is_clamped_by_the_jwt_claims() {
+        let t = jwt(json!({"sub": "k", "iat": 1000, "exp": 1900}));
+        assert_eq!(jwt_claims_lifetime(&t), Some(900));
+        // the server's expires_at read on a local clock 1 h behind: 4500 s left by the clocks, 900 by the claims
+        assert_eq!(token_lifetime(5_000, 500, &t), Duration::from_secs(900));
+        // a local clock ahead: what the clocks say (shorter) wins
+        assert_eq!(token_lifetime(5_000, 4_900, &t), Duration::from_secs(100));
+        // expired by the local clock: zero (renewed on the next call)
+        assert_eq!(token_lifetime(5_000, 6_000, &t), Duration::ZERO);
+        // an opaque token: the clocks only
+        assert_eq!(jwt_claims_lifetime("opaque"), None);
+        assert_eq!(jwt_claims_lifetime("a.!!!.c"), None);
+        assert_eq!(token_lifetime(100, 40, "opaque"), Duration::from_secs(60));
+        let bad = jwt(json!({"iat": 10, "exp": 5}));
+        assert_eq!(jwt_claims_lifetime(&bad), None);
+    }
+
+    #[test]
+    fn retry_after_is_read_in_seconds() {
+        assert_eq!(
+            retry_after_secs(Some(&HeaderValue::from_static("7"))),
+            Some(7)
+        );
+        assert_eq!(
+            retry_after_secs(Some(&HeaderValue::from_static(" 12 "))),
+            Some(12)
+        );
+        assert_eq!(
+            retry_after_secs(Some(&HeaderValue::from_static(
+                "Wed, 21 Oct 2015 07:28:00 GMT"
+            ))),
+            None
+        );
+        assert_eq!(retry_after_secs(None), None);
+        let e = busy_after(WireError::new(ErrorCode::Internal, "slow down"), 7);
+        assert_eq!(e.code, ErrorCode::Busy);
+        assert_eq!(e.data.as_deref(), Some(&json!({"retry_after_s": 7})));
+        assert!(e.hint.unwrap().contains("7 s"));
+    }
+
+    type Reply = (u16, Vec<(&'static str, String)>, String, u64);
+
+    /// A minimal HTTP/1.1 server on loopback: `handler(path)` -> (status, extra headers, body, delay in ms).
+    async fn serve(handler: impl Fn(&str) -> Reply + Send + Sync + 'static) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handler = std::sync::Arc::new(handler);
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    return;
+                };
+                let handler = handler.clone();
+                tokio::spawn(async move {
+                    let mut buf = Vec::new();
+                    let mut chunk = [0u8; 4096];
+                    let head_end = loop {
+                        let n = sock.read(&mut chunk).await.unwrap_or(0);
+                        if n == 0 {
+                            return;
+                        }
+                        buf.extend_from_slice(&chunk[..n]);
+                        if let Some(i) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                            break i + 4;
+                        }
+                    };
+                    let head = String::from_utf8_lossy(&buf[..head_end]).to_string();
+                    let len: usize = head
+                        .lines()
+                        .find_map(|l| {
+                            let (k, v) = l.split_once(':')?;
+                            if k.eq_ignore_ascii_case("content-length") {
+                                v.trim().parse().ok()
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(0);
+                    while buf.len() < head_end + len {
+                        let n = sock.read(&mut chunk).await.unwrap_or(0);
+                        if n == 0 {
+                            break;
+                        }
+                        buf.extend_from_slice(&chunk[..n]);
+                    }
+                    let path = head.split_whitespace().nth(1).unwrap_or("").to_owned();
+                    let (status, headers, body, delay) = handler(&path);
+                    tokio::time::sleep(Duration::from_millis(delay)).await;
+                    let mut resp = format!(
+                        "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n",
+                        body.len()
+                    );
+                    for (k, v) in headers {
+                        resp.push_str(&format!("{k}: {v}\r\n"));
+                    }
+                    resp.push_str("\r\n");
+                    resp.push_str(&body);
+                    let _ = sock.write_all(resp.as_bytes()).await;
+                    let _ = sock.shutdown().await;
+                });
+            }
+        });
+        format!("http://{addr}")
+    }
+
+    fn info_body() -> String {
+        json!({"node_id": "n", "roles": ["match"], "matcher": "m", "mirror": true, "sources": []})
+            .to_string()
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn one_exchange_for_every_waiting_caller_and_its_error_for_each() {
+        let fail = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let hits = std::sync::Arc::new(AtomicU64::new(0));
+        let (f, h) = (fail.clone(), hits.clone());
+        let url = serve(move |path| {
+            if path.ends_with("/auth/token") {
+                h.fetch_add(1, Ordering::SeqCst);
+                if f.load(Ordering::SeqCst) {
+                    return (500, vec![], r#"{"error":"down"}"#.into(), 150);
+                }
+                let now = now_s();
+                let t = jwt(json!({"iat": now, "exp": now + 3600}));
+                let body = json!({"token": t, "expires_at": now + 3600}).to_string();
+                (200, vec![], body, 150)
+            } else {
+                (200, vec![], info_body(), 0)
+            }
+        })
+        .await;
+        let node = std::sync::Arc::new(RemoteNode::new(cfg(&url)).unwrap());
+        let spawn_calls = || {
+            (0..5)
+                .map(|_| {
+                    let n = node.clone();
+                    tokio::spawn(async move { n.info().await })
+                })
+                .collect::<Vec<_>>()
+        };
+        for c in spawn_calls() {
+            assert_eq!(c.await.unwrap().unwrap_err().code, ErrorCode::Internal);
+        }
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            1,
+            "one exchange for five callers"
+        );
+        // the next call tries again, and one exchange serves every waiting caller
+        fail.store(false, Ordering::SeqCst);
+        for c in spawn_calls() {
+            assert_eq!(c.await.unwrap().unwrap().node_id, "n");
+        }
+        assert_eq!(hits.load(Ordering::SeqCst), 2);
+        assert_eq!(node.token_exchanges(), 2);
+        // the token is kept: no exchange for the next call
+        node.info().await.unwrap();
+        assert_eq!(hits.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn a_429_with_retry_after_is_busy_with_the_delay() {
+        let url = serve(|path| {
+            if path.ends_with("/auth/token") {
+                let body = json!({"token": "opaque", "expires_at": now_s() + 3600}).to_string();
+                (200, vec![], body, 0)
+            } else {
+                (429, vec![("retry-after", "7".to_owned())], "{}".into(), 0)
+            }
+        })
+        .await;
+        let node = RemoteNode::new(cfg(&url)).unwrap();
+        let e = node.info().await.unwrap_err();
+        assert_eq!(e.code, ErrorCode::Busy);
+        assert_eq!(e.data.as_deref(), Some(&json!({"retry_after_s": 7})));
+    }
+
+    #[test]
+    fn chunk_answers_keep_the_oldest_version_per_source() {
+        use secmonk_model::node::SourceVersion;
+        let sv = |s: &str, v: Option<&str>, kind: VersionKind| SourceVersion {
+            source: s.into(),
+            version: v.map(Into::into),
+            importer: "rust/1".into(),
+            kind,
+            records: 1,
+            last_sync: None,
+            status: None,
+        };
+        let mut a = Versions::new(
+            "m",
+            [
+                sv("nvd", Some("2026-11-02"), VersionKind::Record),
+                sv("kev", Some("v1"), VersionKind::Snapshot),
+                sv("osv", Some("2026-11-01"), VersionKind::Record),
+            ],
+        );
+        let b = Versions::new(
+            "m",
+            [
+                sv("nvd", Some("2026-11-01"), VersionKind::Record),
+                sv("kev", Some("v0"), VersionKind::Snapshot),
+                sv("osv", None, VersionKind::Record),
+                sv("epss", Some("e"), VersionKind::Snapshot),
+            ],
+        );
+        merge_oldest(&mut a, b);
+        let v = |n: &str| a.sources[n].version.clone();
+        assert_eq!(v("nvd").as_deref(), Some("2026-11-01"), "the older one");
+        assert_eq!(v("kev").as_deref(), Some("v1"), "a label keeps the first");
+        assert_eq!(v("osv"), None, "unknown is the oldest");
+        assert_eq!(v("epss").as_deref(), Some("e"));
     }
 
     #[test]

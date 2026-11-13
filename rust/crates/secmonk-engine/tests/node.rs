@@ -10,8 +10,9 @@ use std::time::Duration;
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use secmonk_engine::node::{
-    DIFF_UNKNOWN_KEY, LocalNode, LocalNodeSettings, NodeMatcher, component_lookup_keys,
-    default_importer_module, matcher_version,
+    CachedVulnInfo, DIFF_UNKNOWN_KEY, LocalNode, LocalNodeSettings, NodeMatcher, SYNC_AS_OF,
+    SYNC_EPOCH, SYNC_LOCAL, SYNC_RESYNC, component_lookup_keys, default_importer_module,
+    matcher_version,
 };
 use secmonk_engine::{EngineConfig, EngineDeps, EngineService, SecmonkEngine};
 use secmonk_model::node::*;
@@ -1104,6 +1105,49 @@ async fn a_sync_rematches_the_assets_it_affects() {
     script(&src, "osv", vec![], "ok");
     run_sync(&e, &["osv"]).await;
     assert!(steps.persisted.lock().unwrap().is_empty());
+
+    // a resync of kev (new to the node) is enrichment: no match set changes, only the assets with findings are
+    // matched again (their KEV / EPSS facts and priority come from the mirror at match time)
+    let latest = store.latest_scan_id("dir:/c").await.unwrap();
+    let f: Finding = serde_json::from_value(json!({
+        "component_id": store.current_components("dir:/c").await.unwrap()[0].id, "vuln_id": "CVE-9",
+        "advisory_ids": ["CVE-9"], "matched_by": "osv-package", "confidence": 1.0, "kev": false,
+        "priority": "P3", "status": "open", "first_seen": "t0", "last_seen": "t1",
+    }))
+    .unwrap();
+    store
+        .replace_findings(
+            "dir:/c",
+            &[f],
+            &BasedOn {
+                latest_scan_id: latest,
+                mirror_synced_at: None,
+            },
+        )
+        .await
+        .unwrap();
+    script(
+        &src,
+        "kev",
+        vec![batch(
+            "kev",
+            1,
+            json!([kev_row("CVE-9"), sync_row("kev", "ok", "2026.01.01")]),
+        )],
+        "ok",
+    );
+    let job = run_sync(&e, &["kev"]).await;
+    assert_eq!(
+        *steps.persisted.lock().unwrap(),
+        ["dir:/c"],
+        "{}",
+        log_text(&job)
+    );
+    assert!(
+        log_text(&job).contains("resync of kev (new source)"),
+        "{}",
+        log_text(&job)
+    );
 }
 
 // ------------------------------------------------------------------------------------------------ NodeMatcher
@@ -1456,4 +1500,324 @@ async fn state_reads_for_the_node_services() {
             .unwrap()
             .is_empty()
     );
+}
+
+// ------------------------------------------------------------------------------------------------ NodeMatcher poll
+
+/// A match service for the poll tests: `changes` counts how many run at once (and takes a while), the answers
+/// can fail, and `extra_keys` adds stored lookup keys a component's own computation would not give.
+struct PollService {
+    changes: Mutex<Option<ChangesResponse>>,
+    versions: Versions,
+    fail: std::sync::atomic::AtomicBool,
+    running: AtomicU64,
+    max_running: AtomicU64,
+    asked: Mutex<Vec<String>>,
+    extra_keys: BTreeMap<String, Vec<String>>,
+}
+
+impl PollService {
+    fn new(extra_keys: &[(&str, &str)]) -> Arc<PollService> {
+        let mut extra: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for (n, k) in extra_keys {
+            extra.entry((*n).into()).or_default().push((*k).into());
+        }
+        Arc::new(PollService {
+            changes: Mutex::new(None),
+            versions: versions("v1"),
+            fail: std::sync::atomic::AtomicBool::new(false),
+            running: AtomicU64::new(0),
+            max_running: AtomicU64::new(0),
+            asked: Mutex::new(Vec::new()),
+            extra_keys: extra,
+        })
+    }
+}
+
+#[async_trait]
+impl MatchService for PollService {
+    async fn match_components(
+        &self,
+        req: MatchComponentsRequest,
+    ) -> StepResult<MatchComponentsResponse> {
+        if self.fail.load(Ordering::SeqCst) {
+            return Err(WireError::new(
+                ErrorCode::HostUnreachable,
+                "the node went away",
+            ));
+        }
+        let results = req
+            .components
+            .iter()
+            .map(|c| {
+                self.asked.lock().unwrap().push(c.name.clone());
+                let mut lookup_keys = component_lookup_keys(c);
+                lookup_keys.extend(self.extra_keys.get(&c.name).cloned().unwrap_or_default());
+                ComponentResult {
+                    key: c.key(),
+                    matches: vec![],
+                    lookup_keys,
+                }
+            })
+            .collect();
+        Ok(MatchComponentsResponse {
+            results,
+            as_of: self.versions.clone(),
+            coverage: Coverage::default(),
+        })
+    }
+
+    async fn changes(&self, _: ChangesRequest) -> StepResult<ChangesResponse> {
+        let n = self.running.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max_running.fetch_max(n, Ordering::SeqCst);
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        self.running.fetch_sub(1, Ordering::SeqCst);
+        Ok(self
+            .changes
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_else(|| ChangesResponse {
+                sources: BTreeMap::new(),
+                as_of: self.versions.clone(),
+            }))
+    }
+
+    async fn versions(&self) -> StepResult<Versions> {
+        Ok(self.versions.clone())
+    }
+}
+
+async fn persisted(m: &NodeMatcher, asset: &str) -> MatchResult {
+    m.match_asset(
+        MatchParams::Persisted {
+            asset_id: asset.into(),
+            min_confidence: 0.0,
+            view_limit: None,
+        },
+        CallCtx::default(),
+    )
+    .await
+    .unwrap()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn node_matcher_polls_one_at_a_time_and_saves_nothing_when_a_call_fails() {
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let steps = Steps::new(store.clone(), &[], 5_000);
+    let service = PollService::new(&[]);
+    let info = Arc::new(FakeInfo {
+        calls: AtomicU64::new(0),
+    });
+    let cache: Arc<dyn NodeCacheStore> = store.node_cache_store();
+    let m = Arc::new(NodeMatcher::new(
+        service.clone(),
+        info,
+        cache.clone(),
+        steps.clone(),
+        store.clone(),
+    ));
+    store
+        .save_inventory(&inventory("dir:/a", &["requests", "clean"]), None)
+        .await
+        .unwrap();
+    persisted(&m, "dir:/a").await;
+    let saved = |name: &'static str| {
+        let cache = cache.clone();
+        async move { cache.node_sync_get(name).await.unwrap() }
+    };
+    let (as_of0, epoch0) = (saved(SYNC_AS_OF).await, saved(SYNC_EPOCH).await);
+    assert!(as_of0.is_some() && epoch0.is_some());
+
+    // concurrent polls run one after the other
+    service.max_running.store(0, Ordering::SeqCst);
+    let (a, b, c) = tokio::join!(m.poll_changes(), m.poll_changes(), m.poll_changes());
+    a.unwrap();
+    b.unwrap();
+    c.unwrap();
+    assert_eq!(service.max_running.load(Ordering::SeqCst), 1);
+
+    // a resync of osv:PyPI whose re-ask fails: neither the versions nor the epoch move
+    *service.changes.lock().unwrap() = Some(ChangesResponse {
+        sources: BTreeMap::from([("osv:PyPI".into(), SourceChanges::Resync("importer".into()))]),
+        as_of: versions("v2"),
+    });
+    service.fail.store(true, Ordering::SeqCst);
+    let e = m.poll_changes().await.unwrap_err();
+    assert_eq!(e.code, ErrorCode::HostUnreachable);
+    assert_eq!(saved(SYNC_AS_OF).await, as_of0);
+    assert_eq!(saved(SYNC_EPOCH).await, epoch0);
+    assert_eq!(saved(SYNC_RESYNC).await.as_deref(), Some("{}"));
+    // once the service answers, the same changes are applied and saved together
+    service.fail.store(false, Ordering::SeqCst);
+    service.asked.lock().unwrap().clear();
+    let p = m.poll_changes().await.unwrap();
+    assert_eq!(p.resynced, ["osv:PyPI"]);
+    assert_eq!(p.hit_keys.len(), 2);
+    assert_ne!(saved(SYNC_AS_OF).await, as_of0);
+    let epoch1: u64 = saved(SYNC_EPOCH).await.unwrap().parse().unwrap();
+    assert_eq!(epoch1, epoch0.unwrap().parse::<u64>().unwrap() + 1);
+    assert_eq!(
+        saved(SYNC_RESYNC).await.as_deref(),
+        Some(format!("{{\"osv:PyPI\":{epoch1}}}").as_str())
+    );
+}
+
+#[tokio::test]
+async fn node_matcher_reads_the_stored_lookup_keys_and_its_own_version() {
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let steps = Steps::new(store.clone(), &[], 5_000);
+    // the service says `clean` also reads npm rows (a key the client would not compute)
+    let service = PollService::new(&[("clean", "pkg:npm/clean-shim")]);
+    let cache: Arc<dyn NodeCacheStore> = store.node_cache_store();
+    let make = || {
+        NodeMatcher::new(
+            service.clone(),
+            Arc::new(FakeInfo {
+                calls: AtomicU64::new(0),
+            }),
+            cache.clone(),
+            steps.clone(),
+            store.clone(),
+        )
+    };
+    let m = make();
+    store
+        .save_inventory(&inventory("dir:/a", &["requests", "clean"]), None)
+        .await
+        .unwrap();
+    persisted(&m, "dir:/a").await;
+    assert!(
+        !component_lookup_keys(&ComponentIdentity::from_component(&component("clean")))
+            .contains(&"pkg:npm/clean-shim".to_owned())
+    );
+    let clean_key = ComponentIdentity::from_component(&component("clean")).key();
+    let stored = cache
+        .stored_lookup_keys(std::slice::from_ref(&clean_key))
+        .await
+        .unwrap();
+    assert!(stored[&clean_key].contains(&"pkg:npm/clean-shim".to_owned()));
+
+    // a resync of osv:npm concerns `clean` through its stored key only
+    *service.changes.lock().unwrap() = Some(ChangesResponse {
+        sources: BTreeMap::from([("osv:npm".into(), SourceChanges::Resync("importer".into()))]),
+        as_of: versions("v2"),
+    });
+    service.asked.lock().unwrap().clear();
+    let p = m.poll_changes().await.unwrap();
+    assert_eq!(p.hit_keys, std::slice::from_ref(&clean_key));
+    assert_eq!(*service.asked.lock().unwrap(), ["clean"]);
+
+    // freshness reads the stored keys too: a scan right after asks nothing again
+    service.asked.lock().unwrap().clear();
+    *service.changes.lock().unwrap() = None;
+    persisted(&m, "dir:/a").await;
+    assert!(service.asked.lock().unwrap().is_empty());
+
+    // another local matcher version (new lookup keys code): a new epoch, the stored inventory asked again
+    let m2 = make().with_local_version("py-engine/0+keys/999");
+    let p = m2.poll_changes().await.unwrap();
+    assert_eq!(p.hit_keys.len(), 2);
+    let mut asked = service.asked.lock().unwrap().clone();
+    asked.sort();
+    assert_eq!(asked, ["clean", "requests"]);
+    assert_eq!(
+        cache.node_sync_get(SYNC_LOCAL).await.unwrap().as_deref(),
+        Some("py-engine/0+keys/999")
+    );
+    // and the default is this build's matcher version
+    service.asked.lock().unwrap().clear();
+    make().poll_changes().await.unwrap();
+    assert_eq!(
+        cache.node_sync_get(SYNC_LOCAL).await.unwrap().as_deref(),
+        Some(matcher_version())
+    );
+    assert!(matcher_version().starts_with("py-engine/") && matcher_version().ends_with("+keys/1"));
+}
+
+// ------------------------------------------------------------------------------------------------ LocalNode limits
+
+/// A matcher whose ephemeral matches take a while (the slot test).
+struct SlowMatcher(Arc<Steps>);
+
+#[async_trait]
+impl Matcher for SlowMatcher {
+    async fn match_asset(&self, params: MatchParams, ctx: CallCtx) -> StepResult<MatchResult> {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        self.0.match_asset(params, ctx).await
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn match_components_answers_busy_when_every_slot_is_taken() {
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let steps = Steps::new(store.clone(), &[], 5_000);
+    let node = Arc::new(LocalNode::new(
+        store.mirror_node_store(),
+        Arc::new(SlowMatcher(steps.clone())),
+        steps.clone(),
+        LocalNodeSettings {
+            max_concurrent_matches: 1,
+            match_wait: Duration::from_millis(50),
+            ..Default::default()
+        },
+    ));
+    let req = || MatchComponentsRequest {
+        components: vec![ident("requests", Some("pkg:pypi/requests@1.0"), None)],
+        min_confidence: None,
+    };
+    let first = {
+        let node = node.clone();
+        tokio::spawn(async move { node.match_components(req()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let e = node.match_components(req()).await.unwrap_err();
+    assert_eq!(e.code, ErrorCode::Busy);
+    first.await.unwrap().unwrap();
+    // the slot is free again
+    node.match_components(req()).await.unwrap();
+    assert_eq!(LocalNodeSettings::default().max_concurrent_matches, 4);
+    assert_eq!(
+        LocalNodeSettings::default().match_wait,
+        Duration::from_secs(2)
+    );
+    assert_eq!(
+        LocalNodeSettings::default().matcher_version,
+        matcher_version()
+    );
+}
+
+#[tokio::test]
+async fn cached_vuln_info_asks_the_service_only_for_misses() {
+    let d = tempfile::tempdir().unwrap();
+    let store = open(d.path()).await;
+    let info = Arc::new(FakeInfo {
+        calls: AtomicU64::new(0),
+    });
+    let cached = CachedVulnInfo::new(store.node_cache_store(), info.clone());
+    let ids = |v: &[&str]| v.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+    let r = cached
+        .summaries(&ids(&["CVE-1", "CVE-2", "CVE-1"]))
+        .await
+        .unwrap();
+    assert_eq!(
+        r.summaries
+            .iter()
+            .map(|s| s.id.as_str())
+            .collect::<Vec<_>>(),
+        ["CVE-1", "CVE-2"]
+    );
+    assert_eq!(info.calls.load(Ordering::SeqCst), 1);
+    // both cached now: no call; a new id: one call for it alone
+    cached.summaries(&ids(&["CVE-2", "CVE-1"])).await.unwrap();
+    assert_eq!(info.calls.load(Ordering::SeqCst), 1);
+    let r = cached.summaries(&ids(&["CVE-3", "CVE-1"])).await.unwrap();
+    assert_eq!(info.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(r.summaries.len(), 2);
+    assert!(r.missing.is_empty());
+    // detail and search go to the service
+    assert_eq!(cached.detail("CVE-1", false).await.unwrap(), Value::Null);
 }

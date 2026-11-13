@@ -837,3 +837,108 @@ async fn node_cache_keeps_answers_lookups_and_summaries() {
     let _: BTreeMap<String, String> = versions.since();
     s.close().await;
 }
+
+#[tokio::test]
+async fn snapshot_paging_is_pinned_to_the_first_pages_version() {
+    let d = tempfile::tempdir().unwrap();
+    let s = open(d.path()).await;
+    fill(&s).await;
+    s.record_complete_version("kev", "v1", "rust/1", VersionKind::Snapshot)
+        .await
+        .unwrap();
+    let (b1, next) = s.rows_snapshot("kev", None, 1).await.unwrap();
+    assert_eq!(b1[0].ops.len(), 1);
+    let next = next.unwrap();
+    assert!(next.starts_with("s2|0|") && next.ends_with("|v1"), "{next}");
+    // the same version: the next page
+    let (b2, _) = s.rows_snapshot("kev", Some(&next), 1).await.unwrap();
+    assert_eq!(b2[0].ops.len(), 1);
+    assert_ne!(b1[0].ops, b2[0].ops);
+    // a complete import moved the version between two pages: stale, the follower restarts
+    s.record_complete_version("kev", "v2", "rust/1", VersionKind::Snapshot)
+        .await
+        .unwrap();
+    let e = s.rows_snapshot("kev", Some(&next), 1).await.unwrap_err();
+    assert!(matches!(e, StoreError::Stale(_)), "{e:?}");
+    // a cursor of the former format carries no version: stale too; garbage is invalid
+    assert!(matches!(
+        s.rows_snapshot("kev", Some("s1|0|1"), 1).await.unwrap_err(),
+        StoreError::Stale(_)
+    ));
+    assert!(matches!(
+        s.rows_snapshot("kev", Some("s2|x|1|v2"), 1)
+            .await
+            .unwrap_err(),
+        StoreError::Invalid(_)
+    ));
+    assert!(matches!(
+        s.rows_snapshot("kev", Some("zz"), 1).await.unwrap_err(),
+        StoreError::Invalid(_)
+    ));
+    // a version with the separator in it still round-trips (the version is the cursor's last part)
+    s.record_complete_version("kev", "2026|11|13", "rust/1", VersionKind::Snapshot)
+        .await
+        .unwrap();
+    let (_, next) = s.rows_snapshot("kev", None, 1).await.unwrap();
+    assert!(s.rows_snapshot("kev", next.as_deref(), 1).await.is_ok());
+}
+
+#[tokio::test]
+async fn node_cache_saves_state_together_and_keeps_the_stored_keys() {
+    let d = tempfile::tempdir().unwrap();
+    let s = open(d.path()).await;
+    let cache = s.node_cache_store();
+    cache
+        .node_sync_set_many(&[("a", "1"), ("b", "2")])
+        .await
+        .unwrap();
+    cache
+        .node_sync_set_many(&[("b", "3"), ("c", "4")])
+        .await
+        .unwrap();
+    for (k, v) in [("a", "1"), ("b", "3"), ("c", "4")] {
+        assert_eq!(cache.node_sync_get(k).await.unwrap().as_deref(), Some(v));
+    }
+    let versions = Versions::new(TEST_MATCHER, []);
+    let res = |key: &str, m: Vec<ComponentMatch>, lk: &[&str]| ComponentResult {
+        key: key.into(),
+        matches: m,
+        lookup_keys: lk.iter().map(|s| s.to_string()).collect(),
+    };
+    cache
+        .put_component_results(
+            &[
+                res(
+                    "k1",
+                    vec![matched("CVE-1", &[])],
+                    &["pkg:npm/b", "pkg:npm/a"],
+                ),
+                res("k2", vec![], &[]),
+            ],
+            &versions,
+        )
+        .await
+        .unwrap();
+    let got = cache
+        .stored_lookup_keys(&["k1".into(), "k2".into(), "k3".into()])
+        .await
+        .unwrap();
+    assert_eq!(got.len(), 1, "answered with keys only: {got:?}");
+    assert_eq!(got["k1"], ["pkg:npm/a", "pkg:npm/b"]);
+    // an empty vuln_id is the "no match" marker: refused, and nothing of the call is stored
+    let e = cache
+        .put_component_results(
+            &[
+                res("k2", vec![matched("CVE-2", &[])], &[]),
+                res("k3", vec![matched("", &[])], &[]),
+            ],
+            &versions,
+        )
+        .await
+        .unwrap_err();
+    assert!(matches!(e, StoreError::Invalid(_)), "{e:?}");
+    assert!(
+        cache.component_matches(&["k2".into()]).await.unwrap()["k2"].is_empty(),
+        "unchanged"
+    );
+}

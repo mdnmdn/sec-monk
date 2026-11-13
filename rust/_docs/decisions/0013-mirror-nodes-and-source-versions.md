@@ -13,6 +13,28 @@ related: [plans/node-server-design.md, decisions/0014-server-mode-auth-and-ui-tr
 
 # ADR-0013 — Mirror nodes
 
+> **Status note 2026-11-13** (after the review; the decision stands, this records what is not done yet and what
+> changed in the details).
+>
+> - **State-only reports still read the local mirror.** On a state-only node (`matcher = "remote"`) matching goes
+>   through `NodeMatcher` and `vuln_detail` / `vuln_search` go to the upstream, but the other py-engine report payloads
+>   (the findings list's summaries, KEV / EPSS details in the asset and overview reports) are built by py-engine from the
+>   **local** mirror database, which a state-only node does not fill. Porting these reports to Rust over
+>   `VulnInfo::summaries` (`secmonk_engine::node::CachedVulnInfo`: the `vuln_summary` cache with the remote service as
+>   fallback, built and tested, not wired yet) is the remaining **P3** work ([backlog](../plans/backlog.md) §4).
+> - **Guardrail 5 of the proposal (lifecycle changes carry a cause: a scan id or the mirror `as_of`) is deferred**:
+>   findings still carry `first_seen` / `fixed_at` without the cause; it lands with the findings-history table.
+> - **Item 2, the matcher version**: not a constant any more but `py-engine/<secmonk version>+keys/<KEYS_VERSION>`
+>   (`secmonk_engine::node::matcher_version()`, the `secmonk` version read at build time from the root
+>   `pyproject.toml`, `KEYS_VERSION` bumped with any change to `component_lookup_keys`); module sources record
+>   `python/<secmonk version>` instead of `python/1`.
+> - **Item 7, feed pages**: a record source is always served in delta mode (every record a replace unit without a
+>   version); snapshot paging is pinned to the version of its first page (a change answers `stale`, the follower
+>   restarts); a follower accepts only the followed source's own tables and rows and refuses a whole page otherwise.
+> - **Items 8-9**: the re-match after a sync and the `NodeMatcher` poll select components with one function
+>   (`affected_components`): a `kev` / `epss` resync re-matches only the assets with findings; a state node uses the
+>   lookup keys the service stored with its answers.
+
 ## Context
 
 The proposal [mirror nodes](../../../_docs/inbox/2026-11-12-mirror-nodes-feed-match-service.md) (2026-11-12, Rust
@@ -30,7 +52,8 @@ signed rows, the hash-prefix mode, Bloom-filtered `changes`) is not built.
 2. **A source's version is `(source, upstream version, importer version)`**, plus one `MATCHER_VERSION` per node.
    The upstream version is the source's cursor in `source_sync` (`status = 'ok'` only), or the value recorded in
    `source_version` after a complete sync. A `partial` run never moves it. The wire form is `<importer>@<version>`.
-   Native importers declare `importer_version` in `secmonk_sources::IMPORTERS`; module sources are `python/1`; a
+   Native importers declare `importer_version` in `secmonk_sources::IMPORTERS`; module sources are `python/1`
+   (`python/<secmonk version>` since the 2026-11-13 status note); a
    followed source carries the upstream's importer, so a follower can serve the same versions further down.
 3. **Three traits in `secmonk-traits::node`** (`MatchService`, `VulnInfo`, `Feed`) with two implementations: in process
    (`secmonk_engine::node::LocalNode`, over `MirrorNodeStore`, the py-engine `Matcher` and `Reporter`) and remote

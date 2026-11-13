@@ -632,3 +632,255 @@ async fn source_trait_surface() {
         .unwrap();
     assert_eq!(e.code, ErrorCode::UnknownSource);
 }
+
+/// Runs `pages` for `src` and returns the run's end and every operation streamed (the `source_sync` row last).
+async fn run_pages(src: &str, pages: Vec<StepResult<FeedPage>>) -> (SyncEnd, Vec<RowOp>) {
+    let feed = ScriptedFeed::new(pages);
+    let (batches, end) = run(
+        &source(feed, stored_kev(&["CVE-1"]), 1, None),
+        params(src, true),
+    )
+    .await
+    .unwrap();
+    (end, batches.into_iter().flat_map(|b| b.ops).collect())
+}
+
+#[tokio::test]
+async fn upstream_pages_carry_only_the_followed_sources_tables() {
+    let refused: Vec<(&str, FeedMode, Vec<RowOp>)> = vec![
+        // a delta page may not write the run bookkeeping, another table or another source's rows
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![up(
+                MirrorTable::SourceSync,
+                json!({"source": "nvd", "status": "ok", "cursor": "far-future"}),
+            )],
+        ),
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![up(
+                MirrorTable::Kev,
+                json!({"source": "nvd", "cve_id": "CVE-1"}),
+            )],
+        ),
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![up(
+                MirrorTable::Vulnerability,
+                json!({"source": "osv", "id": "GHSA-1"}),
+            )],
+        ),
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![up(MirrorTable::Vulnerability, json!({"id": "CVE-1"}))],
+        ),
+        // only the replace-unit marker deletes, and only the source's own
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![del(
+                MirrorTable::Vulnerability,
+                json!({"source": "nvd", "id": "CVE-1"}),
+            )],
+        ),
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![del(
+                MirrorTable::Affected,
+                json!({"source": "osv", "vuln_id": "GHSA-1"}),
+            )],
+        ),
+        (
+            "nvd",
+            FeedMode::Delta,
+            vec![del(MirrorTable::Affected, json!({"source": "nvd"}))],
+        ),
+        // a snapshot page of a record source, a delta page of a snapshot source
+        (
+            "nvd",
+            FeedMode::Snapshot,
+            vec![up(
+                MirrorTable::Vulnerability,
+                json!({"source": "nvd", "id": "CVE-1"}),
+            )],
+        ),
+        ("kev", FeedMode::Delta, vec![kev_row("CVE-1")]),
+        // a snapshot page: upserts of the source's own tables (+ raw_record) only
+        (
+            "kev",
+            FeedMode::Snapshot,
+            vec![del(MirrorTable::Kev, json!({"cve_id": "CVE-1"}))],
+        ),
+        (
+            "kev",
+            FeedMode::Snapshot,
+            vec![up(
+                MirrorTable::Epss,
+                json!({"source": "kev", "cve_id": "CVE-1"}),
+            )],
+        ),
+        (
+            "kev",
+            FeedMode::Snapshot,
+            vec![up(
+                MirrorTable::Kev,
+                json!({"source": "euvd", "cve_id": "CVE-1"}),
+            )],
+        ),
+        (
+            "kev",
+            FeedMode::Snapshot,
+            vec![up(
+                MirrorTable::SourceSync,
+                json!({"source": "kev", "status": "ok"}),
+            )],
+        ),
+    ];
+    for (src, mode, ops) in refused {
+        let what = format!("{src} {mode:?} {ops:?}");
+        // a good batch first: the whole page is refused, nothing of it is streamed
+        let mut batches = vec![batch(
+            1,
+            src,
+            if src == "kev" {
+                vec![kev_row("CVE-2")]
+            } else {
+                replace_unit("CVE-2")
+            },
+        )];
+        batches.push(batch(2, src, ops));
+        let (end, streamed) = run_pages(src, vec![Ok(page(src, "v", mode, batches, None))]).await;
+        assert_eq!(end.entry.status, "error", "{what}");
+        assert!(
+            end.entry.message.as_deref().unwrap().contains("refused"),
+            "{what}: {:?}",
+            end.entry.message
+        );
+        assert_eq!(streamed.len(), 1, "{what}: only the error source_sync row");
+        match &streamed[0] {
+            RowOp::Upsert {
+                table: MirrorTable::SourceSync,
+                row,
+            } => {
+                assert_eq!(row["status"], "error");
+                assert!(
+                    !row.contains_key("cursor"),
+                    "{what}: the version does not move"
+                );
+            }
+            other => panic!("{what}: {other:?}"),
+        }
+    }
+    // a batch labelled with another source
+    let (end, _) = run_pages(
+        "nvd",
+        vec![Ok(page(
+            "nvd",
+            "v",
+            FeedMode::Delta,
+            vec![batch(1, "osv", replace_unit("CVE-1"))],
+            None,
+        ))],
+    )
+    .await;
+    assert_eq!(end.entry.status, "error");
+    // and the accepted shapes pass
+    let (end, _) = run_pages(
+        "nvd",
+        vec![Ok(page(
+            "nvd",
+            "v",
+            FeedMode::Delta,
+            vec![batch(1, "nvd", replace_unit("CVE-1"))],
+            None,
+        ))],
+    )
+    .await;
+    assert_eq!(end.entry.status, "ok", "{:?}", end.entry.message);
+}
+
+#[tokio::test]
+async fn a_snapshot_that_changes_version_while_paged_restarts() {
+    let stale = || {
+        Err(WireError::new(
+            ErrorCode::Stale,
+            "kev: the snapshot changed version while it was paged; restart from the first page",
+        ))
+    };
+    // page 1 of v1, then stale; the run starts over on v2 and deletes what v2 lacks (CVE-1 of v1 only)
+    let feed = ScriptedFeed::new(vec![
+        Ok(page(
+            "kev",
+            "v1",
+            FeedMode::Snapshot,
+            vec![batch(1, "kev", vec![kev_row("CVE-1")])],
+            Some("s2|0|1|v1"),
+        )),
+        stale(),
+        Ok(page(
+            "kev",
+            "v2",
+            FeedMode::Snapshot,
+            vec![batch(1, "kev", vec![kev_row("CVE-2")])],
+            Some("s2|0|1|v2"),
+        )),
+        Ok(page(
+            "kev",
+            "v2",
+            FeedMode::Snapshot,
+            vec![batch(1, "kev", vec![kev_row("CVE-3")])],
+            None,
+        )),
+    ]);
+    let s = source(feed.clone(), stored_kev(&["CVE-1"]), 1, None);
+    let (batches, end) = run(&s, params("kev", false)).await.unwrap();
+    assert_eq!(end.entry.status, "ok", "{:?}", end.entry.message);
+    let pages: Vec<Option<String>> = feed
+        .requests
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|r| r.page.clone())
+        .collect();
+    assert_eq!(
+        pages,
+        [
+            None,
+            Some("s2|0|1|v1".into()),
+            None,
+            Some("s2|0|1|v2".into())
+        ]
+    );
+    let ops: Vec<RowOp> = batches.into_iter().flat_map(|b| b.ops).collect();
+    assert!(ops.contains(&del(MirrorTable::Kev, json!({"cve_id": "CVE-1"}))));
+    let sync = match ops.last().unwrap() {
+        RowOp::Upsert { row, .. } => row.clone(),
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(sync["cursor"], "v2", "the version of the restarted pass");
+
+    // an upstream that keeps moving: at most MAX_RESTARTS restarts, then the run ends `error`
+    let mut pages = Vec::new();
+    for _ in 0..=secmonk_node::follow::MAX_RESTARTS {
+        pages.push(Ok(page(
+            "kev",
+            "v",
+            FeedMode::Snapshot,
+            vec![batch(1, "kev", vec![kev_row("CVE-1")])],
+            Some("c"),
+        )));
+        pages.push(stale());
+    }
+    let (_, end) = run(
+        &source(ScriptedFeed::new(pages), stored_kev(&["CVE-1"]), 1, None),
+        params("kev", false),
+    )
+    .await
+    .unwrap();
+    assert_eq!(end.entry.status, "error");
+}

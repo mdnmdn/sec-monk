@@ -479,6 +479,29 @@ mod tests {
         }
     }
 
+    /// The golden of the Python matcher (`rust/python/scripts/lookup_keys_golden.py`: classified components and
+    /// the `affected` keys `match.py` queries for them): `component_lookup_keys` returns a superset for every one.
+    #[test]
+    fn keys_cover_the_python_matchers_golden() {
+        let golden: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../../golden/node/lookup-keys.expected.json"
+        ))
+        .unwrap();
+        assert!(golden.len() >= 20, "the golden covers every route");
+        for row in golden {
+            let c = ident(row["component"].clone());
+            let got = component_lookup_keys(&c);
+            for want in row["keys"].as_array().unwrap() {
+                let want = want.as_str().unwrap();
+                assert!(
+                    got.iter().any(|g| g == want),
+                    "{want} missing from {got:?} for {}",
+                    row["component"]
+                );
+            }
+        }
+    }
+
     #[test]
     fn package_components_get_no_product_keys_and_products_no_package_keys() {
         let k = keys(
