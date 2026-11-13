@@ -35,6 +35,13 @@ pub struct Claims {
     pub exp: u64,
     /// Random token id.
     pub jti: String,
+    /// The provider that authenticated the subject at login (absent in tokens of the first version: `api_key`).
+    #[serde(default = "default_provider")]
+    pub prv: String,
+}
+
+fn default_provider() -> String {
+    crate::keys::API_KEY_PROVIDER.into()
 }
 
 impl Claims {
@@ -105,6 +112,7 @@ impl JwtSigner {
             iat: now_s,
             exp,
             jti: hex::encode(fsutil::random_bytes::<16>()?),
+            prv: principal.provider.clone(),
         };
         let header = Header {
             alg: "HS256".into(),

@@ -16,20 +16,29 @@ use crate::{AuthError, Result};
 
 const PREFIX: &str = "smk_";
 
-/// How a request was authenticated.
+/// How a request carried its credential.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AuthVia {
-    /// Directly with an API key.
+    /// Directly with an API key (`Authorization: ApiKey …`).
     ApiKey,
-    /// With a JWT issued from an API key.
+    /// With a session JWT issued by this server after a login (any provider).
     Jwt,
+    /// Directly with another provider's credential (a TLS client certificate, an external token).
+    External,
 }
+
+/// Name of the API-key provider: the `prv` claim of the JWTs it backs and the `method` of its logins.
+pub const API_KEY_PROVIDER: &str = "api_key";
 
 /// The authenticated caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Principal {
-    /// Public key id (safe for logs).
+    /// Stable subject id within its provider (the API key id; safe for logs). Rate limits and audit use
+    /// `provider:key_id`.
     pub key_id: String,
+    /// The provider that authenticated the subject ([`crate::AuthProvider::name`], `api_key` for API keys).
+    pub provider: String,
     /// Key name.
     pub name: String,
     /// Granted scopes.
@@ -272,6 +281,7 @@ impl KeyStore {
         }
         Ok(Principal {
             key_id: rec.id.clone(),
+            provider: API_KEY_PROVIDER.into(),
             name: rec.name.clone(),
             scopes: rec.scopes.clone(),
             via: crate::AuthVia::ApiKey,

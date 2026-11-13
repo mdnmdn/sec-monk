@@ -23,6 +23,7 @@ fn signer() -> JwtSigner {
 fn principal(scp: &[&str]) -> Principal {
     Principal {
         key_id: "abcd0123".into(),
+        provider: "api_key".into(),
         name: "n".into(),
         scopes: scopes(scp),
         via: AuthVia::ApiKey,
@@ -442,4 +443,110 @@ fn public_messages_do_not_reveal() {
     ] {
         assert_eq!(e.public_message(), "invalid credentials");
     }
+}
+
+/// A second strategy plugs in without touching the authenticator: a fake "proxy header" provider that trusts
+/// `Authorization: Proxy <user>` and offers a `proxy` login.
+#[derive(Debug)]
+struct FakeProxy {
+    revoked: std::sync::Mutex<bool>,
+}
+
+impl secmonk_auth::AuthProvider for FakeProxy {
+    fn name(&self) -> &str {
+        "proxy"
+    }
+    fn login_methods(&self) -> &[&str] {
+        &["proxy"]
+    }
+    fn authenticate(
+        &self,
+        ctx: &secmonk_auth::RequestContext<'_>,
+        _now: SystemTime,
+    ) -> Option<secmonk_auth::Result<Principal>> {
+        let (scheme, user) = ctx.authorization_parts()?.ok()?;
+        scheme.eq_ignore_ascii_case("proxy").then(|| {
+            Ok(Principal {
+                key_id: user.to_owned(),
+                provider: "proxy".into(),
+                name: user.to_owned(),
+                scopes: scopes(&["ui:read"]),
+                via: AuthVia::External,
+                expires_at: None,
+            })
+        })
+    }
+    fn login(
+        &self,
+        _m: &str,
+        params: &serde_json::Value,
+        _now: SystemTime,
+    ) -> secmonk_auth::Result<Principal> {
+        let user = params["user"].as_str().unwrap_or_default().to_owned();
+        Ok(Principal {
+            key_id: user.clone(),
+            provider: "proxy".into(),
+            name: user,
+            scopes: scopes(&["match"]),
+            via: AuthVia::External,
+            expires_at: None,
+        })
+    }
+    fn revalidate(&self, subject: &str, _now: SystemTime) -> secmonk_auth::Result<String> {
+        if *self.revoked.lock().unwrap() {
+            Err(secmonk_auth::AuthError::Revoked)
+        } else {
+            Ok(subject.to_owned())
+        }
+    }
+}
+
+#[test]
+fn provider_chain_supports_another_strategy() {
+    use std::sync::Arc;
+    let mut store = KeyStore::in_memory();
+    let plain = store.create("svc", scopes(&["ui"]), None).unwrap();
+    let proxy = Arc::new(FakeProxy {
+        revoked: std::sync::Mutex::new(false),
+    });
+    let auth = Authenticator::with_providers(
+        vec![
+            Arc::new(secmonk_auth::ApiKeyProvider::new(store)),
+            proxy.clone(),
+        ],
+        signer(),
+        600,
+    );
+    let now = SystemTime::now();
+    assert_eq!(auth.provider_names(), ["api_key", "proxy"]);
+    assert_eq!(auth.login_methods(), ["api_key", "proxy"]);
+    // direct credentials of both strategies
+    assert_eq!(
+        auth.authenticate(&format!("ApiKey {plain}"), now)
+            .unwrap()
+            .provider,
+        "api_key"
+    );
+    let p = auth.authenticate("Proxy alice", now).unwrap();
+    assert_eq!((p.provider.as_str(), p.via), ("proxy", AuthVia::External));
+    // a session from the proxy login carries prv=proxy and is revalidated with that provider
+    let tok = auth
+        .login("proxy", &serde_json::json!({"user": "bob"}), now)
+        .unwrap()
+        .token;
+    let p = auth.authenticate(&format!("Bearer {tok}"), now).unwrap();
+    assert_eq!(
+        (p.provider.as_str(), p.key_id.as_str(), p.via),
+        ("proxy", "bob", AuthVia::Jwt)
+    );
+    assert!(p.scopes.contains(Scope::Match));
+    *proxy.revoked.lock().unwrap() = true;
+    assert!(auth.authenticate(&format!("Bearer {tok}"), now).is_err());
+    // unknown login method and unknown scheme
+    assert!(auth.login("oidc", &serde_json::json!({}), now).is_err());
+    assert!(auth.authenticate("Digest x", now).is_err());
+    assert!(matches!(
+        auth.authenticate_request(&secmonk_auth::RequestContext::default(), now),
+        Err(secmonk_auth::AuthError::Missing)
+    ));
 }
