@@ -61,8 +61,25 @@ Version: `rust/Cargo.toml` `[workspace.package] version`. Toolchain: `dtolnay/ru
 
 | File | Contents |
 |---|---|
-| `secmonk-server-<ver>-<triple>.tar.gz` (Windows: `.zip`) | `secmonk-server[.exe]`, `README.md`, `sec-monk.toml`, `python/` (no `.venv`, `__pycache__`, `tests`), `static/` (from `src/secmonk/web/static`), `rust-ui/` if `rust/ui` exists; each with a `.sha256` file |
+| `secmonk-server-<ver>-<triple>.tar.gz` (Windows: `.zip`) | the repository layout the modules need (below); each with a `.sha256` file |
 | desktop bundles | `.dmg`, `.app.tar.gz` (tarred to keep symlinks), `.msi`, `*-setup.exe`, `.deb`, `.AppImage` |
+
+Server archive layout (`secmonk-server-<ver>-<triple>/`): `rust/python/pyproject.toml` has a uv path source `../..`
+(the root project), so the archive reproduces it:
+
+```
+secmonk-server[.exe]            the binary (embeds the UI overlay: login, transport)
+sec-monk.toml                   generated: [modules] python_project = "rust/python", [ui] static_dir = "src/secmonk/web/static"; data_dir left at its default
+README-server.md                rust/README.md (quick start, API keys, TLS)
+pyproject.toml, uv.lock, README.md   the root `secmonk` project (hatchling needs README.md)
+src/secmonk/                    the package with its data files and the UI static files (no __pycache__)
+rust/python/                    the modules project (no .venv, __pycache__, tests)
+```
+
+Run it from the archive root (`./secmonk-server serve`), which is where `./sec-monk.toml` is found, or pass `--config`.
+Checked locally 2026-11-13 by running the staging step on a clean copy; the generated config loads. The desktop bundle
+still carries only the static UI (`tauri.conf.json` `bundle.resources`); a release desktop app has no
+`rust/python` and no root project, so its modules cannot start from the bundle yet.
 
 Constraints: whole repo checked out (`tauri.conf.json` bundles `src/secmonk/web/static`); `bash` on every step.
 
@@ -72,8 +89,6 @@ Constraints: whole repo checked out (`tauri.conf.json` bundles `src/secmonk/web/
 |---|---|
 | Code signing (macOS, Windows) and notarization | not configured; placeholders (commented) in `build-desktop` |
 | Tauri updater signatures (`TAURI_SIGNING_PRIVATE_KEY`) | not configured |
-| `secmonk-server` binary | **missing**: `secmonk-host` has only `secmonk-headless` today; the `build-server` step fails until the bin exists ([node-server design §1](../plans/node-server-design.md)) |
-| `rust/ui/` | does not exist; the step skips `rust-ui/` with a notice |
-| Server archive run-time paths | `rust/python/pyproject.toml` has a uv path source `../..` (the repo root), which is outside the archive; the archive is not self-contained yet |
+| Desktop bundle modules | the Python modules project and the root project are not bundled; a release window cannot start its modules ([desktop-app](../features/desktop-app.md)) |
 | Cancelled runs | `release` runs on `always()`; cancelling a run can still publish the partial set as a draft |
 | Verification | YAML parsed, actionlint clean, plan and archive steps run locally; no GitHub run yet |

@@ -9,12 +9,22 @@ license.workspace = true
 
 [dependencies]
 async-trait.workspace = true
+futures-util.workspace = true
+http.workspace = true
+percent-encoding.workspace = true
+reqwest.workspace = true                # the workspace's rustls client (as secmonk-sources and secmonk-runtime)
+secmonk-api.workspace = true            # Mount, json_response, error_response, ApiError (the server binding only)
+secmonk-auth.workspace = true           # Principal, Scope
 secmonk-model.workspace = true
 secmonk-traits.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "time"] }
 tracing.workspace = true
+
+[dev-dependencies]
+secmonk-engine = { path = "../secmonk-engine" }   # SkeletonEngine: the router behind the test server
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "net", "time"] }
 
 [lints]
 workspace = true

@@ -49,7 +49,7 @@ in `data_dir`.
 cd rust
 cargo tauri dev                           # dev window (cargo install tauri-cli --version "^2"); same as:
 cargo run -p secmonk-desktop              # macOS, Windows, Linux with WebKitGTK 4.1
-cargo run -p secmonk-host --bin secmonk-headless -- --listen 127.0.0.1:8765   # no window: API + UI on loopback
+cargo run -p secmonk-host --bin secmonk-server -- serve --listen 127.0.0.1:8765   # no window: API + UI (server mode)
 ```
 
 - **Config.** Every build (`cargo run`, `cargo tauri dev`, release) reads `./sec-monk.toml` of the current directory
@@ -63,8 +63,49 @@ cargo run -p secmonk-host --bin secmonk-headless -- --listen 127.0.0.1:8765   # 
   remove only `rust/_data/db` to keep the Python runtime and start with empty databases.
 - **First start.** The window (or the server) comes up at once and answers "sec-monk is preparing its Python runtime
   (step N of 5: ...)" while uv, Python and the module environment install (38 s observed on a Mac, mostly `uv sync`);
-  reload when it is done. Later starts are ready after a few seconds. The headless server prints
+  reload when it is done. Later starts are ready after a few seconds. The server prints
   `listening http://127.0.0.1:<port>` on stderr and stops cleanly (modules stopped) on Ctrl-C.
+
+### Server mode (`secmonk-server`)
+
+`secmonk-server` serves the UI and the API over HTTP(S), with no window. `secmonk-headless` is the same command line
+and `secmonk-desktop serve` (or `--serve`) runs the same code; every build of the app also has the admin commands
+below (on Windows the release app has no console: use `secmonk-server.exe`).
+
+```bash
+secmonk-server help                                   # all commands and options
+secmonk-server                                        # = serve: 127.0.0.1:8765, no login on loopback
+secmonk-server serve --listen 0.0.0.0:8765 --tls-cert cert.pem --tls-key key.pem   # reachable: login required
+secmonk-server serve --listen 0.0.0.0:8080 --set server.insecure_http=true         # behind a TLS-terminating proxy
+secmonk-server serve --no-actions                     # read-only: no scans or syncs through the API
+secmonk-server config show                            # the effective configuration (file + environment + options)
+```
+
+- **Authentication.** On a non-loopback address (or `--auth required`) `/api/*` needs an API key or a token. The server
+  starts without keys but warns: create the first one **on the machine that runs the server, as the same user**:
+
+  ```bash
+  secmonk-server apikey create --name admin --scope admin               # prints smk_... once on stdout
+  secmonk-server apikey create --name ci --scope ui:read --scope match --expires-days 90
+  secmonk-server apikey list                                            # id, name, scopes, created, expires, revoked
+  secmonk-server apikey revoke ci                                       # by id or name; a running server notices
+  ```
+
+  Scopes: `ui:read`, `ui:actions`, `feed:read`, `match`, `vulninfo:read`, `admin` (implies all). The key is shown once
+  and only its hash is stored (`<data_dir>/auth/api_keys.toml`, 0600). The UI shows a login form that exchanges the key
+  for a one-hour token; scripts use `Authorization: ApiKey smk_...` or `POST /auth/token` ([contract](_docs/tech/api-contract.md#server-mode-authentication-scopes-mounts)).
+  The token signing secret is `SECMONK_JWT_SECRET` (hex or base64, at least 32 bytes) or the file `<data_dir>/auth/jwt.key`
+  (created on first start).
+- **TLS.** `--tls-cert` and `--tls-key` (PEM chain and key, set together) make the server speak HTTPS. A non-loopback
+  address without TLS is refused (exit 2) unless `[server] insecure_http = true`, for a proxy that terminates TLS; add
+  the public name with `[server] allow_hosts = ["scan.example"]`.
+- **Overrides.** Precedence: options (`--set`, `--listen`, ...) > `SECMONK_*` environment > file > defaults, so a server
+  needs no file: `SECMONK_DATA_DIR=/var/lib/sec-monk SECMONK_SERVER__LISTEN=0.0.0.0:8443 secmonk-server serve --tls-cert ... --tls-key ...`
+  or `secmonk-server --data-dir /var/lib/sec-monk --set log.level=debug serve`
+  ([rules](_docs/tech/configuration.md#overrides)).
+- **Release archive.** `secmonk-server-<ver>-<triple>.tar.gz` keeps the repository layout the Python modules need
+  (`pyproject.toml`, `src/secmonk/`, `rust/python/`) next to the binary and a generated `sec-monk.toml`; run it from the
+  archive root ([release](_docs/tech/release.md)).
 
 ### Build features per platform
 
@@ -76,7 +117,7 @@ only (`default-members`), so a machine without WebKitGTK builds and tests everyt
 |---|---|
 | macOS, Windows | `cargo build -p secmonk-desktop` (all features) |
 | Linux desktop | the same, with WebKitGTK 4.1 installed |
-| Linux headless | `cargo build -p secmonk-desktop --no-default-features --features engine,probe` (no Tauri in the graph; runs the loopback server) |
+| Linux headless | `cargo build -p secmonk-host --bin secmonk-server`, or `cargo build -p secmonk-desktop --no-default-features --features engine,probe` (no Tauri in the graph; the same command line) |
 
 ## Checks
 

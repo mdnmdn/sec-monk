@@ -2,7 +2,7 @@
 #
 # Products
 #   desktop  Tauri app secmonk-desktop (rust/apps/desktop/src-tauri), built with the tauri-cli v2.
-#   server   headless secmonk-server (crate secmonk-host), packaged with rust/python, the UI and the example config.
+#   server   secmonk-server (crate secmonk-host), packaged with the Python modules (rust/python), the root Python project they depend on, the UI and an archive config.
 #
 # Signing and notarization are NOT configured. The secrets below are placeholders; nothing reads them yet.
 #   macOS:    APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
@@ -279,22 +279,39 @@ jobs:
 
           rm -rf stage dist
           STAGE="stage/$NAME"
-          mkdir -p "$STAGE/static" dist
+          mkdir -p "$STAGE/rust" dist
 
           cp "rust/target/$TARGET/release/secmonk-server$EXT" "$STAGE/"
-          cp rust/README.md rust/sec-monk.toml "$STAGE/"
+          cp rust/README.md "$STAGE/README-server.md"
 
-          # The Python modules project (uv path dependency); no virtualenv, caches or tests.
-          tar -C rust --exclude=.venv --exclude=__pycache__ --exclude=tests -cf - python | tar -C "$STAGE" -xf -
+          # The Python modules project (rust/python) has a uv path dependency on the repository root ("../.."), so
+          # the archive keeps the repository layout: the root project (pyproject.toml, uv.lock, README.md for the
+          # build backend, src/secmonk with its data files and the UI static files) at the archive root and the
+          # modules project under rust/python. No virtualenv, caches or tests.
+          cp pyproject.toml README.md "$STAGE/"
+          if [ -f uv.lock ]; then cp uv.lock "$STAGE/"; fi
+          mkdir -p "$STAGE/src"
+          tar --exclude=__pycache__ --exclude='*.pyc' -cf - src/secmonk | tar -C "$STAGE" -xf -
+          tar -C rust --exclude=.venv --exclude=__pycache__ --exclude='*.pyc' --exclude=.pytest_cache --exclude=.ruff_cache --exclude=tests \
+            -cf - python | tar -C "$STAGE/rust" -xf -
+          test -f "$STAGE/rust/python/pyproject.toml"
+          test -d "$STAGE/src/secmonk/web/static"
 
-          # The UI static files, served from static/. rust/ui is optional: it is not in the repository yet.
-          cp -R src/secmonk/web/static/. "$STAGE/static/"
-          if [ -d rust/ui ]; then
-            mkdir -p "$STAGE/rust-ui"
-            cp -R rust/ui/. "$STAGE/rust-ui/"
-          else
-            echo "::notice::rust/ui does not exist; rust-ui/ is not packaged"
-          fi
+          # The archive-level configuration (found as ./sec-monk.toml when the server runs from the archive root).
+          # The overlay of the UI (login, transport) is embedded in the binary: nothing else to package.
+          cat > "$STAGE/sec-monk.toml" <<'TOML'
+          # sec-monk server archive: paths are relative to this file (the archive root).
+          # README-server.md has the quick start; every key is documented in rust/_docs/tech/configuration.md of the repository.
+          config_version = 1
+          # data_dir is left at its default (the per-user data directory); set it to keep state elsewhere:
+          # data_dir = "/var/lib/sec-monk"
+
+          [modules]
+          python_project = "rust/python"
+
+          [ui]
+          static_dir = "src/secmonk/web/static"
+          TOML
 
           if [ "$RUNNER_OS" = "Windows" ]; then
             ARCH="$NAME.zip"

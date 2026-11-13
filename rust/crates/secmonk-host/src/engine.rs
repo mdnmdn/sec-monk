@@ -146,6 +146,7 @@ pub(crate) fn build(p: Parts<'_>) -> Result<Arc<SecmonkEngine>, HostError> {
         sources: p.sources.to_vec(),
         probe: p.probe.clone(),
         modules: Some(Arc::new(ModuleStates { modules: p.modules })),
+        node_store: None,
     }))
 }
 
@@ -260,13 +261,11 @@ mod tests {
             let e = native_sources(&c, &store, &served).err().unwrap();
             assert!(e.to_string().contains("sources.implementation.kve"), "{e}");
         }
-        // a source without a Rust implementation refuses the start
+        // every shipped source has a native importer since osv and cvelist were ported (3cd17ca), so
+        // `osv = "rust"` is now accepted; the "no Rust implementation" refusal is covered by the misspelled
+        // names above (an unknown name has neither implementation)
         let c = config_with(d.path(), "[sources.implementation]\nosv = \"rust\"\n");
-        let e = native_sources(&c, &store, &served).err().unwrap();
-        assert!(
-            e.to_string().contains("no Rust implementation of osv"),
-            "{e}"
-        );
+        assert!(native_sources(&c, &store, &served).is_ok());
         store.close().await;
     }
 }

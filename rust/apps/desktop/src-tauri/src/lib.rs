@@ -5,12 +5,15 @@
 //! `secmonk` custom scheme (the router answers every request of the webview, `/api` included, in-process) and
 //! opens the window on the scheme origin. While uv and Python install on the first run the scheme answers a
 //! 503 "preparing" state that the UI shows with its normal error panel. The window gets no Tauri IPC (ADR-0007):
-//! the scheme is its only way to Rust.
+//! the scheme is its only way to Rust, plus one IPC command, `secmonk_api`, that answers `/api/` requests in
+//! process (the capability `main` grants it to the `main` window only).
 //!
-//! Without `ui` (Linux headless: `--no-default-features --features engine,probe`) the same binary runs the
-//! loopback HTTP server of `secmonk_host::headless`; Tauri is not in the dependency graph at all.
-
-pub mod cli;
+//! The command line is `secmonk_host::cli`, shared with `secmonk-server`: `secmonk-desktop serve` (or `--serve`),
+//! `apikey ...`, `config show`, `version` run without a window and without initialising Tauri; plain
+//! `secmonk-desktop [--config FILE] [--set key=value] [--data-dir DIR]` opens the window.
+//!
+//! Without `ui` (Linux headless: `--no-default-features --features engine,probe`) the same binary behaves like
+//! `secmonk-server` for every subcommand (serving when none is given); Tauri is not in the dependency graph.
 
 #[cfg(feature = "ui")]
 mod static_dir;
@@ -28,7 +31,9 @@ mod ui {
     use std::path::PathBuf;
     use std::sync::{Arc, OnceLock};
 
-    use secmonk_api::{HostPolicy, Router, RouterOptions, StaticDir};
+    use secmonk_api::{
+        BridgeRequest, BridgeResponse, HostPolicy, Router, RouterOptions, StaticDir,
+    };
     use secmonk_config::Config;
     use secmonk_host::Service;
     use tauri::{Manager, RunEvent};
@@ -53,6 +58,35 @@ mod ui {
             tauri::http::StatusCode::SERVICE_UNAVAILABLE,
             "starting",
         ))
+    }
+
+    /// The IPC command `secmonk_api`: the page's `fetch` of `/api/...` (rust/ui/transport.js) answered in process.
+    /// No network and no authentication: the window is local. Only `/api/` paths are served (`handle_bridge`).
+    #[tauri::command]
+    async fn secmonk_api(
+        router: tauri::State<'_, Arc<OnceLock<Arc<Router>>>>,
+        request: BridgeRequest,
+    ) -> Result<BridgeResponse, String> {
+        let ready = router.get().cloned();
+        Ok(match ready {
+            Some(r) => secmonk_api::handle_bridge(&r, request).await,
+            None => starting_bridge_response(),
+        })
+    }
+
+    /// 503 "starting": the router is built in `setup`, a moment after the window exists.
+    fn starting_bridge_response() -> BridgeResponse {
+        let r = starting_response();
+        BridgeResponse {
+            status: r.status().as_u16(),
+            headers: r
+                .headers()
+                .iter()
+                .filter_map(|(k, v)| Some((k.as_str().to_owned(), v.to_str().ok()?.to_owned())))
+                .collect(),
+            body: Some(String::from_utf8_lossy(r.body()).into_owned()),
+            body_base64: None,
+        }
     }
 
     /// Optional dev binding (`[ui] http_listen`): the same router on a loopback port with the full Host rules.
@@ -85,7 +119,10 @@ mod ui {
         let for_exit = service.clone();
         let setup_config = config.clone();
 
+        let for_ipc = router.clone();
         let app = tauri::Builder::default()
+            .manage(for_ipc)
+            .invoke_handler(tauri::generate_handler![secmonk_api])
             // Asynchronous: a slow engine call never blocks the webview thread.
             .register_asynchronous_uri_scheme_protocol(
                 config.ui_scheme.clone(),
@@ -139,37 +176,57 @@ mod ui {
     }
 }
 
-/// Start the app. Returns the process exit code (0 ok, 1 runtime error, 2 usage).
-pub fn run() -> i32 {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    #[cfg(feature = "ui")]
-    {
-        let config = match cli::load_config(&args) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("secmonk-desktop: {e}");
-                return 1;
-            }
-        };
-        secmonk_host::logging::init(&config, cfg!(debug_assertions));
-        match ui::run(config) {
-            Ok(()) => 0,
-            Err(e) => {
-                tracing::error!("{e}");
-                eprintln!("secmonk-desktop: {e}");
-                1
-            }
+/// No subcommand: open the window.
+#[cfg(all(feature = "ui", feature = "engine"))]
+fn window(cli: &secmonk_host::cli::Cli) -> i32 {
+    let config = match cli.load_config() {
+        Ok(c) => std::sync::Arc::new(c),
+        Err(e) => {
+            eprintln!("secmonk-desktop: {e}");
+            return 1;
+        }
+    };
+    secmonk_host::logging::init(&config, cfg!(debug_assertions));
+    match ui::run(config) {
+        Ok(()) => 0,
+        Err(e) => {
+            tracing::error!("{e}");
+            eprintln!("secmonk-desktop: {e}");
+            1
         }
     }
-    #[cfg(all(not(feature = "ui"), feature = "engine"))]
+}
+
+/// Without the window toolkit every run is a command (`cli.command` or the server default).
+#[cfg(all(not(feature = "ui"), feature = "engine"))]
+fn window(cli: &secmonk_host::cli::Cli) -> i32 {
+    secmonk_host::cli::run("secmonk-desktop", cli)
+}
+
+/// Start the app. Returns the process exit code (0 ok, 1 runtime error, 2 usage).
+pub fn run() -> i32 {
+    const PROG: &str = "secmonk-desktop";
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    #[cfg(feature = "engine")]
     {
-        secmonk_host::headless::run(&args)
+        let cli = match secmonk_host::cli::parse(&args) {
+            Ok(c) => c,
+            Err(m) => {
+                eprintln!("{PROG}: {m}\nTry `{PROG} help`.");
+                return 2;
+            }
+        };
+        // a subcommand (or --serve) never touches Tauri; without a window toolkit the server is the default
+        if cli.command.is_some() {
+            return secmonk_host::cli::run(PROG, &cli);
+        }
+        window(&cli)
     }
     #[cfg(not(feature = "engine"))]
     {
         let _ = args;
         eprintln!(
-            "secmonk-desktop: built without the `engine` feature (probe-only): there is nothing to serve yet. \
+            "{PROG}: built without the `engine` feature (probe-only): there is nothing to serve yet. \
              Rebuild with `--features engine,probe` (headless) or the default features (window)."
         );
         2

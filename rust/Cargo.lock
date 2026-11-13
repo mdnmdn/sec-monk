@@ -3430,6 +3430,7 @@ dependencies = [
  "async-trait",
  "futures-util",
  "secmonk-api",
+ "secmonk-auth",
  "secmonk-config",
  "secmonk-engine",
  "secmonk-model",
@@ -3489,11 +3490,18 @@ name = "secmonk-node"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "futures-util",
+ "http",
+ "percent-encoding",
+ "reqwest",
+ "secmonk-api",
+ "secmonk-auth",
+ "secmonk-engine",
  "secmonk-model",
  "secmonk-traits",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
+ "tokio",
  "tracing",
 ]
 

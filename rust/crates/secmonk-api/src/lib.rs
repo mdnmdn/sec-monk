@@ -24,7 +24,7 @@ pub use http_server::{
     check_exposure, serve, serve_http, serve_http_with, serve_listener, tls_acceptor,
 };
 pub use router::{
-    CSP, CSRF_HEADER, MAX_BODY, Router, RouterOptions, error_response, json_response,
+    CSP, CSP_WINDOW, CSRF_HEADER, MAX_BODY, Router, RouterOptions, error_response, json_response,
 };
 pub use routes::{ROUTES, Route, RouteId};
 pub use server::{MAX_MOUNT_BODY, MAX_TOKEN_BODY, Mount, Server};

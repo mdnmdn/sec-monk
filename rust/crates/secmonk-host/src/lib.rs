@@ -1,6 +1,6 @@
 //! Composition (`secmonk-host`): the one place that knows both the module host and the engine.
 //!
-//! The desktop app and the headless server share it. [`Host::start`] runs the startup sequence:
+//! The desktop app and the server (`secmonk-server`, `secmonk-headless`) share it. [`Host::start`] runs the startup sequence:
 //!
 //! 1. ensure uv, the managed Python and the module venv through `UvRuntime` (first run: download, with progress);
 //! 2. open the stores and run the migrations (`engine` feature);
@@ -24,13 +24,21 @@ pub mod logging;
 pub mod startup;
 
 #[cfg(feature = "engine")]
+pub mod apikeys;
+#[cfg(feature = "engine")]
+pub mod cli;
+#[cfg(feature = "engine")]
 pub(crate) mod engine;
 #[cfg(feature = "engine")]
 pub mod gate;
 #[cfg(feature = "engine")]
 pub mod headless;
 #[cfg(feature = "engine")]
+pub mod serve;
+#[cfg(feature = "engine")]
 pub mod service;
+#[cfg(all(test, feature = "engine"))]
+pub(crate) mod testutil;
 
 pub use host::{Host, HostError};
 pub use startup::{Phase, Progress, StartupState};

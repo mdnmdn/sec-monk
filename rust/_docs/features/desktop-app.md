@@ -6,7 +6,7 @@ type: feature
 context: features
 status: implemented
 tags: [desktop, tauri, web-ui, rust]
-updated: 2026-11-11
+updated: 2026-11-13
 verified: 2026-11-11
 code: [rust/apps/desktop/src-tauri/src/, rust/crates/secmonk-host/src/]
 related: [tech/architecture.md, tech/api-contract.md, tech/configuration.md, plans/backlog.md]
@@ -27,7 +27,7 @@ related: [tech/architecture.md, tech/api-contract.md, tech/configuration.md, pla
 | OS | Ships | Notes |
 |---|---|---|
 | macOS, Windows | probe, engine and ui (the desktop app) | Features switch per platform: live process monitor on macOS, off on Windows (503 as today); `macos`, `homebrew` collectors on macOS, `windows` on Windows. |
-| Linux | engine and probe; the ui when possible | The desktop app needs WebKitGTK. Without it, the headless build serves the same UI and `/api` over the loopback HTTP binding (`cargo run -p secmonk-host --bin secmonk-headless`, or `cargo run -p secmonk-desktop --no-default-features --features engine,probe`; Host check as `secmonk ui`, loopback addresses only). |
+| Linux | engine and probe; the ui when possible | The desktop app needs WebKitGTK. Without it, the headless build serves the same UI and `/api` over the loopback HTTP binding (`cargo run -p secmonk-host --bin secmonk-server`, or `cargo run -p secmonk-desktop --no-default-features --features engine,probe`; the Host check of `secmonk ui`; loopback without a login, any other address with API-key authentication and TLS, see Server mode below). |
 
 The `secmonk-api`, `secmonk-engine` and `secmonk-probe` crates do not depend on Tauri
 ([ADR-0009](../decisions/0009-platform-targets.md)).
@@ -38,9 +38,32 @@ The `secmonk-api`, `secmonk-engine` and `secmonk-probe` crates do not depend on 
 cd rust && cargo tauri dev                      # dev: config ./sec-monk.toml (debug build), data in rust/_data/
 cargo run -p secmonk-desktop                    # the same without the Tauri CLI
 secmonk-desktop --config ~/work/sec-monk.toml   # another config (or SECMONK_CONFIG; otherwise ./sec-monk.toml of the current directory, in every build)
-cargo run -p secmonk-host --bin secmonk-headless -- --listen 127.0.0.1:8765   # no window, no WebKit
+secmonk-desktop --set log.level=debug --data-dir ~/sec-monk-test   # options of the shared command line also apply to the window
+cargo run -p secmonk-host --bin secmonk-server -- serve --listen 127.0.0.1:8765   # no window, no WebKit
 rm -rf rust/_data                               # reset the dev data (quit the app first)
 ```
+
+### Server mode from the app binary
+
+`secmonk-desktop serve [options]` (or `--serve`) runs exactly the server mode of `secmonk-server`: no window, Tauri is
+never initialised, the same options (`--config`, `--set`, `--data-dir`, `--listen`, `--tls-cert`, `--tls-key`,
+`--allow-actions` / `--no-actions`, `--auth`). `secmonk-desktop apikey create|list|revoke` and `config show` work the
+same way and never start the engine. A build without the `ui` feature behaves like `secmonk-server` for every
+subcommand (serving when none is given). The Windows release app is a GUI-subsystem program (no console is attached;
+attaching to the parent console needs `unsafe`, which the workspace forbids), so on Windows use `secmonk-server.exe` for
+the command line. Details: [README](../../README.md#server-mode-secmonk-server), [architecture §3](../tech/architecture.md#3-composition-secmonk-host-and-the-desktop-app).
+
+### How the window reaches the engine
+
+The page loads from the custom scheme (`secmonk://localhost`, on Windows `http://secmonk.localhost`). Plain requests go
+through the scheme handler; the overlay's transport (`rust/ui/transport.js`) instead calls the Tauri command
+`secmonk_api({method, path, headers, body})` (`window.__TAURI_INTERNALS__.invoke`, `withGlobalTauri` is false), which
+runs `secmonk_api::handle_bridge` on the same router: no network, no authentication, `/api/` paths only. The command
+exists only for the `main` window: `capabilities/main.json` grants the generated permission `allow-secmonk-api` and
+nothing else. Tauri 2.12 treats the origin of a registered custom scheme as local (`is_local_url`), so IPC from it is
+allowed. Status: compiled and ACL-validated on Linux (2026-11-13); not exercised in a running window. Open point: the
+page's CSP (`connect-src 'self'`) may block Tauri's `ipc:` fetch channel, in which case Tauri falls back to
+`postMessage`; check on a real window ([on-macos](../plans/on-macos.md)).
 
 The configuration must list the modules (`[modules] enabled`); the repo's `rust/sec-monk.toml` does
 ([configuration](../tech/configuration.md)).

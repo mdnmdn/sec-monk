@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use http::{Method, Request, Response, StatusCode};
-use secmonk_api::{CSP, HostPolicy, ROUTES, Router, RouterOptions, StaticDir};
+use secmonk_api::{CSP, CSP_WINDOW, HostPolicy, ROUTES, Router, RouterOptions, StaticDir};
 use secmonk_engine::{
     DiscoverQuery, DockerListQuery, EngineInfo, EngineResult, EngineService, FindingsQuery,
     JobsQuery, JsonObject, SkeletonEngine, VulnSearchQuery,
@@ -87,7 +87,9 @@ fn json_of(r: &Response<Vec<u8>>) -> Value {
 
 fn assert_security_headers(r: &Response<Vec<u8>>, what: &str) {
     let h = r.headers();
-    assert_eq!(h["content-security-policy"], CSP, "{what}: CSP");
+    // the window (custom scheme) also allows Tauri IPC in connect-src; the HTTP bindings keep the browser CSP
+    let csp = h["content-security-policy"].to_str().unwrap();
+    assert!(csp == CSP || csp == CSP_WINDOW, "{what}: CSP {csp}");
     assert_eq!(h["x-content-type-options"], "nosniff", "{what}");
     assert_eq!(h["referrer-policy"], "no-referrer", "{what}");
     assert_eq!(h["cross-origin-opener-policy"], "same-origin", "{what}");
@@ -869,3 +871,22 @@ fn engine_errors_become_api_errors() {
 
 #[allow(dead_code)]
 fn _method_is_used(_: Method) {}
+
+#[test]
+fn only_the_window_csp_allows_tauri_ipc() {
+    let scheme = router_with(Arc::new(Echo), "csp-w", HostPolicy::scheme("secmonk"), true);
+    let r = get(&scheme, "/");
+    assert_eq!(r.headers()["content-security-policy"], CSP_WINDOW);
+    let http = router_with(
+        Arc::new(Echo),
+        "csp-h",
+        HostPolicy::http("127.0.0.1", 8765, &[]),
+        true,
+    );
+    let req = Request::builder()
+        .uri("http://127.0.0.1:8765/")
+        .body(Vec::new())
+        .unwrap();
+    let r = block(http.handle(req));
+    assert_eq!(r.headers()["content-security-policy"], CSP);
+}

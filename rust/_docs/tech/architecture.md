@@ -185,7 +185,7 @@ differences from Python) has its own page: [engine-service](engine-service.md).
 
 `rust/crates/secmonk-host` is the composition root, the only crate that names both the module host and the engine
 (features `engine` and `probe`, see [§2](#build-features-per-platform)). Two thin shells run it: `secmonk-desktop`
-(Tauri window) and `secmonk-headless` (loopback HTTP, no window). Server mode adds `secmonk_api::Server` (API-key/JWT auth, mounts) and TLS in front of the same router (see [§6](#6-serving-the-current-ui)); the window answers `/api/` through `secmonk_api::handle_bridge`.
+(Tauri window) and `secmonk-server` (HTTP(S), no window; `secmonk-headless` is the same command line under its old name). Server mode adds `secmonk_api::Server` (API-key/JWT auth, mounts) and TLS in front of the same router (see [§6](#6-serving-the-current-ui)); the window answers `/api/` through the Tauri command `secmonk_api`, which calls `secmonk_api::handle_bridge`.
 
 **`Host::start(config, progress)`** (`host.rs`) runs these steps; each reports a `Phase` (`startup.rs`), which is the
 "step N of 5" of the preparing message:
@@ -226,11 +226,28 @@ to the engine. The window calls it on `RunEvent::Exit`; the headless server on C
 waits for the starter task. Observed 2026-11-11: both modules logged "stdin closed, exiting" and the host stopped
 within 175 ms of the signal.
 
-**Headless** (`headless.rs`, `bin/secmonk-headless.rs`): `secmonk-headless [--config FILE] [--listen 127.0.0.1:8765]`
-(also what `secmonk-desktop` runs when built without `ui`). Config as for the window; `--listen`, else `[ui]
-http_listen`, else 8765; **loopback addresses only**, port 0 refused (no login exists), `HostPolicy::http` (the full
-Host check of `secmonk ui`), actions allowed (loopback). It always serves `ui.static_dir` (there is no bundle). Prints
-`listening http://ADDR` on stderr. The loopback server (`secmonk_api::serve_http`) serves at most 64 connections at once, drops a response that cannot be written within 30 s, and its accept loop backs off (50 ms doubling, capped) on an accept error instead of spinning. Exit 0 / 1 runtime / 2 usage.
+**The shared command line** (`cli.rs`; `secmonk-server`, `secmonk-headless` and `secmonk-desktop` all use it): `serve`
+(the default of the two server binaries), `apikey create|list|revoke`, `config show`, `version`, `help`; global options
+`--config`, `--set key=value`, and conveniences that are translated into `--set` entries in command-line order
+(`--data-dir`, `--listen`, `--tls-cert`, `--tls-key`, `--allow-actions` / `--no-actions`, `--auth`), so precedence is
+the one of [configuration](configuration.md#overrides). `cli::parse` is pure (unit tests); `cli::run` executes. The
+`apikey` commands (`apikeys.rs`) load the configuration and operate on `auth_keys_file` only (auth dir 0700, file
+0600): no engine, no uv, no Python; the plaintext key goes to stdout once, the warning to stderr. Exit codes 0 / 1
+runtime / 2 usage.
+
+**Server mode** (`serve.rs`): listen = `[server] listen`, else `[ui] http_listen`, else `127.0.0.1:8765`, any address
+(`localhost:PORT` is 127.0.0.1; port 0 refused). Authentication is on when `[server] auth` is `required`, or `auto` on
+a non-loopback address. `build_server(config, engine, jwt_secret_env, mounts)` (testable with a stub engine) checks
+`check_exposure` (usage error, exit 2), builds the `Router` (`HostPolicy::http_server`, `actions = server_allow_actions`,
+`serve_ui = false` points the static directory nowhere so UI files answer 404) and `Server::new(router)
+.with_auth(Authenticator::new(KeyStore::load(keys_file), JwtSigner::new(secret, ttl), rate))`; the secret is
+`SECMONK_JWT_SECRET` (read once, in `ServeOptions::from_env`) else `load_or_create_secret(jwt_secret_file)`. An empty
+key store starts anyway with a warning that names `secmonk-server apikey create --name admin --scope admin`; keys
+created or revoked while it runs are picked up on the next request. `ServeOptions::mount_factory` is the hook for
+extra mounts (the node API): it receives the `Service` and returns `Arc<dyn Mount>`s. `serve` prints
+`listening http(s)://ADDR` on stderr, serves with `secmonk_api::serve` (TLS from `tls_cert`/`tls_key`) and stops the
+modules on Ctrl-C / SIGTERM as before. `headless::listen_addr` (loopback only) remains for the desktop's optional dev
+binding.
 
 **Logging** (`logging.rs`): `tracing-subscriber` writes to `<data_dir>/logs/secmonk-desktop.log.<YYYY-MM-DD>` (the
 day the process started; mode 0600; append; not rotated while running) and to stderr (headless, and debug desktop
@@ -238,14 +255,24 @@ builds). Files older than `[log] keep_days` are removed at start. `RUST_LOG` tak
 lines arrive through `tracing` (target `module`, field `module = <name>`, scrubbed, at most 8 KiB) in the same file.
 There are no per-module files yet: `logs/modules/` is created and stays empty ([backlog](../plans/backlog.md)).
 
-**The desktop shell** (`apps/desktop/src-tauri/src`, feature `ui`): `cli.rs` (`--config`), `static_dir.rs`,
-`window.rs`, `lib.rs`. It loads the config, initializes logging, creates the `Service`, registers the asynchronous
-`secmonk` scheme handler (the router sits in a `OnceLock`; a slow call never blocks the webview thread), and in
+**The desktop shell** (`apps/desktop/src-tauri/src`, feature `ui`): `static_dir.rs`, `window.rs`, `lib.rs`. The
+command line is `secmonk_host::cli`: a subcommand or `--serve` (`secmonk-desktop serve ...`, `apikey ...`, `config
+show`, `version`) runs without Tauri being initialised, exactly the server mode / admin command; no subcommand opens
+the window (`--config`, `--set`, `--data-dir` apply). Without `ui` the binary behaves like `secmonk-server`. The
+window path loads the config, initializes logging, creates the `Service`, registers the asynchronous
+`secmonk` scheme handler (the router sits in a `OnceLock`; a slow call never blocks the webview thread) and the IPC
+command `secmonk_api(request: BridgeRequest) -> BridgeResponse` (`handle_bridge`, `/api/` paths only; a 503 "starting"
+answer while the router is not built; the overlay's transport calls it through `window.__TAURI_INTERNALS__.invoke`,
+`withGlobalTauri` stays false), and in
 `setup` resolves the static directory (**debug builds**: `$SECMONK_STATIC`, then `ui.static_dir`, then the bundle;
 **release builds**: the bundled `static` resource only), builds the router, starts the optional `[ui] http_listen`
 binding, spawns `Service::run` and opens the window at the scheme origin. `frontendDist` points to an empty
-directory: Tauri serves nothing itself. The window has no Tauri capabilities (no IPC); developer tools need a debug
-build and `[ui] devtools`; navigation outside the origin is refused and `http(s)` links go to the system browser.
+directory: Tauri serves nothing itself. The only Tauri capability is `capabilities/main.json`: the permission
+`allow-secmonk-api` (generated by `build.rs` from `AppManifest::commands(&["secmonk_api"])`) for the window `main`;
+nothing else is granted. Tauri treats a registered custom scheme as a local origin (`Webview::is_local_url`:
+`secmonk://localhost`, on Windows `http(s)://secmonk.localhost`), so the page may invoke the command, and a remote
+page could not. Developer tools need a debug build and `[ui] devtools`; navigation outside the origin is refused and
+`http(s)` links go to the system browser.
 Offline mode skips downloads and fails with a clear message when a pinned artifact is missing.
 
 ## 4. Transports

@@ -21,6 +21,12 @@ use crate::static_files::{Refused, StaticDir};
 /// `web/server.py` `CSP`, byte for byte.
 pub const CSP: &str = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; \
 connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
+
+/// [`CSP`] for pages served to the desktop window (the custom scheme): `connect-src` also allows Tauri's IPC
+/// channel (`ipc:` on macOS/Linux, `http://ipc.localhost` on Windows), which the overlay's `transport.js` uses
+/// for the single `secmonk_api` command (rust ADR-0014). Nothing else differs from the browser policy.
+pub const CSP_WINDOW: &str = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; \
+connect-src 'self' ipc: http://ipc.localhost; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
 pub const CSRF_HEADER: &str = "x-secmonk-request";
 /// Largest POST body (`MAX_BODY`).
 pub const MAX_BODY: usize = 64 * 1024;
@@ -64,10 +70,18 @@ impl Router {
 
     /// Answer one request. Never panics on input; every response carries the security headers.
     pub async fn handle(&self, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
-        match self.dispatch(&req).await {
+        let mut r = match self.dispatch(&req).await {
             Ok(r) => r,
             Err(e) => error_response(&e),
+        };
+        if matches!(self.opts.host_policy, HostPolicy::Scheme { .. }) {
+            // the window's pages may reach Tauri IPC; the HTTP bindings keep the browser policy
+            r.headers_mut().insert(
+                header::CONTENT_SECURITY_POLICY,
+                header::HeaderValue::from_static(CSP_WINDOW),
+            );
         }
+        r
     }
 
     async fn dispatch(&self, req: &Request<Vec<u8>>) -> ApiResult<Response<Vec<u8>>> {
